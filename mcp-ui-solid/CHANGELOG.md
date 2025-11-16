@@ -5,6 +5,56 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.10] - 2025-11-17
+
+### Fixed
+- **CONDITIONAL EXPORTS FIX**: Added `"solid"` condition to all package.json exports
+  - This completes the SSR fix started in v1.0.9
+  - Allows Vite's SSR resolver to correctly identify which module to load in server vs browser contexts
+  - Without this, module resolution conflicts occurred even with SSR-compatible compilation
+  - Follows SolidJS library best practices for proper module resolution
+
+### Technical Details
+**The Missing Piece in v1.0.9:**
+- v1.0.9 correctly changed `generate: 'ssr'` in vite.config.ts ✅
+- BUT package.json exports didn't include the `"solid"` condition ❌
+- This caused Vite to load the same build for both SSR and browser
+- Result: Module resolution conflicts with `solid-js/web` during SSR
+
+**How Conditional Exports Fix This:**
+```json
+{
+  "./components": {
+    "solid": "./dist/components/index.js",  // ← NEW: SolidJS-aware loaders use this
+    "import": "./dist/components/index.js", // Fallback for standard ESM
+    "require": "./dist/components/index.cjs" // CommonJS
+  }
+}
+```
+
+With the `"solid"` condition:
+- Vite recognizes this as a SolidJS-specific module
+- Applies correct resolution strategy for SSR context
+- No more "Client-only API called on the server side" errors
+
+### Why This Matters
+- **v1.0.8**: Added `isServer` guards (fixed symptoms)
+- **v1.0.9**: Changed to SSR compilation mode (fixed compilation)
+- **v1.0.10**: Added conditional exports (fixed module resolution) ← **Complete fix!**
+
+### Affected Exports
+All package entry points now have the `"solid"` condition:
+- `"."` - Main export
+- `"./components"` - Component exports
+- `"./hooks"` - Hook exports
+- `"./types"` - Type exports
+
+### Migration Notes
+- No breaking changes for consumers
+- Drop-in replacement for v1.0.9
+- Fixes persistent SSR errors on Railway, Vercel, Netlify, etc.
+- **This is the final piece** for complete SSR compatibility
+
 ## [1.0.9] - 2025-11-17
 
 ### Fixed

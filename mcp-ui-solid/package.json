@@ -1,6 +1,6 @@
 {
   "name": "@seed-ship/mcp-ui-solid",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "SolidJS components for rendering MCP-generated UI resources",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -8,21 +8,25 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "solid": "./dist/index.js",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs",
       "types": "./dist/index.d.ts"
     },
     "./components": {
+      "solid": "./dist/components/index.js",
       "import": "./dist/components/index.js",
       "require": "./dist/components/index.cjs",
       "types": "./dist/components/index.d.ts"
     },
     "./hooks": {
+      "solid": "./dist/hooks/index.js",
       "import": "./dist/hooks/index.js",
       "require": "./dist/hooks/index.cjs",
       "types": "./dist/hooks/index.d.ts"
     },
     "./types": {
+      "solid": "./dist/types/index.js",
       "import": "./dist/types/index.js",
       "require": "./dist/types/index.cjs",
       "types": "./dist/types/index.d.ts"
