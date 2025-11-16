@@ -13,7 +13,23 @@ describe('ComponentRegistrySchema', () => {
   it('should validate a minimal valid registry', () => {
     const registry = {
       version: '1.0.0' as const,
-      components: [],
+      components: [
+        {
+          id: 'test-component',
+          type: 'chart' as const,
+          name: 'Test Component',
+          schema: {
+            type: 'object' as const,
+            properties: {},
+          },
+          examples: [
+            {
+              name: 'Example 1',
+              params: {},
+            },
+          ],
+        },
+      ],
     };
 
     const result = ComponentRegistrySchema.safeParse(registry);
@@ -23,7 +39,15 @@ describe('ComponentRegistrySchema', () => {
   it('should reject invalid version', () => {
     const registry = {
       version: '2.0.0',
-      components: [],
+      components: [
+        {
+          id: 'test',
+          type: 'chart' as const,
+          name: 'Test',
+          schema: { type: 'object' as const, properties: {} },
+          examples: [{ name: 'Ex', params: {} }],
+        },
+      ],
     };
 
     const result = ComponentRegistrySchema.safeParse(registry);
@@ -41,7 +65,12 @@ describe('ComponentSchema', () => {
         type: 'object' as const,
         properties: {},
       },
-      examples: [],
+      examples: [
+        {
+          name: 'Example 1',
+          params: {},
+        },
+      ],
     };
 
     const result = ComponentSchema.safeParse(component);
