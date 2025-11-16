@@ -145,12 +145,11 @@ export function StreamingUIRenderer(props: StreamingUIRendererProps) {
           <div class="h-2 w-full overflow-hidden rounded-full bg-surface-tertiary">
             <div
               class="h-full bg-brand-primary transition-all duration-300 ease-out"
-              style={{
-                width:
-                  progress().totalCount !== null
-                    ? `${(progress().receivedCount / progress().totalCount!) * 100}%`
-                    : '0%',
-              }}
+              style={
+                progress().totalCount !== null
+                  ? `width: ${(progress().receivedCount / progress().totalCount!) * 100}%`
+                  : 'width: 0%'
+              }
             />
           </div>
 
@@ -210,10 +209,7 @@ export function StreamingUIRenderer(props: StreamingUIRendererProps) {
                 col-span-${component.position.colSpan}
                 ${animatingComponents().has(component.id) ? 'animate-fade-in-up' : ''}
               `}
-              style={{
-                'grid-column-start': component.position.colStart,
-                'grid-column-end': component.position.colStart + component.position.colSpan,
-              }}
+              style={`grid-column-start: ${component.position.colStart}; grid-column-end: ${component.position.colStart + component.position.colSpan}`}
             >
               <StreamingComponentRenderer component={component} onError={props.onRenderError} />
             </div>

@@ -341,18 +341,22 @@ export const UIResourceRenderer: Component<UIResourceRendererProps> = (props) =>
     }
   }
 
+  // Convert grid styles to CSS string to avoid setStyleProperty
+  const gridContainerStyle = () =>
+    `grid-template-columns: repeat(${layout().grid.columns}, 1fr); gap: ${layout().grid.gap}`
+
+  // Convert component grid styles to CSS string
+  const getGridStyleString = (component: UIComponent) => {
+    const { colStart, colSpan, rowStart, rowSpan = 1 } = component.position
+    return `grid-column: ${colStart} / span ${colSpan}; grid-row: ${rowStart ? `${rowStart} / span ${rowSpan}` : 'auto'}`
+  }
+
   return (
     <div class={`w-full ${props.class || ''}`}>
-      <div
-        class="grid gap-4"
-        style={{
-          'grid-template-columns': `repeat(${layout().grid.columns}, 1fr)`,
-          gap: layout().grid.gap,
-        }}
-      >
+      <div class="grid gap-4" style={gridContainerStyle()}>
         <For each={layout().components}>
           {(component) => (
-            <div style={getGridStyles(component)}>
+            <div style={getGridStyleString(component)}>
               <ComponentRenderer component={component} onError={props.onError} />
             </div>
           )}
