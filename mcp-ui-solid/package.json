@@ -1,6 +1,6 @@
 {
   "name": "@seed-ship/mcp-ui-solid",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "SolidJS components for rendering MCP-generated UI resources",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -34,7 +34,7 @@
     "CHANGELOG.md"
   ],
   "scripts": {
-    "build": "vite build",
+    "build": "vite build && pnpm build:types",
     "build:types": "tsc --emitDeclarationOnly --outDir dist --skipLibCheck",
     "dev": "vite build --watch",
     "test": "vitest run",
