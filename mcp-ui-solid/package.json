@@ -1,6 +1,6 @@
 {
   "name": "@seed-ship/mcp-ui-solid",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "SolidJS components for rendering MCP-generated UI resources",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -58,6 +58,7 @@
     "@vitest/ui": "^4.0.9",
     "eslint": "^8.56.0",
     "jsdom": "^27.2.0",
+    "solid-js": "^1.9.10",
     "typescript": "^5.3.3",
     "vite": "^6.3.6",
     "vite-plugin-solid": "^2.11.8",
