@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.7] - 2025-11-16
+
+### Fixed
+- **CRITICAL SSR FIX**: Replaced `ref` callback with `onMount` to eliminate `use()` directive
+  - Previous versions (1.0.5, 1.0.6) used `ref={() => handleComponentRender(component.id)}`
+  - vite-plugin-solid@2.11.8 transforms ref callbacks into `use()` directive calls
+  - `use` is NOT exported from `solid-js/web` in Node/SSR environment (only in browser)
+  - This caused SSR crashes on Railway: `SyntaxError: The requested module 'solid-js/web' does not provide an export named 'use'`
+  - Solution: Replaced `ref` callback with `onMount()` which is SSR-safe
+  - Affected file: `StreamingUIRenderer.tsx` (line 207)
+
+### Technical Details
+- `onMount` only executes client-side (after hydration), perfect for animations
+- No `use()` directive needed, no SSR/browser export mismatch
+- Maintains same functionality: animation triggers when component mounts
+- Fully compatible with solid-js@1.9.10 in both browser and Node environments
+
+### Migration Notes
+- No breaking changes for consumers
+- Drop-in replacement for v1.0.6
+- Fixes production SSR crashes on Railway and similar Node.js SSR platforms
+
 ## [1.0.6] - 2025-11-16
 
 ### Fixed

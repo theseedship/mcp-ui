@@ -21,7 +21,7 @@
  * ```
  */
 
-import { Show, For, createSignal } from 'solid-js'
+import { Show, For, createSignal, onMount } from 'solid-js'
 import { useStreamingUI, type UseStreamingUIOptions } from '../hooks/useStreamingUI'
 import type { UIComponent, RendererError } from '../types'
 import { validateComponent } from '../services/validation'
@@ -202,18 +202,22 @@ export function StreamingUIRenderer(props: StreamingUIRendererProps) {
       <div class="grid grid-cols-12 gap-4">
         {/* Render received components */}
         <For each={components()}>
-          {(component) => (
-            <div
-              ref={() => handleComponentRender(component.id)}
-              class={`
-                col-span-${component.position.colSpan}
-                ${animatingComponents().has(component.id) ? 'animate-fade-in-up' : ''}
-              `}
-              style={`grid-column-start: ${component.position.colStart}; grid-column-end: ${component.position.colStart + component.position.colSpan}`}
-            >
-              <StreamingComponentRenderer component={component} onError={props.onRenderError} />
-            </div>
-          )}
+          {(component) => {
+            // Trigger animation on mount (SSR-safe, no 'use' directive needed)
+            onMount(() => handleComponentRender(component.id))
+
+            return (
+              <div
+                class={`
+                  col-span-${component.position.colSpan}
+                  ${animatingComponents().has(component.id) ? 'animate-fade-in-up' : ''}
+                `}
+                style={`grid-column-start: ${component.position.colStart}; grid-column-end: ${component.position.colStart + component.position.colSpan}`}
+              >
+                <StreamingComponentRenderer component={component} onError={props.onRenderError} />
+              </div>
+            )
+          }}
         </For>
 
         {/* Skeleton placeholders (if streaming and expecting more) */}
