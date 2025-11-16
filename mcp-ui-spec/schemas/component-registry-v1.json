@@ -1,0 +1,227 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mcp-ui.dev/schemas/component-registry-v1.json",
+  "title": "MCP UI Component Registry",
+  "description": "Schema for defining UI components that can be rendered by MCP UI renderers",
+  "type": "object",
+  "required": ["version", "components"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "1.0.0",
+      "description": "Schema version (semver)"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Optional registry metadata",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Registry name"
+        },
+        "description": {
+          "type": "string",
+          "description": "Registry description"
+        },
+        "author": {
+          "type": "string",
+          "description": "Registry author"
+        },
+        "repository": {
+          "type": "string",
+          "format": "uri",
+          "description": "Repository URL"
+        }
+      }
+    },
+    "components": {
+      "type": "array",
+      "description": "Array of component definitions",
+      "items": {
+        "$ref": "#/definitions/Component"
+      },
+      "minItems": 1
+    }
+  },
+  "definitions": {
+    "Component": {
+      "type": "object",
+      "required": ["id", "type", "name", "schema", "examples"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$",
+          "description": "Unique component identifier (kebab-case)",
+          "examples": ["quickchart-bar", "metric-card", "data-table"]
+        },
+        "type": {
+          "type": "string",
+          "enum": ["chart", "table", "metric", "text", "composite"],
+          "description": "Component category"
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable component name",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string",
+          "description": "Component description for documentation"
+        },
+        "schema": {
+          "type": "object",
+          "description": "JSON Schema for component params validation",
+          "required": ["type", "properties"],
+          "properties": {
+            "type": {
+              "const": "object"
+            },
+            "required": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "properties": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        },
+        "examples": {
+          "type": "array",
+          "description": "Working examples for testing and documentation",
+          "items": {
+            "$ref": "#/definitions/Example"
+          },
+          "minItems": 1
+        },
+        "security": {
+          "type": "object",
+          "description": "Security constraints for the component",
+          "properties": {
+            "requiresAuth": {
+              "type": "boolean",
+              "default": false,
+              "description": "Whether component requires authentication"
+            },
+            "allowedDomains": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "hostname"
+              },
+              "description": "Whitelisted domains for external resources"
+            },
+            "maxIframeDepth": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 3,
+              "default": 1,
+              "description": "Maximum iframe nesting depth"
+            },
+            "sandboxFlags": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "allow-scripts",
+                  "allow-same-origin",
+                  "allow-forms",
+                  "allow-popups",
+                  "allow-modals"
+                ]
+              },
+              "description": "Iframe sandbox flags"
+            }
+          }
+        },
+        "performance": {
+          "type": "object",
+          "description": "Performance constraints",
+          "properties": {
+            "maxRenderTime": {
+              "type": "integer",
+              "minimum": 100,
+              "default": 5000,
+              "description": "Maximum render time in milliseconds"
+            },
+            "maxDataSize": {
+              "type": "integer",
+              "minimum": 1024,
+              "default": 102400,
+              "description": "Maximum data size in bytes (100KB default)"
+            }
+          }
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
+          },
+          "description": "Tags for categorization and search"
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "description": "Component version (semver)"
+        },
+        "deprecated": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether component is deprecated"
+        },
+        "deprecationMessage": {
+          "type": "string",
+          "description": "Deprecation message and migration guide"
+        }
+      }
+    },
+    "Example": {
+      "type": "object",
+      "required": ["name", "params"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Example name",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string",
+          "description": "Example description"
+        },
+        "params": {
+          "type": "object",
+          "description": "Component params for this example"
+        },
+        "position": {
+          "type": "object",
+          "description": "Optional grid position for example",
+          "properties": {
+            "colStart": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 12
+            },
+            "colSpan": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 12
+            },
+            "rowStart": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "rowSpan": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          "required": ["colStart", "colSpan"]
+        }
+      }
+    }
+  }
+}

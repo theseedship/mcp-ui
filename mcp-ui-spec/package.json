@@ -1,0 +1,66 @@
+{
+  "name": "@mcp-ui/spec",
+  "version": "1.0.0",
+  "description": "Component registry specification and JSON Schemas for MCP UI",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    },
+    "./schemas": {
+      "import": "./dist/schemas/index.js",
+      "require": "./dist/schemas/index.cjs",
+      "types": "./dist/schemas/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "schemas",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "vite build && tsc --emitDeclarationOnly --outDir dist",
+    "dev": "vite build --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@typescript-eslint/eslint-plugin": "^6.15.0",
+    "@typescript-eslint/parser": "^6.15.0",
+    "eslint": "^8.56.0",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.10",
+    "vitest": "^1.1.0"
+  },
+  "keywords": [
+    "mcp",
+    "ui",
+    "specification",
+    "json-schema",
+    "component-registry"
+  ],
+  "author": "Gabriel Brument",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/theseedship/mcp-ui.git",
+    "directory": "mcp-ui-spec"
+  },
+  "homepage": "https://github.com/theseedship/mcp-ui#readme",
+  "bugs": {
+    "url": "https://github.com/theseedship/mcp-ui/issues"
+  }
+}

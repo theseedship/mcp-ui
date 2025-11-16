@@ -1,0 +1,368 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "name": "Basic Component Registry",
+    "description": "Example registry with common UI components",
+    "author": "MCP UI Team"
+  },
+  "components": [
+    {
+      "id": "quickchart-bar",
+      "type": "chart",
+      "name": "Bar Chart (Quickchart)",
+      "description": "Renders a bar chart using Quickchart.io API",
+      "schema": {
+        "type": "object",
+        "required": ["type", "data"],
+        "properties": {
+          "type": {
+            "const": "bar"
+          },
+          "title": {
+            "type": "string",
+            "description": "Chart title"
+          },
+          "data": {
+            "type": "object",
+            "required": ["labels", "datasets"],
+            "properties": {
+              "labels": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "X-axis labels"
+              },
+              "datasets": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["label", "data"],
+                  "properties": {
+                    "label": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      }
+                    },
+                    "backgroundColor": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "options": {
+            "type": "object",
+            "description": "Chart.js options"
+          }
+        }
+      },
+      "examples": [
+        {
+          "name": "Monthly Sales",
+          "description": "Simple bar chart showing sales by month",
+          "params": {
+            "type": "bar",
+            "title": "Monthly Sales 2024",
+            "data": {
+              "labels": ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+              "datasets": [
+                {
+                  "label": "Sales ($)",
+                  "data": [12000, 15000, 18000, 14000, 22000, 25000],
+                  "backgroundColor": "rgba(54, 162, 235, 0.8)"
+                }
+              ]
+            }
+          },
+          "position": {
+            "colStart": 1,
+            "colSpan": 6
+          }
+        },
+        {
+          "name": "Comparative Revenue",
+          "description": "Multi-dataset bar chart comparing revenue streams",
+          "params": {
+            "type": "bar",
+            "title": "Revenue by Product Line",
+            "data": {
+              "labels": ["Q1", "Q2", "Q3", "Q4"],
+              "datasets": [
+                {
+                  "label": "Product A",
+                  "data": [45000, 52000, 48000, 65000],
+                  "backgroundColor": "rgba(255, 99, 132, 0.8)"
+                },
+                {
+                  "label": "Product B",
+                  "data": [38000, 42000, 51000, 58000],
+                  "backgroundColor": "rgba(54, 162, 235, 0.8)"
+                }
+              ]
+            }
+          },
+          "position": {
+            "colStart": 7,
+            "colSpan": 6
+          }
+        }
+      ],
+      "security": {
+        "requiresAuth": true,
+        "allowedDomains": ["quickchart.io"],
+        "maxIframeDepth": 1
+      },
+      "performance": {
+        "maxRenderTime": 3000,
+        "maxDataSize": 51200
+      },
+      "tags": ["chart", "visualization", "quickchart", "bar"],
+      "version": "1.0.0"
+    },
+    {
+      "id": "metric-card",
+      "type": "metric",
+      "name": "Metric Card",
+      "description": "Displays a single metric with optional trend indicator",
+      "schema": {
+        "type": "object",
+        "required": ["title", "value"],
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Metric title"
+          },
+          "value": {
+            "type": ["string", "number"],
+            "description": "Metric value"
+          },
+          "unit": {
+            "type": "string",
+            "description": "Optional unit (e.g., '$', '%', 'users')"
+          },
+          "subtitle": {
+            "type": "string",
+            "description": "Optional subtitle or description"
+          },
+          "trend": {
+            "type": "object",
+            "properties": {
+              "direction": {
+                "type": "string",
+                "enum": ["up", "down", "neutral"]
+              },
+              "value": {
+                "type": "number",
+                "description": "Trend percentage"
+              }
+            },
+            "required": ["direction", "value"]
+          }
+        }
+      },
+      "examples": [
+        {
+          "name": "Revenue Metric",
+          "description": "Total revenue with upward trend",
+          "params": {
+            "title": "Total Revenue",
+            "value": "1.2M",
+            "unit": "$",
+            "subtitle": "Last 30 days",
+            "trend": {
+              "direction": "up",
+              "value": 15.3
+            }
+          },
+          "position": {
+            "colStart": 1,
+            "colSpan": 3
+          }
+        },
+        {
+          "name": "User Count",
+          "description": "Active users metric",
+          "params": {
+            "title": "Active Users",
+            "value": 24583,
+            "subtitle": "Currently online",
+            "trend": {
+              "direction": "up",
+              "value": 8.2
+            }
+          },
+          "position": {
+            "colStart": 4,
+            "colSpan": 3
+          }
+        },
+        {
+          "name": "Conversion Rate",
+          "description": "Conversion rate with downward trend",
+          "params": {
+            "title": "Conversion Rate",
+            "value": 3.2,
+            "unit": "%",
+            "subtitle": "Last 7 days",
+            "trend": {
+              "direction": "down",
+              "value": 2.1
+            }
+          },
+          "position": {
+            "colStart": 7,
+            "colSpan": 3
+          }
+        }
+      ],
+      "security": {
+        "requiresAuth": true,
+        "maxIframeDepth": 0
+      },
+      "performance": {
+        "maxRenderTime": 500,
+        "maxDataSize": 1024
+      },
+      "tags": ["metric", "kpi", "card"],
+      "version": "1.0.0"
+    },
+    {
+      "id": "data-table",
+      "type": "table",
+      "name": "Data Table",
+      "description": "Renders tabular data with sorting and pagination",
+      "schema": {
+        "type": "object",
+        "required": ["columns", "rows"],
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Table title"
+          },
+          "columns": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["key", "label"],
+              "properties": {
+                "key": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "width": {
+                  "type": "string"
+                },
+                "sortable": {
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            }
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "maxItems": 1000
+          },
+          "pagination": {
+            "type": "object",
+            "properties": {
+              "currentPage": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "pageSize": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100
+              },
+              "totalRows": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "examples": [
+        {
+          "name": "Sales Report",
+          "description": "Simple sales data table",
+          "params": {
+            "title": "Recent Transactions",
+            "columns": [
+              {
+                "key": "id",
+                "label": "ID",
+                "width": "80px"
+              },
+              {
+                "key": "customer",
+                "label": "Customer"
+              },
+              {
+                "key": "amount",
+                "label": "Amount",
+                "width": "120px"
+              },
+              {
+                "key": "status",
+                "label": "Status",
+                "width": "100px"
+              }
+            ],
+            "rows": [
+              {
+                "id": "TXN-001",
+                "customer": "Acme Corp",
+                "amount": "$1,250.00",
+                "status": "Completed"
+              },
+              {
+                "id": "TXN-002",
+                "customer": "TechStart Inc",
+                "amount": "$890.00",
+                "status": "Pending"
+              },
+              {
+                "id": "TXN-003",
+                "customer": "Global Systems",
+                "amount": "$2,100.00",
+                "status": "Completed"
+              }
+            ],
+            "pagination": {
+              "currentPage": 0,
+              "pageSize": 10,
+              "totalRows": 3
+            }
+          },
+          "position": {
+            "colStart": 1,
+            "colSpan": 12
+          }
+        }
+      ],
+      "security": {
+        "requiresAuth": true,
+        "maxIframeDepth": 0
+      },
+      "performance": {
+        "maxRenderTime": 2000,
+        "maxDataSize": 102400
+      },
+      "tags": ["table", "data", "grid"],
+      "version": "1.0.0"
+    }
+  ]
+}
