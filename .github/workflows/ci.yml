@@ -46,11 +46,11 @@ jobs:
       - name: Lint
         run: pnpm lint || true  # Don't fail on lint errors for now
 
-      - name: Type check
-        run: pnpm typecheck
-
       - name: Build
         run: pnpm build
+
+      - name: Type check
+        run: pnpm typecheck
 
       - name: Test
         run: pnpm test
