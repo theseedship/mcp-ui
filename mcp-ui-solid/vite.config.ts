@@ -3,7 +3,15 @@ import solidPlugin from 'vite-plugin-solid'
 import { resolve } from 'path'
 
 export default defineConfig({
-  plugins: [solidPlugin()],
+  plugins: [
+    solidPlugin({
+      // Don't transform JSX in library mode - let consuming app handle it
+      solid: {
+        generate: 'dom',
+        hydratable: false,
+      },
+    }),
+  ],
   build: {
     lib: {
       entry: {
@@ -23,10 +31,11 @@ export default defineConfig({
           'solid-js/web': 'SolidJSWeb',
           'solid-js/store': 'SolidJSStore',
         },
+        preserveModules: true, // Preserve module structure
       },
     },
     sourcemap: true,
-    minify: 'esbuild',
+    minify: false, // Don't minify library code
   },
   test: {
     globals: true,
