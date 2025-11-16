@@ -5,10 +5,10 @@ import { resolve } from 'path'
 export default defineConfig({
   plugins: [
     solidPlugin({
-      // Don't transform JSX in library mode - let consuming app handle it
+      // SSR-compatible mode: prevents module-level template() calls that crash in Node.js
       solid: {
-        generate: 'dom',
-        hydratable: false,
+        generate: 'ssr',
+        hydratable: true,
       },
     }),
   ],
