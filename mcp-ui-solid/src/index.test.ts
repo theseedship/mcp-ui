@@ -5,7 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import * as mcpUiSolid from './index';
 
-describe('@mcp-ui/solid', () => {
+describe('@seed-ship/mcp-ui-solid', () => {
   it('should export UIResourceRenderer', () => {
     expect(mcpUiSolid.UIResourceRenderer).toBeDefined();
   });

@@ -22,7 +22,7 @@ export default defineConfig({
         'chalk',
         'ora',
         'json-schema-to-typescript',
-        '@mcp-ui/spec',
+        '@seed-ship/mcp-ui-spec',
       ],
     },
     sourcemap: true,

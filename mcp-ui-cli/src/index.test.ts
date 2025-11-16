@@ -5,7 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import * as mcpUiCli from './index';
 
-describe('@mcp-ui/cli', () => {
+describe('@seed-ship/mcp-ui-cli', () => {
   it('should export validateCommand', () => {
     expect(mcpUiCli.validateCommand).toBeDefined();
     expect(typeof mcpUiCli.validateCommand).toBe('function');

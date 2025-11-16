@@ -21,7 +21,7 @@ function formatLogMessage(
   context?: Record<string, unknown>
 ): string {
   const contextStr = context ? ` ${JSON.stringify(context)}` : ''
-  return `[@mcp-ui/solid:${feature}] ${message}${contextStr}`
+  return `[@seed-ship/mcp-ui-solid:${feature}] ${message}${contextStr}`
 }
 
 /**

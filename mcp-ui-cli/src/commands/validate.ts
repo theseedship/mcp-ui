@@ -7,9 +7,9 @@ import { resolve } from 'path'
 import Ajv from 'ajv'
 import chalk from 'chalk'
 import ora from 'ora'
-import { ComponentRegistrySchema, type ComponentRegistry } from '@mcp-ui/spec'
+import { ComponentRegistrySchema, type ComponentRegistry } from '@seed-ship/mcp-ui-spec'
 
-// Load JSON Schema from @mcp-ui/spec package
+// Load JSON Schema from @seed-ship/mcp-ui-spec package
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 
@@ -49,7 +49,7 @@ export async function validateCommand(file: string, options: ValidateOptions) {
     // Load JSON Schema for secondary validation
     const schemaPath = join(
       __dirname,
-      '../../node_modules/@mcp-ui/spec/schemas/component-registry-v1.json'
+      '../../node_modules/@seed-ship/mcp-ui-spec/schemas/component-registry-v1.json'
     )
     let jsonSchemaContent: string
 

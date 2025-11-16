@@ -1,5 +1,5 @@
 /**
- * @mcp-ui/spec
+ * @seed-ship/mcp-ui-spec
  *
  * Component registry specification and validation schemas
  */

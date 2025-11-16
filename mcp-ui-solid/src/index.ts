@@ -1,13 +1,13 @@
 /**
- * @mcp-ui/solid
+ * @seed-ship/mcp-ui-solid
  *
  * SolidJS components and hooks for rendering MCP-generated UI resources
  *
  * @example
  * ```tsx
- * import { UIResourceRenderer, StreamingUIRenderer } from '@mcp-ui/solid'
- * import { useStreamingUI } from '@mcp-ui/solid/hooks'
- * import type { UIComponent, UILayout } from '@mcp-ui/solid/types'
+ * import { UIResourceRenderer, StreamingUIRenderer } from '@seed-ship/mcp-ui-solid'
+ * import { useStreamingUI } from '@seed-ship/mcp-ui-solid/hooks'
+ * import type { UIComponent, UILayout } from '@seed-ship/mcp-ui-solid/types'
  *
  * // Static rendering
  * function Dashboard() {

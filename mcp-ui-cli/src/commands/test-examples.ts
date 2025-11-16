@@ -7,7 +7,7 @@ import { resolve } from 'path'
 import Ajv from 'ajv'
 import chalk from 'chalk'
 import ora from 'ora'
-import type { ComponentRegistry } from '@mcp-ui/spec'
+import type { ComponentRegistry } from '@seed-ship/mcp-ui-spec'
 
 interface TestExamplesOptions {
   component?: string

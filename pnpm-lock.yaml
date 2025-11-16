@@ -17,7 +17,7 @@ importers:
 
   mcp-ui-cli:
     dependencies:
-      '@mcp-ui/spec':
+      '@seed-ship/mcp-ui-spec':
         specifier: workspace:*
         version: link:../mcp-ui-spec
       ajv:

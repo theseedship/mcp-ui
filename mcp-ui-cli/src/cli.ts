@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * @mcp-ui/cli
+ * @seed-ship/mcp-ui-cli
  *
  * Command-line interface for MCP UI component registry operations
  */

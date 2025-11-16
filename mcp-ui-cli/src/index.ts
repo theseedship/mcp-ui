@@ -1,5 +1,5 @@
 /**
- * @mcp-ui/cli
+ * @seed-ship/mcp-ui-cli
  *
  * Programmatic API for CLI operations
  */
