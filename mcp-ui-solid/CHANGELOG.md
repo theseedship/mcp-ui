@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.8] - 2025-11-16
+
+### Fixed
+- **CRITICAL SSR FIX**: Added `isServer` guards to all browser APIs in `GenerativeUIErrorBoundary.tsx`
+  - Previous versions crashed on Railway SSR with: `Error: Client-only API called on the server side`
+  - Browser APIs used without guards: `performance.now()`, `navigator.userAgent`, `window.innerWidth/height`
+  - These APIs don't exist in Node.js SSR environment, causing immediate crashes
+  - Solution: Wrapped all browser API calls with `isServer` conditionals
+  - Affected locations:
+    - Line 114: `createSignal(isServer ? 0 : performance.now())`
+    - Line 118: `const renderEndTime = isServer ? 0 : performance.now()`
+    - Line 130: `userAgent: isServer ? 'server' : navigator.userAgent`
+    - Lines 131-133: `viewport: isServer ? { width: 0, height: 0 } : { width: window.innerWidth, height: window.innerHeight }`
+    - Line 203: `const renderStart = isServer ? 0 : performance.now()` (withPerformanceMonitoring)
+    - Line 212: `if (!isServer && typeof window !== 'undefined')` (requestAnimationFrame guard)
+    - Line 242: `const mountTime = isServer ? 0 : performance.now()` (useComponentTelemetry)
+    - Line 252: `const lifetime = isServer ? 0 : performance.now() - mountTime`
+
+### Technical Details
+- `isServer` is a compile-time constant from `solid-js/web`
+- On server: `isServer = true`, browser APIs return safe defaults (0, 'server', empty viewport)
+- On client: `isServer = false`, real browser APIs are used
+- No runtime overhead: dead code elimination removes unused branches
+- Fully compatible with SolidStart SSR on Railway and other Node.js platforms
+
+### Migration Notes
+- No breaking changes for consumers
+- Drop-in replacement for v1.0.7
+- Fixes production SSR crashes on Railway and similar Node.js SSR platforms
+- Telemetry data will show default values on server-side renders (expected behavior)
+
 ## [1.0.7] - 2025-11-16
 
 ### Fixed

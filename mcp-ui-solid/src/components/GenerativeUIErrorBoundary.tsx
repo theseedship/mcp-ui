@@ -11,6 +11,7 @@
  */
 
 import { Component, ErrorBoundary, createSignal, Show } from 'solid-js'
+import { isServer } from 'solid-js/web'
 import { createLogger } from '../utils/logger'
 import type { RendererError } from '../types'
 
@@ -110,11 +111,11 @@ function DefaultErrorFallback(props: {
  */
 export const GenerativeUIErrorBoundary: Component<GenerativeUIErrorBoundaryProps> = (props) => {
   const [retryKey, setRetryKey] = createSignal(0)
-  const [renderStartTime] = createSignal(performance.now())
+  const [renderStartTime] = createSignal(isServer ? 0 : performance.now())
 
   // Handle error with telemetry
   const handleError = (error: Error) => {
-    const renderEndTime = performance.now()
+    const renderEndTime = isServer ? 0 : performance.now()
     const renderDuration = renderEndTime - renderStartTime()
 
     // Structure error context
@@ -126,11 +127,10 @@ export const GenerativeUIErrorBoundary: Component<GenerativeUIErrorBoundaryProps
       renderDuration,
       retryCount: retryKey(),
       timestamp: new Date().toISOString(),
-      userAgent: navigator.userAgent,
-      viewport: {
-        width: window.innerWidth,
-        height: window.innerHeight,
-      },
+      userAgent: isServer ? 'server' : navigator.userAgent,
+      viewport: isServer
+        ? { width: 0, height: 0 }
+        : { width: window.innerWidth, height: window.innerHeight },
     }
 
     // Log to structured logger
@@ -200,7 +200,7 @@ export function withPerformanceMonitoring<P extends { componentId: string; compo
   WrappedComponent: Component<P>
 ) {
   return (props: P) => {
-    const renderStart = performance.now()
+    const renderStart = isServer ? 0 : performance.now()
 
     // Log render start
     logger.debug(`Component render start: ${props.componentType}`, {
@@ -208,8 +208,8 @@ export function withPerformanceMonitoring<P extends { componentId: string; compo
       timestamp: new Date().toISOString(),
     })
 
-    // Measure on mount completion
-    if (typeof window !== 'undefined') {
+    // Measure on mount completion (client-side only)
+    if (!isServer && typeof window !== 'undefined') {
       requestAnimationFrame(() => {
         const renderEnd = performance.now()
         const duration = renderEnd - renderStart
@@ -239,7 +239,7 @@ export function withPerformanceMonitoring<P extends { componentId: string; compo
  * Hook to track component lifecycle events
  */
 export function useComponentTelemetry(componentId: string, componentType: string) {
-  const mountTime = performance.now()
+  const mountTime = isServer ? 0 : performance.now()
 
   // Log mount
   logger.debug(`Component mounted: ${componentType}`, {
@@ -249,7 +249,7 @@ export function useComponentTelemetry(componentId: string, componentType: string
 
   // Return cleanup function for unmount
   return () => {
-    const lifetime = performance.now() - mountTime
+    const lifetime = isServer ? 0 : performance.now() - mountTime
     logger.debug(`Component unmounted: ${componentType}`, {
       componentId,
       lifetime,
