@@ -85,7 +85,7 @@ function DefaultErrorFallback(props: {
             Component Failed to Render
           </p>
           <p class="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
-            Type: {props.componentType} | ID: {props.componentId.slice(0, 8)}...
+            Type: {props.componentType || 'unknown'} | ID: {props.componentId?.slice(0, 8) || 'unknown'}...
           </p>
           <Show when={import.meta.env.DEV}>
             <p class="text-xs text-yellow-600 dark:text-yellow-400 mt-2 font-mono">
