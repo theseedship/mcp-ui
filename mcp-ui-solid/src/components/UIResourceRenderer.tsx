@@ -317,8 +317,9 @@ function ComponentRenderer(props: {
  */
 export const UIResourceRenderer: Component<UIResourceRendererProps> = (props) => {
   const layout = () => {
-    // Convert single component to layout
-    if ('type' in props.content) {
+    // ✅ PHASE 3.3 FIX: Check if content is a UIComponent (non-composite) vs UILayout (composite)
+    // UILayout has type='composite', UIComponent has type='chart'|'table'|'metric'|'text'
+    if ('type' in props.content && (props.content as any).type !== 'composite') {
       return {
         id: 'single-component',
         components: [props.content as UIComponent],
