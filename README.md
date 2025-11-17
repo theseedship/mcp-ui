@@ -222,7 +222,7 @@ We use [Conventional Commits](https://www.conventionalcommits.org/):
 
 ## 📄 License
 
-MIT © Gabriel Brument
+MIT © TSS
 
 See [LICENSE](./LICENSE) for details.
 
