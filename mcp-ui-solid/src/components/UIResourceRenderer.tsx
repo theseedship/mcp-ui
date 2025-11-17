@@ -333,6 +333,15 @@ export const UIResourceRenderer: Component<UIResourceRendererProps> = (props) =>
 
   // Grid position to CSS Grid styles
   const getGridStyles = (component: UIComponent) => {
+    // ✅ PHASE 3 FIX: Defensive check for position field
+    if (!component.position) {
+      console.error('[UIResourceRenderer] Component missing position field:', component)
+      return {
+        'grid-column': '1 / span 12',
+        'grid-row': 'auto',
+      }
+    }
+
     const { colStart, colSpan, rowStart, rowSpan = 1 } = component.position
 
     return {
@@ -347,6 +356,12 @@ export const UIResourceRenderer: Component<UIResourceRendererProps> = (props) =>
 
   // Convert component grid styles to CSS string
   const getGridStyleString = (component: UIComponent) => {
+    // ✅ PHASE 3 FIX: Defensive check for position field
+    if (!component.position) {
+      console.error('[UIResourceRenderer] Component missing position field:', component)
+      return 'grid-column: 1 / span 12; grid-row: auto' // Default to full width
+    }
+
     const { colStart, colSpan, rowStart, rowSpan = 1 } = component.position
     return `grid-column: ${colStart} / span ${colSpan}; grid-row: ${rowStart ? `${rowStart} / span ${rowSpan}` : 'auto'}`
   }
