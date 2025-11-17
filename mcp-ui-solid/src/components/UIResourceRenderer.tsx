@@ -14,10 +14,11 @@
  * - Error boundaries for isolation
  */
 
-import { Component, createSignal, onMount, Show, For } from 'solid-js'
+import { Component, createSignal, onMount, Show, For, createMemo } from 'solid-js'
 import type { UIComponent, UILayout, RendererError, ComponentType } from '../types'
 import { validateComponent, DEFAULT_RESOURCE_LIMITS } from '../services/validation'
 import { GenerativeUIErrorBoundary } from './GenerativeUIErrorBoundary'
+import { marked } from 'marked'
 
 /**
  * Props for UIResourceRenderer
@@ -251,11 +252,19 @@ function MetricRenderer(props: { component: UIComponent }) {
 function TextRenderer(props: { component: UIComponent }) {
   const textParams = props.component.params as any
 
+  // Convert markdown to HTML if markdown flag is true
+  const htmlContent = createMemo(() => {
+    if (textParams.markdown) {
+      return marked.parse(textParams.content, { async: false }) as string
+    }
+    return textParams.content
+  })
+
   return (
     <div class="w-full h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
       <div
         class={`prose prose-sm dark:prose-invert max-w-none ${textParams.className || ''}`}
-        innerHTML={textParams.content} // Note: Should be sanitized at generation time
+        innerHTML={htmlContent()}
       />
     </div>
   )
