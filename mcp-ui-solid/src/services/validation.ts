@@ -45,6 +45,20 @@ const ALLOWED_IFRAME_DOMAINS = [
 export function validateGridPosition(position: UIComponent['position']): ValidationResult {
   const errors: ValidationResult['errors'] = []
 
+  // ✅ PHASE 3 FIX: Defensive check for undefined position
+  if (!position) {
+    return {
+      valid: false,
+      errors: [
+        {
+          path: 'position',
+          message: 'Position is required',
+          code: 'MISSING_POSITION',
+        },
+      ],
+    }
+  }
+
   if (position.colStart < 1 || position.colStart > 12) {
     errors.push({
       path: 'position.colStart',
