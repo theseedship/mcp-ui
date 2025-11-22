@@ -355,6 +355,42 @@ export function validateComponent(
       }
       break
 
+    case 'iframe':
+      // Basic validation for iframe
+      const iframeParams = component.params as any
+      if (!iframeParams.url) {
+        errors.push({
+          path: 'params',
+          message: 'Iframe component must have url',
+          code: 'INVALID_IFRAME',
+        })
+      }
+      break
+
+    case 'image':
+      // Basic validation for image
+      const imageParams = component.params as any
+      if (!imageParams.url) {
+        errors.push({
+          path: 'params',
+          message: 'Image component must have url',
+          code: 'INVALID_IMAGE',
+        })
+      }
+      break
+
+    case 'link':
+      // Basic validation for link
+      const linkParams = component.params as any
+      if (!linkParams.url) {
+        errors.push({
+          path: 'params',
+          message: 'Link component must have url',
+          code: 'INVALID_LINK',
+        })
+      }
+      break
+
     default:
       errors.push({
         path: 'type',
