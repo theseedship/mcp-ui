@@ -30,7 +30,15 @@ export interface Component {
   deprecationMessage?: string
 }
 
-export type ComponentType = 'chart' | 'table' | 'metric' | 'text' | 'composite'
+export type ComponentType =
+  | 'chart'
+  | 'table'
+  | 'metric'
+  | 'text'
+  | 'composite'
+  | 'iframe'
+  | 'image'
+  | 'link'
 
 export interface ComponentSchema {
   type: 'object'

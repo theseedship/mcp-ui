@@ -220,13 +220,12 @@ function MetricRenderer(props: { component: UIComponent }) {
         <Show when={metricParams.trend}>
           <div class="mt-3 flex items-center">
             <span
-              class={`text-sm font-medium ${
-                metricParams.trend.direction === 'up'
-                  ? 'text-green-600 dark:text-green-400'
-                  : metricParams.trend.direction === 'down'
-                    ? 'text-red-600 dark:text-red-400'
-                    : 'text-gray-600 dark:text-gray-400'
-              }`}
+              class={`text-sm font-medium ${metricParams.trend.direction === 'up'
+                ? 'text-green-600 dark:text-green-400'
+                : metricParams.trend.direction === 'down'
+                  ? 'text-red-600 dark:text-red-400'
+                  : 'text-gray-600 dark:text-gray-400'
+                }`}
             >
               {metricParams.trend.direction === 'up'
                 ? '�'
@@ -267,6 +266,107 @@ function TextRenderer(props: { component: UIComponent }) {
         innerHTML={htmlContent()}
       />
     </div>
+  )
+}
+
+/**
+ * Render an iframe component
+ */
+function IframeRenderer(props: { component: UIComponent }) {
+  const params = props.component.params as any
+  return (
+    <div class="w-full h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col">
+      <Show when={params.title}>
+        <div class="px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+          <h3 class="text-sm font-semibold text-gray-900 dark:text-white">{params.title}</h3>
+        </div>
+      </Show>
+      <iframe
+        src={params.url}
+        title={params.title || 'Embedded content'}
+        class="w-full border-0 flex-1"
+        style={{ height: params.height || '400px', 'min-height': '300px' }}
+        sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+        loading="lazy"
+      />
+    </div>
+  )
+}
+
+/**
+ * Render an image component
+ */
+function ImageRenderer(props: { component: UIComponent }) {
+  const params = props.component.params as any
+  return (
+    <div class="w-full h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col">
+      <div class="flex-1 flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-900 min-h-[200px]">
+        <img
+          src={params.url}
+          alt={params.alt || 'Image'}
+          class="max-w-full max-h-[500px] object-contain rounded shadow-sm"
+          loading="lazy"
+        />
+      </div>
+      <Show when={params.caption}>
+        <div class="p-3 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+          <p class="text-sm text-gray-600 dark:text-gray-400 text-center">{params.caption}</p>
+        </div>
+      </Show>
+    </div>
+  )
+}
+
+/**
+ * Render a link component
+ */
+function LinkRenderer(props: { component: UIComponent }) {
+  const params = props.component.params as any
+  return (
+    <a
+      href={params.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      class="flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors group h-full"
+    >
+      <div class="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-full text-blue-600 dark:text-blue-400 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/50 shrink-0">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="w-5 h-5"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+        </svg>
+      </div>
+      <div class="flex-1 min-w-0">
+        <h4 class="text-sm font-medium text-gray-900 dark:text-white truncate">
+          {params.label || params.url}
+        </h4>
+        <Show when={params.description}>
+          <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{params.description}</p>
+        </Show>
+      </div>
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        class="w-4 h-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 shrink-0"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+        <polyline points="15 3 21 3 21 9" />
+        <line x1="10" y1="14" x2="21" y2="3" />
+      </svg>
+    </a>
   )
 }
 
@@ -316,6 +416,15 @@ function ComponentRenderer(props: {
       </Show>
       <Show when={props.component.type === 'text'}>
         <TextRenderer component={props.component} />
+      </Show>
+      <Show when={props.component.type === 'iframe'}>
+        <IframeRenderer component={props.component} />
+      </Show>
+      <Show when={props.component.type === 'image'}>
+        <ImageRenderer component={props.component} />
+      </Show>
+      <Show when={props.component.type === 'link'}>
+        <LinkRenderer component={props.component} />
       </Show>
     </GenerativeUIErrorBoundary>
   )

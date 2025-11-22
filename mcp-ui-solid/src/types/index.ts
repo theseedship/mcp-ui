@@ -8,7 +8,15 @@
 /**
  * Component types supported by the renderer
  */
-export type ComponentType = 'chart' | 'table' | 'metric' | 'text' | 'grid'
+export type ComponentType =
+  | 'chart'
+  | 'table'
+  | 'metric'
+  | 'text'
+  | 'grid'
+  | 'iframe'
+  | 'image'
+  | 'link'
 
 /**
  * Chart types (powered by Quickchart)
