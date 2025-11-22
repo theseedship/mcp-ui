@@ -285,7 +285,7 @@ function IframeRenderer(props: { component: UIComponent }) {
         src={params.url}
         title={params.title || 'Embedded content'}
         class="w-full border-0 flex-1"
-        style={{ height: params.height || '400px', 'min-height': '300px' }}
+        style={`height: ${params.height || '400px'}; min-height: 300px;`}
         sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
         loading="lazy"
       />
