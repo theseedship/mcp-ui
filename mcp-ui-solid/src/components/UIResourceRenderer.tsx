@@ -15,6 +15,7 @@
  */
 
 import { Component, createSignal, onMount, Show, For, createMemo } from 'solid-js'
+import { isServer } from 'solid-js/web'
 import type { UIComponent, UILayout, RendererError, ComponentType } from '../types'
 import { validateComponent, DEFAULT_RESOURCE_LIMITS } from '../services/validation'
 import { GenerativeUIErrorBoundary } from './GenerativeUIErrorBoundary'
@@ -449,14 +450,17 @@ function ActionRenderer(props: { component: UIComponent }) {
   const handleClick = (e: MouseEvent) => {
     if (params.action === 'tool-call' && params.toolName) {
       e.preventDefault()
-      const event = new CustomEvent('mcp-action', {
-        detail: {
-          toolName: params.toolName,
-          params: params.params || {},
-        },
-        bubbles: true,
-      })
-      window.dispatchEvent(event)
+      // Client-only: CustomEvent and window are not available in SSR
+      if (!isServer && typeof window !== 'undefined') {
+        const event = new CustomEvent('mcp-action', {
+          detail: {
+            toolName: params.toolName,
+            params: params.params || {},
+          },
+          bubbles: true,
+        })
+        window.dispatchEvent(event)
+      }
     }
   }
 

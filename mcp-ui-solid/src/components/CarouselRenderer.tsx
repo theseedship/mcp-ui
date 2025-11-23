@@ -1,4 +1,5 @@
-import { Component, For, createSignal } from 'solid-js'
+import { Component, For, createSignal, onMount } from 'solid-js'
+import { isServer } from 'solid-js/web'
 import { UIResourceRenderer } from './UIResourceRenderer'
 
 // Local definition to avoid missing module error
@@ -15,7 +16,7 @@ export const CarouselRenderer: Component<CarouselRendererProps> = (props) => {
     const [canScrollRight, setCanScrollRight] = createSignal(true)
 
     const checkScroll = () => {
-        if (!scrollContainer) return
+        if (isServer || !scrollContainer) return
         setCanScrollLeft(scrollContainer.scrollLeft > 0)
         setCanScrollRight(
             scrollContainer.scrollLeft < scrollContainer.scrollWidth - scrollContainer.clientWidth - 10
@@ -23,7 +24,7 @@ export const CarouselRenderer: Component<CarouselRendererProps> = (props) => {
     }
 
     const scroll = (direction: 'left' | 'right') => {
-        if (!scrollContainer) return
+        if (isServer || !scrollContainer) return
         const scrollAmount = scrollContainer.clientWidth * 0.8
         scrollContainer.scrollBy({
             left: direction === 'left' ? -scrollAmount : scrollAmount,
