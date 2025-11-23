@@ -391,6 +391,18 @@ export function validateComponent(
       }
       break
 
+    case 'action':
+      // Basic validation for action
+      const actionParams = component.params as any
+      if (!actionParams.label) {
+        errors.push({
+          path: 'params',
+          message: 'Action component must have label',
+          code: 'INVALID_ACTION',
+        })
+      }
+      break
+
     default:
       errors.push({
         path: 'type',

@@ -36,9 +36,9 @@ export type ComponentType =
   | 'metric'
   | 'text'
   | 'composite'
-  | 'iframe'
   | 'image'
   | 'link'
+  | 'action'
 
 export interface ComponentSchema {
   type: 'object'

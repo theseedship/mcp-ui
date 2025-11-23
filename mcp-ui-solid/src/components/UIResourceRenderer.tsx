@@ -301,12 +301,14 @@ function ImageRenderer(props: { component: UIComponent }) {
   return (
     <div class="w-full h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col">
       <div class="flex-1 flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-900 min-h-[200px]">
-        <img
-          src={params.url}
-          alt={params.alt || 'Image'}
-          class="max-w-full max-h-[500px] object-contain rounded shadow-sm"
-          loading="lazy"
-        />
+        <a href={params.url} target="_blank" rel="noopener noreferrer" class="cursor-zoom-in">
+          <img
+            src={params.url}
+            alt={params.alt || 'Image'}
+            class="max-w-full max-h-[500px] object-contain rounded shadow-sm hover:opacity-95 transition-opacity"
+            loading="lazy"
+          />
+        </a>
       </div>
       <Show when={params.caption}>
         <div class="p-3 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
@@ -320,6 +322,9 @@ function ImageRenderer(props: { component: UIComponent }) {
 /**
  * Render a link component
  */
+/**
+ * Render a link component
+ */
 function LinkRenderer(props: { component: UIComponent }) {
   const params = props.component.params as any
   return (
@@ -328,8 +333,9 @@ function LinkRenderer(props: { component: UIComponent }) {
       target="_blank"
       rel="noopener noreferrer"
       class="flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors group h-full"
+      onClick={(e) => e.stopPropagation()}
     >
-      <div class="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-full text-blue-600 dark:text-blue-400 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/50 shrink-0">
+      <div class="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-full text-blue-600 dark:text-blue-400 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/50 shrink-0 transition-colors">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           class="w-5 h-5"
@@ -345,7 +351,7 @@ function LinkRenderer(props: { component: UIComponent }) {
         </svg>
       </div>
       <div class="flex-1 min-w-0">
-        <h4 class="text-sm font-medium text-gray-900 dark:text-white truncate">
+        <h4 class="text-sm font-medium text-gray-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
           {params.label || params.url}
         </h4>
         <Show when={params.description}>
@@ -354,7 +360,7 @@ function LinkRenderer(props: { component: UIComponent }) {
       </div>
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        class="w-4 h-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 shrink-0"
+        class="w-4 h-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 shrink-0 transition-colors"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -426,7 +432,73 @@ function ComponentRenderer(props: {
       <Show when={props.component.type === 'link'}>
         <LinkRenderer component={props.component} />
       </Show>
+      <Show when={props.component.type === 'action'}>
+        <ActionRenderer component={props.component} />
+      </Show>
     </GenerativeUIErrorBoundary>
+  )
+}
+
+/**
+ * Render an action component (button or link)
+ */
+function ActionRenderer(props: { component: UIComponent }) {
+  const params = props.component.params as any
+
+  // Handle click to execute tool via window event
+  const handleClick = (e: MouseEvent) => {
+    if (params.action === 'tool-call' && params.toolName) {
+      e.preventDefault()
+      const event = new CustomEvent('mcp-action', {
+        detail: {
+          toolName: params.toolName,
+          params: params.params || {},
+        },
+        bubbles: true,
+      })
+      window.dispatchEvent(event)
+    }
+  }
+
+  if (params.type === 'link' || params.action === 'link') {
+    return (
+      <a
+        href={params.url || '#'}
+        target={params.url ? '_blank' : undefined}
+        rel="noopener noreferrer"
+        class={`inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors
+          ${params.variant === 'primary' ? 'bg-blue-600 text-white hover:bg-blue-700' :
+            params.variant === 'outline' ? 'border border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800' :
+              'text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300'}`}
+        onClick={handleClick}
+      >
+        <Show when={params.icon}>
+          <span>{params.icon}</span>
+        </Show>
+        {params.label}
+      </a>
+    )
+  }
+
+  return (
+    <button
+      type={params.action === 'submit' ? 'submit' : 'button'}
+      disabled={params.disabled}
+      class={`inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500
+        ${params.variant === 'primary' ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm' :
+          params.variant === 'secondary' ? 'bg-gray-100 text-gray-900 hover:bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600' :
+            params.variant === 'outline' ? 'border border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800' :
+              params.variant === 'danger' ? 'bg-red-600 text-white hover:bg-red-700' :
+                'bg-transparent text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'}
+        ${params.disabled ? 'opacity-50 cursor-not-allowed' : ''}
+        ${params.size === 'sm' ? 'px-3 py-1.5 text-xs' : params.size === 'lg' ? 'px-6 py-3 text-base' : ''}`}
+      onClick={handleClick}
+    >
+      <Show when={params.icon}>
+        <span>{params.icon}</span>
+      </Show>
+      {params.label}
+    </button>
   )
 }
 

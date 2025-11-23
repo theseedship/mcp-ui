@@ -5,9 +5,9 @@ import { resolve } from 'path'
 export default defineConfig({
   plugins: [
     solidPlugin({
-      // SSR-compatible mode: prevents module-level template() calls that crash in Node.js
+      // Client-side mode with SSR support: generates DOM rendering code with hydration
       solid: {
-        generate: 'ssr',
+        generate: 'dom',
         hydratable: true,
       },
     }),
