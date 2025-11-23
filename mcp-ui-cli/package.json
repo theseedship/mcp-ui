@@ -1,6 +1,6 @@
 {
   "name": "@seed-ship/mcp-ui-cli",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "description": "CLI tools for validating and generating MCP UI component registries",
   "type": "module",
   "bin": {
