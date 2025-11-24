@@ -111,12 +111,30 @@ function DefaultErrorFallback(props: {
  */
 export const GenerativeUIErrorBoundary: Component<GenerativeUIErrorBoundaryProps> = (props) => {
   const [retryKey, setRetryKey] = createSignal(0)
-  const [renderStartTime] = createSignal(isServer ? 0 : performance.now())
+  // SSR-safe: Initialize performance timing
+  let initialRenderTime = 0
+  if (!isServer && typeof performance !== 'undefined') {
+    initialRenderTime = performance.now()
+  }
+  const [renderStartTime] = createSignal(initialRenderTime)
 
   // Handle error with telemetry
   const handleError = (error: Error) => {
-    const renderEndTime = isServer ? 0 : performance.now()
+    // SSR-safe: Calculate render duration
+    let renderEndTime = 0
+    if (!isServer && typeof performance !== 'undefined') {
+      renderEndTime = performance.now()
+    }
     const renderDuration = renderEndTime - renderStartTime()
+
+    // SSR-safe: Get client-only context
+    let userAgent = 'server'
+    let viewport = { width: 0, height: 0 }
+
+    if (!isServer && typeof window !== 'undefined') {
+      userAgent = navigator.userAgent
+      viewport = { width: window.innerWidth, height: window.innerHeight }
+    }
 
     // Structure error context
     const errorContext = {
@@ -127,10 +145,8 @@ export const GenerativeUIErrorBoundary: Component<GenerativeUIErrorBoundaryProps
       renderDuration,
       retryCount: retryKey(),
       timestamp: new Date().toISOString(),
-      userAgent: isServer ? 'server' : navigator.userAgent,
-      viewport: isServer
-        ? { width: 0, height: 0 }
-        : { width: window.innerWidth, height: window.innerHeight },
+      userAgent,
+      viewport,
     }
 
     // Log to structured logger
@@ -200,7 +216,11 @@ export function withPerformanceMonitoring<P extends { componentId: string; compo
   WrappedComponent: Component<P>
 ) {
   return (props: P) => {
-    const renderStart = isServer ? 0 : performance.now()
+    // SSR-safe: Performance timing
+    let renderStart = 0
+    if (!isServer && typeof performance !== 'undefined') {
+      renderStart = performance.now()
+    }
 
     // Log render start
     logger.debug(`Component render start: ${props.componentType}`, {
@@ -239,7 +259,11 @@ export function withPerformanceMonitoring<P extends { componentId: string; compo
  * Hook to track component lifecycle events
  */
 export function useComponentTelemetry(componentId: string, componentType: string) {
-  const mountTime = isServer ? 0 : performance.now()
+  // SSR-safe: Performance timing
+  let mountTime = 0
+  if (!isServer && typeof performance !== 'undefined') {
+    mountTime = performance.now()
+  }
 
   // Log mount
   logger.debug(`Component mounted: ${componentType}`, {
@@ -249,7 +273,10 @@ export function useComponentTelemetry(componentId: string, componentType: string
 
   // Return cleanup function for unmount
   return () => {
-    const lifetime = isServer ? 0 : performance.now() - mountTime
+    let lifetime = 0
+    if (!isServer && typeof performance !== 'undefined') {
+      lifetime = performance.now() - mountTime
+    }
     logger.debug(`Component unmounted: ${componentType}`, {
       componentId,
       lifetime,
