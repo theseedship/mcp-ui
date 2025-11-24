@@ -22,11 +22,13 @@
  */
 
 import { createSignal, onCleanup } from 'solid-js'
-import { isServer } from 'solid-js/web'
 import type { UIComponent } from '../types'
 import { createLogger } from '../utils/logger'
 
 const logger = createLogger('useStreamingUI')
+
+// SSR detection without importing solid-js/web (which might cause bundler issues)
+const isServer = typeof window === 'undefined'
 
 // ============================================================================
 // Types
