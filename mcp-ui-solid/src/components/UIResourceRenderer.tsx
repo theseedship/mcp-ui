@@ -441,22 +441,30 @@ function ComponentRenderer(props: {
  */
 function ActionRenderer(props: { component: UIComponent }) {
   const params = props.component.params as any
+  let dispatchAction: ((toolName: string, toolParams: any) => void) | null = null
 
-  // Handle click to execute tool via window event
-  const handleClick = (e: MouseEvent) => {
-    if (params.action === 'tool-call' && params.toolName) {
-      e.preventDefault()
-      // Client-only: CustomEvent and window are not available in SSR
-      if (!isServer && typeof window !== 'undefined') {
+  // Initialize CustomEvent dispatcher only on client-side
+  onMount(() => {
+    if (typeof window !== 'undefined') {
+      dispatchAction = (toolName: string, toolParams: any) => {
         const event = new CustomEvent('mcp-action', {
           detail: {
-            toolName: params.toolName,
-            params: params.params || {},
+            toolName,
+            params: toolParams,
           },
           bubbles: true,
         })
         window.dispatchEvent(event)
       }
+    }
+  })
+
+  // Handle click to execute tool via window event
+  const handleClick = (e: MouseEvent) => {
+    if (params.action === 'tool-call' && params.toolName) {
+      e.preventDefault()
+      // SSR-safe: Only call if dispatcher was initialized client-side
+      dispatchAction?.(params.toolName, params.params || {})
     }
   }
 
