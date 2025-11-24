@@ -1,6 +1,6 @@
 {
   "name": "@seed-ship/mcp-ui-solid",
-  "version": "1.0.30",
+  "version": "1.0.31",
   "description": "SolidJS components for rendering MCP-generated UI resources",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -8,34 +8,34 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "solid": "./dist/index.js",
       "import": "./dist/index.js",
-      "require": "./dist/index.cjs",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/index.cjs"
     },
     "./components": {
+      "types": "./dist/components.d.ts",
       "solid": "./dist/components.js",
       "import": "./dist/components.js",
-      "require": "./dist/components.cjs",
-      "types": "./dist/components/index.d.ts"
+      "require": "./dist/components.cjs"
     },
     "./hooks": {
+      "types": "./dist/hooks.d.ts",
       "solid": "./dist/hooks.js",
       "import": "./dist/hooks.js",
-      "require": "./dist/hooks.cjs",
-      "types": "./dist/hooks/index.d.ts"
+      "require": "./dist/hooks.cjs"
     },
     "./types": {
+      "types": "./dist/types.d.ts",
       "solid": "./dist/types.js",
       "import": "./dist/types.js",
-      "require": "./dist/types.cjs",
-      "types": "./dist/types/index.d.ts"
+      "require": "./dist/types.cjs"
     },
     "./validation": {
+      "types": "./dist/validation.d.ts",
       "solid": "./dist/validation.js",
       "import": "./dist/validation.js",
-      "require": "./dist/validation.cjs",
-      "types": "./dist/validation.d.ts"
+      "require": "./dist/validation.cjs"
     },
     "./types-only": {
       "types": "./dist/types-export.d.ts",
@@ -45,7 +45,7 @@
   },
   "scripts": {
     "build": "vite build && pnpm build:types",
-    "build:types": "tsc --emitDeclarationOnly --outDir dist --skipLibCheck",
+    "build:types": "tsc --declaration --emitDeclarationOnly --outDir dist --composite false && cp dist/components/index.d.ts dist/components.d.ts 2>/dev/null || true && cp dist/hooks/index.d.ts dist/hooks.d.ts 2>/dev/null || true && cp dist/types/index.d.ts dist/types.d.ts 2>/dev/null || true",
     "dev": "vite build --watch",
     "test": "vitest run",
     "test:watch": "vitest",

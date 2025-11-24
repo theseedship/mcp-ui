@@ -33,7 +33,8 @@ export default defineConfig({
           'solid-js/web': 'SolidJSWeb',
           'solid-js/store': 'SolidJSStore',
         },
-        preserveModules: false, // Flatten module structure
+        preserveModules: true, // Preserve directory structure for proper sub-exports
+        preserveModulesRoot: 'src',
       },
     },
     sourcemap: true,
