@@ -1,6 +1,6 @@
 {
   "name": "@seed-ship/mcp-ui-solid",
-  "version": "1.0.29",
+  "version": "1.0.30",
   "description": "SolidJS components for rendering MCP-generated UI resources",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -14,21 +14,21 @@
       "types": "./dist/index.d.ts"
     },
     "./components": {
-      "solid": "./dist/components/index.js",
-      "import": "./dist/components/index.js",
-      "require": "./dist/components/index.cjs",
+      "solid": "./dist/components.js",
+      "import": "./dist/components.js",
+      "require": "./dist/components.cjs",
       "types": "./dist/components/index.d.ts"
     },
     "./hooks": {
-      "solid": "./dist/hooks/index.js",
-      "import": "./dist/hooks/index.js",
-      "require": "./dist/hooks/index.cjs",
+      "solid": "./dist/hooks.js",
+      "import": "./dist/hooks.js",
+      "require": "./dist/hooks.cjs",
       "types": "./dist/hooks/index.d.ts"
     },
     "./types": {
-      "solid": "./dist/types/index.js",
-      "import": "./dist/types/index.js",
-      "require": "./dist/types/index.cjs",
+      "solid": "./dist/types.js",
+      "import": "./dist/types.js",
+      "require": "./dist/types.cjs",
       "types": "./dist/types/index.d.ts"
     },
     "./validation": {
@@ -43,11 +43,6 @@
       "require": "./dist/types-export.cjs"
     }
   },
-  "files": [
-    "dist",
-    "README.md",
-    "CHANGELOG.md"
-  ],
   "scripts": {
     "build": "vite build && pnpm build:types",
     "build:types": "tsc --emitDeclarationOnly --outDir dist --skipLibCheck",
@@ -63,6 +58,8 @@
     "solid-js": "^1.9.0"
   },
   "dependencies": {
+    "@types/dompurify": "^3.0.5",
+    "dompurify": "^3.3.0",
     "marked": "^16.3.0",
     "zod": "^3.22.4"
   },

@@ -1,19 +1,9 @@
 /**
  * UI Resource Renderer Component
  * Phase 0: Foundation with iframe sandbox and composite grid support
- *
- * Security features:
- * - Sandboxed iframes for untrusted content
- * - CSP enforcement via middleware
- * - XSS prevention with DOMPurify
- * - Domain whitelist validation
- *
- * Performance:
- * - Lazy loading with Intersection Observer
- * - Render timeout enforcement
- * - Error boundaries for isolation
  */
 
+import DOMPurify from 'dompurify'
 import { Component, createSignal, onMount, Show, For, createMemo } from 'solid-js'
 import { isServer } from 'solid-js/web'
 import type { UIComponent, UILayout, RendererError, ComponentType } from '../types'
@@ -167,7 +157,13 @@ function TableRenderer(props: {
                     <For each={tableParams.columns}>
                       {(column: any) => (
                         <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-200 whitespace-normal break-words leading-relaxed first:pl-6 last:pr-6">
-                          {row[column.key] || '-'}
+                          <div
+                            innerHTML={
+                              typeof row[column.key] === 'string' && (row[column.key].includes('[') || row[column.key].includes('**') || row[column.key].includes('`'))
+                                ? DOMPurify.sanitize(marked.parse(row[column.key], { async: false }) as string, { ADD_ATTR: ['target', 'rel'] })
+                                : (row[column.key] || '-')
+                            }
+                          />
                         </td>
                       )}
                     </For>
