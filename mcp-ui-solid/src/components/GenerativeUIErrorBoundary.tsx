@@ -10,7 +10,7 @@
  * - User-friendly fallback UI
  */
 
-import { Component, ErrorBoundary, createSignal, Show } from 'solid-js'
+import { Component, ErrorBoundary, createSignal, Show, onMount } from 'solid-js'
 import { isServer } from 'solid-js/web'
 import { createLogger } from '../utils/logger'
 import type { RendererError } from '../types'
@@ -111,30 +111,29 @@ function DefaultErrorFallback(props: {
  */
 export const GenerativeUIErrorBoundary: Component<GenerativeUIErrorBoundaryProps> = (props) => {
   const [retryKey, setRetryKey] = createSignal(0)
-  // SSR-safe: Initialize performance timing
-  let initialRenderTime = 0
-  if (!isServer && typeof performance !== 'undefined') {
-    initialRenderTime = performance.now()
-  }
-  const [renderStartTime] = createSignal(initialRenderTime)
+  const [renderStartTime, setRenderStartTime] = createSignal(0)
+
+  // SSR-safe: Initialize performance timing on client only
+  onMount(() => {
+    if (typeof performance !== 'undefined') {
+      setRenderStartTime(performance.now())
+    }
+  })
 
   // Handle error with telemetry
   const handleError = (error: Error) => {
     // SSR-safe: Calculate render duration
-    let renderEndTime = 0
-    if (!isServer && typeof performance !== 'undefined') {
-      renderEndTime = performance.now()
-    }
-    const renderDuration = renderEndTime - renderStartTime()
+    const renderDuration = !isServer && typeof performance !== 'undefined'
+      ? performance.now() - renderStartTime()
+      : 0
 
     // SSR-safe: Get client-only context
-    let userAgent = 'server'
-    let viewport = { width: 0, height: 0 }
-
-    if (!isServer && typeof window !== 'undefined') {
-      userAgent = navigator.userAgent
-      viewport = { width: window.innerWidth, height: window.innerHeight }
-    }
+    const userAgent = !isServer && typeof navigator !== 'undefined'
+      ? navigator.userAgent
+      : 'server'
+    const viewport = !isServer && typeof window !== 'undefined'
+      ? { width: window.innerWidth, height: window.innerHeight }
+      : { width: 0, height: 0 }
 
     // Structure error context
     const errorContext = {
@@ -216,11 +215,7 @@ export function withPerformanceMonitoring<P extends { componentId: string; compo
   WrappedComponent: Component<P>
 ) {
   return (props: P) => {
-    // SSR-safe: Performance timing
-    let renderStart = 0
-    if (!isServer && typeof performance !== 'undefined') {
-      renderStart = performance.now()
-    }
+    const [renderStart, setRenderStart] = createSignal(0)
 
     // Log render start
     logger.debug(`Component render start: ${props.componentType}`, {
@@ -228,28 +223,32 @@ export function withPerformanceMonitoring<P extends { componentId: string; compo
       timestamp: new Date().toISOString(),
     })
 
-    // Measure on mount completion (client-side only)
-    if (!isServer && typeof window !== 'undefined') {
-      requestAnimationFrame(() => {
-        const renderEnd = performance.now()
-        const duration = renderEnd - renderStart
+    // SSR-safe: Measure on mount completion (client-side only)
+    onMount(() => {
+      if (typeof performance !== 'undefined') {
+        setRenderStart(performance.now())
 
-        logger.info(`Component rendered: ${props.componentType}`, {
-          componentId: props.componentId,
-          renderDuration: duration,
-          timestamp: new Date().toISOString(),
-        })
+        requestAnimationFrame(() => {
+          const renderEnd = performance.now()
+          const duration = renderEnd - renderStart()
 
-        // Warn if render is slow (>50ms target)
-        if (duration > 50) {
-          logger.warn(`Slow component render: ${props.componentType}`, {
+          logger.info(`Component rendered: ${props.componentType}`, {
             componentId: props.componentId,
             renderDuration: duration,
-            threshold: 50,
+            timestamp: new Date().toISOString(),
           })
-        }
-      })
-    }
+
+          // Warn if render is slow (>50ms target)
+          if (duration > 50) {
+            logger.warn(`Slow component render: ${props.componentType}`, {
+              componentId: props.componentId,
+              renderDuration: duration,
+              threshold: 50,
+            })
+          }
+        })
+      }
+    })
 
     return <WrappedComponent {...props} />
   }
@@ -259,24 +258,26 @@ export function withPerformanceMonitoring<P extends { componentId: string; compo
  * Hook to track component lifecycle events
  */
 export function useComponentTelemetry(componentId: string, componentType: string) {
-  // SSR-safe: Performance timing
-  let mountTime = 0
-  if (!isServer && typeof performance !== 'undefined') {
-    mountTime = performance.now()
-  }
+  const [mountTime, setMountTime] = createSignal(0)
 
-  // Log mount
-  logger.debug(`Component mounted: ${componentType}`, {
-    componentId,
-    timestamp: new Date().toISOString(),
+  // SSR-safe: Initialize mount time on client only
+  onMount(() => {
+    if (typeof performance !== 'undefined') {
+      setMountTime(performance.now())
+    }
+
+    // Log mount
+    logger.debug(`Component mounted: ${componentType}`, {
+      componentId,
+      timestamp: new Date().toISOString(),
+    })
   })
 
   // Return cleanup function for unmount
   return () => {
-    let lifetime = 0
-    if (!isServer && typeof performance !== 'undefined') {
-      lifetime = performance.now() - mountTime
-    }
+    const lifetime = !isServer && typeof performance !== 'undefined'
+      ? performance.now() - mountTime()
+      : 0
     logger.debug(`Component unmounted: ${componentType}`, {
       componentId,
       lifetime,
