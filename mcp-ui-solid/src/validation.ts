@@ -1,7 +1,7 @@
 /**
  * SSR-safe validation exports
  *
- * This file ONLY exports validation functions and types,
+ * This module ONLY exports validation functions and types,
  * WITHOUT loading any UI components that contain client-only APIs.
  *
  * Use this for server-side validation:
@@ -21,7 +21,7 @@ export {
   validateIframeDomain,
   sanitizeString,
   DEFAULT_RESOURCE_LIMITS,
-} from './dist/services/validation.js'
+} from './services/validation'
 
 // Re-export types only (no runtime code)
 export type {
@@ -35,4 +35,4 @@ export type {
   TextComponentParams,
   ValidationResult,
   ResourceLimits,
-} from './dist/types/index.js'
+} from './types'

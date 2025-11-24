@@ -19,6 +19,7 @@ export default defineConfig({
         components: resolve(__dirname, 'src/components/index.ts'),
         hooks: resolve(__dirname, 'src/hooks/index.ts'),
         types: resolve(__dirname, 'src/types/index.ts'),
+        validation: resolve(__dirname, 'src/validation.ts'),
       },
       name: 'McpUiSolid',
       formats: ['es', 'cjs'],
