@@ -1,6 +1,6 @@
 {
   "name": "@seed-ship/mcp-ui-solid",
-  "version": "1.0.28",
+  "version": "1.0.29",
   "description": "SolidJS components for rendering MCP-generated UI resources",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -36,6 +36,11 @@
       "import": "./dist/validation.js",
       "require": "./dist/validation.cjs",
       "types": "./dist/validation.d.ts"
+    },
+    "./types-only": {
+      "types": "./dist/types-export.d.ts",
+      "import": "./dist/types-export.js",
+      "require": "./dist/types-export.cjs"
     }
   },
   "files": [

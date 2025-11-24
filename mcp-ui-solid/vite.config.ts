@@ -20,6 +20,7 @@ export default defineConfig({
         hooks: resolve(__dirname, 'src/hooks/index.ts'),
         types: resolve(__dirname, 'src/types/index.ts'),
         validation: resolve(__dirname, 'src/validation.ts'),
+        'types-export': resolve(__dirname, 'src/types-export.ts'),
       },
       name: 'McpUiSolid',
       formats: ['es', 'cjs'],
