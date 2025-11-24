@@ -22,6 +22,7 @@
  */
 
 import { createSignal, onCleanup } from 'solid-js'
+import { isServer } from 'solid-js/web'
 import type { UIComponent } from '../types'
 import { createLogger } from '../utils/logger'
 
@@ -310,6 +311,19 @@ export function useStreamingUI(options: UseStreamingUIOptions) {
    * Start SSE streaming
    */
   const startStreaming = () => {
+    // SSR Guard: Prevent execution on server-side (Node.js environment)
+    // fetch() and ReadableStream APIs are only available in browsers
+    if (isServer) {
+      logger.warn('startStreaming called on server-side - skipping')
+      setError({
+        error: 'ssr',
+        message: 'Streaming UI cannot start on server-side',
+        recoverable: false,
+      })
+      setIsLoading(false)
+      return
+    }
+
     // Reset state
     setComponents([])
     setError(null)
