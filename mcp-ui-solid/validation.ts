@@ -21,7 +21,7 @@ export {
   validateIframeDomain,
   sanitizeString,
   DEFAULT_RESOURCE_LIMITS,
-} from './src/services/validation'
+} from './dist/services/validation.js'
 
 // Re-export types only (no runtime code)
 export type {
@@ -35,4 +35,4 @@ export type {
   TextComponentParams,
   ValidationResult,
   ResourceLimits,
-} from './src/types'
+} from './dist/types/index.js'
