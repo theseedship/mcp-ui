@@ -4,7 +4,7 @@
  */
 
 import DOMPurify from 'dompurify'
-import { Component, createSignal, onMount, Show, For, createMemo } from 'solid-js'
+import { Component, createSignal, Show, For, createMemo, createEffect } from 'solid-js'
 import { isServer } from 'solid-js/web'
 import type { UIComponent, UILayout, RendererError, ComponentType } from '../types'
 import { validateComponent, DEFAULT_RESOURCE_LIMITS } from '../services/validation'
@@ -47,8 +47,11 @@ function ChartRenderer(props: {
   const [isLoading, setIsLoading] = createSignal(true)
   const [error, setError] = createSignal<string>()
 
-  onMount(() => {
+  // Use createEffect instead of onMount for SSR compatibility
+  // createEffect runs after hydration on client-side
+  createEffect(() => {
     const chartParams = props.component.params as any
+    if (!chartParams) return
 
     // Build Quickchart URL
     const chartConfig = {
@@ -444,7 +447,8 @@ function ActionRenderer(props: { component: UIComponent }) {
   let dispatchAction: ((toolName: string, toolParams: any) => void) | null = null
 
   // Initialize CustomEvent dispatcher only on client-side
-  onMount(() => {
+  // Use createEffect instead of onMount for SSR compatibility
+  createEffect(() => {
     if (typeof window !== 'undefined') {
       dispatchAction = (toolName: string, toolParams: any) => {
         const event = new CustomEvent('mcp-action', {
