@@ -15,6 +15,50 @@ import { useAction } from '../hooks/useAction'
 import { marked } from 'marked'
 
 /**
+ * Copy button component with visual feedback
+ */
+function CopyButton(props: { getText: () => string; title?: string; position?: 'top-right' | 'bottom-right' }) {
+  const [copied, setCopied] = createSignal(false)
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(props.getText())
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
+    }
+  }
+
+  const positionClasses = () => {
+    return props.position === 'bottom-right'
+      ? 'absolute -right-2 -bottom-3'
+      : 'absolute right-2 top-2'
+  }
+
+  return (
+    <button
+      onClick={handleCopy}
+      class={`${positionClasses()} opacity-60 hover:opacity-100 px-2 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-all shadow-sm z-10`}
+      title={props.title || 'Copy'}
+    >
+      <Show
+        when={!copied()}
+        fallback={
+          <svg class="w-3 h-3 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+        }
+      >
+        <svg class="w-3 h-3 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+        </svg>
+      </Show>
+    </button>
+  )
+}
+
+/**
  * Props for UIResourceRenderer
  */
 export interface UIResourceRendererProps {
@@ -200,8 +244,25 @@ function TableRenderer(props: {
 }) {
   const tableParams = props.component.params as any
 
+  // Generate copyable text from table data (TSV format for spreadsheet compatibility)
+  const getTableText = () => {
+    const columns = tableParams.columns || []
+    const rows = tableParams.rows || []
+    const header = columns.map((c: any) => c.label).join('\t')
+    const dataRows = rows.map((row: any) =>
+      columns.map((c: any) => {
+        const value = row[c.key]
+        if (value === null || value === undefined) return ''
+        if (typeof value === 'object') return value.name || value.label || JSON.stringify(value)
+        return String(value)
+      }).join('\t')
+    ).join('\n')
+    return `${header}\n${dataRows}`
+  }
+
   return (
-    <div class="w-full h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div class="relative w-full h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden group">
+      <CopyButton getText={getTableText} title="Copy table data" position="top-right" />
       <div class="p-4">
         <Show when={tableParams.title}>
           <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">
@@ -267,8 +328,17 @@ function TableRenderer(props: {
 function MetricRenderer(props: { component: UIComponent }) {
   const metricParams = props.component.params as any
 
+  // Generate copyable text for metric
+  const getMetricText = () => {
+    const title = metricParams.title || metricParams.label || ''
+    const value = metricParams.value
+    const unit = metricParams.unit || ''
+    return `${title}: ${value}${unit ? ' ' + unit : ''}`
+  }
+
   return (
-    <div class="w-full h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+    <div class="relative w-full h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 group">
+      <CopyButton getText={getMetricText} title="Copy metric" position="top-right" />
       <div class="flex flex-col h-full justify-between">
         <div>
           <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
@@ -355,12 +425,18 @@ function TextRenderer(props: { component: UIComponent }) {
     return textParams.content
   })
 
+  // Get plain text content for copying (strip markdown/HTML)
+  const getTextContent = () => {
+    return textParams.content || ''
+  }
+
   // Render as image component if we extracted image data
   return (
     <Show
       when={imageData()}
       fallback={
-        <div class="w-full h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+        <div class="relative w-full h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 group">
+          <CopyButton getText={getTextContent} title="Copy text" position="top-right" />
           <div
             class={`prose prose-sm dark:prose-invert max-w-none ${textParams.className || ''}`}
             innerHTML={htmlContent()}
