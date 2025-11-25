@@ -119,6 +119,55 @@ function ChartRenderer(props: {
 }
 
 /**
+ * Smart cell value renderer that handles markdown links and other formats
+ */
+function renderCellValue(value: any): string {
+  // Handle null/undefined
+  if (value === null || value === undefined) {
+    return '-'
+  }
+
+  // Convert to string
+  let strValue = String(value)
+
+  // Clean up "undefined" patterns from backend data
+  // Pattern 1: "Text – undefined" or "Text - undefined" → "Text"
+  strValue = strValue.replace(/\s*[–-]\s*undefined\s*$/gi, '')
+  // Pattern 2: "undefined – Text" or "undefined - Text" → "Text"
+  strValue = strValue.replace(/^undefined\s*[–-]\s*/gi, '')
+  // Pattern 3: standalone "undefined" → "-"
+  if (strValue.trim().toLowerCase() === 'undefined') {
+    return '-'
+  }
+  // Pattern 4: empty string after cleanup → "-"
+  if (strValue.trim() === '') {
+    return '-'
+  }
+
+  // Detect and convert markdown links: [text](url)
+  const markdownLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/g
+  if (markdownLinkRegex.test(strValue)) {
+    // Replace all markdown links with HTML links
+    const htmlValue = strValue.replace(
+      /\[([^\]]+)\]\(([^)]+)\)/g,
+      '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-blue-600 dark:text-blue-400 hover:underline">$1</a>'
+    )
+    return DOMPurify.sanitize(htmlValue, { ADD_ATTR: ['target', 'rel'] })
+  }
+
+  // Check if value contains markdown formatting (bold, italic, code, etc.)
+  const hasMarkdown = /[*_`\[\]#]/.test(strValue)
+  if (hasMarkdown) {
+    // Parse with marked and sanitize
+    const parsed = marked.parse(strValue, { async: false }) as string
+    return DOMPurify.sanitize(parsed, { ADD_ATTR: ['target', 'rel'] })
+  }
+
+  // Plain text
+  return strValue
+}
+
+/**
  * Render a table component
  */
 function TableRenderer(props: {
@@ -160,13 +209,7 @@ function TableRenderer(props: {
                     <For each={tableParams.columns}>
                       {(column: any) => (
                         <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-200 whitespace-normal break-words leading-relaxed first:pl-6 last:pr-6">
-                          <div
-                            innerHTML={
-                              typeof row[column.key] === 'string' && (row[column.key].includes('[') || row[column.key].includes('**') || row[column.key].includes('`'))
-                                ? DOMPurify.sanitize(marked.parse(row[column.key], { async: false }) as string, { ADD_ATTR: ['target', 'rel'] })
-                                : (row[column.key] || '-')
-                            }
-                          />
+                          <div innerHTML={renderCellValue(row[column.key])} />
                         </td>
                       )}
                     </For>
@@ -246,26 +289,79 @@ function MetricRenderer(props: { component: UIComponent }) {
 }
 
 /**
+ * Extract image data from markdown image link format
+ * Pattern: [![alt](image-url)](link-url)\n*Photo by Author*
+ */
+function extractImageFromMarkdown(content: string): { alt: string; imageUrl: string; linkUrl: string; credit: string } | null {
+  // Pattern: [![alt text](image-url)](link-url) followed by optional credit line
+  const imagePattern = /\[!\[([^\]]*)\]\(([^)]+)\)\]\(([^)]+)\)\s*\*([^*]+)\*/
+  const match = content.match(imagePattern)
+
+  if (match) {
+    return {
+      alt: match[1] || 'Image',
+      imageUrl: match[2],
+      linkUrl: match[3],
+      credit: match[4].trim()
+    }
+  }
+
+  return null
+}
+
+/**
  * Render a text component (with optional markdown)
  */
 function TextRenderer(props: { component: UIComponent }) {
   const textParams = props.component.params as any
 
-  // Convert markdown to HTML if markdown flag is true
+  // Check if this is an image markdown that should be rendered as image component
+  const imageData = createMemo(() => {
+    if (textParams.markdown && textParams.content) {
+      return extractImageFromMarkdown(textParams.content)
+    }
+    return null
+  })
+
+  // Convert markdown to HTML if markdown flag is true (and not an image component)
   const htmlContent = createMemo(() => {
-    if (textParams.markdown) {
+    if (textParams.markdown && !imageData()) {
       return marked.parse(textParams.content, { async: false }) as string
     }
     return textParams.content
   })
 
+  // Render as image component if we extracted image data
   return (
-    <div class="w-full h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-      <div
-        class={`prose prose-sm dark:prose-invert max-w-none ${textParams.className || ''}`}
-        innerHTML={htmlContent()}
-      />
-    </div>
+    <Show
+      when={imageData()}
+      fallback={
+        <div class="w-full h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+          <div
+            class={`prose prose-sm dark:prose-invert max-w-none ${textParams.className || ''}`}
+            innerHTML={htmlContent()}
+          />
+        </div>
+      }
+    >
+      {(data) => (
+        <div class="w-full h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col">
+          <div class="flex-1 flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-900 min-h-[200px]">
+            <a href={data().linkUrl} target="_blank" rel="noopener noreferrer" class="cursor-zoom-in">
+              <img
+                src={data().imageUrl}
+                alt={data().alt}
+                class="max-w-full max-h-[400px] object-contain rounded shadow-sm hover:opacity-90 transition-opacity"
+                loading="lazy"
+              />
+            </a>
+          </div>
+          <div class="p-3 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+            <p class="text-sm text-gray-600 dark:text-gray-400 text-center italic">{data().credit}</p>
+          </div>
+        </div>
+      )}
+    </Show>
   )
 }
 
@@ -298,6 +394,7 @@ function IframeRenderer(props: { component: UIComponent }) {
  */
 function ImageRenderer(props: { component: UIComponent }) {
   const params = props.component.params as any
+
   return (
     <div class="w-full h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col">
       <div class="flex-1 flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-900 min-h-[200px]">
@@ -327,6 +424,7 @@ function ImageRenderer(props: { component: UIComponent }) {
  */
 function LinkRenderer(props: { component: UIComponent }) {
   const params = props.component.params as any
+
   return (
     <a
       href={params.url}
@@ -519,8 +617,7 @@ function ActionRenderer(props: { component: UIComponent }) {
  */
 export const UIResourceRenderer: Component<UIResourceRendererProps> = (props) => {
   const layout = () => {
-    // ✅ PHASE 3.3 FIX: Check if content is a UIComponent (non-composite) vs UILayout (composite)
-    // UILayout has type='composite', UIComponent has type='chart'|'table'|'metric'|'text'
+    // Check if content is a UIComponent (non-composite) vs UILayout (composite)
     if ('type' in props.content && (props.content as any).type !== 'composite') {
       return {
         id: 'single-component',
@@ -534,45 +631,28 @@ export const UIResourceRenderer: Component<UIResourceRendererProps> = (props) =>
     return props.content as UILayout
   }
 
-  // Grid position to CSS Grid styles
-  const getGridStyles = (component: UIComponent) => {
-    // ✅ PHASE 3 FIX: Defensive check for position field
-    if (!component.position) {
-      console.error('[UIResourceRenderer] Component missing position field:', component)
-      return {
-        'grid-column': '1 / span 12',
-        'grid-row': 'auto',
-      }
-    }
-
-    const { colStart, colSpan, rowStart, rowSpan = 1 } = component.position
-
-    return {
-      'grid-column': `${colStart} / span ${colSpan}`,
-      'grid-row': rowStart ? `${rowStart} / span ${rowSpan}` : 'auto',
-    }
+  // Convert grid styles to CSS string
+  const gridContainerStyle = () => {
+    const layoutData = layout()
+    return `grid-template-columns: repeat(${layoutData.grid.columns}, 1fr); gap: ${layoutData.grid.gap}`
   }
-
-  // Convert grid styles to CSS string to avoid setStyleProperty
-  const gridContainerStyle = () =>
-    `grid-template-columns: repeat(${layout().grid.columns}, 1fr); gap: ${layout().grid.gap}`
 
   // Convert component grid styles to CSS string
   const getGridStyleString = (component: UIComponent) => {
-    // ✅ PHASE 3 FIX: Defensive check for position field
+    // Defensive check for position field - default to full width
     if (!component.position) {
-      console.error('[UIResourceRenderer] Component missing position field:', component)
-      return 'grid-column: 1 / span 12; grid-row: auto' // Default to full width
+      return 'grid-column: 1 / span 12; grid-row: auto'
     }
-
     const { colStart, colSpan, rowStart, rowSpan = 1 } = component.position
     return `grid-column: ${colStart} / span ${colSpan}; grid-row: ${rowStart ? `${rowStart} / span ${rowSpan}` : 'auto'}`
   }
 
+  const layoutData = layout()
+
   return (
     <div class={`w-full ${props.class || ''}`}>
       <div class="grid gap-4" style={gridContainerStyle()}>
-        <For each={layout().components}>
+        <For each={layoutData.components}>
           {(component) => (
             <div style={getGridStyleString(component)}>
               <ComponentRenderer component={component} onError={props.onError} />

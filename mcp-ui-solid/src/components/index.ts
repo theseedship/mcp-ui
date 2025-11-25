@@ -12,3 +12,6 @@ export type { StreamingUIRendererProps } from './StreamingUIRenderer'
 
 export { GenerativeUIErrorBoundary } from './GenerativeUIErrorBoundary'
 export type { GenerativeUIErrorBoundaryProps } from './GenerativeUIErrorBoundary'
+
+// Default exports for lazy loading compatibility
+export { UIResourceRenderer as default } from './UIResourceRenderer'
