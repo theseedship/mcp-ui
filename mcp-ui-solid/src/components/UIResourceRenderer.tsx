@@ -127,6 +127,27 @@ function renderCellValue(value: any): string {
     return '-'
   }
 
+  // Handle object with url/name properties (common source/link format from LLM)
+  if (typeof value === 'object' && value !== null) {
+    // Check for link-like objects: { url: "...", name/label/title: "..." }
+    if (value.url) {
+      const label = value.name || value.label || value.title || value.url
+      const sanitizedLabel = DOMPurify.sanitize(String(label))
+      const sanitizedUrl = DOMPurify.sanitize(String(value.url))
+      return `<a href="${sanitizedUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-600 dark:text-blue-400 hover:underline">${sanitizedLabel}</a>`
+    }
+    // Fallback: extract meaningful text from object properties
+    if (value.name || value.label || value.title) {
+      return DOMPurify.sanitize(String(value.name || value.label || value.title))
+    }
+    // Last resort: JSON stringify for debugging (better than [object Object])
+    try {
+      return JSON.stringify(value)
+    } catch {
+      return '-'
+    }
+  }
+
   // Convert to string
   let strValue = String(value)
 
