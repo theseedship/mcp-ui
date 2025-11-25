@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2025-11-25
+
+### Changed - Phase 5.0 Quick Wins
+
+#### ComponentType Enum Expansion
+- **Synchronized with mcp-ui-solid v1.2.0**
+- Expanded from 5 types to 13 types:
+  - `chart`, `table`, `metric`, `text`, `composite` (existing)
+  - `grid` - Nested CSS Grid layouts (NEW)
+  - `iframe` - Embedded content
+  - `image` - Image display
+  - `link` - Clickable links
+  - `action` - Tool call buttons (NEW)
+  - `footer` - Metadata footer (NEW)
+  - `carousel` - Horizontal scrolling
+  - `artifact` - Downloadable files
+
+### Notes
+- Full backward compatibility with existing registries
+- New types support Phase 5.0 template builder features
+
 ## [1.1.0] - 2025-11-25
 
 ### Documentation

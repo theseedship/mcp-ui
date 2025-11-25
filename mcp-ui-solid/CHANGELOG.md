@@ -5,6 +5,47 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2025-11-25
+
+### Added - Phase 5.0 Quick Wins
+
+#### GridRenderer (NEW)
+- **Nested CSS Grid layouts** for complex template builder layouts
+- Supports `columns`, `gap`, `minRowHeight`, and `areas` configuration
+- Recursive rendering of child components via `UIResourceRenderer`
+- Enables sidebar + main + footer dashboard layouts
+
+#### MCPActionContext + useAction() (NEW)
+- **Context Provider pattern** replaces CustomEvent for action dispatch
+- `MCPActionProvider` wrapper for orchestration (Mastra integration ready)
+- `useAction()` hook with execute, isExecuting state, and error handling
+- `useMCPActionSafe()` for components outside provider (fallback to CustomEvent)
+- `useToolAction()` for binding to specific tool names
+- Typed `ActionRequest` and `ActionResult` interfaces
+- Support for audit callbacks (`onAction`) and webhook events (`onWebhook`)
+
+#### FooterRenderer Auto-Injection (NEW)
+- Automatically inject footer when layout has metadata (executionTime, sourceCount, llmModel)
+- Opt-out via `layout.metadata.hideFooter: true`
+- Respects explicit footer components if already present
+- Shows "Powered by Deposium" with execution metrics
+
+### Changed
+- **ActionRenderer refactored** to use `useAction()` hook internally
+- Added loading spinner state during tool-call execution
+- Button auto-disables while action is executing
+
+### Types
+- Added `GridComponentParams` interface for grid configuration
+- Added `footer`, `carousel`, `artifact` to `ComponentType` union
+- Extended `UILayout.metadata` with `executionTime`, `sourceCount`, `hideFooter`
+- New exports: `MCPActionProvider`, `MCPActionContext`, `useMCPAction`, `useAction`, `useToolAction`
+
+### Technical
+- New directories: `src/context/`, `src/hooks/useAction.ts`
+- Full TypeScript support with strict types
+- SSR-compatible with `isServer` guards
+
 ## [1.1.0] - 2025-11-25
 
 ### Documentation

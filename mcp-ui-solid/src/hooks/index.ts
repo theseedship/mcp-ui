@@ -12,3 +12,7 @@ export type {
   StreamError,
   CompleteMetadata,
 } from './useStreamingUI'
+
+// Action hooks (Phase 5.0)
+export { useAction, useToolAction } from './useAction'
+export type { UseActionReturn, ActionRequest, ActionResult } from './useAction'

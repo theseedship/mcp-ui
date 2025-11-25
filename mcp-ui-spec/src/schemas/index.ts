@@ -12,8 +12,22 @@ export const GridPositionSchema = z.object({
   rowSpan: z.number().int().min(1).default(1).optional(),
 })
 
-// Component types
-export const ComponentTypeSchema = z.enum(['chart', 'table', 'metric', 'text', 'composite'])
+// Component types (synced with mcp-ui-solid v1.2.0)
+export const ComponentTypeSchema = z.enum([
+  'chart',
+  'table',
+  'metric',
+  'text',
+  'composite',
+  'grid',      // Phase 5.0: Nested grid layouts
+  'iframe',
+  'image',
+  'link',
+  'action',    // Phase 5.0: Tool call actions
+  'footer',    // Phase 5.0: Metadata footer
+  'carousel',
+  'artifact',
+])
 
 // Sandbox flags
 export const SandboxFlagSchema = z.enum([

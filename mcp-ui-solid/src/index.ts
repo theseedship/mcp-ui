@@ -38,7 +38,7 @@ export type {
 } from './components'
 
 // Hooks
-export { useStreamingUI } from './hooks'
+export { useStreamingUI, useAction, useToolAction } from './hooks'
 
 export type {
   UseStreamingUIOptions,
@@ -46,7 +46,18 @@ export type {
   StreamProgress,
   StreamError,
   CompleteMetadata,
+  UseActionReturn,
 } from './hooks'
+
+// Context (Phase 5.0)
+export { MCPActionProvider, MCPActionContext, useMCPAction, useMCPActionSafe } from './context'
+
+export type {
+  MCPActionContextValue,
+  MCPActionProviderProps,
+  ActionRequest,
+  ActionResult,
+} from './context'
 
 // Types
 export type {
@@ -59,6 +70,8 @@ export type {
   TableComponentParams,
   MetricComponentParams,
   TextComponentParams,
+  ActionComponentParams,
+  GridComponentParams,
 } from './types'
 
 // Services

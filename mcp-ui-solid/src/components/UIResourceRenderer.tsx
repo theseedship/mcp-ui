@@ -9,6 +9,9 @@ import { isServer } from 'solid-js/web'
 import type { UIComponent, UILayout, RendererError, ComponentType } from '../types'
 import { validateComponent, DEFAULT_RESOURCE_LIMITS } from '../services/validation'
 import { GenerativeUIErrorBoundary } from './GenerativeUIErrorBoundary'
+import { GridRenderer } from './GridRenderer'
+import { FooterRenderer } from './FooterRenderer'
+import { useAction } from '../hooks/useAction'
 import { marked } from 'marked'
 
 /**
@@ -554,42 +557,31 @@ function ComponentRenderer(props: {
       <Show when={props.component.type === 'action'}>
         <ActionRenderer component={props.component} />
       </Show>
+      <Show when={props.component.type === 'grid'}>
+        <GridRenderer component={props.component} onError={props.onError} />
+      </Show>
     </GenerativeUIErrorBoundary>
   )
 }
 
 /**
  * Render an action component (button or link)
+ * Refactored in Phase 5.0 to use useAction hook for Context-based execution
  */
 function ActionRenderer(props: { component: UIComponent }) {
   const params = props.component.params as any
-  let dispatchAction: ((toolName: string, toolParams: any) => void) | null = null
+  const { execute, isExecuting } = useAction()
 
-  // Initialize CustomEvent dispatcher only on client-side
-  // Use createEffect instead of onMount for SSR compatibility
-  createEffect(() => {
-    if (typeof window !== 'undefined') {
-      dispatchAction = (toolName: string, toolParams: any) => {
-        const event = new CustomEvent('mcp-action', {
-          detail: {
-            toolName,
-            params: toolParams,
-          },
-          bubbles: true,
-        })
-        window.dispatchEvent(event)
-      }
-    }
-  })
-
-  // Handle click to execute tool via window event
-  const handleClick = (e: MouseEvent) => {
+  // Handle click to execute tool via Context (falls back to CustomEvent if no provider)
+  const handleClick = async (e: MouseEvent) => {
     if (params.action === 'tool-call' && params.toolName) {
       e.preventDefault()
-      // SSR-safe: Only call if dispatcher was initialized client-side
-      dispatchAction?.(params.toolName, params.params || {})
+      await execute(params.toolName, params.params || {})
     }
   }
+
+  // Determine if button should be disabled (explicit disable or currently executing)
+  const isDisabled = () => params.disabled || (params.action === 'tool-call' && isExecuting())
 
   if (params.type === 'link' || params.action === 'link') {
     return (
@@ -614,18 +606,21 @@ function ActionRenderer(props: { component: UIComponent }) {
   return (
     <button
       type={params.action === 'submit' ? 'submit' : 'button'}
-      disabled={params.disabled}
+      disabled={isDisabled()}
       class={`inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500
         ${params.variant === 'primary' ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm' :
           params.variant === 'secondary' ? 'bg-gray-100 text-gray-900 hover:bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600' :
             params.variant === 'outline' ? 'border border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800' :
               params.variant === 'danger' ? 'bg-red-600 text-white hover:bg-red-700' :
                 'bg-transparent text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'}
-        ${params.disabled ? 'opacity-50 cursor-not-allowed' : ''}
+        ${isDisabled() ? 'opacity-50 cursor-not-allowed' : ''}
         ${params.size === 'sm' ? 'px-3 py-1.5 text-xs' : params.size === 'lg' ? 'px-6 py-3 text-base' : ''}`}
       onClick={handleClick}
     >
-      <Show when={params.icon}>
+      <Show when={isExecuting() && params.action === 'tool-call'}>
+        <span class="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
+      </Show>
+      <Show when={params.icon && !(isExecuting() && params.action === 'tool-call')}>
         <span>{params.icon}</span>
       </Show>
       {params.label}
@@ -668,6 +663,46 @@ export const UIResourceRenderer: Component<UIResourceRendererProps> = (props) =>
     return `grid-column: ${colStart} / span ${colSpan}; grid-row: ${rowStart ? `${rowStart} / span ${rowSpan}` : 'auto'}`
   }
 
+  // Auto-footer logic (Phase 5.0)
+  // Automatically inject footer when metadata is present and no explicit footer exists
+  const shouldShowAutoFooter = createMemo(() => {
+    const layoutData = layout()
+
+    // Don't show if explicitly hidden
+    if (layoutData.metadata?.hideFooter) {
+      return false
+    }
+
+    // Don't show if no metadata (nothing to display)
+    if (!layoutData.metadata) {
+      return false
+    }
+
+    // Don't show if explicit footer component exists
+    const hasExplicitFooter = layoutData.components.some((c) => c.type === 'footer')
+    if (hasExplicitFooter) {
+      return false
+    }
+
+    // Show auto-footer if metadata has relevant info
+    return !!(
+      layoutData.metadata.executionTime ||
+      layoutData.metadata.sourceCount ||
+      layoutData.metadata.llmModel
+    )
+  })
+
+  // Build auto-footer params from metadata
+  const autoFooterParams = createMemo(() => {
+    const layoutData = layout()
+    return {
+      poweredBy: 'Deposium',
+      executionTime: layoutData.metadata?.executionTime,
+      model: layoutData.metadata?.llmModel,
+      sourceCount: layoutData.metadata?.sourceCount,
+    }
+  })
+
   const layoutData = layout()
 
   return (
@@ -681,6 +716,11 @@ export const UIResourceRenderer: Component<UIResourceRendererProps> = (props) =>
           )}
         </For>
       </div>
+
+      {/* Auto-injected footer (Phase 5.0) */}
+      <Show when={shouldShowAutoFooter()}>
+        <FooterRenderer params={autoFooterParams()} />
+      </Show>
     </div>
   )
 }
