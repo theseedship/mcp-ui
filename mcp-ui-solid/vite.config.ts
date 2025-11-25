@@ -5,9 +5,10 @@ import { resolve } from 'path'
 export default defineConfig({
   plugins: [
     solidPlugin({
-      // SSR mode: generates SSR-compatible code that works on Node.js server
+      // DOM mode: generates client-side code with real DOM elements
+      // SolidStart handles SSR separately; packages should export client code
       solid: {
-        generate: 'ssr',
+        generate: 'dom',
         hydratable: true,
       },
     }),
