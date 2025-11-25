@@ -1,17 +1,101 @@
-# @mcp-ui/spec Changelog
+# @seed-ship/mcp-ui-spec Changelog
 
 All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [1.1.0] - 2025-11-25
+
+### Documentation
+- **Comprehensive README Rewrite**: Complete documentation overhaul
+  - Fixed npm scope from `@mcp-ui/spec` to `@seed-ship/mcp-ui-spec`
+  - Documented all 10 exported Zod schemas
+  - Documented all 11 component types with renderer mappings
+  - Added full registry format specification
+  - Added Grid Positioning, Security Constraints, Performance Constraints docs
+  - Added deprecation and versioning documentation
+  - Included complete example registry JSON
+
+### Notes
+- This minor version bump marks a documentation milestone
+- No schema changes - all validation identical to v1.0.15
+
+## [1.0.15] - 2025-11-24
+
+### Changed
+- Version bump (synchronized with mcp-ui-solid v1.0.26, mcp-ui-cli v1.0.14)
+
+## [1.0.14] - 2025-11-23
+
+### Changed
+- Version bump (synchronized with mcp-ui-solid v1.0.25, mcp-ui-cli v1.0.13)
+
+## [1.0.12] - 2025-11-23
+
+### Changed
+- Version bump for npm publication with updated token
+- Synchronized with mcp-ui-solid v1.0.23, mcp-ui-cli v1.0.11
+
+## [1.0.11] - 2025-11-23
+
+### Changed
+- Version bump (synchronized with mcp-ui-solid v1.0.22, mcp-ui-cli v1.0.10)
+
+## [1.0.10] - 2025-11-23
+
+### Added
+- **Validation Enhancements**: Extended Zod schemas for new component types
+  - Action component validation
+  - Artifact component validation
+  - Carousel component validation
+  - Footer component validation
+
+### Changed
+- Synchronized with mcp-ui-solid v1.0.21, mcp-ui-cli v1.0.9
+
+## [1.0.8] - 2025-11-22
+
+### Changed
+- Version bump (synchronized with mcp-ui-solid v1.0.18, mcp-ui-cli v1.0.8)
+
+## [1.0.7] - 2025-11-22
+
+### Changed
+- Version bump
+
+## [1.0.5] - 2025-11-22
+
+### Added
+- **New Component Types**: Added Zod schemas for iframe, image, link components
+  - `IframeComponentSchema` with src and sandbox validation
+  - `ImageComponentSchema` with src, alt, dimensions
+  - `LinkComponentSchema` with href and text
+
+### Changed
+- Version bump for npm publication
+
+## [1.0.2] - 2025-11-17
+
+### Changed
+- Migrate to `@seed-ship` npm scope
+- Updated package name from `@mcp-ui/spec` to `@seed-ship/mcp-ui-spec`
+
+## [1.0.1] - 2025-11-16
+
+### Fixed
+- Add type definitions generation for all packages
 
 ## [1.0.0] - 2025-01-14
 
 ### Added
-- Initial release of `@mcp-ui/spec` package
+- Initial release of `@seed-ship/mcp-ui-spec` package
 - JSON Schema v7 specification for component registries
 - Zod validation schemas with TypeScript types
-- Comprehensive example registry with 3 components:
-  - quickchart-bar (Bar chart visualization)
-  - metric-card (KPI metric card)
-  - data-table (Tabular data display)
+- Comprehensive example registry with components:
+  - `quickchart-bar` (Bar chart visualization)
+  - `metric-card` (KPI metric card)
+  - `data-table` (Tabular data display)
 - Security constraints specification:
   - Authentication requirements
   - Domain whitelisting
@@ -29,9 +113,3 @@ All notable changes to this project will be documented in this file.
 - **Type Safety**: Complete TypeScript definitions
 - **Examples**: Working examples for each component type
 - **Extensible**: Easy to add new component types
-- **Validation**: Built-in validation for security and performance
-
-### Documentation
-- Complete JSON Schema with descriptions
-- Example registry with real-world use cases
-- TypeScript types for all schema entities

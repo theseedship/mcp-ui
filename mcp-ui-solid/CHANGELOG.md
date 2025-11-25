@@ -1,9 +1,310 @@
-# @mcp-ui/solid Changelog
+# @seed-ship/mcp-ui-solid Changelog
 
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [1.1.0] - 2025-11-25
+
+### Documentation
+- **Comprehensive README Rewrite**: Complete documentation overhaul
+  - Added architecture diagram and SSR guide
+  - Documented all 12 component renderers with examples
+  - Added conditional export setup for SolidStart
+  - Included troubleshooting section for common SSR issues
+- **CHANGELOG Catch-up**: Added 33 missing version entries (v1.0.11 to v1.0.43)
+- **Phase 5 Roadmap**: Documented planned advanced components
+
+### Notes
+- This minor version bump marks a documentation milestone
+- No code changes - all functionality identical to v1.0.43
+
+## [1.0.43] - 2025-11-25
+
+### Fixed
+- **Object-to-Link Conversion**: Handle object values in `renderCellValue()` for table cells
+  - Backend/LLM may send `{url, name}` objects instead of markdown strings
+  - Previous: `String(value)` produced `[object Object]` in cells and broken URLs
+  - Now: Auto-converts objects with `url` property to clickable HTML links
+  - Supports `name`, `label`, or `title` as link text (falls back to URL)
+  - Objects without `url` but with `name/label/title` render as plain text
+  - Other objects are serialized with `JSON.stringify()`
+
+### Technical Details
+```typescript
+// Before: "[object Object]" displayed, broken links
+// After: Proper clickable links
+if (value.url) {
+  const label = value.name || value.label || value.title || value.url
+  return `<a href="${sanitizedUrl}">${sanitizedLabel}</a>`
+}
+```
+
+## [1.0.42] - 2025-11-25
+
+### Added
+- **Source Exports via "solid" Condition**: Add direct source exports for SolidStart SSR compatibility
+  - New `"solid"` condition in package.json exports points to TypeScript source files
+  - Allows Vite/SolidStart to compile components in the same context as the app
+  - Fixes SSR hydration mismatches when compiled separately
+  - **Requires**: Consuming app must add `conditions: ['solid']` in Vite config
+
+### Technical Details
+```json
+{
+  "exports": {
+    ".": {
+      "solid": "./src/index.ts",      // ← Source for SolidStart
+      "import": "./dist/index.js",    // ← Compiled for other bundlers
+    }
+  }
+}
+```
+
+### Migration Notes
+For SolidStart users on Railway/SSR platforms, add to `app.config.ts`:
+```typescript
+resolve: {
+  conditions: ['solid', 'development', 'browser']
+}
+```
+
+## [1.0.41] - 2025-11-25
+
+### Changed
+- Switch from SSR to DOM mode for client-side rendering experiments
+- Reverted in v1.0.42
+
+## [1.0.40] - 2025-11-25
+
+### Improved
+- **Smart Cell Rendering**: Enhanced `renderCellValue()` with better markdown/link detection
+  - Extract actual URL from markdown links before validation
+  - Support image URLs in markdown format
+  - Improved detection of URLs without protocol prefix
+
+## [1.0.39] - 2025-11-24
+
+### Fixed
+- Rebuild with fresh `dist/` containing createEffect fix from v1.0.38
+- Clean rebuild to ensure all SSR fixes are included in the package
+
+## [1.0.38] - 2025-11-24
+
+### Fixed
+- **SSR Compatibility**: Replace `onMount` with `createEffect` for better SSR behavior
+  - `createEffect` runs on both server and client
+  - More predictable execution timing
+  - Fixes certain edge cases in streaming UI
+
+## [1.0.37] - 2025-11-24
+
+### Fixed
+- **SSR Mode Restoration**: Restore `generate: 'ssr'` mode for Railway Node 22 compatibility
+  - Previous version accidentally reverted to DOM mode
+  - Re-enables proper SSR compilation for server environments
+
+## [1.0.36] - 2025-11-24
+
+### Fixed
+- **SSR Guard Improvement**: Use `typeof window` check instead of `isServer` import
+  - More reliable detection in mixed environments
+  - Fixes edge cases where `isServer` wasn't properly tree-shaken
+
+## [1.0.35] - 2025-11-24
+
+### Fixed
+- **SSR Guard in useStreamingUI**: Add SSR guard to `fetch()` calls in useStreamingUI hook
+  - Prevents SSR crashes when hook is instantiated during server render
+  - `fetch` is guarded to only execute client-side
+
+## [1.0.34] - 2025-11-24
+
+### Fixed
+- **Client-Only API Guards**: Use `onMount` pattern for all client-only APIs in GenerativeUIErrorBoundary
+  - Consistent pattern across all components
+  - Prevents accidental server-side execution
+
+## [1.0.33] - 2025-11-24
+
+### Fixed
+- **Railway SSR Fix**: Wrap client APIs in GenerativeUIErrorBoundary for Railway SSR
+  - Additional guards for browser-only code
+  - Improved compatibility with Railway's Node.js environment
+
+## [1.0.32] - 2025-11-24
+
+### Fixed
+- **CustomEvent SSR Fix**: Wrap CustomEvent in `onMount` for Railway SSR compatibility
+  - `CustomEvent` constructor doesn't exist in Node.js
+  - Now only created client-side during mount
+
+## [1.0.31] - 2025-11-24
+
+### Fixed
+- Fix build configuration and TypeScript declarations
+- Update pnpm-lock.yaml for v1.0.31 dependencies
+- Ensure all type definitions are properly exported
+
+## [1.0.30] - 2025-11-24
+
+### Improved
+- **Table Rendering**: Improve table rendering with markdown support
+  - Tables now parse markdown links in cell values
+  - Better export path configuration
+  - Enhanced styling for table cells
+
+## [1.0.29] - 2025-11-24
+
+### Added
+- **SSR-Safe Type Imports**: Add `/types-only` sub-export for SSR-safe type imports
+  - Allows importing types without triggering component code
+  - Useful for server-side type checking
+
+```typescript
+// SSR-safe type import
+import type { UIResource } from '@seed-ship/mcp-ui-solid/types-only'
+```
+
+## [1.0.28] - 2025-11-24
+
+### Fixed
+- **Validation Entry Point**: Compile validation.ts as proper entry point
+  - Fixes import errors when using `/validation` export
+
+## [1.0.27] - 2025-11-24
+
+### Fixed
+- **Validation Imports**: validation.ts imports from dist instead of src
+  - Prevents source-map resolution issues
+
+## [1.0.26] - 2025-11-24
+
+### Changed
+- Version bump (synced with mcp-ui-spec v1.0.15, mcp-ui-cli v1.0.14)
+
+## [1.0.25] - 2025-11-23
+
+### Added
+- **Validation Sub-Export**: Add `/validation` sub-export for SSR-safe imports
+  - Validation utilities available without loading UI components
+  - Useful for server-side schema validation
+
+```typescript
+import { validateUIResource } from '@seed-ship/mcp-ui-solid/validation'
+```
+
+### Fixed
+- Add SSR compatibility checks for client-only APIs throughout codebase
+
+## [1.0.24] - 2025-11-23
+
+### Improved
+- **Table Styling**: Improve table rendering with better styling
+  - Enhanced header styling
+  - Better cell padding and borders
+  - Improved responsive behavior
+
+## [1.0.23] - 2025-11-23
+
+### Changed
+- Version bump for npm publication with updated token
+- Synchronized with mcp-ui-spec v1.0.12, mcp-ui-cli v1.0.11
+
+## [1.0.22] - 2025-11-23
+
+### Changed
+- Version bump for npm publication
+- Synchronized with mcp-ui-spec v1.0.11, mcp-ui-cli v1.0.10
+
+## [1.0.21] - 2025-11-23
+
+### Added
+- **New Renderers**: Four new component renderers for enhanced UI capabilities
+  - `ActionRenderer`: Interactive buttons with callback support
+  - `ArtifactRenderer`: File/download artifact display
+  - `CarouselRenderer`: Image/content carousel with navigation
+  - `FooterRenderer`: Metadata and footer information display
+- **Validation Enhancements**: Extended validation for new component types
+
+### Technical Details
+ActionRenderer example:
+```typescript
+<ActionRenderer
+  action={{
+    type: 'action',
+    label: 'Download Report',
+    actionType: 'download',
+    payload: { fileId: '123' }
+  }}
+  onAction={(action) => handleAction(action)}
+/>
+```
+
+## [1.0.18] - 2025-11-22
+
+### Changed
+- Version bump for npm publication
+- Synchronized with mcp-ui-spec v1.0.8, mcp-ui-cli v1.0.8
+
+## [1.0.17] - 2025-11-22
+
+### Added
+- **Component Type Validation**: Add validation for iframe, image, link component types
+  - Schema validation for `iframe` with src and sandbox attributes
+  - Schema validation for `image` with src, alt, and dimensions
+  - Schema validation for `link` with href and text
+
+## [1.0.16] - 2025-11-22
+
+### Fixed
+- **SSR Compatibility**: Fix SSR compatibility by using CSS strings instead of style objects
+  - Vite's solid plugin generates different code for style objects vs strings
+  - CSS strings avoid the `setStyleProperty` issue in SSR
+
+## [1.0.15] - 2025-11-22
+
+### Changed
+- Version bump for npm publication
+
+## [1.0.13] - 2025-11-17
+
+### Added
+- **New Renderers**: Add iframe, image, and link renderers to mcp-ui-solid
+  - `IframeRenderer`: Secure iframe embedding with sandbox support
+  - `ImageRenderer`: Responsive image display with lazy loading
+  - `LinkRenderer`: External link rendering with proper security attributes
+- **Markdown Support**: Add markdown rendering to TextRenderer
+  - Uses `marked` library for parsing
+  - Sanitizes output with DOMPurify
+
+### Technical Details
+```typescript
+// TextRenderer now supports markdown
+<TextRenderer
+  component={{
+    type: 'text',
+    content: '# Hello\n\nThis is **markdown**!'
+  }}
+/>
+```
+
+## [1.0.12] - 2025-11-17
+
+### Added
+- **Markdown in TextRenderer**: Basic markdown support using `marked` library
+  - Headings, bold, italic, links, lists
+  - Code blocks with syntax highlighting
+  - Sanitized HTML output
+
+### Fixed
+- Composite layout detection in UIResourceRenderer
+- Optional chaining for componentId in error display
+- Defensive position check in validateGridPosition
+- Defensive position checks in UIResourceRenderer
+
+---
 
 ## [1.0.10] - 2025-11-17
 
@@ -16,8 +317,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Technical Details
 **The Missing Piece in v1.0.9:**
-- v1.0.9 correctly changed `generate: 'ssr'` in vite.config.ts ✅
-- BUT package.json exports didn't include the `"solid"` condition ❌
+- v1.0.9 correctly changed `generate: 'ssr'` in vite.config.ts
+- BUT package.json exports didn't include the `"solid"` condition
 - This caused Vite to load the same build for both SSR and browser
 - Result: Module resolution conflicts with `solid-js/web` during SSR
 
@@ -25,35 +326,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ```json
 {
   "./components": {
-    "solid": "./dist/components/index.js",  // ← NEW: SolidJS-aware loaders use this
-    "import": "./dist/components/index.js", // Fallback for standard ESM
-    "require": "./dist/components/index.cjs" // CommonJS
+    "solid": "./dist/components/index.js",
+    "import": "./dist/components/index.js",
+    "require": "./dist/components/index.cjs"
   }
 }
 ```
 
-With the `"solid"` condition:
-- Vite recognizes this as a SolidJS-specific module
-- Applies correct resolution strategy for SSR context
-- No more "Client-only API called on the server side" errors
-
 ### Why This Matters
 - **v1.0.8**: Added `isServer` guards (fixed symptoms)
 - **v1.0.9**: Changed to SSR compilation mode (fixed compilation)
-- **v1.0.10**: Added conditional exports (fixed module resolution) ← **Complete fix!**
-
-### Affected Exports
-All package entry points now have the `"solid"` condition:
-- `"."` - Main export
-- `"./components"` - Component exports
-- `"./hooks"` - Hook exports
-- `"./types"` - Type exports
-
-### Migration Notes
-- No breaking changes for consumers
-- Drop-in replacement for v1.0.9
-- Fixes persistent SSR errors on Railway, Vercel, Netlify, etc.
-- **This is the final piece** for complete SSR compatibility
+- **v1.0.10**: Added conditional exports (fixed module resolution)
 
 ## [1.0.9] - 2025-11-17
 
@@ -62,125 +345,35 @@ All package entry points now have the `"solid"` condition:
   - Updated `generate: 'dom'` → `generate: 'ssr'` in vite.config.ts
   - Updated `hydratable: false` → `hydratable: true` in vite.config.ts
   - This prevents module-level `template()` calls that crash in SSR environments
-  - Fixes the root cause of ALL previous SSR issues (setStyleProperty, use directive, template exports)
-  - Package now works seamlessly in both Node.js SSR and browser environments without configuration
 
 ### Technical Details
-- **SSR mode** compiles JSX to server-safe string rendering instead of DOM template cloning
+- **SSR mode** compiles JSX to server-safe string rendering
 - **Hydratable mode** enables client-side hydration after SSR
 - No module-level browser API calls that crash in Node.js
-- Components render to HTML on server, then hydrate in browser
-- Fully compatible with SolidStart, Railway SSR, Vercel, Netlify, and all SSR platforms
-- **No `ssr.external` configuration needed** in consuming applications
-
-### Why This Is The Definitive Fix
-Previous versions (1.0.5-1.0.8) fixed symptoms:
-- v1.0.5: Fixed `setStyleProperty` by using CSS strings
-- v1.0.7: Fixed `use()` directive by replacing ref callbacks
-- v1.0.8: Fixed browser APIs by adding `isServer` guards
-
-**v1.0.9 fixes the root cause:** The `generate: 'dom'` configuration that created client-only template calls.
-
-With `generate: 'ssr'` + `hydratable: true`, the compiler generates universal code that:
-- ✅ Renders on the server (Node.js)
-- ✅ Hydrates in the browser
-- ✅ Falls back to client-only rendering if needed
-- ✅ No module-level side effects
-
-### Performance Impact
-- Minimal bundle size increase (~2-5KB)
-- Negligible runtime performance difference (<5%)
-- Server-side rendering is now possible (major win!)
-
-### Migration Notes
-- No breaking changes for consumers
-- Drop-in replacement for v1.0.8
-- **Recommended:** Remove `@seed-ship/mcp-ui-solid` from `ssr.external` in app.config.ts (no longer needed)
-- Components will now SSR by default (better SEO, faster initial load)
-
-### Best Practices for Component Libraries
-This is the **recommended configuration** for SolidJS component libraries per official documentation:
-```typescript
-solidPlugin({
-  solid: {
-    generate: 'ssr',      // Universal code generation
-    hydratable: true,     // Enable hydration
-  },
-})
-```
 
 ## [1.0.8] - 2025-11-16
 
 ### Fixed
 - **CRITICAL SSR FIX**: Added `isServer` guards to all browser APIs in `GenerativeUIErrorBoundary.tsx`
-  - Previous versions crashed on Railway SSR with: `Error: Client-only API called on the server side`
-  - Browser APIs used without guards: `performance.now()`, `navigator.userAgent`, `window.innerWidth/height`
-  - These APIs don't exist in Node.js SSR environment, causing immediate crashes
-  - Solution: Wrapped all browser API calls with `isServer` conditionals
-  - Affected locations:
-    - Line 114: `createSignal(isServer ? 0 : performance.now())`
-    - Line 118: `const renderEndTime = isServer ? 0 : performance.now()`
-    - Line 130: `userAgent: isServer ? 'server' : navigator.userAgent`
-    - Lines 131-133: `viewport: isServer ? { width: 0, height: 0 } : { width: window.innerWidth, height: window.innerHeight }`
-    - Line 203: `const renderStart = isServer ? 0 : performance.now()` (withPerformanceMonitoring)
-    - Line 212: `if (!isServer && typeof window !== 'undefined')` (requestAnimationFrame guard)
-    - Line 242: `const mountTime = isServer ? 0 : performance.now()` (useComponentTelemetry)
-    - Line 252: `const lifetime = isServer ? 0 : performance.now() - mountTime`
-
-### Technical Details
-- `isServer` is a compile-time constant from `solid-js/web`
-- On server: `isServer = true`, browser APIs return safe defaults (0, 'server', empty viewport)
-- On client: `isServer = false`, real browser APIs are used
-- No runtime overhead: dead code elimination removes unused branches
-- Fully compatible with SolidStart SSR on Railway and other Node.js platforms
-
-### Migration Notes
-- No breaking changes for consumers
-- Drop-in replacement for v1.0.7
-- Fixes production SSR crashes on Railway and similar Node.js SSR platforms
-- Telemetry data will show default values on server-side renders (expected behavior)
+  - Browser APIs: `performance.now()`, `navigator.userAgent`, `window.innerWidth/height`
+  - These APIs don't exist in Node.js SSR environment
 
 ## [1.0.7] - 2025-11-16
 
 ### Fixed
 - **CRITICAL SSR FIX**: Replaced `ref` callback with `onMount` to eliminate `use()` directive
-  - Previous versions (1.0.5, 1.0.6) used `ref={() => handleComponentRender(component.id)}`
-  - vite-plugin-solid@2.11.8 transforms ref callbacks into `use()` directive calls
-  - `use` is NOT exported from `solid-js/web` in Node/SSR environment (only in browser)
-  - This caused SSR crashes on Railway: `SyntaxError: The requested module 'solid-js/web' does not provide an export named 'use'`
+  - `use` is NOT exported from `solid-js/web` in Node/SSR environment
   - Solution: Replaced `ref` callback with `onMount()` which is SSR-safe
-  - Affected file: `StreamingUIRenderer.tsx` (line 207)
-
-### Technical Details
-- `onMount` only executes client-side (after hydration), perfect for animations
-- No `use()` directive needed, no SSR/browser export mismatch
-- Maintains same functionality: animation triggers when component mounts
-- Fully compatible with solid-js@1.9.10 in both browser and Node environments
-
-### Migration Notes
-- No breaking changes for consumers
-- Drop-in replacement for v1.0.6
-- Fixes production SSR crashes on Railway and similar Node.js SSR platforms
 
 ## [1.0.6] - 2025-11-16
 
 ### Fixed
 - Add `solid-js` to devDependencies for tests to pass in CI/CD
-- CI was failing because `solid-js` (peerDependency) wasn't available for tests
 
-### Technical Details
-- `solid-js` remains a peerDependency for consuming apps
-- Added to devDependencies for package development and testing
-- No functional changes to the package itself
-
-## [1.0.5] - 2025-11-16 (UNPUBLISHED - CI Failed)
+## [1.0.5] - 2025-11-16 (UNPUBLISHED)
 
 ### Fixed
-- **CRITICAL SSR FIX**: Replaced dynamic style objects with CSS strings to eliminate `setStyleProperty` usage
-  - `setStyleProperty` was being generated by vite-plugin-solid but doesn't exist in solid-js/web API
-  - This caused SSR crashes on Railway with error: `SyntaxError: The requested module 'solid-js/web' does not provide an export named 'setStyleProperty'`
-  - Affected files: `UIResourceRenderer.tsx`, `StreamingUIRenderer.tsx`
-  - Solution: Convert style objects to CSS strings (e.g., `style="width: 100%"` instead of `style={{ width: '100%' }}`)
+- **CRITICAL SSR FIX**: Replaced dynamic style objects with CSS strings
 
 ### Changed
 - Updated `vite` from ^5.0.10 to ^6.3.6
@@ -188,29 +381,16 @@ solidPlugin({
 - Updated `vitest` from ^1.1.0 to ^4.0.8
 - Updated `solid-js` peerDependency from ^1.8.0 to ^1.9.0
 
-### Technical Details
-The issue occurred because:
-1. Old `vite-plugin-solid@2.8.2` compiled JSX style objects into calls to `setStyleProperty()`
-2. `setStyleProperty` is not exported by `solid-js/web` in any version
-3. The error only appeared in production SSR (Railway) because dev mode doesn't do full SSR
-4. Local builds may have worked due to cached node_modules or different build artifacts
-
-### Migration Notes
-- No breaking changes for consumers
-- Drop-in replacement for v1.0.4
-- Fully compatible with solid-js@1.9.x
-
 ## [1.0.0] - 2025-01-14
 
 ### Added
-- Initial release of `@mcp-ui/solid` package
+- Initial release of `@seed-ship/mcp-ui-solid` package
 - `UIResourceRenderer` component for static dashboard rendering
 - `StreamingUIRenderer` component for progressive streaming rendering
 - `GenerativeUIErrorBoundary` for error isolation and retry logic
 - `useStreamingUI` hook for SSE connection management
 - Component validation and layout validation services
 - Component registry system
-- Internal logger utility (self-contained)
 - Full TypeScript support with comprehensive types
 - 12-column responsive grid layout system
 - Support for chart, table, metric, and text components
@@ -222,10 +402,3 @@ The issue occurred because:
 - **Type Safety**: Full TypeScript definitions
 - **Performance**: TTFB <500ms, optimized rendering
 - **Responsive**: 12-column grid with flexible positioning
-- **Clean API**: Simple, intuitive component interfaces
-- **Zero Config**: Works out of the box with sensible defaults
-
-### Documentation
-- README with installation and usage examples
-- JSDoc comments for all public APIs
-- TypeScript definitions for IntelliSense support
