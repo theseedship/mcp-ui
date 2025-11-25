@@ -111,14 +111,20 @@ function StreamingDashboard() {
 | `LinkRenderer` | `link` | External links with security attributes |
 | `IframeRenderer` | `iframe` | Secure iframe embedding (sandboxed) |
 
+### Layout Renderers
+
+| Component | Type | Description |
+|-----------|------|-------------|
+| `GridRenderer` | `grid` | **NEW v1.2.0** - Nested CSS Grid layouts for complex dashboards |
+
 ### Interactive Renderers
 
 | Component | Type | Description |
 |-----------|------|-------------|
-| `ActionRenderer` | `action` | Interactive buttons with callbacks |
+| `ActionRenderer` | `action` | Interactive buttons with MCP tool calls |
 | `ArtifactRenderer` | `artifact` | File download/preview |
 | `CarouselRenderer` | `carousel` | Image/content carousel |
-| `FooterRenderer` | `footer` | Metadata and attribution display |
+| `FooterRenderer` | `footer` | Metadata and attribution display (auto-injected)
 
 ## Exports
 
@@ -142,12 +148,55 @@ import {
 ### Hooks
 
 ```typescript
-import { useStreamingUI } from '@seed-ship/mcp-ui-solid/hooks'
+import { useStreamingUI, useAction, useToolAction } from '@seed-ship/mcp-ui-solid'
 
+// Streaming hook
 const { components, isComplete, error, metadata } = useStreamingUI({
   query: 'Show revenue data',
   spaceIds: ['space-1']
 })
+
+// Action hooks (NEW v1.2.0)
+const { execute, isExecuting, lastError } = useAction()
+await execute('search.hub', { query: 'revenue Q4' })
+
+// Bound to specific tool
+const { execute: searchExecute } = useToolAction('search.hub')
+await searchExecute({ query: 'test' })
+```
+
+### Context Provider (NEW v1.2.0)
+
+```typescript
+import { MCPActionProvider, useMCPAction } from '@seed-ship/mcp-ui-solid'
+
+// Wrap your app to enable typed action dispatch
+function App() {
+  return (
+    <MCPActionProvider
+      spaceIds={['space-123']}
+      macroId="dashboard_template"
+      onAction={(req, res) => auditLog(req, res)}
+      onWebhook={(event) => triggerN8n(event)}
+    >
+      <UIResourceRenderer content={layout} />
+    </MCPActionProvider>
+  )
+}
+
+// Inside any component
+function ActionButton() {
+  const { executeAction, isExecuting } = useMCPAction()
+
+  return (
+    <button
+      onClick={() => executeAction({ toolName: 'search.hub', params: { query: 'test' } })}
+      disabled={isExecuting()}
+    >
+      Search
+    </button>
+  )
+}
 ```
 
 ### Validation (SSR-Safe)
@@ -230,6 +279,48 @@ interface GridPosition {
 ```
 
 ## Advanced Usage
+
+### Nested Grid Layouts (NEW v1.2.0)
+
+Use `GridRenderer` for complex dashboard layouts:
+
+```typescript
+const dashboardLayout = {
+  id: 'dashboard',
+  type: 'grid',
+  params: {
+    columns: 12,
+    gap: '1rem',
+    areas: [
+      ['header', 'header', 'header'],
+      ['sidebar', 'main', 'main'],
+      ['footer', 'footer', 'footer']
+    ],
+    children: [
+      { id: 'nav', type: 'text', params: { content: 'Navigation' }, position: { colStart: 1, colSpan: 3 } },
+      { id: 'content', type: 'chart', params: { /* ... */ }, position: { colStart: 4, colSpan: 9 } }
+    ]
+  }
+}
+```
+
+### Auto-Footer (NEW v1.2.0)
+
+Footers are automatically injected when `layout.metadata` contains execution info:
+
+```typescript
+const layout = {
+  id: 'report',
+  components: [/* ... */],
+  metadata: {
+    executionTime: 1234,      // Shows "1234ms"
+    sourceCount: 5,           // Shows "5 sources"
+    llmModel: 'gpt-4',        // Shows model name
+    // hideFooter: true       // Opt-out of auto-footer
+  }
+}
+// Footer automatically added showing "Powered by Deposium | 1234ms | gpt-4 | 5 sources"
+```
 
 ### Custom Component Registry
 
