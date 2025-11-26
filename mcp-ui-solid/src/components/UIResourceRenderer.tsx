@@ -11,6 +11,8 @@ import { validateComponent, DEFAULT_RESOURCE_LIMITS } from '../services/validati
 import { GenerativeUIErrorBoundary } from './GenerativeUIErrorBoundary'
 import { GridRenderer } from './GridRenderer'
 import { FooterRenderer } from './FooterRenderer'
+import { CarouselRenderer } from './CarouselRenderer'
+import { ArtifactRenderer } from './ArtifactRenderer'
 import { useAction } from '../hooks/useAction'
 import { marked } from 'marked'
 
@@ -635,6 +637,12 @@ function ComponentRenderer(props: {
       </Show>
       <Show when={props.component.type === 'grid'}>
         <GridRenderer component={props.component} onError={props.onError} />
+      </Show>
+      <Show when={props.component.type === 'carousel'}>
+        <CarouselRenderer items={(props.component.params as any)?.items || []} height={(props.component.params as any)?.height} />
+      </Show>
+      <Show when={props.component.type === 'artifact'}>
+        <ArtifactRenderer params={props.component.params as any} />
       </Show>
     </GenerativeUIErrorBoundary>
   )
