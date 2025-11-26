@@ -763,12 +763,62 @@ function isErrorResponse(content: any): boolean {
 }
 
 /**
+ * Check if content is a UIResource (raw HTML or URI-based resource)
+ * UIResource has: { uri, content: { type: 'rawHtml', htmlString }, encoding, metadata }
+ */
+function isUIResource(content: any): boolean {
+  return content && typeof content === 'object' && (
+    content.uri?.startsWith('ui://') ||
+    content.content?.type === 'rawHtml' ||
+    content.content?.htmlString
+  )
+}
+
+/**
+ * Render UIResource (raw HTML) content
+ * Handles HTML resources returned by tools like ui_show_dashboard, ui_show_health
+ */
+function UIResourceHtmlRenderer(props: { resource: any }) {
+  const htmlContent = () => {
+    if (props.resource.content?.htmlString) {
+      return DOMPurify.sanitize(props.resource.content.htmlString)
+    }
+    return ''
+  }
+
+  const resourceTitle = () => {
+    return props.resource.metadata?.title || props.resource.uri?.replace('ui://deposium/', '') || 'Resource'
+  }
+
+  return (
+    <div class="w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <Show when={props.resource.metadata?.title || props.resource.uri}>
+        <div class="px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+          <h3 class="text-sm font-semibold text-gray-900 dark:text-white capitalize">
+            {resourceTitle()}
+          </h3>
+        </div>
+      </Show>
+      <div
+        class="p-4 prose prose-sm dark:prose-invert max-w-none"
+        innerHTML={htmlContent()}
+      />
+    </div>
+  )
+}
+
+/**
  * Main UIResourceRenderer component
  */
 export const UIResourceRenderer: Component<UIResourceRendererProps> = (props) => {
   // Handle error responses early (Sprint 9b fix)
   if (isErrorResponse(props.content)) {
     return <ErrorCardRenderer error={props.content} />
+  }
+
+  // Handle UIResource (raw HTML) - skip grid validation (Sprint 9c fix)
+  if (isUIResource(props.content)) {
+    return <UIResourceHtmlRenderer resource={props.content} />
   }
 
   const layout = () => {
