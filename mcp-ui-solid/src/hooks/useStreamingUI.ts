@@ -69,6 +69,8 @@ export interface CompleteMetadata {
   layoutId: string
   componentsCount: number
   executionTimeMs: number
+  /** Alias for executionTimeMs (for compatibility with FooterRenderer) */
+  executionTime?: number
   firstTokenMs: number
   provider: 'groq' | 'mock'
   model: string
@@ -229,7 +231,11 @@ export function useStreamingUI(options: UseStreamingUIOptions) {
 
     setIsStreaming(false)
     setIsLoading(false)
-    setMetadata(data)
+    // Normalize executionTimeMs to executionTime for compatibility with FooterRenderer
+    setMetadata({
+      ...data,
+      executionTime: data.executionTimeMs || data.executionTime,
+    })
 
     // Flush any remaining buffered components
     flushBuffer()
