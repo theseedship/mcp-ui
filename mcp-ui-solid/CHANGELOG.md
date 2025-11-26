@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.2] - 2025-11-26
+
+### Added - Sprint 4: Public Exports & Registry
+
+#### Component Exports (NEW)
+- **FooterRenderer**: Now publicly exported for custom footer implementations
+- **ActionRenderer**: Interactive button/link component with tool-call support
+- **ArtifactRenderer**: Downloadable artifact display with filename, size, MIME type
+- **CarouselRenderer**: Horizontal carousel with snap scrolling and navigation
+- **GridRenderer**: Nested CSS Grid layout for complex dashboard templates
+
+#### Component Registry Entries (NEW)
+- Added 5 new registry entries in `component-registry.ts`:
+  - `grid`: Nested CSS Grid layout with columns, gap, areas, children
+  - `action`: Interactive button/link with tool-call, link, submit actions
+  - `footer`: Metadata display with executionTime, model, sourceCount
+  - `carousel`: Horizontal item carousel with snap scrolling
+  - `artifact`: Downloadable file display with URL, filename, mimeType, size
+
+### Technical
+- All Sprint 4 components now available via main package export
+- Registry entries enable LLM prompt engineering with schema definitions
+- Full TypeScript types exported for all new components
+
+## [1.2.1] - 2025-11-25
+
+### Fixed
+- Minor build fixes and dependency updates
+
 ## [1.2.0] - 2025-11-25
 
 ### Added - Phase 5.0 Quick Wins
