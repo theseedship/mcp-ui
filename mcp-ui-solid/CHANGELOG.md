@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.4] - 2025-11-26
+
+### Fixed - Sprint 12: Component Rendering
+- **CarouselRenderer**: Now actually rendered in UIResourceRenderer's ComponentRenderer
+- **ArtifactRenderer**: Now actually rendered in UIResourceRenderer's ComponentRenderer
+- Components were previously exported and registered but not rendered in the main switch
+
+### Note
+- Version 1.2.3 was released with the renderer code but props interface mismatch
+- This version fixes the props mapping for both components
+
+## [1.2.3] - 2025-11-26
+
+### Fixed - Sprint 9: UI Fixes
+- **ErrorCardRenderer**: Added for proper error display
+- **UIResource vs UILayout routing**: Fixed validation routing
+- **auto-layout.ts**: Fixed label → title property mapping
+
 ## [1.2.2] - 2025-11-26
 
 ### Added - Sprint 4: Public Exports & Registry
