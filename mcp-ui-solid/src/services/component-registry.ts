@@ -307,6 +307,239 @@ export const TextRegistry: ComponentRegistryEntry = {
   },
 }
 
+// ============================================================================
+// Sprint 4: Additional Component Registry Entries
+// ============================================================================
+
+/**
+ * Grid Component Registry Entry
+ * Nested CSS Grid layout for organizing multiple components
+ */
+export const GridRegistry: ComponentRegistryEntry = {
+  type: 'grid',
+  name: 'GridLayout',
+  description:
+    'Nested CSS Grid layout for organizing multiple components. Supports named areas, responsive columns (1-12), and custom gap spacing. Best for complex dashboard layouts and template builder.',
+  schema: {
+    type: 'object',
+    properties: {
+      columns: {
+        type: 'number',
+        description: 'Number of columns (default: 12)',
+      },
+      gap: {
+        type: 'string',
+        description: 'Gap between items (e.g., "1rem")',
+      },
+      minRowHeight: {
+        type: 'string',
+        description: 'Minimum row height (optional)',
+      },
+      areas: {
+        type: 'array',
+        items: {
+          type: 'array',
+          items: { type: 'string' },
+        },
+        description: 'CSS Grid template areas for named regions',
+      },
+      children: {
+        type: 'array',
+        items: { type: 'object' },
+        description: 'Child UIComponents to render within the grid',
+      },
+    },
+    required: ['children'],
+  },
+  examples: [],
+  limits: DEFAULT_RESOURCE_LIMITS,
+}
+
+/**
+ * Action Component Registry Entry
+ * Interactive button or link that triggers tool calls
+ */
+export const ActionRegistry: ComponentRegistryEntry = {
+  type: 'action',
+  name: 'ActionButton',
+  description:
+    'Interactive button or link that triggers tool calls or navigation. Best for user interactions, form submissions, and workflow triggers.',
+  schema: {
+    type: 'object',
+    properties: {
+      label: {
+        type: 'string',
+        description: 'Button text',
+      },
+      type: {
+        type: 'string',
+        enum: ['button', 'link'],
+        description: 'Render as button or link',
+      },
+      action: {
+        type: 'string',
+        enum: ['tool-call', 'link', 'submit'],
+        description: 'Action type to perform',
+      },
+      toolName: {
+        type: 'string',
+        description: 'Tool name to call (for tool-call action)',
+      },
+      params: {
+        type: 'object',
+        description: 'Parameters to pass to the tool',
+      },
+      url: {
+        type: 'string',
+        description: 'URL for link action',
+      },
+      variant: {
+        type: 'string',
+        enum: ['primary', 'secondary', 'outline', 'ghost', 'danger'],
+        description: 'Visual style variant',
+      },
+      size: {
+        type: 'string',
+        enum: ['sm', 'md', 'lg'],
+        description: 'Button size',
+      },
+      disabled: {
+        type: 'boolean',
+        description: 'Whether the action is disabled',
+      },
+    },
+    required: ['label', 'type', 'action'],
+  },
+  examples: [],
+  limits: DEFAULT_RESOURCE_LIMITS,
+}
+
+/**
+ * Footer Component Registry Entry
+ * Display execution metadata like timing and source count
+ */
+export const FooterRegistry: ComponentRegistryEntry = {
+  type: 'footer',
+  name: 'FooterSection',
+  description:
+    'Footer section displaying execution metadata. Best for showing timing, model info, and source counts. Auto-injected by layouts when metadata is provided.',
+  schema: {
+    type: 'object',
+    properties: {
+      poweredBy: {
+        type: 'string',
+        description: 'Powered by text (optional)',
+      },
+      executionTime: {
+        type: 'number',
+        description: 'Execution time in milliseconds',
+      },
+      model: {
+        type: 'string',
+        description: 'LLM model used',
+      },
+      sourceCount: {
+        type: 'number',
+        description: 'Number of sources used',
+      },
+      customText: {
+        type: 'string',
+        description: 'Custom footer text',
+      },
+      links: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            label: { type: 'string' },
+            url: { type: 'string' },
+          },
+        },
+        description: 'Footer links',
+      },
+    },
+  },
+  examples: [],
+  limits: {
+    maxDataPoints: 1,
+    maxTableRows: 1,
+    maxPayloadSize: 5 * 1024,
+    renderTimeout: 1000,
+  },
+}
+
+/**
+ * Carousel Component Registry Entry
+ * Display multiple items with horizontal scrolling
+ */
+export const CarouselRegistry: ComponentRegistryEntry = {
+  type: 'carousel',
+  name: 'Carousel',
+  description:
+    'Horizontal carousel for displaying multiple items with snap scrolling and navigation buttons. Best for showcasing related content, image galleries, or card collections.',
+  schema: {
+    type: 'object',
+    properties: {
+      items: {
+        type: 'array',
+        items: { type: 'object' },
+        description: 'Array of UIComponents to display in carousel',
+      },
+      height: {
+        type: 'string',
+        description: 'Carousel height (optional)',
+      },
+    },
+    required: ['items'],
+  },
+  examples: [],
+  limits: DEFAULT_RESOURCE_LIMITS,
+}
+
+/**
+ * Artifact Component Registry Entry
+ * Display downloadable artifacts like generated files
+ */
+export const ArtifactRegistry: ComponentRegistryEntry = {
+  type: 'artifact',
+  name: 'Artifact',
+  description:
+    'Display downloadable artifacts like generated files or exports. Shows filename, size, and download button. Best for CSV exports, PDF reports, and generated documents.',
+  schema: {
+    type: 'object',
+    properties: {
+      url: {
+        type: 'string',
+        description: 'Download URL for the artifact',
+      },
+      filename: {
+        type: 'string',
+        description: 'Display filename',
+      },
+      mimeType: {
+        type: 'string',
+        description: 'MIME type (e.g., "text/csv", "application/pdf")',
+      },
+      size: {
+        type: 'number',
+        description: 'File size in bytes',
+      },
+      description: {
+        type: 'string',
+        description: 'Description of the artifact',
+      },
+    },
+    required: ['url', 'filename', 'mimeType'],
+  },
+  examples: [],
+  limits: {
+    maxDataPoints: 1,
+    maxTableRows: 1,
+    maxPayloadSize: 5 * 1024,
+    renderTimeout: 1000,
+  },
+}
+
 /**
  * Component Registry - All components indexed by type
  */
@@ -315,6 +548,12 @@ export const ComponentRegistry: Map<ComponentType, ComponentRegistryEntry> = new
   ['table', TableRegistry],
   ['metric', MetricRegistry],
   ['text', TextRegistry],
+  // Sprint 4 additions
+  ['grid', GridRegistry],
+  ['action', ActionRegistry],
+  ['footer', FooterRegistry],
+  ['carousel', CarouselRegistry],
+  ['artifact', ArtifactRegistry],
 ])
 
 /**
