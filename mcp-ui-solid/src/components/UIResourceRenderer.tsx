@@ -705,9 +705,72 @@ function ActionRenderer(props: { component: UIComponent }) {
 }
 
 /**
+ * Error card renderer for tool execution errors
+ * Handles {error: true, message: "...", tool: "...", suggestions: [...]} format
+ */
+function ErrorCardRenderer(props: { error: any }) {
+  const getErrorText = () => {
+    return `Error in ${props.error.tool || 'unknown tool'}: ${props.error.message || 'Unknown error'}`
+  }
+
+  return (
+    <div class="relative w-full bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 group">
+      <CopyButton getText={getErrorText} title="Copy error details" position="top-right" />
+      <div class="flex items-start gap-3">
+        <div class="p-2 bg-red-100 dark:bg-red-900/40 rounded-full shrink-0">
+          <svg class="w-5 h-5 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <div class="flex-1 min-w-0">
+          <h4 class="text-sm font-semibold text-red-800 dark:text-red-200">
+            Tool Error: {props.error.tool || 'Unknown'}
+          </h4>
+          <p class="text-sm text-red-700 dark:text-red-300 mt-1">
+            {props.error.message || 'An error occurred during tool execution'}
+          </p>
+          <Show when={props.error.type}>
+            <p class="text-xs text-red-600 dark:text-red-400 mt-1">
+              Type: {props.error.type}
+            </p>
+          </Show>
+          <Show when={props.error.suggestions?.length}>
+            <div class="mt-3">
+              <p class="text-xs font-medium text-red-700 dark:text-red-300">Suggestions:</p>
+              <ul class="mt-1 text-xs text-red-600 dark:text-red-400 list-disc list-inside">
+                <For each={props.error.suggestions}>
+                  {(suggestion: string) => <li>{suggestion}</li>}
+                </For>
+              </ul>
+            </div>
+          </Show>
+          <Show when={props.error.timestamp}>
+            <p class="text-xs text-red-500 dark:text-red-500 mt-2">
+              {new Date(props.error.timestamp).toLocaleString()}
+            </p>
+          </Show>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Check if content is an error response from MCP tool
+ */
+function isErrorResponse(content: any): boolean {
+  return content && typeof content === 'object' && content.error === true
+}
+
+/**
  * Main UIResourceRenderer component
  */
 export const UIResourceRenderer: Component<UIResourceRendererProps> = (props) => {
+  // Handle error responses early (Sprint 9b fix)
+  if (isErrorResponse(props.content)) {
+    return <ErrorCardRenderer error={props.content} />
+  }
+
   const layout = () => {
     // Check if content is a UIComponent (non-composite) vs UILayout (composite)
     if ('type' in props.content && (props.content as any).type !== 'composite') {
