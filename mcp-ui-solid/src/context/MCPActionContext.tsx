@@ -209,9 +209,12 @@ const defaultExecutor = async (request: ActionRequest): Promise<ActionResult> =>
 export const MCPActionProvider: ParentComponent<MCPActionProviderProps> = (props) => {
   const [isExecuting, setIsExecuting] = createSignal(false)
   const [lastResult, setLastResult] = createSignal<ActionResult>()
-  const [spaceIds, setSpaceIds] = createSignal<string[]>(props.spaceIds || [])
-  const [macroId, setMacroId] = createSignal<string | undefined>(props.macroId)
-  const [availableTools, setAvailableTools] = createSignal<string[]>(props.availableTools || [])
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [spaceIds, _setSpaceIds] = createSignal<string[]>(props.spaceIds || [])
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [macroId, _setMacroId] = createSignal<string | undefined>(props.macroId)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [availableTools, _setAvailableTools] = createSignal<string[]>(props.availableTools || [])
 
   // Update signals when props change
   // Note: This is a simple approach; for more complex scenarios, consider createEffect

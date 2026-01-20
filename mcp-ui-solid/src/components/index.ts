@@ -29,5 +29,44 @@ export type { CarouselRendererProps } from './CarouselRenderer'
 export { GridRenderer } from './GridRenderer'
 export type { GridRendererProps, GridComponentParams } from './GridRenderer'
 
+// Sprint 1: Form components
+export { FormRenderer } from './FormRenderer'
+export type { FormRendererProps } from './FormRenderer'
+
+export { FormFieldRenderer } from './FormFieldRenderer'
+export type { FormFieldRendererProps } from './FormFieldRenderer'
+
+// Sprint 3: UX Improvements
+export { ModalRenderer } from './ModalRenderer'
+export type { ModalRendererProps } from './ModalRenderer'
+
+export { ActionGroupRenderer } from './ActionGroupRenderer'
+export type { ActionGroupRendererProps } from './ActionGroupRenderer'
+
+// Sprint 4: State & Charts
+export { ChartJSRenderer, isChartJSAvailable } from './ChartJSRenderer'
+export type { ChartJSRendererProps } from './ChartJSRenderer'
+
+// Sprint 5: Media Components
+export { LightboxOverlay } from './LightboxOverlay'
+export type { LightboxOverlayProps } from './LightboxOverlay'
+
+export { ImageGalleryRenderer } from './ImageGalleryRenderer'
+export type { ImageGalleryRendererProps } from './ImageGalleryRenderer'
+
+export { VideoRenderer, isSupportedVideoUrl, getVideoProvider } from './VideoRenderer'
+export type { VideoRendererProps } from './VideoRenderer'
+
+// Sprint 6: Code & Maps
+export { CodeBlockRenderer } from './CodeBlockRenderer'
+export type { CodeBlockRendererProps } from './CodeBlockRenderer'
+
+export { MapRenderer } from './MapRenderer'
+export type { MapRendererProps } from './MapRenderer'
+
+// Sprint Ultimate: RenderContext for circular dependency resolution
+export { RenderContext, RenderProvider, useRenderContext } from './RenderContext'
+export type { RenderContextValue, RenderComponentFn } from './RenderContext'
+
 // Default exports for lazy loading compatibility
 export { UIResourceRenderer as default } from './UIResourceRenderer'

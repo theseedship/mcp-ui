@@ -1,6 +1,6 @@
 {
   "name": "@seed-ship/mcp-ui-solid",
-  "version": "1.2.6",
+  "version": "2.0.0",
   "description": "SolidJS components for rendering MCP-generated UI resources",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -8,56 +8,131 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
       "solid": "./src/index.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     },
     "./components": {
-      "types": "./dist/components.d.ts",
       "solid": "./src/components/index.ts",
-      "import": "./dist/components.js",
-      "require": "./dist/components.cjs"
+      "import": {
+        "types": "./dist/components.d.ts",
+        "default": "./dist/components.js"
+      },
+      "require": {
+        "types": "./dist/components.d.cts",
+        "default": "./dist/components.cjs"
+      }
     },
     "./hooks": {
-      "types": "./dist/hooks.d.ts",
       "solid": "./src/hooks/index.ts",
-      "import": "./dist/hooks.js",
-      "require": "./dist/hooks.cjs"
+      "import": {
+        "types": "./dist/hooks.d.ts",
+        "default": "./dist/hooks.js"
+      },
+      "require": {
+        "types": "./dist/hooks.d.cts",
+        "default": "./dist/hooks.cjs"
+      }
     },
     "./types": {
-      "types": "./dist/types.d.ts",
       "solid": "./src/types/index.ts",
-      "import": "./dist/types.js",
-      "require": "./dist/types.cjs"
+      "import": {
+        "types": "./dist/types.d.ts",
+        "default": "./dist/types.js"
+      },
+      "require": {
+        "types": "./dist/types.d.cts",
+        "default": "./dist/types.cjs"
+      }
     },
     "./validation": {
-      "types": "./dist/validation.d.ts",
       "solid": "./src/validation.ts",
-      "import": "./dist/validation.js",
-      "require": "./dist/validation.cjs"
+      "import": {
+        "types": "./dist/validation.d.ts",
+        "default": "./dist/validation.js"
+      },
+      "require": {
+        "types": "./dist/validation.d.cts",
+        "default": "./dist/validation.cjs"
+      }
     },
     "./types-only": {
-      "types": "./dist/types-export.d.ts",
       "solid": "./src/types-export.ts",
-      "import": "./dist/types-export.js",
-      "require": "./dist/types-export.cjs"
+      "import": {
+        "types": "./dist/types-export.d.ts",
+        "default": "./dist/types-export.js"
+      },
+      "require": {
+        "types": "./dist/types-export.d.cts",
+        "default": "./dist/types-export.cjs"
+      }
     },
     "./src/*": "./src/*"
   },
   "scripts": {
     "build": "vite build && pnpm build:types",
-    "build:types": "tsc --declaration --emitDeclarationOnly --outDir dist --composite false && cp dist/components/index.d.ts dist/components.d.ts 2>/dev/null || true && cp dist/hooks/index.d.ts dist/hooks.d.ts 2>/dev/null || true && cp dist/types/index.d.ts dist/types.d.ts 2>/dev/null || true",
+    "build:types": "tsc --declaration --emitDeclarationOnly --outDir dist --composite false && pnpm build:types:copy",
+    "build:types:copy": "cp dist/components/index.d.ts dist/components.d.ts 2>/dev/null || true && cp dist/hooks/index.d.ts dist/hooks.d.ts 2>/dev/null || true && cp dist/types/index.d.ts dist/types.d.ts 2>/dev/null || true && pnpm build:types:cts",
+    "build:types:cts": "cp dist/index.d.ts dist/index.d.cts && cp dist/components.d.ts dist/components.d.cts 2>/dev/null || true && cp dist/hooks.d.ts dist/hooks.d.cts 2>/dev/null || true && cp dist/types.d.ts dist/types.d.cts 2>/dev/null || true && cp dist/validation.d.ts dist/validation.d.cts 2>/dev/null || true && cp dist/types-export.d.ts dist/types-export.d.cts 2>/dev/null || true",
     "dev": "vite build --watch",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:browser": "vitest --mode browser",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "size": "size-limit",
+    "size:analyze": "size-limit --why"
   },
+  "size-limit": [
+    {
+      "name": "Streaming renderer",
+      "path": "dist/index.js",
+      "import": "{ StreamingUIRenderer }",
+      "limit": "30 KB"
+    },
+    {
+      "name": "Hooks only",
+      "path": "dist/index.js",
+      "import": "{ useStreamingUI, useAction }",
+      "limit": "25 KB"
+    },
+    {
+      "name": "Full bundle (with deps)",
+      "path": "dist/index.js",
+      "limit": "350 KB"
+    }
+  ],
   "peerDependencies": {
+    "@tanstack/solid-virtual": "^3.0.0",
+    "chart.js": "^4.0.0",
+    "highlight.js": "^11.9.0",
+    "leaflet": "^1.9.4",
+    "leaflet.markercluster": "^1.5.0",
     "solid-js": "^1.9.0"
+  },
+  "peerDependenciesMeta": {
+    "chart.js": {
+      "optional": true
+    },
+    "highlight.js": {
+      "optional": true
+    },
+    "leaflet": {
+      "optional": true
+    },
+    "leaflet.markercluster": {
+      "optional": true
+    },
+    "@tanstack/solid-virtual": {
+      "optional": true
+    }
   },
   "dependencies": {
     "@types/dompurify": "^3.0.5",
@@ -66,13 +141,22 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@size-limit/esbuild": "^12.0.0",
+    "@size-limit/esbuild-why": "^12.0.0",
+    "@size-limit/preset-small-lib": "^12.0.0",
     "@solidjs/testing-library": "^0.8.5",
+    "@tanstack/solid-virtual": "^3.13.18",
+    "@types/leaflet": "^1.9.8",
+    "@types/leaflet.markercluster": "^1.5.6",
     "@types/node": "^20.10.0",
     "@typescript-eslint/eslint-plugin": "^6.15.0",
     "@typescript-eslint/parser": "^6.15.0",
     "@vitest/ui": "^4.0.9",
+    "chart.js": "^4.5.1",
     "eslint": "^8.56.0",
     "jsdom": "^27.2.0",
+    "leaflet.markercluster": "^1.5.3",
+    "size-limit": "^12.0.0",
     "solid-js": "^1.9.10",
     "typescript": "^5.3.3",
     "vite": "^6.3.6",
@@ -88,11 +172,11 @@
     "dashboard",
     "generative-ui"
   ],
-  "author": "Gabriel Brument",
+  "author": "Nicolas GEYSSE",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/theseedship/mcp-ui.git",
+    "url": "git+https://github.com/theseedship/mcp-ui.git",
     "directory": "mcp-ui-solid"
   },
   "homepage": "https://github.com/theseedship/mcp-ui#readme",

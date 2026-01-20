@@ -6,13 +6,22 @@
 import DOMPurify from 'dompurify'
 import { Component, createSignal, Show, For, createMemo, createEffect } from 'solid-js'
 import { isServer } from 'solid-js/web'
-import type { UIComponent, UILayout, RendererError, ComponentType } from '../types'
+import type { UIComponent, UILayout, RendererError, TableVirtualizeOptions } from '../types'
 import { validateComponent, DEFAULT_RESOURCE_LIMITS } from '../services/validation'
 import { GenerativeUIErrorBoundary } from './GenerativeUIErrorBoundary'
 import { GridRenderer } from './GridRenderer'
 import { FooterRenderer } from './FooterRenderer'
 import { CarouselRenderer } from './CarouselRenderer'
 import { ArtifactRenderer } from './ArtifactRenderer'
+import { FormRenderer } from './FormRenderer'
+import { ModalRenderer } from './ModalRenderer'
+import { ActionGroupRenderer } from './ActionGroupRenderer'
+import { ChartJSRenderer, isChartJSAvailable } from './ChartJSRenderer'
+import { ImageGalleryRenderer } from './ImageGalleryRenderer'
+import { VideoRenderer } from './VideoRenderer'
+import { CodeBlockRenderer } from './CodeBlockRenderer'
+import { MapRenderer } from './MapRenderer'
+import { RenderProvider } from './RenderContext'
 import { useAction } from '../hooks/useAction'
 import { marked } from 'marked'
 
@@ -88,18 +97,55 @@ export interface UIResourceRendererProps {
 /**
  * Render a single chart component in a sandboxed iframe
  */
+/**
+ * Smart Chart Renderer - Sprint 4
+ * Supports native Chart.js or Quickchart.io iframe fallback
+ */
 function ChartRenderer(props: {
   component: UIComponent
   onError?: (error: RendererError) => void
 }) {
+  const [useNative, setUseNative] = createSignal(false)
   const [iframeUrl, setIframeUrl] = createSignal<string>()
   const [isLoading, setIsLoading] = createSignal(true)
   const [error, setError] = createSignal<string>()
 
-  // Use createEffect instead of onMount for SSR compatibility
-  // createEffect runs after hydration on client-side
-  createEffect(() => {
-    const chartParams = props.component.params as any
+  const params = () => props.component.params as any
+  const rendererPref = () => params()?.renderer || 'auto'
+
+  // Check renderer preference and Chart.js availability
+  createEffect(async () => {
+    const pref = rendererPref()
+
+    if (pref === 'iframe') {
+      // Force iframe mode
+      setUseNative(false)
+      buildIframeUrl()
+    } else if (pref === 'native') {
+      // Force native mode - will show error if Chart.js not available
+      const available = await isChartJSAvailable()
+      if (available) {
+        setUseNative(true)
+        setIsLoading(false)
+      } else {
+        setError('Chart.js is not available. Install chart.js peer dependency.')
+        setIsLoading(false)
+      }
+    } else {
+      // Auto mode - use native if available, otherwise iframe
+      const available = await isChartJSAvailable()
+      if (available) {
+        setUseNative(true)
+        setIsLoading(false)
+      } else {
+        setUseNative(false)
+        buildIframeUrl()
+      }
+    }
+  })
+
+  const buildIframeUrl = () => {
+    const chartParams = params()
     if (!chartParams) return
 
     // Build Quickchart URL
@@ -117,11 +163,25 @@ function ChartRenderer(props: {
     const configStr = encodeURIComponent(JSON.stringify(chartConfig))
     const url = `https://quickchart.io/chart?c=${configStr}&width=500&height=300&devicePixelRatio=2`
 
-    // Validate domain (should always pass for quickchart.io)
     setIframeUrl(url)
     setIsLoading(false)
-  })
+  }
 
+  // Use native Chart.js renderer
+  if (useNative()) {
+    return (
+      <ChartJSRenderer
+        component={props.component}
+        onError={(err) => props.onError?.({
+          type: 'render',
+          message: err.message,
+          componentId: props.component.id,
+        })}
+      />
+    )
+  }
+
+  // Iframe fallback (Quickchart.io)
   return (
     <div class="relative w-full h-full min-h-[300px] bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
       <Show when={isLoading()}>
@@ -141,15 +201,15 @@ function ChartRenderer(props: {
 
       <Show when={iframeUrl() && !error()}>
         <div class="w-full h-full p-4">
-          <Show when={(props.component.params as any).title}>
+          <Show when={params()?.title}>
             <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">
-              {(props.component.params as any).title}
+              {params()?.title}
             </h3>
           </Show>
-          <div class="w-full h-full">
+          <div class="w-full h-full" role="img" aria-label={params()?.title ? `Chart: ${params()?.title}` : 'Chart visualization'}>
             <img
               src={iframeUrl()}
-              alt="Chart visualization"
+              alt={params()?.title ? `Chart: ${params()?.title}` : 'Chart visualization'}
               class="w-full h-auto max-h-[300px] object-contain"
               onError={() => {
                 setError('Failed to load chart')
@@ -226,7 +286,7 @@ function renderCellValue(value: any): string {
   }
 
   // Check if value contains markdown formatting (bold, italic, code, etc.)
-  const hasMarkdown = /[*_`\[\]#]/.test(strValue)
+  const hasMarkdown = /[*_`[\]#]/.test(strValue)
   if (hasMarkdown) {
     // Parse with marked and sanitize
     const parsed = marked.parse(strValue, { async: false }) as string
@@ -239,12 +299,67 @@ function renderCellValue(value: any): string {
 
 /**
  * Render a table component
+ * Sprint Ultimate U.3: Added virtualization support for large datasets
  */
 function TableRenderer(props: {
   component: UIComponent
   onError?: (error: RendererError) => void
 }) {
   const tableParams = props.component.params as any
+  let scrollContainerRef: HTMLDivElement | undefined
+
+  // Virtualization state
+  const [virtualizer, setVirtualizer] = createSignal<any>(null)
+  const [isVirtualizing, setIsVirtualizing] = createSignal(false)
+
+  // Determine if virtualization should be enabled
+  const shouldVirtualize = createMemo(() => {
+    const opts = tableParams.virtualize
+    if (opts === false) return false
+    if (opts === true) return true
+    if (typeof opts === 'object') {
+      if (opts.enabled !== undefined) return opts.enabled
+      const threshold = opts.threshold ?? 100
+      return (tableParams.rows?.length ?? 0) > threshold
+    }
+    // Auto-enable if > 100 rows by default
+    return (tableParams.rows?.length ?? 0) > 100
+  })
+
+  // Get virtualization options
+  const virtualizeOpts = createMemo((): TableVirtualizeOptions => {
+    const opts = tableParams.virtualize
+    if (typeof opts === 'object') return opts
+    return {}
+  })
+
+  // Initialize virtualizer when needed
+  createEffect(async () => {
+    if (isServer || !shouldVirtualize()) {
+      setIsVirtualizing(false)
+      return
+    }
+
+    try {
+      const { createVirtualizer } = await import('@tanstack/solid-virtual')
+      const opts = virtualizeOpts()
+      const rowHeight = opts.rowHeight ?? 48
+      const overscan = opts.overscan ?? 5
+
+      const v = createVirtualizer({
+        get count() { return tableParams.rows?.length ?? 0 },
+        getScrollElement: () => scrollContainerRef ?? null,
+        estimateSize: () => rowHeight,
+        overscan,
+      })
+
+      setVirtualizer(v)
+      setIsVirtualizing(true)
+    } catch (e) {
+      console.warn('Failed to load @tanstack/solid-virtual, falling back to regular table', e)
+      setIsVirtualizing(false)
+    }
+  })
 
   // Generate copyable text from table data (TSV format for spreadsheet compatibility)
   const getTableText = () => {
@@ -262,25 +377,100 @@ function TableRenderer(props: {
     return `${header}\n${dataRows}`
   }
 
+  const tableId = `table-${Math.random().toString(36).slice(2, 9)}`
+
+  // Standard table body (non-virtualized)
+  const StandardTableBody = () => (
+    <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+      <For each={tableParams.rows.slice(0, DEFAULT_RESOURCE_LIMITS.maxTableRows)}>
+        {(row: any, i) => (
+          <tr class={`hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${i() % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50/30 dark:bg-gray-800/50'}`}>
+            <For each={tableParams.columns}>
+              {(column: any) => (
+                <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-200 whitespace-normal break-words leading-relaxed first:pl-6 last:pr-6">
+                  <div innerHTML={renderCellValue(row[column.key])} />
+                </td>
+              )}
+            </For>
+          </tr>
+        )}
+      </For>
+    </tbody>
+  )
+
+  // Virtualized table body
+  const VirtualizedTableBody = () => {
+    const v = virtualizer()
+    if (!v) return null
+
+    const items = v.getVirtualItems()
+    const totalSize = v.getTotalSize()
+    const opts = virtualizeOpts()
+    const rowHeight = opts.rowHeight ?? 48
+
+    return (
+      <tbody
+        class="bg-white dark:bg-gray-800 relative"
+        style={{ height: `${totalSize}px` }}
+      >
+        <For each={items}>
+          {(virtualRow: any) => {
+            const row = tableParams.rows[virtualRow.index]
+            return (
+              <tr
+                class={`hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors absolute left-0 right-0 ${virtualRow.index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50/30 dark:bg-gray-800/50'}`}
+                style={{
+                  height: `${rowHeight}px`,
+                  transform: `translateY(${virtualRow.start}px)`
+                }}
+              >
+                <For each={tableParams.columns}>
+                  {(column: any) => (
+                    <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-200 whitespace-normal break-words leading-relaxed first:pl-6 last:pr-6">
+                      <div innerHTML={renderCellValue(row[column.key])} />
+                    </td>
+                  )}
+                </For>
+              </tr>
+            )
+          }}
+        </For>
+      </tbody>
+    )
+  }
+
   return (
     <div class="relative w-full h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden group">
       <CopyButton getText={getTableText} title="Copy table data" position="top-right" />
       <div class="p-4">
         <Show when={tableParams.title}>
-          <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+          <h3 id={`${tableId}-title`} class="text-sm font-semibold text-gray-900 dark:text-white mb-3">
             {tableParams.title}
+            <Show when={isVirtualizing()}>
+              <span class="ml-2 text-xs font-normal text-gray-400">(virtualized: {tableParams.rows?.length} rows)</span>
+            </Show>
           </h3>
         </Show>
 
-        <div class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 border-separate border-spacing-0">
-            <thead class="bg-gray-50 dark:bg-gray-900/50">
+        <div
+          ref={scrollContainerRef}
+          class="overflow-x-auto"
+          style={isVirtualizing() ? { 'max-height': '500px', 'overflow-y': 'auto' } : {}}
+          role="region"
+          aria-label={tableParams.title || 'Data table'}
+          tabindex="0"
+        >
+          <table
+            class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 border-separate border-spacing-0"
+            aria-labelledby={tableParams.title ? `${tableId}-title` : undefined}
+          >
+            <thead class="bg-gray-50 dark:bg-gray-900/50 sticky top-0 z-10">
               <tr>
                 <For each={tableParams.columns}>
                   {(column: any) => (
                     <th
                       scope="col"
-                      class="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700 first:pl-6 last:pr-6"
+                      class="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700 first:pl-6 last:pr-6 bg-gray-50 dark:bg-gray-900/50"
                       style={column.width ? { width: column.width } : {}}
                     >
                       {column.label}
@@ -289,21 +479,9 @@ function TableRenderer(props: {
                 </For>
               </tr>
             </thead>
-            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              <For each={tableParams.rows.slice(0, DEFAULT_RESOURCE_LIMITS.maxTableRows)}>
-                {(row: any, i) => (
-                  <tr class={`hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${i() % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50/30 dark:bg-gray-800/50'}`}>
-                    <For each={tableParams.columns}>
-                      {(column: any) => (
-                        <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-200 whitespace-normal break-words leading-relaxed first:pl-6 last:pr-6">
-                          <div innerHTML={renderCellValue(row[column.key])} />
-                        </td>
-                      )}
-                    </For>
-                  </tr>
-                )}
-              </For>
-            </tbody>
+            <Show when={isVirtualizing()} fallback={<StandardTableBody />}>
+              <VirtualizedTableBody />
+            </Show>
           </table>
         </div>
 
@@ -498,9 +676,15 @@ function ImageRenderer(props: { component: UIComponent }) {
   const params = props.component.params as any
 
   return (
-    <div class="w-full h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col">
+    <figure class={`w-full h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col ${params.className || ''}`}>
       <div class="flex-1 flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-900 min-h-[200px]">
-        <a href={params.url} target="_blank" rel="noopener noreferrer" class="cursor-zoom-in">
+        <a
+          href={params.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="cursor-zoom-in focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded"
+          aria-label={`View full size: ${params.alt || 'image'}`}
+        >
           <img
             src={params.url}
             alt={params.alt || 'Image'}
@@ -510,17 +694,14 @@ function ImageRenderer(props: { component: UIComponent }) {
         </a>
       </div>
       <Show when={params.caption}>
-        <div class="p-3 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+        <figcaption class="p-3 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
           <p class="text-sm text-gray-600 dark:text-gray-400 text-center">{params.caption}</p>
-        </div>
+        </figcaption>
       </Show>
-    </div>
+    </figure>
   )
 }
 
-/**
- * Render a link component
- */
 /**
  * Render a link component
  */
@@ -532,10 +713,11 @@ function LinkRenderer(props: { component: UIComponent }) {
       href={params.url}
       target="_blank"
       rel="noopener noreferrer"
-      class="flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors group h-full"
+      aria-label={`${params.label || 'Link'}: ${params.description || params.url} (opens in new tab)`}
+      class={`flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors group h-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${params.className || ''}`}
       onClick={(e) => e.stopPropagation()}
     >
-      <div class="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-full text-blue-600 dark:text-blue-400 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/50 shrink-0 transition-colors">
+      <div class="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-full text-blue-600 dark:text-blue-400 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/50 shrink-0 transition-colors" aria-hidden="true">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           class="w-5 h-5"
@@ -567,6 +749,7 @@ function LinkRenderer(props: { component: UIComponent }) {
         stroke-width="2"
         stroke-linecap="round"
         stroke-linejoin="round"
+        aria-hidden="true"
       >
         <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
         <polyline points="15 3 21 3 21 9" />
@@ -644,6 +827,27 @@ function ComponentRenderer(props: {
       <Show when={props.component.type === 'artifact'}>
         <ArtifactRenderer params={props.component.params as any} />
       </Show>
+      <Show when={props.component.type === 'form'}>
+        <FormRenderer component={props.component} />
+      </Show>
+      <Show when={props.component.type === 'modal'}>
+        <ModalRenderer component={props.component} />
+      </Show>
+      <Show when={props.component.type === 'action-group'}>
+        <ActionGroupRenderer component={props.component} />
+      </Show>
+      <Show when={props.component.type === 'image-gallery'}>
+        <ImageGalleryRenderer component={props.component} />
+      </Show>
+      <Show when={props.component.type === 'video'}>
+        <VideoRenderer component={props.component} />
+      </Show>
+      <Show when={props.component.type === 'code'}>
+        <CodeBlockRenderer component={props.component} />
+      </Show>
+      <Show when={props.component.type === 'map'}>
+        <MapRenderer component={props.component} />
+      </Show>
     </GenerativeUIErrorBoundary>
   )
 }
@@ -673,14 +877,16 @@ function ActionRenderer(props: { component: UIComponent }) {
         href={params.url || '#'}
         target={params.url ? '_blank' : undefined}
         rel="noopener noreferrer"
-        class={`inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors
+        aria-label={params.ariaLabel || params.label}
+        class={`inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500
           ${params.variant === 'primary' ? 'bg-blue-600 text-white hover:bg-blue-700' :
             params.variant === 'outline' ? 'border border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800' :
-              'text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300'}`}
+              'text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300'}
+          ${params.className || ''}`}
         onClick={handleClick}
       >
         <Show when={params.icon}>
-          <span>{params.icon}</span>
+          <span aria-hidden="true">{params.icon}</span>
         </Show>
         {params.label}
       </a>
@@ -691,6 +897,8 @@ function ActionRenderer(props: { component: UIComponent }) {
     <button
       type={params.action === 'submit' ? 'submit' : 'button'}
       disabled={isDisabled()}
+      aria-busy={isExecuting() && params.action === 'tool-call'}
+      aria-label={params.ariaLabel || params.label}
       class={`inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500
         ${params.variant === 'primary' ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm' :
           params.variant === 'secondary' ? 'bg-gray-100 text-gray-900 hover:bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600' :
@@ -698,14 +906,15 @@ function ActionRenderer(props: { component: UIComponent }) {
               params.variant === 'danger' ? 'bg-red-600 text-white hover:bg-red-700' :
                 'bg-transparent text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'}
         ${isDisabled() ? 'opacity-50 cursor-not-allowed' : ''}
-        ${params.size === 'sm' ? 'px-3 py-1.5 text-xs' : params.size === 'lg' ? 'px-6 py-3 text-base' : ''}`}
+        ${params.size === 'sm' ? 'px-3 py-1.5 text-xs' : params.size === 'lg' ? 'px-6 py-3 text-base' : ''}
+        ${params.className || ''}`}
       onClick={handleClick}
     >
       <Show when={isExecuting() && params.action === 'tool-call'}>
-        <span class="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
+        <span class="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" aria-hidden="true" />
       </Show>
       <Show when={params.icon && !(isExecuting() && params.action === 'tool-call')}>
-        <span>{params.icon}</span>
+        <span aria-hidden="true">{params.icon}</span>
       </Show>
       {params.label}
     </button>
@@ -902,22 +1111,29 @@ export const UIResourceRenderer: Component<UIResourceRendererProps> = (props) =>
 
   const layoutData = layout()
 
-  return (
-    <div class={`w-full ${props.class || ''}`}>
-      <div class="grid gap-4" style={gridContainerStyle()}>
-        <For each={layoutData.components}>
-          {(component) => (
-            <div style={getGridStyleString(component)}>
-              <ComponentRenderer component={component} onError={props.onError} />
-            </div>
-          )}
-        </For>
-      </div>
+  // Wrapper function for RenderContext (breaks circular dependency)
+  const renderComponent = (component: UIComponent, onError?: (error: RendererError) => void) => (
+    <ComponentRenderer component={component} onError={onError} />
+  )
 
-      {/* Auto-injected footer (Phase 5.0) */}
-      <Show when={shouldShowAutoFooter()}>
-        <FooterRenderer params={autoFooterParams()} />
-      </Show>
-    </div>
+  return (
+    <RenderProvider renderComponent={renderComponent}>
+      <div class={`w-full ${props.class || ''}`}>
+        <div class="grid gap-4" style={gridContainerStyle()}>
+          <For each={layoutData.components}>
+            {(component) => (
+              <div style={getGridStyleString(component)}>
+                <ComponentRenderer component={component} onError={props.onError} />
+              </div>
+            )}
+          </For>
+        </div>
+
+        {/* Auto-injected footer (Phase 5.0) */}
+        <Show when={shouldShowAutoFooter()}>
+          <FooterRenderer params={autoFooterParams()} />
+        </Show>
+      </div>
+    </RenderProvider>
   )
 }

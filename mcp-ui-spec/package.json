@@ -1,6 +1,6 @@
 {
   "name": "@seed-ship/mcp-ui-spec",
-  "version": "1.2.0",
+  "version": "2.0.0",
   "description": "Component registry specification and JSON Schemas for MCP UI",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -42,8 +42,8 @@
     "@typescript-eslint/parser": "^6.15.0",
     "eslint": "^8.56.0",
     "typescript": "^5.3.3",
-    "vite": "^5.0.10",
-    "vitest": "^1.1.0"
+    "vite": "^6.3.6",
+    "vitest": "^4.0.8"
   },
   "keywords": [
     "mcp",
@@ -52,7 +52,7 @@
     "json-schema",
     "component-registry"
   ],
-  "author": "Gabriel Brument",
+  "author": "Nicolas GEYSSE",
   "license": "MIT",
   "repository": {
     "type": "git",

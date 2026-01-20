@@ -200,7 +200,7 @@ export const GenerativeUIErrorBoundary: Component<GenerativeUIErrorBoundaryProps
     >
       {/* Key prop for forcing remount on retry */}
       {(() => {
-        const _ = retryKey() // Access signal to track changes
+        void retryKey() // Access signal to track changes
         return <>{props.children}</>
       })()}
     </ErrorBoundary>

@@ -1,6 +1,6 @@
 {
   "name": "@seed-ship/mcp-ui-cli",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "description": "CLI tools for validating and generating MCP UI component registries",
   "type": "module",
   "bin": {
@@ -46,8 +46,8 @@
     "@typescript-eslint/parser": "^6.15.0",
     "eslint": "^8.56.0",
     "typescript": "^5.3.3",
-    "vite": "^5.0.10",
-    "vitest": "^1.1.0"
+    "vite": "^6.3.6",
+    "vitest": "^4.0.8"
   },
   "keywords": [
     "mcp",
@@ -57,7 +57,7 @@
     "codegen",
     "component-registry"
   ],
-  "author": "Gabriel Brument",
+  "author": "Nicolas GEYSSE",
   "license": "MIT",
   "repository": {
     "type": "git",

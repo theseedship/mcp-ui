@@ -38,7 +38,16 @@ export type {
 } from './components'
 
 // Hooks
-export { useStreamingUI, useAction, useToolAction } from './hooks'
+export {
+  useStreamingUI,
+  useAction,
+  useToolAction,
+  useConditionalField,
+  evaluateCondition,
+  useModal,
+  useConfirmModal,
+  useFormPersistence,
+} from './hooks'
 
 export type {
   UseStreamingUIOptions,
@@ -47,6 +56,13 @@ export type {
   StreamError,
   CompleteMetadata,
   UseActionReturn,
+  UseActionOptions,
+  UseToolActionReturn,
+  UseConditionalFieldOptions,
+  UseModalReturn,
+  UseConfirmModalReturn,
+  UseFormPersistenceOptions,
+  UseFormPersistenceReturn,
 } from './hooks'
 
 // Context (Phase 5.0)
@@ -72,12 +88,44 @@ export type {
   TextComponentParams,
   ActionComponentParams,
   GridComponentParams,
+  // Form types (Sprint 1)
+  FormFieldOption,
+  FormFieldType,
+  FormFieldParams,
+  FormComponentParams,
+  // Conditional field types (Sprint 2)
+  ShowWhenOperator,
+  ShowWhenCondition,
+  // Action lifecycle types (Sprint 2)
+  ActionRequestBase,
+  ActionResultBase,
+  ActionLifecycleCallbacks,
+  // Modal types (Sprint 3)
+  ModalSize,
+  ModalComponentParams,
+  // Action group types (Sprint 3)
+  ActionGroupLayout,
+  ActionGroupGap,
+  ActionGroupParams,
+  // Media types (Sprint 5)
+  GalleryImage,
+  ImageGalleryParams,
+  VideoComponentParams,
+  // Code & Maps types (Sprint 6)
+  CodeComponentParams,
+  MapMarker,
+  MapComponentParams,
+  // Validation options (v2.0.0)
+  IframePolicy,
+  ValidationOptions,
 } from './types'
 
 // Services
 export {
   validateComponent,
   validateLayout,
+  validateIframeDomain,
   DEFAULT_RESOURCE_LIMITS,
+  DEFAULT_IFRAME_DOMAINS,
   ComponentRegistry,
 } from './services'

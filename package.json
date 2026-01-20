@@ -1,6 +1,7 @@
 {
   "name": "@mcp-ui/root",
   "version": "1.0.0",
+  "type": "module",
   "private": true,
   "description": "MCP UI Components - Monorepo root",
   "repository": {
@@ -29,8 +30,10 @@
     "version:major": "pnpm -r exec -- npm version major"
   },
   "devDependencies": {
+    "@eslint/js": "^8.56.0",
     "prettier": "^3.1.1",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "typescript-eslint": "^7.0.0"
   },
   "engines": {
     "node": ">=18.0.0",

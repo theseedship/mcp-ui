@@ -15,6 +15,9 @@ import type {
   ResourceLimits,
   ChartComponentParams,
   TableComponentParams,
+  FormFieldParams,
+  IframePolicy,
+  ValidationOptions,
 } from '../types'
 
 /**
@@ -28,15 +31,66 @@ export const DEFAULT_RESOURCE_LIMITS: ResourceLimits = {
 }
 
 /**
- * Allowed iframe domains (whitelist)
+ * Default allowed iframe domains (whitelist)
  * Must match CSP frame-src directive
+ * Updated Sprint 7: Added code, design, docs, and map providers
+ *
+ * This list is exported for transparency and can be extended via ValidationOptions
  */
-const ALLOWED_IFRAME_DOMAINS = [
+export const DEFAULT_IFRAME_DOMAINS = [
+  // Charts
   'quickchart.io',
   'www.quickchart.io',
+
+  // Deposium
   'deposium.com',
   'deposium.vip',
+  'deposium.ai',
+
+  // Development
   'localhost',
+
+  // Video providers (Sprint 5)
+  'youtube.com',
+  'www.youtube.com',
+  'youtube-nocookie.com',
+  'www.youtube-nocookie.com',
+  'youtu.be',
+  'vimeo.com',
+  'player.vimeo.com',
+
+  // Code playgrounds (Sprint 7)
+  'codepen.io',
+  'codesandbox.io',
+  'stackblitz.com',
+  'jsfiddle.net',
+
+  // Design tools (Sprint 7)
+  'figma.com',
+  'www.figma.com',
+  'miro.com',
+
+  // Google services (Sprint 7)
+  'docs.google.com',
+  'drive.google.com',
+  'sheets.google.com',
+  'slides.google.com',
+  'maps.google.com',
+  'www.google.com',
+  'datastudio.google.com',
+  'lookerstudio.google.com',
+
+  // Productivity (Sprint 7)
+  'airtable.com',
+  'notion.so',
+  'www.notion.so',
+
+  // Maps (Sprint 7)
+  'openstreetmap.org',
+  'www.openstreetmap.org',
+
+  // Analytics/Dashboards (Sprint 7)
+  'public.tableau.com',
 ]
 
 /**
@@ -256,13 +310,32 @@ export function sanitizeString(input: string): string {
 
 /**
  * Validate iframe domain against whitelist
+ *
+ * @param url - The URL to validate
+ * @param options - Optional validation options
+ * @param options.policy - 'strict' (default), 'extend', or 'allow-all'
+ * @param options.customDomains - Additional domains when policy is 'extend'
  */
-export function validateIframeDomain(url: string): ValidationResult {
+export function validateIframeDomain(
+  url: string,
+  options?: { policy?: IframePolicy; customDomains?: string[] }
+): ValidationResult {
+  // If allow-all, skip validation
+  if (options?.policy === 'allow-all') {
+    return { valid: true }
+  }
+
   try {
     const parsedUrl = new URL(url)
     const domain = parsedUrl.hostname
 
-    const isAllowed = ALLOWED_IFRAME_DOMAINS.some(
+    // Build effective whitelist
+    let effectiveWhitelist = DEFAULT_IFRAME_DOMAINS
+    if (options?.policy === 'extend' && options.customDomains) {
+      effectiveWhitelist = [...DEFAULT_IFRAME_DOMAINS, ...options.customDomains]
+    }
+
+    const isAllowed = effectiveWhitelist.some(
       (allowed) => domain === allowed || domain.endsWith(`.${allowed}`) || allowed === 'localhost'
     )
 
@@ -296,11 +369,15 @@ export function validateIframeDomain(url: string): ValidationResult {
 
 /**
  * Validate entire component
+ *
+ * @param component - The component to validate
+ * @param options - Optional validation options (limits, iframePolicy, customIframeDomains)
  */
 export function validateComponent(
   component: UIComponent,
-  limits: ResourceLimits = DEFAULT_RESOURCE_LIMITS
+  options?: ValidationOptions
 ): ValidationResult {
+  const limits = options?.limits ?? DEFAULT_RESOURCE_LIMITS
   const errors: ValidationResult['errors'] = []
 
   // Validate grid position
@@ -317,21 +394,23 @@ export function validateComponent(
 
   // Type-specific validation
   switch (component.type) {
-    case 'chart':
+    case 'chart': {
       const chartResult = validateChartComponent(component.params as ChartComponentParams, limits)
       if (!chartResult.valid) {
         errors.push(...(chartResult.errors || []))
       }
       break
+    }
 
-    case 'table':
+    case 'table': {
       const tableResult = validateTableComponent(component.params as TableComponentParams, limits)
       if (!tableResult.valid) {
         errors.push(...(tableResult.errors || []))
       }
       break
+    }
 
-    case 'metric':
+    case 'metric': {
       // Basic validation for metrics
       const metricParams = component.params as any
       if (!metricParams.title || !metricParams.value) {
@@ -342,8 +421,9 @@ export function validateComponent(
         })
       }
       break
+    }
 
-    case 'text':
+    case 'text': {
       // Basic validation for text
       const textParams = component.params as any
       if (!textParams.content) {
@@ -354,8 +434,9 @@ export function validateComponent(
         })
       }
       break
+    }
 
-    case 'iframe':
+    case 'iframe': {
       // Basic validation for iframe
       const iframeParams = component.params as any
       if (!iframeParams.url) {
@@ -364,10 +445,20 @@ export function validateComponent(
           message: 'Iframe component must have url',
           code: 'INVALID_IFRAME',
         })
+      } else {
+        // Validate iframe domain against whitelist
+        const iframeResult = validateIframeDomain(iframeParams.url, {
+          policy: options?.iframePolicy,
+          customDomains: options?.customIframeDomains,
+        })
+        if (!iframeResult.valid) {
+          errors.push(...(iframeResult.errors || []))
+        }
       }
       break
+    }
 
-    case 'image':
+    case 'image': {
       // Basic validation for image
       const imageParams = component.params as any
       if (!imageParams.url) {
@@ -378,8 +469,9 @@ export function validateComponent(
         })
       }
       break
+    }
 
-    case 'link':
+    case 'link': {
       // Basic validation for link
       const linkParams = component.params as any
       if (!linkParams.url) {
@@ -390,8 +482,9 @@ export function validateComponent(
         })
       }
       break
+    }
 
-    case 'action':
+    case 'action': {
       // Basic validation for action
       const actionParams = component.params as any
       if (!actionParams.label) {
@@ -402,6 +495,7 @@ export function validateComponent(
         })
       }
       break
+    }
 
     default:
       errors.push({
@@ -419,10 +513,13 @@ export function validateComponent(
 
 /**
  * Validate entire layout
+ *
+ * @param layout - The layout to validate
+ * @param options - Optional validation options (limits, iframePolicy, customIframeDomains)
  */
 export function validateLayout(
   layout: UILayout,
-  limits: ResourceLimits = DEFAULT_RESOURCE_LIMITS
+  options?: ValidationOptions
 ): ValidationResult {
   const errors: ValidationResult['errors'] = []
 
@@ -445,7 +542,7 @@ export function validateLayout(
 
   // Validate each component
   for (const [index, component] of layout.components.entries()) {
-    const result = validateComponent(component, limits)
+    const result = validateComponent(component, options)
     if (!result.valid) {
       errors.push(
         ...(result.errors?.map((error) => ({
@@ -468,5 +565,109 @@ export function validateLayout(
   return {
     valid: errors.length === 0,
     errors: errors.length > 0 ? errors : undefined,
+  }
+}
+
+/**
+ * Validate a single form field value against field rules
+ */
+export function validateFieldValue(
+  value: any,
+  field: FormFieldParams
+): { valid: boolean; error?: string } {
+  // Required check
+  if (field.required) {
+    if (value === undefined || value === null || value === '') {
+      return { valid: false, error: `${field.label || field.name} is required` }
+    }
+    if (field.type === 'checkbox' && value !== true) {
+      return { valid: false, error: `${field.label || field.name} must be checked` }
+    }
+  }
+
+  // Skip further validation if value is empty and not required
+  if (value === undefined || value === null || value === '') {
+    return { valid: true }
+  }
+
+  // Type-specific validation
+  switch (field.type) {
+    case 'text':
+    case 'textarea':
+    case 'password':
+      if (field.minLength && String(value).length < field.minLength) {
+        return { valid: false, error: `Minimum ${field.minLength} characters required` }
+      }
+      if (field.maxLength && String(value).length > field.maxLength) {
+        return { valid: false, error: `Maximum ${field.maxLength} characters allowed` }
+      }
+      if (field.pattern && !new RegExp(field.pattern).test(String(value))) {
+        return { valid: false, error: 'Invalid format' }
+      }
+      break
+
+    case 'email':
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value))) {
+        return { valid: false, error: 'Invalid email address' }
+      }
+      break
+
+    case 'number': {
+      const numValue = Number(value)
+      if (isNaN(numValue)) {
+        return { valid: false, error: 'Must be a valid number' }
+      }
+      if (field.min !== undefined && numValue < field.min) {
+        return { valid: false, error: `Minimum value is ${field.min}` }
+      }
+      if (field.max !== undefined && numValue > field.max) {
+        return { valid: false, error: `Maximum value is ${field.max}` }
+      }
+      break
+    }
+
+    case 'date':
+      if (field.minDate && value < field.minDate) {
+        return { valid: false, error: `Date must be after ${field.minDate}` }
+      }
+      if (field.maxDate && value > field.maxDate) {
+        return { valid: false, error: `Date must be before ${field.maxDate}` }
+      }
+      break
+
+    case 'select':
+    case 'radio':
+      // Validate that value is one of the options
+      if (field.options && field.options.length > 0) {
+        const validValues = field.options.map((opt) => opt.value)
+        if (!validValues.includes(String(value))) {
+          return { valid: false, error: 'Please select a valid option' }
+        }
+      }
+      break
+  }
+
+  return { valid: true }
+}
+
+/**
+ * Validate entire form data against field definitions
+ */
+export function validateFormData(
+  data: Record<string, any>,
+  fields: FormFieldParams[]
+): { valid: boolean; errors: Record<string, string> } {
+  const errors: Record<string, string> = {}
+
+  for (const field of fields) {
+    const result = validateFieldValue(data[field.name], field)
+    if (!result.valid && result.error) {
+      errors[field.name] = result.error
+    }
+  }
+
+  return {
+    valid: Object.keys(errors).length === 0,
+    errors,
   }
 }

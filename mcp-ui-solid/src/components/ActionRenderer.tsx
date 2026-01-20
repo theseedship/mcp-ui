@@ -1,4 +1,4 @@
-import { Component, Show } from 'solid-js'
+import { Component } from 'solid-js'
 // import type { ActionSpec } from '@seed-ship/mcp-ui-spec'
 type ActionSpec = any
 

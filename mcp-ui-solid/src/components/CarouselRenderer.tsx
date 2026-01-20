@@ -1,9 +1,7 @@
-import { Component, For, createSignal, onMount } from 'solid-js'
+import { Component, For, createSignal } from 'solid-js'
 import { isServer } from 'solid-js/web'
-import { UIResourceRenderer } from './UIResourceRenderer'
-
-// Local definition to avoid missing module error
-type UIComponent = any
+import { useRenderContext } from './RenderContext'
+import type { UIComponent } from '../types'
 
 export interface CarouselRendererProps {
     items: UIComponent[]
@@ -14,6 +12,9 @@ export const CarouselRenderer: Component<CarouselRendererProps> = (props) => {
     let scrollContainer: HTMLDivElement | undefined
     const [canScrollLeft, setCanScrollLeft] = createSignal(false)
     const [canScrollRight, setCanScrollRight] = createSignal(true)
+
+    // Use render context to avoid circular dependency
+    const { renderComponent } = useRenderContext()
 
     const checkScroll = () => {
         if (isServer || !scrollContainer) return
@@ -66,7 +67,7 @@ export const CarouselRenderer: Component<CarouselRendererProps> = (props) => {
                     {(item) => (
                         <div class="flex-none w-[85%] sm:w-[45%] snap-center">
                             <div class="h-full border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800">
-                                <UIResourceRenderer content={item} />
+                                {renderComponent(item)}
                             </div>
                         </div>
                     )}

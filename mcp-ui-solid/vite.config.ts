@@ -27,12 +27,20 @@ export default defineConfig({
       formats: ['es', 'cjs'],
     },
     rollupOptions: {
-      external: ['solid-js', 'solid-js/web', 'solid-js/store'],
+      external: [
+        'solid-js',
+        'solid-js/web',
+        'solid-js/store',
+        'chart.js',
+        'chart.js/auto',
+      ],
       output: {
         globals: {
           'solid-js': 'SolidJS',
           'solid-js/web': 'SolidJSWeb',
           'solid-js/store': 'SolidJSStore',
+          'chart.js': 'Chart',
+          'chart.js/auto': 'Chart',
         },
         preserveModules: true, // Preserve directory structure for proper sub-exports
         preserveModulesRoot: 'src',

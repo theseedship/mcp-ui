@@ -1,11 +1,12 @@
 /**
  * GridRenderer - CSS Grid layout component for nested layouts
  * Phase 5.0: Quick Wins - Enables template builder layouts
+ * Updated: Uses RenderContext to avoid circular dependencies
  */
 
 import { Component, For, createMemo } from 'solid-js'
 import type { UIComponent, GridPosition } from '../types'
-import { UIResourceRenderer } from './UIResourceRenderer'
+import { useRenderContext } from './RenderContext'
 
 /**
  * Parameters for GridRenderer component
@@ -53,7 +54,7 @@ export interface GridRendererProps {
 /**
  * Convert grid position to CSS style string
  */
-function getGridItemStyle(position: GridPosition | undefined, areas?: string[][]): string {
+function getGridItemStyle(position: GridPosition | undefined, _areas?: string[][]): string {
   // Default to full width if no position specified
   if (!position) {
     return 'grid-column: 1 / -1; grid-row: auto'
@@ -86,6 +87,9 @@ function buildGridTemplateAreas(areas: string[][]): string {
  * Renders a CSS Grid container with nested UIComponents
  */
 export const GridRenderer: Component<GridRendererProps> = (props) => {
+  // Use render context to avoid circular dependency
+  const { renderComponent } = useRenderContext()
+
   // Extract params with defaults
   const params = createMemo(() => {
     const p = props.component.params as GridComponentParams
@@ -127,8 +131,8 @@ export const GridRenderer: Component<GridRendererProps> = (props) => {
               style={getGridItemStyle(child.position, params().areas)}
               class="min-w-0 h-full"
             >
-              {/* Use UIResourceRenderer for recursive rendering */}
-              <UIResourceRenderer content={child} onError={props.onError} />
+              {/* Use RenderContext for recursive rendering (avoids circular dependency) */}
+              {renderComponent(child, props.onError)}
             </div>
           )}
         </For>
