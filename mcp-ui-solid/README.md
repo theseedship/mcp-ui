@@ -5,6 +5,55 @@ SolidJS components for rendering MCP-generated UI resources. Part of the MCP UI 
 [![npm version](https://img.shields.io/npm/v/@seed-ship/mcp-ui-solid.svg)](https://www.npmjs.com/package/@seed-ship/mcp-ui-solid)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+## What's New in v2.0.0
+
+### Highlights
+
+- **Configurable Iframe Whitelist** - Control iframe security with `IframePolicy`: `strict`, `extend`, or `allow-all`
+- **60+ Whitelisted Domains** - Expanded default whitelist for business use cases
+- **New Component Types** - Forms, Modals, Action Groups, Image Gallery, Video, Code, Map
+- **Table Virtualization** - Handle 10,000+ rows with smooth scrolling
+- **Map Clustering** - Auto-cluster markers for large datasets
+- **Native Chart.js Support** - Optional direct Chart.js rendering (no iframe)
+
+### Configurable Iframe Security
+
+```typescript
+import { validateComponent, DEFAULT_IFRAME_DOMAINS } from '@seed-ship/mcp-ui-solid'
+
+// Default: strict whitelist
+validateComponent(component)
+
+// Extend whitelist with custom domains
+validateComponent(component, {
+  iframePolicy: 'extend',
+  customIframeDomains: ['my-trusted-site.com']
+})
+
+// Disable whitelist (use with caution)
+validateComponent(component, { iframePolicy: 'allow-all' })
+
+// View default whitelist
+console.log(DEFAULT_IFRAME_DOMAINS)
+```
+
+### Whitelisted Domains (v2.0.0)
+
+| Category | Domains |
+|----------|---------|
+| **Video** | youtube.com, vimeo.com, loom.com, cloudflarestream.com, streamable.com |
+| **Diagrams** | mermaid.live, excalidraw.com, lucidchart.com, figma.com, miro.com |
+| **Code** | github.com, gitlab.com, codepen.io, codesandbox.io, stackblitz.com, replit.com |
+| **Google** | docs, sheets, slides, drive, maps, datastudio, lookerstudio |
+| **Business** | notion.so, airtable.com, calendly.com, typeform.com, cal.com |
+| **Analytics** | tableau.com, powerbi.com, observablehq.com |
+| **Design** | canva.com, figma.com |
+| **Maps** | maps.google.com, openstreetmap.org |
+| **Previews** | vercel.app, netlify.app |
+| **E-commerce** | amazon.com, amazon.fr, amazon.de, amazon.co.uk, etc. |
+
+---
+
 ## Overview
 
 `@seed-ship/mcp-ui-solid` provides a complete rendering solution for MCP (Model Context Protocol) generated UIs. It enables AI/LLM systems to generate structured, interactive dashboards that are rendered with SolidJS.
@@ -389,7 +438,7 @@ function CustomStreaming() {
 
 This package follows [Semantic Versioning](https://semver.org/). See [CHANGELOG.md](./CHANGELOG.md) for release notes.
 
-**Current Version:** 1.0.43
+**Current Version:** 2.0.1
 
 ## License
 

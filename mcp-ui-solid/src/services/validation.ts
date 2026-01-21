@@ -91,6 +91,52 @@ export const DEFAULT_IFRAME_DOMAINS = [
 
   // Analytics/Dashboards (Sprint 7)
   'public.tableau.com',
+  'app.powerbi.com',
+  'observablehq.com',
+
+  // Diagrams & Whiteboards (v2.0.0)
+  'mermaid.live',
+  'excalidraw.com',
+  'lucidchart.com',
+  'lucid.app',
+
+  // Video - Business (v2.0.0)
+  'loom.com',
+  'www.loom.com',
+  'cloudflarestream.com',
+  'streamable.com',
+
+  // Code repositories (v2.0.0)
+  'github.com',
+  'gist.github.com',
+  'gitlab.com',
+  'replit.com',
+  'glitch.com',
+
+  // Business tools (v2.0.0)
+  'calendly.com',
+  'typeform.com',
+  'cal.com',
+
+  // Design (v2.0.0)
+  'canva.com',
+
+  // Deploy previews (v2.0.0)
+  'vercel.app',
+  'netlify.app',
+
+  // E-commerce (v2.0.0)
+  'amazon.com',
+  'amazon.fr',
+  'amazon.de',
+  'amazon.co.uk',
+  'amazon.es',
+  'amazon.it',
+  'amazon.ca',
+  'amazon.co.jp',
+  'images-amazon.com',
+  'media-amazon.com',
+  'ws-na.amazon-adsystem.com',
 ]
 
 /**

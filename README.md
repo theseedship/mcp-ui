@@ -7,13 +7,26 @@ A collection of TypeScript packages for building generative, streaming user inte
 [![npm version](https://img.shields.io/npm/v/@seed-ship/mcp-ui-solid.svg)](https://www.npmjs.com/package/@seed-ship/mcp-ui-solid)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+## What's New in v2.0.0
+
+- **Configurable Iframe Whitelist** - Control iframe security with `IframePolicy`: `strict`, `extend`, or `allow-all`
+- **60+ Whitelisted Domains** - YouTube, Vimeo, Loom, Mermaid, Excalidraw, GitHub, Figma, Notion, Calendly, Power BI, and more
+- **New Components** - Forms, Modals, Action Groups, Image Gallery, Video, Code blocks, Interactive Maps
+- **Table Virtualization** - Handle 10,000+ rows efficiently
+- **Map Clustering** - Auto-cluster markers for large datasets
+- **Native Chart.js** - Optional direct rendering without iframe
+
+See [`mcp-ui-solid` README](./mcp-ui-solid/README.md#whats-new-in-v200) for details.
+
+---
+
 ## Packages
 
 This monorepo contains three packages published under `@seed-ship/`:
 
 | Package | Version | Description |
 |---------|---------|-------------|
-| [`@seed-ship/mcp-ui-solid`](./mcp-ui-solid) | 1.0.43 | SolidJS components for rendering MCP-generated UI |
+| [`@seed-ship/mcp-ui-solid`](./mcp-ui-solid) | 2.0.1 | SolidJS components for rendering MCP-generated UI |
 | [`@seed-ship/mcp-ui-spec`](./mcp-ui-spec) | 1.0.15 | JSON schemas and Zod validators |
 | [`@seed-ship/mcp-ui-cli`](./mcp-ui-cli) | 1.0.14 | CLI for validation and type generation |
 
