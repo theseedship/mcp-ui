@@ -1033,3 +1033,532 @@ export interface ValidationOptions {
    */
   customIframeDomains?: string[]
 }
+
+// =============================================================================
+// DRAG-DROP TYPES (Sprint Drag-Drop)
+// =============================================================================
+
+/**
+ * Resize constraints for grid items
+ */
+export interface ResizeConstraints {
+  /**
+   * Minimum column span (default: 1)
+   */
+  minColSpan?: number
+
+  /**
+   * Maximum column span (default: 12)
+   */
+  maxColSpan?: number
+
+  /**
+   * Minimum row span (default: 1)
+   */
+  minRowSpan?: number
+
+  /**
+   * Maximum row span
+   */
+  maxRowSpan?: number
+
+  /**
+   * Lock horizontal resizing
+   */
+  lockHorizontal?: boolean
+
+  /**
+   * Lock vertical resizing
+   */
+  lockVertical?: boolean
+}
+
+/**
+ * Drag-Drop configuration for UIResourceRenderer
+ */
+export interface DragDropConfig {
+  /**
+   * Enable drag-drop functionality (default: false)
+   */
+  enabled?: boolean
+
+  /**
+   * Enable reordering via drag (default: true when enabled)
+   */
+  reorder?: boolean
+
+  /**
+   * Enable resize handles (default: true when enabled)
+   */
+  resize?: boolean
+
+  /**
+   * Resize constraints
+   */
+  constraints?: ResizeConstraints
+
+  /**
+   * Callback when components are reordered
+   */
+  onReorder?: (components: UIComponent[]) => void
+
+  /**
+   * Callback when a component is resized
+   */
+  onResize?: (componentId: string, newPosition: GridPosition) => void
+
+  /**
+   * Callback when layout changes (reorder or resize)
+   */
+  onChange?: (layout: UILayout) => void
+
+  /**
+   * Show grid lines during drag (default: true)
+   */
+  showGridLines?: boolean
+
+  /**
+   * Animation duration in ms (default: 200)
+   */
+  animationDuration?: number
+}
+
+/**
+ * Drag event data for internal use
+ */
+export interface DragEventData {
+  /**
+   * Component being dragged
+   */
+  componentId: string
+
+  /**
+   * Original position
+   */
+  originalPosition: GridPosition
+
+  /**
+   * Current drag position (in grid coordinates)
+   */
+  currentPosition?: GridPosition
+
+  /**
+   * Drag type
+   */
+  type: 'reorder' | 'resize'
+
+  /**
+   * For resize: which edge is being dragged
+   */
+  resizeEdge?: 'left' | 'right' | 'top' | 'bottom' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
+}
+
+/**
+ * Props for draggable grid items
+ */
+export interface DraggableGridItemProps {
+  /**
+   * Component ID
+   */
+  id: string
+
+  /**
+   * Grid position
+   */
+  position: GridPosition
+
+  /**
+   * Enable dragging
+   */
+  draggable?: boolean
+
+  /**
+   * Enable resize handles
+   */
+  resizable?: boolean
+
+  /**
+   * Resize constraints
+   */
+  constraints?: ResizeConstraints
+
+  /**
+   * Is this item currently being dragged
+   */
+  isDragging?: boolean
+
+  /**
+   * Is this item a drop target
+   */
+  isDropTarget?: boolean
+
+  /**
+   * Children to render
+   */
+  children?: any
+
+  /**
+   * Custom class
+   */
+  class?: string
+}
+
+// =============================================================================
+// AUTOCOMPLETE TYPES (Sprint Autocomplete)
+// =============================================================================
+
+/**
+ * Autocomplete result type
+ */
+export type AutocompleteResultType = 'completion' | 'options'
+
+/**
+ * Single autocomplete option (for dropdown)
+ */
+export interface AutocompleteOption {
+  /**
+   * Option value
+   */
+  value: string
+
+  /**
+   * Display label (defaults to value)
+   */
+  label?: string
+
+  /**
+   * Optional description
+   */
+  description?: string
+
+  /**
+   * Optional icon
+   */
+  icon?: string
+
+  /**
+   * Additional metadata from the source
+   */
+  metadata?: Record<string, any>
+
+  /**
+   * Whether this option is disabled
+   */
+  disabled?: boolean
+}
+
+/**
+ * Result from autocomplete plugin
+ */
+export interface AutocompleteResult {
+  /**
+   * Result type:
+   * - 'completion': Ghost text (LLM-style)
+   * - 'options': Dropdown options (data source)
+   */
+  type: AutocompleteResultType
+
+  /**
+   * For type: 'completion' - the suggested text to complete
+   */
+  completion?: string
+
+  /**
+   * For type: 'options' - list of suggestions
+   */
+  options?: AutocompleteOption[]
+
+  /**
+   * Plugin ID that generated this result
+   */
+  pluginId?: string
+
+  /**
+   * Whether result is from cache
+   */
+  cached?: boolean
+}
+
+/**
+ * Context passed to autocomplete plugins
+ */
+export interface AutocompleteContext {
+  /**
+   * Field name/identifier
+   */
+  fieldName: string
+
+  /**
+   * Current form data (other fields)
+   */
+  formData?: Record<string, any>
+
+  /**
+   * Cursor position in input
+   */
+  cursorPosition?: number
+
+  /**
+   * Previous user inputs (for context)
+   */
+  history?: string[]
+
+  /**
+   * Custom context data
+   */
+  custom?: Record<string, any>
+}
+
+/**
+ * Plugin interface for autocomplete sources
+ */
+export interface AutocompletePlugin {
+  /**
+   * Unique plugin identifier
+   */
+  id: string
+
+  /**
+   * Human-readable name
+   */
+  name: string
+
+  /**
+   * Configure the plugin
+   */
+  configure?: (config: Record<string, any>) => void
+
+  /**
+   * Get suggestions for input
+   */
+  getSuggestions: (
+    input: string,
+    context?: AutocompleteContext
+  ) => Promise<AutocompleteResult>
+
+  /**
+   * Cleanup resources
+   */
+  dispose?: () => void
+
+  /**
+   * Whether plugin is ready
+   */
+  isReady?: () => boolean
+}
+
+/**
+ * Groq LLM plugin configuration
+ */
+export interface GroqPluginConfig {
+  /**
+   * Groq API key (VITE_GROQ_API_KEY)
+   */
+  apiKey: string
+
+  /**
+   * Model to use (default: 'mixtral-8x7b-32768')
+   */
+  model?: string
+
+  /**
+   * System prompt for completion
+   */
+  systemPrompt?: string
+
+  /**
+   * Max tokens to generate (default: 50)
+   */
+  maxTokens?: number
+
+  /**
+   * Temperature (default: 0.3)
+   */
+  temperature?: number
+}
+
+/**
+ * Supabase plugin configuration
+ */
+export interface SupabasePluginConfig {
+  /**
+   * Supabase project URL
+   */
+  url: string
+
+  /**
+   * Supabase anonymous key
+   */
+  anonKey: string
+
+  /**
+   * Table to search
+   */
+  table: string
+
+  /**
+   * Column to return as value
+   */
+  column: string
+
+  /**
+   * Column to search (defaults to column)
+   */
+  searchColumn?: string
+
+  /**
+   * Label column (defaults to column)
+   */
+  labelColumn?: string
+
+  /**
+   * Max results (default: 10)
+   */
+  limit?: number
+
+  /**
+   * Filter expression
+   */
+  filter?: Record<string, any>
+}
+
+/**
+ * DuckDB WASM plugin configuration
+ */
+export interface DuckDBPluginConfig {
+  /**
+   * SQL query with :search placeholder
+   * Example: "SELECT name FROM cities WHERE name ILIKE :search || '%' LIMIT 10"
+   */
+  query: string
+
+  /**
+   * Optional data to load into DuckDB
+   */
+  data?: {
+    tableName: string
+    source: string | ArrayBuffer | File // URL, raw data, or file
+    format?: 'csv' | 'json' | 'parquet'
+  }
+}
+
+/**
+ * Generic REST API plugin configuration
+ */
+export interface RestPluginConfig {
+  /**
+   * API endpoint with {search} placeholder
+   * Example: '/api/search?q={search}'
+   */
+  endpoint: string
+
+  /**
+   * HTTP method (default: 'GET')
+   */
+  method?: 'GET' | 'POST'
+
+  /**
+   * Request headers
+   */
+  headers?: Record<string, string>
+
+  /**
+   * For POST: body template with {search} placeholder
+   */
+  bodyTemplate?: string
+
+  /**
+   * Transform response to options
+   */
+  transform?: (response: any) => AutocompleteOption[]
+
+  /**
+   * Path to results array in response (e.g., 'data.results')
+   */
+  resultPath?: string
+
+  /**
+   * Field name for value (default: 'value' or 'id')
+   */
+  valueField?: string
+
+  /**
+   * Field name for label (default: 'label' or 'name')
+   */
+  labelField?: string
+}
+
+/**
+ * Field-level autocomplete configuration
+ */
+export interface FieldAutocompleteConfig {
+  /**
+   * Enable autocomplete for this field
+   */
+  enabled: boolean
+
+  /**
+   * Plugin ID to use (defaults to provider default)
+   */
+  plugin?: string
+
+  /**
+   * Plugin-specific configuration
+   */
+  config?: Record<string, any>
+
+  /**
+   * Other form fields to include as context
+   */
+  contextFields?: string[]
+
+  /**
+   * Minimum characters before triggering (default: 1)
+   */
+  minChars?: number
+
+  /**
+   * Debounce delay in ms (default: 150)
+   */
+  debounceMs?: number
+
+  /**
+   * Custom placeholder when loading
+   */
+  loadingPlaceholder?: string
+}
+
+/**
+ * Autocomplete provider configuration
+ */
+export interface AutocompleteProviderConfig {
+  /**
+   * Registered plugins
+   */
+  plugins: AutocompletePlugin[]
+
+  /**
+   * Default plugin ID
+   */
+  defaultPlugin?: string
+
+  /**
+   * Global debounce delay (default: 150ms)
+   */
+  debounceMs?: number
+
+  /**
+   * Global minimum characters (default: 1)
+   */
+  minChars?: number
+
+  /**
+   * Cache TTL in ms (default: 60000)
+   */
+  cacheTtl?: number
+
+  /**
+   * Enable caching (default: true)
+   */
+  cacheEnabled?: boolean
+}

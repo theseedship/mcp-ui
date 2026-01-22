@@ -1,0 +1,7 @@
+/**
+ * MCP UI Styles Index
+ * Import this file to include all component styles
+ */
+
+@import './drag-drop.css';
+@import './autocomplete.css';

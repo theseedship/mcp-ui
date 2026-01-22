@@ -1,6 +1,6 @@
 {
   "name": "@seed-ship/mcp-ui-solid",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "description": "SolidJS components for rendering MCP-generated UI resources",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -73,6 +73,17 @@
         "default": "./dist/types-export.cjs"
       }
     },
+    "./plugins/duckdb": {
+      "solid": "./src/plugins/duckdb.ts",
+      "import": {
+        "types": "./dist/plugins/duckdb.d.ts",
+        "default": "./dist/plugins/duckdb.js"
+      },
+      "require": {
+        "types": "./dist/plugins/duckdb.d.ts",
+        "default": "./dist/plugins/duckdb.cjs"
+      }
+    },
     "./src/*": "./src/*"
   },
   "scripts": {
@@ -110,6 +121,7 @@
     }
   ],
   "peerDependencies": {
+    "@duckdb/duckdb-wasm": "^1.28.0",
     "@tanstack/solid-virtual": "^3.0.0",
     "chart.js": "^4.0.0",
     "highlight.js": "^11.9.0",
@@ -118,6 +130,9 @@
     "solid-js": "^1.9.0"
   },
   "peerDependenciesMeta": {
+    "@duckdb/duckdb-wasm": {
+      "optional": true
+    },
     "chart.js": {
       "optional": true
     },

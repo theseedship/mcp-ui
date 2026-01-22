@@ -1,0 +1,297 @@
+/**
+ * Drag-Drop Styles
+ * CSS styles for drag-and-drop grid editing
+ *
+ * Sprint Drag-Drop Feature
+ */
+
+/* =============================================================================
+   DRAGGABLE GRID ITEM
+   ============================================================================= */
+
+.mcp-draggable-grid-item {
+  position: relative;
+  transition: all 200ms ease-out;
+}
+
+/* Hover state - show drag handle */
+.mcp-draggable-grid-item.mcp-draggable:hover .mcp-drag-handle {
+  opacity: 1 !important;
+}
+
+/* Dragging state */
+.mcp-draggable-grid-item.mcp-dragging {
+  opacity: 0.5;
+  transform: scale(1.02);
+  z-index: 100;
+  cursor: grabbing;
+}
+
+/* Drop target state */
+.mcp-draggable-grid-item.mcp-drop-target:not(.mcp-dragging) {
+  box-shadow: 0 0 0 2px #3b82f6;
+  border-radius: 4px;
+}
+
+/* Resizing state */
+.mcp-draggable-grid-item.mcp-resizing {
+  z-index: 100;
+  transition: none;
+}
+
+/* =============================================================================
+   DRAG HANDLE
+   ============================================================================= */
+
+.mcp-drag-handle {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 4px;
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 2px;
+  cursor: grab;
+  opacity: 0;
+  transition: opacity 150ms ease, background-color 150ms ease;
+  z-index: 5;
+}
+
+.mcp-drag-handle:hover {
+  background-color: rgba(0, 0, 0, 0.4);
+}
+
+.mcp-drag-handle:active {
+  cursor: grabbing;
+}
+
+/* =============================================================================
+   RESIZE HANDLES
+   ============================================================================= */
+
+.mcp-resize-handle {
+  position: absolute;
+  z-index: 10;
+  user-select: none;
+  touch-action: none;
+}
+
+/* Horizontal resize handles */
+.mcp-resize-handle-left,
+.mcp-resize-handle-right {
+  cursor: ew-resize;
+  width: 12px;
+  height: 100%;
+  top: 0;
+}
+
+.mcp-resize-handle-left {
+  left: -6px;
+}
+
+.mcp-resize-handle-right {
+  right: -6px;
+}
+
+/* Vertical resize handles */
+.mcp-resize-handle-top,
+.mcp-resize-handle-bottom {
+  cursor: ns-resize;
+  height: 12px;
+  width: 100%;
+  left: 0;
+}
+
+.mcp-resize-handle-top {
+  top: -6px;
+}
+
+.mcp-resize-handle-bottom {
+  bottom: -6px;
+}
+
+/* Resize indicator (visible line) */
+.mcp-resize-indicator {
+  position: absolute;
+  background-color: #9ca3af;
+  border-radius: 2px;
+  transition: background-color 150ms ease, opacity 150ms ease;
+  opacity: 0;
+}
+
+/* Show indicator on hover */
+.mcp-resize-handle:hover .mcp-resize-indicator,
+.mcp-resize-handle-active .mcp-resize-indicator {
+  opacity: 1;
+  background-color: #3b82f6;
+}
+
+/* Show indicators when parent item is hovered */
+.mcp-draggable-grid-item.mcp-resizable:hover .mcp-resize-indicator {
+  opacity: 0.6;
+}
+
+/* Active resize state */
+.mcp-resize-handle-active .mcp-resize-indicator {
+  opacity: 1 !important;
+  background-color: #3b82f6 !important;
+}
+
+/* Disabled state */
+.mcp-resize-handle-disabled {
+  pointer-events: none;
+  cursor: default;
+}
+
+.mcp-resize-handle-disabled .mcp-resize-indicator {
+  display: none;
+}
+
+/* =============================================================================
+   DROP INDICATOR
+   ============================================================================= */
+
+.mcp-drop-indicator {
+  position: absolute;
+  top: -2px;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background-color: #3b82f6;
+  border-radius: 2px;
+  z-index: 20;
+  animation: drop-indicator-pulse 1s ease-in-out infinite;
+}
+
+@keyframes drop-indicator-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* =============================================================================
+   GRID OVERLAY
+   ============================================================================= */
+
+.mcp-grid-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.mcp-grid-overlay-column {
+  background-color: rgba(59, 130, 246, 0.05);
+  border: 1px dashed rgba(59, 130, 246, 0.2);
+  border-radius: 4px;
+}
+
+/* =============================================================================
+   DRAG GHOST (browser's drag image)
+   ============================================================================= */
+
+/* Style the element while it's being dragged (browser creates a snapshot) */
+.mcp-draggable-grid-item[draggable="true"] {
+  cursor: grab;
+}
+
+.mcp-draggable-grid-item[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+/* =============================================================================
+   EDITABLE UI RENDERER
+   ============================================================================= */
+
+.editable-ui-renderer {
+  position: relative;
+}
+
+.editable-ui-renderer[data-editing="true"] {
+  min-height: 200px;
+}
+
+/* =============================================================================
+   TRANSITIONS
+   ============================================================================= */
+
+/* Smooth transitions for position changes */
+.mcp-draggable-grid-item:not(.mcp-dragging):not(.mcp-resizing) {
+  transition:
+    grid-column 200ms ease-out,
+    grid-row 200ms ease-out,
+    transform 200ms ease-out,
+    opacity 200ms ease-out,
+    box-shadow 200ms ease-out;
+}
+
+/* =============================================================================
+   ACCESSIBILITY
+   ============================================================================= */
+
+/* Focus styles for keyboard navigation */
+.mcp-resize-handle:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.mcp-resize-handle:focus .mcp-resize-indicator {
+  opacity: 1;
+  background-color: #3b82f6;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .mcp-draggable-grid-item,
+  .mcp-drag-handle,
+  .mcp-resize-indicator,
+  .mcp-drop-indicator {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* =============================================================================
+   DARK MODE
+   ============================================================================= */
+
+@media (prefers-color-scheme: dark) {
+  .mcp-drag-handle {
+    background-color: rgba(255, 255, 255, 0.2);
+  }
+
+  .mcp-drag-handle:hover {
+    background-color: rgba(255, 255, 255, 0.4);
+  }
+
+  .mcp-resize-indicator {
+    background-color: #6b7280;
+  }
+
+  .mcp-grid-overlay-column {
+    background-color: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.3);
+  }
+}
+
+/* Explicit dark mode class support */
+.dark .mcp-drag-handle {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.dark .mcp-drag-handle:hover {
+  background-color: rgba(255, 255, 255, 0.4);
+}
+
+.dark .mcp-resize-indicator {
+  background-color: #6b7280;
+}
+
+.dark .mcp-grid-overlay-column {
+  background-color: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.3);
+}

@@ -22,6 +22,7 @@ export default defineConfig({
         types: resolve(__dirname, 'src/types/index.ts'),
         validation: resolve(__dirname, 'src/validation.ts'),
         'types-export': resolve(__dirname, 'src/types-export.ts'),
+        'plugins/duckdb': resolve(__dirname, 'src/plugins/duckdb.ts'),
       },
       name: 'McpUiSolid',
       formats: ['es', 'cjs'],
@@ -33,6 +34,7 @@ export default defineConfig({
         'solid-js/store',
         'chart.js',
         'chart.js/auto',
+        '@duckdb/duckdb-wasm',
       ],
       output: {
         globals: {

@@ -31,11 +31,28 @@
 // Components
 export { UIResourceRenderer, StreamingUIRenderer, GenerativeUIErrorBoundary } from './components'
 
+// Drag-Drop Components
+export { DraggableGridItem } from './components/DraggableGridItem'
+export { ResizeHandle } from './components/ResizeHandle'
+export { EditableUIResourceRenderer } from './components/EditableUIResourceRenderer'
+
+// Autocomplete Components
+export { GhostText, GhostTextInput } from './components/GhostText'
+export { AutocompleteDropdown } from './components/AutocompleteDropdown'
+export { AutocompleteFormField } from './components/AutocompleteFormField'
+
 export type {
   UIResourceRendererProps,
   StreamingUIRendererProps,
   GenerativeUIErrorBoundaryProps,
 } from './components'
+
+export type { DraggableGridItemProps } from './components/DraggableGridItem'
+export type { ResizeHandleProps as ResizeHandleComponentProps } from './components/ResizeHandle'
+export type { EditableUIResourceRendererProps } from './components/EditableUIResourceRenderer'
+export type { GhostTextProps, GhostTextInputProps } from './components/GhostText'
+export type { AutocompleteDropdownProps } from './components/AutocompleteDropdown'
+export type { AutocompleteFormFieldProps, AutocompleteFormFieldParams } from './components/AutocompleteFormField'
 
 // Hooks
 export {
@@ -47,6 +64,11 @@ export {
   useModal,
   useConfirmModal,
   useFormPersistence,
+  // Drag-Drop hooks
+  useDragDrop,
+  useResize,
+  // Autocomplete hooks
+  useAutocomplete,
 } from './hooks'
 
 export type {
@@ -63,10 +85,26 @@ export type {
   UseConfirmModalReturn,
   UseFormPersistenceOptions,
   UseFormPersistenceReturn,
+  // Drag-Drop types
+  UseDragDropOptions,
+  UseDragDropReturn,
+  DragProps,
+  UseResizeOptions,
+  UseResizeReturn,
+  ResizeEdge,
+  // Autocomplete types
+  UseAutocompleteOptions,
+  UseAutocompleteReturn,
 } from './hooks'
 
 // Context (Phase 5.0)
 export { MCPActionProvider, MCPActionContext, useMCPAction, useMCPActionSafe } from './context'
+// Autocomplete Context
+export {
+  AutocompleteProvider,
+  useAutocompleteContext,
+  useAutocompleteContextSafe,
+} from './context/AutocompleteContext'
 
 export type {
   MCPActionContextValue,
@@ -74,6 +112,22 @@ export type {
   ActionRequest,
   ActionResult,
 } from './context'
+
+export type {
+  AutocompleteContextValue,
+  AutocompleteProviderProps,
+} from './context/AutocompleteContext'
+
+// Plugins (Sprint Autocomplete)
+// Note: DuckDB plugin is exported separately due to WASM dependencies
+export {
+  createGroqPlugin,
+  createSupabasePlugin,
+  createRestPlugin,
+} from './plugins'
+
+// DuckDB plugin is available via direct import:
+// import { createDuckDBPlugin, preloadDuckDB } from '@seed-ship/mcp-ui-solid/plugins/duckdb'
 
 // Types
 export type {
@@ -118,6 +172,23 @@ export type {
   // Validation options (v2.0.0)
   IframePolicy,
   ValidationOptions,
+  // Drag-Drop types (Sprint Drag-Drop)
+  ResizeConstraints,
+  DragDropConfig,
+  DragEventData,
+  DraggableGridItemProps as DraggableGridItemPropsType,
+  // Autocomplete types (Sprint Autocomplete)
+  AutocompleteResultType,
+  AutocompleteOption,
+  AutocompleteResult,
+  AutocompleteContext,
+  AutocompletePlugin,
+  GroqPluginConfig,
+  SupabasePluginConfig,
+  DuckDBPluginConfig,
+  RestPluginConfig,
+  FieldAutocompleteConfig,
+  AutocompleteProviderConfig,
 } from './types'
 
 // Services

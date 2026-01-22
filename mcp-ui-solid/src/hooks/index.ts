@@ -34,3 +34,26 @@ export type { UseModalReturn, UseConfirmModalReturn } from './useModal'
 // Form persistence hooks (Sprint 4)
 export { useFormPersistence } from './useFormPersistence'
 export type { UseFormPersistenceOptions, UseFormPersistenceReturn } from './useFormPersistence'
+
+// Drag-Drop hooks (Sprint Drag-Drop)
+export { useDragDrop } from './useDragDrop'
+export type {
+  UseDragDropOptions,
+  UseDragDropReturn,
+  DragProps,
+} from './useDragDrop'
+
+export { useResize } from './useResize'
+export type {
+  UseResizeOptions,
+  UseResizeReturn,
+  ResizeEdge,
+  ResizeHandleProps,
+} from './useResize'
+
+// Autocomplete hooks (Sprint Autocomplete)
+export { useAutocomplete } from './useAutocomplete'
+export type {
+  UseAutocompleteOptions,
+  UseAutocompleteReturn,
+} from './useAutocomplete'
