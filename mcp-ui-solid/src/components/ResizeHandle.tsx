@@ -24,7 +24,7 @@ export interface ResizeHandleProps {
   /**
    * Callback when resize starts
    */
-  onResizeStart?: (edge: ResizeEdge) => void
+  onResizeStart?: (edge: ResizeEdge, event: PointerEvent) => void
 
   /**
    * Whether the handle is disabled
@@ -195,7 +195,7 @@ export const ResizeHandle: Component<ResizeHandleProps> = (props) => {
     e.preventDefault()
     e.stopPropagation()
 
-    props.onResizeStart?.(props.edge)
+    props.onResizeStart?.(props.edge, e)
   }
 
   // Container styles
@@ -246,7 +246,12 @@ export const ResizeHandle: Component<ResizeHandleProps> = (props) => {
         if (merged.disabled) return
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
-          props.onResizeStart?.(props.edge)
+          // Create synthetic pointer event for keyboard activation
+          const syntheticEvent = new PointerEvent('pointerdown', {
+            clientX: window.innerWidth / 2,
+            clientY: window.innerHeight / 2
+          })
+          props.onResizeStart?.(props.edge, syntheticEvent)
         }
       }}
     >
