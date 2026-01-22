@@ -205,6 +205,9 @@ export function useAutocomplete(options: UseAutocompleteOptions): UseAutocomplet
   const [isOpen, setIsOpen] = createSignal(false)
   const [resultType, setResultType] = createSignal<'completion' | 'options' | null>(null)
 
+  // Request ID to track stale responses
+  let currentRequestId = 0
+
   // Config with defaults from context/options
   const config = createMemo(() => ({
     minChars: minCharsOption ?? fieldConfig?.minChars ?? autocompleteCtx?.config.minChars ?? 1,
@@ -242,6 +245,9 @@ export function useAutocomplete(options: UseAutocompleteOptions): UseAutocomplet
       return
     }
 
+    // Increment request ID to track this specific request
+    const requestId = ++currentRequestId
+
     setIsLoading(true)
     setError(null)
 
@@ -254,6 +260,11 @@ export function useAutocomplete(options: UseAutocompleteOptions): UseAutocomplet
         targetPluginId,
         contextData
       )
+
+      // Ignore stale responses - if a newer request was made, discard this result
+      if (requestId !== currentRequestId) {
+        return
+      }
 
       batch(() => {
         setResultType(result.type)
@@ -272,6 +283,11 @@ export function useAutocomplete(options: UseAutocompleteOptions): UseAutocomplet
         setIsLoading(false)
       })
     } catch (e) {
+      // Ignore errors from stale requests
+      if (requestId !== currentRequestId) {
+        return
+      }
+
       batch(() => {
         setError(e instanceof Error ? e.message : 'Unknown error')
         setIsLoading(false)

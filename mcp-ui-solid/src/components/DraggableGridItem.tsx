@@ -69,7 +69,7 @@ export interface DraggableGridItemProps {
   /**
    * Callback when resize starts
    */
-  onResizeStart?: (edge: 'left' | 'right' | 'top' | 'bottom') => void
+  onResizeStart?: (edge: 'left' | 'right' | 'top' | 'bottom', event: PointerEvent) => void
 
   /**
    * Callback for resize preview
@@ -190,8 +190,8 @@ export const DraggableGridItem: Component<DraggableGridItemProps> = (props) => {
   })
 
   // Handle resize start
-  const handleResizeStart = (edge: 'left' | 'right' | 'top' | 'bottom') => {
-    props.onResizeStart?.(edge)
+  const handleResizeStart = (edge: 'left' | 'right' | 'top' | 'bottom', event: PointerEvent) => {
+    props.onResizeStart?.(edge, event)
   }
 
   return (

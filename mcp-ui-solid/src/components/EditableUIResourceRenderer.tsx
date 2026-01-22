@@ -246,14 +246,9 @@ export const EditableUIResourceRenderer: Component<EditableUIResourceRendererPro
                 isResizing={activeResizeId() === component.id}
                 previewPosition={previewPositions().get(component.id) || null}
                 dragProps={dragDrop.getDragProps(component.id)}
-                onResizeStart={(edge) => {
+                onResizeStart={(edge, event) => {
                   setActiveResizeId(component.id)
-                  // Trigger resize with a synthetic event
-                  const syntheticEvent = new PointerEvent('pointerdown', {
-                    clientX: 0,
-                    clientY: 0
-                  })
-                  resize.handleResizeStart(syntheticEvent, edge as ResizeEdge)
+                  resize.handleResizeStart(event, edge as ResizeEdge)
                 }}
               >
                 {/* Render component using UIResourceRenderer for single component */}
