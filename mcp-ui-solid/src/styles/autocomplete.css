@@ -1,0 +1,356 @@
+/**
+ * Autocomplete Styles
+ * CSS styles for autocomplete components
+ *
+ * Sprint Autocomplete Feature
+ */
+
+/* =============================================================================
+   ANIMATIONS
+   ============================================================================= */
+
+@keyframes mcp-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* =============================================================================
+   GHOST TEXT
+   ============================================================================= */
+
+.mcp-ghost-text-container {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+
+.mcp-ghost-text-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  overflow: hidden;
+  white-space: pre;
+}
+
+.mcp-ghost-text {
+  color: #9ca3af;
+  opacity: 0.7;
+}
+
+.mcp-ghost-text-hint {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.75rem;
+  color: #6b7280;
+  background-color: rgba(255, 255, 255, 0.95);
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid #e5e7eb;
+  pointer-events: none;
+  animation: mcp-hint-fade-in 150ms ease;
+}
+
+@keyframes mcp-hint-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) translateX(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+  }
+}
+
+.mcp-ghost-text-input-wrapper {
+  position: relative;
+}
+
+.mcp-ghost-text-input {
+  position: relative;
+  background-color: transparent;
+  caret-color: inherit;
+}
+
+/* =============================================================================
+   AUTOCOMPLETE DROPDOWN
+   ============================================================================= */
+
+.mcp-autocomplete-dropdown {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  animation: mcp-dropdown-enter 150ms ease;
+}
+
+@keyframes mcp-dropdown-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.mcp-autocomplete-options {
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.mcp-autocomplete-option {
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.mcp-autocomplete-option:hover {
+  background-color: #f3f4f6;
+}
+
+.mcp-autocomplete-option-selected {
+  background-color: #eff6ff !important;
+}
+
+.mcp-autocomplete-option-disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.mcp-autocomplete-option-disabled:hover {
+  background-color: transparent;
+}
+
+.mcp-autocomplete-option-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mcp-autocomplete-option-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mcp-autocomplete-option-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.mcp-autocomplete-option-label {
+  display: block;
+  font-size: 0.875rem;
+  color: #374151;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mcp-autocomplete-option-description {
+  display: block;
+  font-size: 0.75rem;
+  color: #6b7280;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.mcp-autocomplete-highlight {
+  font-weight: 600;
+  color: #1d4ed8;
+}
+
+.mcp-autocomplete-loading,
+.mcp-autocomplete-empty {
+  padding: 12px 16px;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.mcp-autocomplete-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mcp-autocomplete-empty {
+  text-align: center;
+}
+
+.mcp-autocomplete-footer {
+  padding: 6px 12px;
+  border-top: 1px solid #e5e7eb;
+  background-color: #f9fafb;
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+/* =============================================================================
+   DARK MODE
+   ============================================================================= */
+
+@media (prefers-color-scheme: dark) {
+  .mcp-ghost-text {
+    color: #6b7280;
+  }
+
+  .mcp-ghost-text-hint {
+    background-color: rgba(31, 41, 55, 0.95);
+    border-color: #374151;
+    color: #9ca3af;
+  }
+
+  .mcp-autocomplete-dropdown {
+    background-color: #1f2937;
+    border-color: #374151;
+  }
+
+  .mcp-autocomplete-option:hover {
+    background-color: #374151;
+  }
+
+  .mcp-autocomplete-option-selected {
+    background-color: #1e3a5f !important;
+  }
+
+  .mcp-autocomplete-option-label {
+    color: #e5e7eb;
+  }
+
+  .mcp-autocomplete-option-description {
+    color: #9ca3af;
+  }
+
+  .mcp-autocomplete-highlight {
+    color: #60a5fa;
+  }
+
+  .mcp-autocomplete-loading,
+  .mcp-autocomplete-empty {
+    color: #9ca3af;
+  }
+
+  .mcp-autocomplete-footer {
+    background-color: #111827;
+    border-color: #374151;
+    color: #9ca3af;
+  }
+
+  .mcp-autocomplete-footer kbd {
+    background-color: #374151;
+    color: #d1d5db;
+  }
+}
+
+/* Explicit dark mode class support */
+.dark .mcp-ghost-text {
+  color: #6b7280;
+}
+
+.dark .mcp-ghost-text-hint {
+  background-color: rgba(31, 41, 55, 0.95);
+  border-color: #374151;
+  color: #9ca3af;
+}
+
+.dark .mcp-autocomplete-dropdown {
+  background-color: #1f2937;
+  border-color: #374151;
+}
+
+.dark .mcp-autocomplete-option:hover {
+  background-color: #374151;
+}
+
+.dark .mcp-autocomplete-option-selected {
+  background-color: #1e3a5f !important;
+}
+
+.dark .mcp-autocomplete-option-label {
+  color: #e5e7eb;
+}
+
+.dark .mcp-autocomplete-option-description {
+  color: #9ca3af;
+}
+
+.dark .mcp-autocomplete-highlight {
+  color: #60a5fa;
+}
+
+.dark .mcp-autocomplete-loading,
+.dark .mcp-autocomplete-empty {
+  color: #9ca3af;
+}
+
+.dark .mcp-autocomplete-footer {
+  background-color: #111827;
+  border-color: #374151;
+  color: #9ca3af;
+}
+
+.dark .mcp-autocomplete-footer kbd {
+  background-color: #374151;
+  color: #d1d5db;
+}
+
+/* =============================================================================
+   SCROLLBAR STYLING
+   ============================================================================= */
+
+.mcp-autocomplete-options::-webkit-scrollbar {
+  width: 6px;
+}
+
+.mcp-autocomplete-options::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.mcp-autocomplete-options::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  border-radius: 3px;
+}
+
+.dark .mcp-autocomplete-options::-webkit-scrollbar-thumb {
+  background-color: #4b5563;
+}
+
+/* =============================================================================
+   ACCESSIBILITY
+   ============================================================================= */
+
+/* Focus styles */
+.mcp-autocomplete-option:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: -2px;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .mcp-autocomplete-dropdown,
+  .mcp-ghost-text-hint,
+  .mcp-autocomplete-option {
+    animation: none !important;
+    transition: none !important;
+  }
+}
