@@ -1,18 +1,19 @@
 /**
  * ExpandableWrapper - Generic expand/fullscreen wrapper for components
  * v2.2.0: Reusable wrapper that adds expand button + fullscreen modal
+ *
+ * Uses DOM reparenting to avoid rendering children twice — critical for
+ * imperative components like ChartJS that bind instances to DOM nodes.
  */
 
 import { Component, Show, createSignal, createEffect, onCleanup, JSX } from 'solid-js'
 import { Portal } from 'solid-js/web'
 
 export interface ExpandableWrapperProps {
-  /** Content to render inline (and in expanded view unless expandedContent is provided) */
+  /** Content to render inline (and in expanded view) */
   children: JSX.Element
   /** Title shown in the expanded modal header */
   title?: string
-  /** Alternative content to render in expanded view (defaults to children) */
-  expandedContent?: JSX.Element
   /** Data string for copy-to-clipboard in expanded view */
   copyData?: string
   /** Label for copy button tooltip */
@@ -21,7 +22,9 @@ export interface ExpandableWrapperProps {
 
 /**
  * Wraps any component with an expand button (top-right corner).
- * Opens a fullscreen Portal modal with the content, optional title, and copy button.
+ * Opens a fullscreen Portal modal. The children's DOM is physically
+ * reparented into the modal (not duplicated), so imperative bindings
+ * like Chart.js canvas refs stay intact.
  *
  * @example
  * <ExpandableWrapper title="Sales Data" copyData={tsvData}>
@@ -32,9 +35,25 @@ export const ExpandableWrapper: Component<ExpandableWrapperProps> = (props) => {
   const [isExpanded, setIsExpanded] = createSignal(false)
   const [copied, setCopied] = createSignal(false)
   let dialogRef: HTMLDivElement | undefined
+  let contentRef: HTMLDivElement | undefined
+  let inlineSlotRef: HTMLDivElement | undefined
+  let modalSlotRef: HTMLDivElement | undefined
 
   const handleOpen = () => setIsExpanded(true)
   const handleClose = () => setIsExpanded(false)
+
+  // Reparent content DOM between inline and modal slots
+  createEffect(() => {
+    if (!contentRef) return
+
+    if (isExpanded()) {
+      // Move content into modal
+      modalSlotRef?.appendChild(contentRef)
+    } else {
+      // Move content back to inline
+      inlineSlotRef?.appendChild(contentRef)
+    }
+  })
 
   // Keyboard: Escape to close
   createEffect(() => {
@@ -81,8 +100,12 @@ export const ExpandableWrapper: Component<ExpandableWrapperProps> = (props) => {
 
   return (
     <div class="relative group">
-      {/* Inline content */}
-      {props.children}
+      {/* Inline slot — content lives here when not expanded */}
+      <div ref={inlineSlotRef}>
+        <div ref={contentRef}>
+          {props.children}
+        </div>
+      </div>
 
       {/* Expand button — visible on hover */}
       <button
@@ -156,10 +179,8 @@ export const ExpandableWrapper: Component<ExpandableWrapperProps> = (props) => {
                 </div>
               </div>
 
-              {/* Content — fills remaining space */}
-              <div class="flex-1 overflow-auto p-4">
-                {props.expandedContent || props.children}
-              </div>
+              {/* Modal slot — content is reparented here when expanded */}
+              <div class="flex-1 overflow-auto p-4" ref={modalSlotRef} />
             </div>
           </div>
 

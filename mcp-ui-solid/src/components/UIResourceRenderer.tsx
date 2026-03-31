@@ -518,7 +518,7 @@ function TableRenderer(props: {
     <ExpandableWrapper title={tableParams.title || 'Table'} copyData={getTableText()} copyLabel="Copy table (TSV)">
       <div class="relative w-full h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden group">
         <Show when={exportable} fallback={<CopyButton getText={getTableText} title="Copy table data" position="top-right" />}>
-          <div class="absolute right-2 top-2 z-10">
+          <div class="absolute right-10 top-2 z-10">
             <button
               onClick={() => setShowExportMenu(!showExportMenu())}
               class="opacity-60 hover:opacity-100 px-2 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-all shadow-sm"

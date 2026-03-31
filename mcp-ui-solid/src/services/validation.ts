@@ -18,7 +18,18 @@ import type {
   FormFieldParams,
   IframePolicy,
   ValidationOptions,
+  ComponentType,
 } from '../types'
+
+/**
+ * All known ComponentType values — used to distinguish known-but-unvalidated
+ * types (pass through) from truly unknown strings (reject).
+ */
+const KNOWN_COMPONENT_TYPES: Set<string> = new Set<ComponentType>([
+  'chart', 'table', 'metric', 'text', 'grid', 'iframe', 'image', 'link',
+  'action', 'footer', 'carousel', 'artifact', 'form', 'modal',
+  'action-group', 'image-gallery', 'video', 'code', 'map',
+])
 
 /**
  * Default resource limits (configurable via env)
@@ -544,7 +555,15 @@ export function validateComponent(
     }
 
     default:
-      // Types without specific validation pass through — renderer handles errors
+      // Known types without specific validation pass through — renderer handles errors
+      // Truly unknown types (e.g. typos in streamed JSON) are rejected
+      if (!KNOWN_COMPONENT_TYPES.has(component.type)) {
+        errors.push({
+          path: 'type',
+          message: `Unknown component type: ${component.type}`,
+          code: 'UNKNOWN_COMPONENT_TYPE',
+        })
+      }
       break
   }
 

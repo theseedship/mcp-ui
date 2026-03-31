@@ -106,4 +106,29 @@ describe('validateComponent', () => {
       expect(unknownTypeError).toBeUndefined()
     })
   })
+
+  describe('truly unknown types are rejected', () => {
+    it('rejects a typo like "chrt" with UNKNOWN_COMPONENT_TYPE', () => {
+      const component = makeComponent('chrt' as any)
+      const result = validateComponent(component)
+      const unknownTypeError = result.errors?.find(
+        (e) => e.code === 'UNKNOWN_COMPONENT_TYPE'
+      )
+      expect(unknownTypeError).toBeDefined()
+      expect(result.valid).toBe(false)
+    })
+
+    it('rejects garbage type "foobar"', () => {
+      const component = makeComponent('foobar' as any)
+      const result = validateComponent(component)
+      expect(result.valid).toBe(false)
+      expect(result.errors?.some((e) => e.code === 'UNKNOWN_COMPONENT_TYPE')).toBe(true)
+    })
+
+    it('rejects empty string type', () => {
+      const component = makeComponent('' as any)
+      const result = validateComponent(component)
+      expect(result.valid).toBe(false)
+    })
+  })
 })
