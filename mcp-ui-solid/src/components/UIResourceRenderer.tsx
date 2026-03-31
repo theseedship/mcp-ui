@@ -231,7 +231,7 @@ function ChartRenderer(props: {
 /**
  * Smart cell value renderer that handles markdown links and other formats
  */
-function renderCellValue(value: any): string {
+export function renderCellValue(value: any): string {
   // Handle null/undefined
   if (value === null || value === undefined) {
     return '-'
@@ -286,6 +286,17 @@ function renderCellValue(value: any): string {
     return DOMPurify.sanitize(htmlValue, { ADD_ATTR: ['target', 'rel'] })
   }
 
+  // Detect raw HTML in cell values (e.g. <a href="..." data-citation-page="5">text</a>)
+  // This handles cases where cell data comes from innerHTML extraction
+  const hasHtml = /<[a-z][\s\S]*>/i.test(strValue)
+  if (hasHtml) {
+    return DOMPurify.sanitize(strValue, {
+      ALLOWED_TAGS: ['a', 'strong', 'em', 'b', 'i', 'code', 'span', 'br'],
+      ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'data-citation-page', 'data-citation-source', 'title'],
+      ADD_ATTR: ['target', 'rel'],
+    })
+  }
+
   // Check if value contains markdown formatting (bold, italic, code, etc.)
   const hasMarkdown = /[*_`[\]#]/.test(strValue)
   if (hasMarkdown) {
@@ -294,8 +305,8 @@ function renderCellValue(value: any): string {
     return DOMPurify.sanitize(parsed, { ADD_ATTR: ['target', 'rel'] })
   }
 
-  // Plain text
-  return strValue
+  // Plain text — sanitize to prevent XSS via innerHTML
+  return DOMPurify.sanitize(strValue)
 }
 
 /**
