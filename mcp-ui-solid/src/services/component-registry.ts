@@ -912,13 +912,13 @@ export const ImageRegistry: ComponentRegistryEntry = {
   schema: {
     type: 'object',
     properties: {
-      src: { type: 'string', description: 'Image URL' },
+      url: { type: 'string', description: 'Image URL' },
       alt: { type: 'string', description: 'Alt text for accessibility' },
-      caption: { type: 'string', description: 'Caption below image' },
+      title: { type: 'string', description: 'Image title / heading' },
       width: { type: 'string', description: 'CSS width' },
       height: { type: 'string', description: 'CSS height' },
     },
-    required: ['src'],
+    required: ['url'],
   },
   examples: [
     {
@@ -928,7 +928,7 @@ export const ImageRegistry: ComponentRegistryEntry = {
         type: 'image',
         position: { colStart: 1, colSpan: 4 },
         params: {
-          src: '/images/logo.png',
+          url: '/images/logo.png',
           alt: 'Company Logo',
         } as any,
       },
@@ -949,11 +949,11 @@ export const LinkRegistry: ComponentRegistryEntry = {
     type: 'object',
     properties: {
       url: { type: 'string', description: 'Link destination URL' },
-      title: { type: 'string', description: 'Link title' },
+      label: { type: 'string', description: 'Link display text' },
       description: { type: 'string', description: 'Link description' },
       icon: { type: 'string', description: 'Icon identifier' },
     },
-    required: ['url', 'title'],
+    required: ['url', 'label'],
   },
   examples: [
     {
@@ -964,7 +964,7 @@ export const LinkRegistry: ComponentRegistryEntry = {
         position: { colStart: 1, colSpan: 4 },
         params: {
           url: 'https://docs.example.com/api',
-          title: 'API Documentation',
+          label: 'API Documentation',
           description: 'Full reference for the REST API',
         } as any,
       },
