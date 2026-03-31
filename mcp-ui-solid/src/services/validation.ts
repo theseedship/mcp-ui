@@ -148,6 +148,18 @@ export const DEFAULT_IFRAME_DOMAINS = [
   'images-amazon.com',
   'media-amazon.com',
   'ws-na.amazon-adsystem.com',
+
+  // MCP Connectors — embed-capable services (v2.2.7)
+  'gamma.app',
+  'www.gamma.app',
+  'app.hubspot.com',
+  'share.hubspot.com',
+  'www.data.gouv.fr',
+  'data.gouv.fr',
+  'clinicaltrials.gov',
+  'www.clinicaltrials.gov',
+  'linear.app',
+  'www.linear.app',
 ]
 
 /**
