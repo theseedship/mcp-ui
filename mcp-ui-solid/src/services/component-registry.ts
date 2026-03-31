@@ -541,6 +541,439 @@ export const ArtifactRegistry: ComponentRegistryEntry = {
 }
 
 /**
+ * Code Block Registry Entry
+ */
+export const CodeRegistry: ComponentRegistryEntry = {
+  type: 'code',
+  name: 'CodeBlock',
+  description:
+    'Render syntax-highlighted code blocks with line numbers, copy button, and word wrap toggle. Supports all languages via highlight.js auto-detection. Best for displaying source code, configuration files, CLI output, or API responses.',
+  schema: {
+    type: 'object',
+    properties: {
+      code: { type: 'string', description: 'The code content to display' },
+      language: { type: 'string', description: 'Programming language for syntax highlighting (auto-detected if omitted)' },
+      filename: { type: 'string', description: 'Filename shown in header bar' },
+      showLineNumbers: { type: 'boolean', description: 'Show line numbers (default: true)' },
+      startLine: { type: 'number', description: 'Starting line number (default: 1)' },
+      maxHeight: { type: 'string', description: 'CSS max-height for scrollable code blocks' },
+      theme: { type: 'string', enum: ['light', 'dark'], description: 'Color theme (follows system preference by default)' },
+    },
+    required: ['code'],
+  },
+  examples: [
+    {
+      query: 'Show me how to connect to the API',
+      component: {
+        id: 'example-code-1',
+        type: 'code',
+        position: { colStart: 1, colSpan: 8 },
+        params: {
+          code: 'const client = new MCPClient({ url: "https://api.example.com" });\nawait client.connect();\nconst result = await client.query("SELECT * FROM documents");',
+          language: 'typescript',
+          filename: 'example.ts',
+        },
+      },
+    },
+  ],
+  limits: DEFAULT_RESOURCE_LIMITS,
+}
+
+/**
+ * Map Registry Entry
+ */
+export const MapRegistry: ComponentRegistryEntry = {
+  type: 'map',
+  name: 'InteractiveMap',
+  description:
+    'Render interactive maps with markers using Leaflet. Supports marker clustering, custom tile layers, and auto-fitting bounds. Best for displaying geographic data with up to 1000 markers.',
+  schema: {
+    type: 'object',
+    properties: {
+      center: { type: 'array', items: { type: 'number' }, minItems: 2, maxItems: 2, description: 'Map center [lat, lng]' },
+      zoom: { type: 'number', description: 'Zoom level (1-18, default: 13)' },
+      markers: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            position: { type: 'array', items: { type: 'number' }, minItems: 2, maxItems: 2 },
+            title: { type: 'string' },
+            popup: { type: 'string' },
+          },
+          required: ['position'],
+        },
+      },
+      height: { type: 'string', description: 'CSS height (default: 400px)' },
+      fitBounds: { type: 'boolean', description: 'Auto-fit to show all markers' },
+      clustering: { type: 'boolean', description: 'Enable marker clustering for large datasets' },
+    },
+    required: [],
+  },
+  examples: [
+    {
+      query: 'Show office locations on a map',
+      component: {
+        id: 'example-map-1',
+        type: 'map',
+        position: { colStart: 1, colSpan: 12 },
+        params: {
+          center: [48.8566, 2.3522],
+          zoom: 5,
+          markers: [
+            { position: [48.8566, 2.3522], tooltip: 'Paris', popup: 'HQ — 120 employees' },
+            { position: [51.5074, -0.1278], tooltip: 'London', popup: 'UK Office — 45 employees' },
+          ],
+          fitBounds: true,
+        },
+      },
+    },
+  ],
+  limits: DEFAULT_RESOURCE_LIMITS,
+}
+
+/**
+ * Form Registry Entry
+ */
+export const FormRegistry: ComponentRegistryEntry = {
+  type: 'form',
+  name: 'Form',
+  description:
+    'Render interactive forms with text inputs, selects, checkboxes, date pickers, and conditional fields. Supports persistence, validation, and submit actions that trigger MCP tool calls.',
+  schema: {
+    type: 'object',
+    properties: {
+      title: { type: 'string', description: 'Form title' },
+      fields: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            name: { type: 'string' },
+            label: { type: 'string' },
+            type: { type: 'string', enum: ['text', 'number', 'email', 'password', 'textarea', 'select', 'checkbox', 'radio', 'date'] },
+            required: { type: 'boolean' },
+            placeholder: { type: 'string' },
+            options: { type: 'array', items: { type: 'object', properties: { label: { type: 'string' }, value: { type: 'string' } } } },
+          },
+          required: ['name', 'label', 'type'],
+        },
+      },
+      submitLabel: { type: 'string', description: 'Submit button text (default: "Submit")' },
+      layout: { type: 'string', enum: ['vertical', 'horizontal', 'inline'] },
+    },
+    required: ['fields'],
+  },
+  examples: [
+    {
+      query: 'Create a document upload form',
+      component: {
+        id: 'example-form-1',
+        type: 'form',
+        position: { colStart: 1, colSpan: 6 },
+        params: {
+          title: 'Upload Document',
+          fields: [
+            { name: 'title', label: 'Document Title', type: 'text', required: true },
+            { name: 'category', label: 'Category', type: 'select', options: [{ label: 'Report', value: 'report' }, { label: 'Invoice', value: 'invoice' }] },
+            { name: 'notes', label: 'Notes', type: 'textarea' },
+          ],
+          submitLabel: 'Upload',
+        },
+      },
+    },
+  ],
+  limits: DEFAULT_RESOURCE_LIMITS,
+}
+
+/**
+ * Modal Registry Entry
+ */
+export const ModalRegistry: ComponentRegistryEntry = {
+  type: 'modal',
+  name: 'Modal',
+  description:
+    'Render a dialog overlay with Portal rendering. Supports sizes from small to fullscreen, close on Escape/backdrop, and nested content. Best for confirmations, detail views, and focused interactions.',
+  schema: {
+    type: 'object',
+    properties: {
+      title: { type: 'string', description: 'Modal header title' },
+      size: { type: 'string', enum: ['sm', 'md', 'lg', 'xl', 'full'], description: 'Modal width (default: md)' },
+      showClose: { type: 'boolean', description: 'Show close button (default: true)' },
+      closeOnEscape: { type: 'boolean', description: 'Close on Escape key (default: true)' },
+      closeOnBackdrop: { type: 'boolean', description: 'Close on backdrop click (default: true)' },
+      maxHeight: { type: 'string', description: 'CSS max-height for scrollable content' },
+    },
+    required: [],
+  },
+  examples: [
+    {
+      query: 'Show document details in a dialog',
+      component: {
+        id: 'example-modal-1',
+        type: 'modal',
+        position: { colStart: 1, colSpan: 12 },
+        params: {
+          title: 'Document Details',
+          size: 'lg',
+        },
+      },
+    },
+  ],
+  limits: DEFAULT_RESOURCE_LIMITS,
+}
+
+/**
+ * Action Group Registry Entry
+ */
+export const ActionGroupRegistry: ComponentRegistryEntry = {
+  type: 'action-group',
+  name: 'ActionGroup',
+  description:
+    'Render a group of action buttons in horizontal, vertical, or grid layout. Each action triggers an MCP tool call. Best for presenting multiple related actions like CRUD operations or workflow steps.',
+  schema: {
+    type: 'object',
+    properties: {
+      actions: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            label: { type: 'string' },
+            toolName: { type: 'string' },
+            params: { type: 'object' },
+            variant: { type: 'string', enum: ['primary', 'secondary', 'danger', 'ghost'] },
+            icon: { type: 'string' },
+          },
+          required: ['label', 'toolName'],
+        },
+      },
+      layout: { type: 'string', enum: ['horizontal', 'vertical', 'grid'], description: 'Button layout' },
+      label: { type: 'string', description: 'Group label' },
+    },
+    required: ['actions'],
+  },
+  examples: [
+    {
+      query: 'Show actions for this document',
+      component: {
+        id: 'example-action-group-1',
+        type: 'action-group',
+        position: { colStart: 1, colSpan: 6 },
+        params: {
+          label: 'Document Actions',
+          actions: [
+            { label: 'Download', type: 'button', action: 'tool-call', toolName: 'document_download', params: { id: '123' }, variant: 'primary' },
+            { label: 'Share', type: 'button', action: 'tool-call', toolName: 'document_share', params: { id: '123' }, variant: 'secondary' },
+            { label: 'Delete', type: 'button', action: 'tool-call', toolName: 'document_delete', params: { id: '123' }, variant: 'danger' },
+          ],
+          layout: 'horizontal',
+        },
+      },
+    },
+  ],
+  limits: DEFAULT_RESOURCE_LIMITS,
+}
+
+/**
+ * Image Gallery Registry Entry
+ */
+export const ImageGalleryRegistry: ComponentRegistryEntry = {
+  type: 'image-gallery',
+  name: 'ImageGallery',
+  description:
+    'Render a grid of images with lightbox overlay for fullscreen viewing. Supports captions, configurable columns, aspect ratios, and keyboard navigation in lightbox mode.',
+  schema: {
+    type: 'object',
+    properties: {
+      title: { type: 'string', description: 'Gallery title' },
+      images: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            url: { type: 'string', description: 'Image URL' },
+            alt: { type: 'string', description: 'Alt text' },
+            caption: { type: 'string', description: 'Caption text' },
+            thumbnail: { type: 'string', description: 'Thumbnail URL (optional, falls back to url)' },
+          },
+          required: ['url'],
+        },
+      },
+      columns: { type: 'number', enum: [2, 3, 4, 5], description: 'Grid columns (default: 3)' },
+      aspectRatio: { type: 'string', enum: ['1:1', '16:9', '4:3', 'auto'] },
+      lightbox: { type: 'boolean', description: 'Enable lightbox overlay (default: true)' },
+    },
+    required: ['images'],
+  },
+  examples: [
+    {
+      query: 'Show document thumbnails',
+      component: {
+        id: 'example-gallery-1',
+        type: 'image-gallery',
+        position: { colStart: 1, colSpan: 12 },
+        params: {
+          title: 'Recent Documents',
+          images: [
+            { url: '/thumbnails/doc1.png', alt: 'Q4 Report', caption: 'Q4 Report — 24 pages' },
+            { url: '/thumbnails/doc2.png', alt: 'Invoice #4521', caption: 'Invoice #4521' },
+          ],
+          columns: 4,
+        },
+      },
+    },
+  ],
+  limits: DEFAULT_RESOURCE_LIMITS,
+}
+
+/**
+ * Video Registry Entry
+ */
+export const VideoRegistry: ComponentRegistryEntry = {
+  type: 'video',
+  name: 'Video',
+  description:
+    'Embed video from YouTube, Vimeo, or direct URLs. Auto-detects provider from URL and renders appropriate embed. Supports aspect ratios, autoplay, and start time.',
+  schema: {
+    type: 'object',
+    properties: {
+      url: { type: 'string', description: 'Video URL (YouTube, Vimeo, or direct)' },
+      title: { type: 'string', description: 'Video title' },
+      caption: { type: 'string', description: 'Caption below video' },
+      aspectRatio: { type: 'string', enum: ['16:9', '4:3', '1:1', '21:9'], description: 'Aspect ratio (default: 16:9)' },
+      autoplay: { type: 'boolean', description: 'Auto-play video' },
+      startTime: { type: 'number', description: 'Start time in seconds' },
+    },
+    required: ['url'],
+  },
+  examples: [
+    {
+      query: 'Show the product demo video',
+      component: {
+        id: 'example-video-1',
+        type: 'video',
+        position: { colStart: 1, colSpan: 8 },
+        params: {
+          url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+          title: 'Product Demo',
+          aspectRatio: '16:9',
+        },
+      },
+    },
+  ],
+  limits: DEFAULT_RESOURCE_LIMITS,
+}
+
+/**
+ * Iframe Registry Entry
+ */
+export const IframeRegistry: ComponentRegistryEntry = {
+  type: 'iframe',
+  name: 'Iframe',
+  description:
+    'Embed external content via sandboxed iframe. Domain whitelist enforced for security. Supports Mermaid diagrams, Excalidraw, GitHub Gists, Figma, and 60+ whitelisted domains.',
+  schema: {
+    type: 'object',
+    properties: {
+      url: { type: 'string', description: 'URL to embed (must be on whitelist)' },
+      title: { type: 'string', description: 'Iframe title for accessibility' },
+      height: { type: 'string', description: 'CSS height (default: 400px)' },
+      sandbox: { type: 'string', description: 'Sandbox attribute (default: restrictive)' },
+    },
+    required: ['url'],
+  },
+  examples: [
+    {
+      query: 'Show the architecture diagram',
+      component: {
+        id: 'example-iframe-1',
+        type: 'iframe',
+        position: { colStart: 1, colSpan: 12 },
+        params: {
+          url: 'https://mermaid.ink/svg/graph+TD;A-->B;B-->C',
+          title: 'Architecture Diagram',
+          height: '500px',
+        },
+      },
+    },
+  ],
+  limits: DEFAULT_RESOURCE_LIMITS,
+}
+
+/**
+ * Image Registry Entry
+ */
+export const ImageRegistry: ComponentRegistryEntry = {
+  type: 'image',
+  name: 'Image',
+  description:
+    'Render a single image with optional alt text, caption, and link. Best for logos, screenshots, diagrams, or any standalone visual content.',
+  schema: {
+    type: 'object',
+    properties: {
+      src: { type: 'string', description: 'Image URL' },
+      alt: { type: 'string', description: 'Alt text for accessibility' },
+      caption: { type: 'string', description: 'Caption below image' },
+      width: { type: 'string', description: 'CSS width' },
+      height: { type: 'string', description: 'CSS height' },
+    },
+    required: ['src'],
+  },
+  examples: [
+    {
+      query: 'Show the company logo',
+      component: {
+        id: 'example-image-1',
+        type: 'image',
+        position: { colStart: 1, colSpan: 4 },
+        params: {
+          src: '/images/logo.png',
+          alt: 'Company Logo',
+        } as any,
+      },
+    },
+  ],
+  limits: DEFAULT_RESOURCE_LIMITS,
+}
+
+/**
+ * Link Registry Entry
+ */
+export const LinkRegistry: ComponentRegistryEntry = {
+  type: 'link',
+  name: 'Link',
+  description:
+    'Render a styled link card with title, description, and URL. Best for navigation, references, and external resource links.',
+  schema: {
+    type: 'object',
+    properties: {
+      url: { type: 'string', description: 'Link destination URL' },
+      title: { type: 'string', description: 'Link title' },
+      description: { type: 'string', description: 'Link description' },
+      icon: { type: 'string', description: 'Icon identifier' },
+    },
+    required: ['url', 'title'],
+  },
+  examples: [
+    {
+      query: 'Link to the API documentation',
+      component: {
+        id: 'example-link-1',
+        type: 'link',
+        position: { colStart: 1, colSpan: 4 },
+        params: {
+          url: 'https://docs.example.com/api',
+          title: 'API Documentation',
+          description: 'Full reference for the REST API',
+        } as any,
+      },
+    },
+  ],
+  limits: DEFAULT_RESOURCE_LIMITS,
+}
+
+/**
  * Component Registry - All components indexed by type
  */
 export const ComponentRegistry: Map<ComponentType, ComponentRegistryEntry> = new Map([
@@ -554,6 +987,17 @@ export const ComponentRegistry: Map<ComponentType, ComponentRegistryEntry> = new
   ['footer', FooterRegistry],
   ['carousel', CarouselRegistry],
   ['artifact', ArtifactRegistry],
+  // v2.2.5: Complete registry
+  ['code', CodeRegistry],
+  ['map', MapRegistry],
+  ['form', FormRegistry],
+  ['modal', ModalRegistry],
+  ['action-group', ActionGroupRegistry],
+  ['image-gallery', ImageGalleryRegistry],
+  ['video', VideoRegistry],
+  ['iframe', IframeRegistry],
+  ['image', ImageRegistry],
+  ['link', LinkRegistry],
 ])
 
 /**
