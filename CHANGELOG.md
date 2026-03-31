@@ -5,21 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
-### Added
-- Initial monorepo setup with pnpm workspaces
-- Migrated packages from deposium_MCPs to standalone repository
-- GitHub Actions for automated npm publishing
-- Comprehensive documentation and examples
+## [2.2.4] - 2026-03-31
 
 ### Changed
-- Updated repository URLs to https://github.com/theseedship/mcp-ui
-- Configured monorepo with pnpm-workspace.yaml
-- Added root-level package.json with workspace scripts
+- Updated README with v2.2.x features and current package versions
+- Added CHANGELOG with full release history
+
+## [2.2.3] - 2026-03-31
+
+### Security
+- **dompurify** 3.3.0 → 3.3.3 — mutation-XSS via Re-Contextualization (HIGH)
+- **ajv** 8.17.1 → 8.18.0 — ReDoS with `$data` option (HIGH)
+- **picomatch** 4.0.3 → 4.0.4 — Method Injection + ReDoS
+- **flatted** 3.3.3 → 3.4.2 — Prototype Pollution via `parse()`
+- **minimatch** 10.2.2 → 10.2.5 — ReDoS via GLOBSTAR segments
+
+## [2.2.1] - 2026-03-31
 
 ### Fixed
-- Package.json repository links now point to correct location
+- **ComponentRegistry validation** — `validateAgainstRegistry()` returns warnings (not errors) for types without registry entries. Known-but-unvalidated types pass through; truly unknown types (typos) still rejected.
+- **HTML links in table cells** — `renderCellValue` detects raw HTML (`<a>` tags, citation links) and sanitizes via DOMPurify. Prevents XSS on plain text path.
+- **ExpandableWrapper DOM reparenting** — Content physically moved between inline and modal (not duplicated), preserving Chart.js canvas refs.
+- **Table export/expand button collision** — Export dropdown offset to avoid overlap with expand button.
+
+### Added
+- **ExpandableWrapper component** — Generic Portal-based fullscreen expand. Escape/backdrop close, optional copy-to-clipboard. Integrated into Table, Chart, Code renderers.
+- **Table export** — `exportable` prop with dropdown: Copy TSV / Download CSV / Download JSON. RFC 4180 compliant CSV.
+- **Chart export** — `exportable` prop for PNG download. `height` prop (default `250px`).
+- **CodeBlock word wrap** — Toggle button next to Copy with active state indicator.
+
+## [2.1.3] - 2026-03-20
+
+### Security
+- Patched minimatch CVE-2026-26996
+- Upgraded to Node 22
+
+## [2.1.2] - 2026-03-19
+
+### Security
+- Patched lodash and seroval vulnerabilities
 
 ## [1.0.0] - 2025-11-14
 
