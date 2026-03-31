@@ -115,6 +115,14 @@ export interface ChartComponentParams {
    */
   renderer?: 'native' | 'iframe' | 'auto'
   /**
+   * Enable PNG export button (v2.2.0)
+   */
+  exportable?: boolean
+  /**
+   * Chart container height as CSS value (v2.2.0, default '250px')
+   */
+  height?: string
+  /**
    * Custom CSS class (Sprint 7)
    */
   className?: string
@@ -170,6 +178,15 @@ export interface TableComponentParams {
    * - TableVirtualizeOptions: Enable with custom options
    */
   virtualize?: boolean | TableVirtualizeOptions
+  /**
+   * Enable table export (v2.2.0)
+   * - true: Enable all formats (csv, tsv, json)
+   * - object: Configure formats and filename
+   */
+  exportable?: boolean | {
+    formats?: ('csv' | 'tsv' | 'json')[]
+    filename?: string
+  }
   /**
    * Custom CSS class (Sprint 7)
    */

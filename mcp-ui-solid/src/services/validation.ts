@@ -544,11 +544,8 @@ export function validateComponent(
     }
 
     default:
-      errors.push({
-        path: 'type',
-        message: `Unknown component type: ${component.type}`,
-        code: 'UNKNOWN_COMPONENT_TYPE',
-      })
+      // Types without specific validation pass through — renderer handles errors
+      break
   }
 
   return {

@@ -7,6 +7,7 @@
 import { Component, createEffect, onCleanup, createSignal, Show, For } from 'solid-js'
 import { isServer } from 'solid-js/web'
 import type { UIComponent, CodeComponentParams } from '../types'
+import { ExpandableWrapper } from './ExpandableWrapper'
 
 // Lazy load highlight.js
 let hljs: any = null
@@ -30,6 +31,7 @@ export const CodeBlockRenderer: Component<CodeBlockRendererProps> = (props) => {
     const [isCopied, setIsCopied] = createSignal(false)
     const [isHljsLoaded, setIsHljsLoaded] = createSignal(false)
     const [activeTheme, setActiveTheme] = createSignal<'light' | 'dark'>('dark')
+    const [wordWrap, setWordWrap] = createSignal(false)
 
     const params = () => props.params || (props.component?.params as CodeComponentParams)
 
@@ -143,28 +145,43 @@ export const CodeBlockRenderer: Component<CodeBlockRendererProps> = (props) => {
     }
 
     return (
+        <ExpandableWrapper title={params()?.filename || params()?.language || 'Code'} copyData={params()?.code} copyLabel="Copy code">
         <div class="w-full bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden text-sm flex flex-col">
             {/* Header */}
             <div class="flex items-center justify-between px-4 py-2 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shrink-0">
                 <div class="font-mono text-xs text-gray-600 dark:text-gray-400">
                     {params()?.filename || params()?.language || 'Code'}
                 </div>
-                <button
-                    onClick={handleCopy}
-                    class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 focus:outline-none transition-colors"
-                    aria-label="Copy code"
-                    title="Copy code"
-                >
-                    <Show when={isCopied()} fallback={
+                <div class="flex items-center gap-2">
+                    {/* Word wrap toggle */}
+                    <button
+                        onClick={() => setWordWrap(!wordWrap())}
+                        class={`focus:outline-none transition-colors ${wordWrap() ? 'text-blue-500 dark:text-blue-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
+                        aria-label="Toggle word wrap"
+                        title={wordWrap() ? 'Disable word wrap' : 'Enable word wrap'}
+                    >
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a4 4 0 010 8H9m4 0l-3-3m3 3l-3 3M3 6h18M3 14h4" />
                         </svg>
-                    }>
-                        <svg class="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                        </svg>
-                    </Show>
-                </button>
+                    </button>
+                    {/* Copy button */}
+                    <button
+                        onClick={handleCopy}
+                        class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 focus:outline-none transition-colors"
+                        aria-label="Copy code"
+                        title="Copy code"
+                    >
+                        <Show when={isCopied()} fallback={
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                        }>
+                            <svg class="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                        </Show>
+                    </button>
+                </div>
             </div>
 
             {/* Code Area */}
@@ -184,6 +201,7 @@ export const CodeBlockRenderer: Component<CodeBlockRendererProps> = (props) => {
                 {/* Code Content - Sprint Ultimate U.1: data-theme for reactive theming */}
                 <pre
                     class="flex-1 m-0 p-4 font-mono text-gray-800 dark:text-gray-100 bg-transparent leading-5"
+                    style={wordWrap() ? { 'white-space': 'pre-wrap', 'word-break': 'break-all' } : {}}
                     data-theme={activeTheme()}
                 >
                     <code
@@ -193,5 +211,6 @@ export const CodeBlockRenderer: Component<CodeBlockRendererProps> = (props) => {
                 </pre>
             </div>
         </div>
+        </ExpandableWrapper>
     )
 }

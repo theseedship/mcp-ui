@@ -21,6 +21,7 @@ import { ImageGalleryRenderer } from './ImageGalleryRenderer'
 import { VideoRenderer } from './VideoRenderer'
 import { CodeBlockRenderer } from './CodeBlockRenderer'
 import { MapRenderer } from './MapRenderer'
+import { ExpandableWrapper } from './ExpandableWrapper'
 import { RenderProvider } from './RenderContext'
 import { useAction } from '../hooks/useAction'
 import { marked } from 'marked'
@@ -361,20 +362,83 @@ function TableRenderer(props: {
     }
   })
 
+  // Cell value extraction helper
+  const getCellValue = (row: any, key: string): string => {
+    const value = row[key]
+    if (value === null || value === undefined) return ''
+    if (typeof value === 'object') return value.name || value.label || JSON.stringify(value)
+    return String(value)
+  }
+
   // Generate copyable text from table data (TSV format for spreadsheet compatibility)
   const getTableText = () => {
     const columns = tableParams.columns || []
     const rows = tableParams.rows || []
     const header = columns.map((c: any) => c.label).join('\t')
     const dataRows = rows.map((row: any) =>
-      columns.map((c: any) => {
-        const value = row[c.key]
-        if (value === null || value === undefined) return ''
-        if (typeof value === 'object') return value.name || value.label || JSON.stringify(value)
-        return String(value)
-      }).join('\t')
+      columns.map((c: any) => getCellValue(row, c.key)).join('\t')
     ).join('\n')
     return `${header}\n${dataRows}`
+  }
+
+  // CSV generation (RFC 4180 compliant)
+  const getTableCSV = () => {
+    const columns = tableParams.columns || []
+    const rows = tableParams.rows || []
+    const escapeCSV = (val: string) => {
+      if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+        return `"${val.replace(/"/g, '""')}"`
+      }
+      return val
+    }
+    const header = columns.map((c: any) => escapeCSV(c.label)).join(',')
+    const dataRows = rows.map((row: any) =>
+      columns.map((c: any) => escapeCSV(getCellValue(row, c.key))).join(',')
+    ).join('\n')
+    return `${header}\n${dataRows}`
+  }
+
+  // JSON generation
+  const getTableJSON = () => {
+    const columns = tableParams.columns || []
+    const rows = tableParams.rows || []
+    return JSON.stringify({ columns: columns.map((c: any) => ({ key: c.key, label: c.label })), rows }, null, 2)
+  }
+
+  // Download helper
+  const downloadFile = (content: string, filename: string, mimeType: string) => {
+    const blob = new Blob([content], { type: mimeType })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  // Export config
+  const exportable = tableParams.exportable
+  const exportFormats = typeof exportable === 'object' && exportable?.formats
+    ? exportable.formats
+    : ['csv', 'tsv', 'json']
+  const exportFilename = (typeof exportable === 'object' && exportable?.filename) || `table-${Math.random().toString(36).slice(2, 9)}`
+
+  // Export dropdown state
+  const [showExportMenu, setShowExportMenu] = createSignal(false)
+
+  const handleExport = (format: string) => {
+    setShowExportMenu(false)
+    switch (format) {
+      case 'tsv':
+        navigator.clipboard.writeText(getTableText())
+        break
+      case 'csv':
+        downloadFile(getTableCSV(), `${exportFilename}.csv`, 'text/csv')
+        break
+      case 'json':
+        downloadFile(getTableJSON(), `${exportFilename}.json`, 'application/json')
+        break
+    }
   }
 
   const tableId = `table-${Math.random().toString(36).slice(2, 9)}`
@@ -440,65 +504,93 @@ function TableRenderer(props: {
   }
 
   return (
-    <div class="relative w-full h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden group">
-      <CopyButton getText={getTableText} title="Copy table data" position="top-right" />
-      <div class="p-4">
-        <Show when={tableParams.title}>
-          <h3 id={`${tableId}-title`} class="text-sm font-semibold text-gray-900 dark:text-white mb-3">
-            {tableParams.title}
-            <Show when={isVirtualizing()}>
-              <span class="ml-2 text-xs font-normal text-gray-400">(virtualized: {tableParams.rows?.length} rows)</span>
+    <ExpandableWrapper title={tableParams.title || 'Table'} copyData={getTableText()} copyLabel="Copy table (TSV)">
+      <div class="relative w-full h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden group">
+        <Show when={exportable} fallback={<CopyButton getText={getTableText} title="Copy table data" position="top-right" />}>
+          <div class="absolute right-2 top-2 z-10">
+            <button
+              onClick={() => setShowExportMenu(!showExportMenu())}
+              class="opacity-60 hover:opacity-100 px-2 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-all shadow-sm"
+              title="Export table"
+              aria-label="Export table"
+            >
+              <svg class="w-3 h-3 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </button>
+            <Show when={showExportMenu()}>
+              <div class="absolute right-0 mt-1 w-36 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg py-1 text-sm">
+                <Show when={(exportFormats as string[]).includes('tsv')}>
+                  <button onClick={() => handleExport('tsv')} class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">Copy TSV</button>
+                </Show>
+                <Show when={(exportFormats as string[]).includes('csv')}>
+                  <button onClick={() => handleExport('csv')} class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">Download CSV</button>
+                </Show>
+                <Show when={(exportFormats as string[]).includes('json')}>
+                  <button onClick={() => handleExport('json')} class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">Download JSON</button>
+                </Show>
+              </div>
             </Show>
-          </h3>
-        </Show>
-
-        <div
-          ref={scrollContainerRef}
-          class="overflow-x-auto"
-          style={isVirtualizing() ? { 'max-height': '500px', 'overflow-y': 'auto' } : {}}
-          role="region"
-          aria-label={tableParams.title || 'Data table'}
-          tabindex="0"
-        >
-          <table
-            class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 border-separate border-spacing-0"
-            aria-labelledby={tableParams.title ? `${tableId}-title` : undefined}
-          >
-            <thead class="bg-gray-50 dark:bg-gray-900/50 sticky top-0 z-10">
-              <tr>
-                <For each={tableParams.columns}>
-                  {(column: any) => (
-                    <th
-                      scope="col"
-                      class="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700 first:pl-6 last:pr-6 bg-gray-50 dark:bg-gray-900/50"
-                      style={column.width ? { width: column.width } : {}}
-                    >
-                      {column.label}
-                    </th>
-                  )}
-                </For>
-              </tr>
-            </thead>
-            <Show when={isVirtualizing()} fallback={<StandardTableBody />}>
-              <VirtualizedTableBody />
-            </Show>
-          </table>
-        </div>
-
-        <Show when={tableParams.pagination}>
-          <div class="mt-3 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-            <span>
-              Showing {tableParams.pagination.currentPage * tableParams.pagination.pageSize + 1} -{' '}
-              {Math.min(
-                (tableParams.pagination.currentPage + 1) * tableParams.pagination.pageSize,
-                tableParams.pagination.totalRows
-              )}{' '}
-              of {tableParams.pagination.totalRows}
-            </span>
           </div>
         </Show>
+        <div class="p-4">
+          <Show when={tableParams.title}>
+            <h3 id={`${tableId}-title`} class="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+              {tableParams.title}
+              <Show when={isVirtualizing()}>
+                <span class="ml-2 text-xs font-normal text-gray-400">(virtualized: {tableParams.rows?.length} rows)</span>
+              </Show>
+            </h3>
+          </Show>
+
+          <div
+            ref={scrollContainerRef}
+            class="overflow-x-auto"
+            style={isVirtualizing() ? { 'max-height': '500px', 'overflow-y': 'auto' } : {}}
+            role="region"
+            aria-label={tableParams.title || 'Data table'}
+            tabindex="0"
+          >
+            <table
+              class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 border-separate border-spacing-0"
+              aria-labelledby={tableParams.title ? `${tableId}-title` : undefined}
+            >
+              <thead class="bg-gray-50 dark:bg-gray-900/50 sticky top-0 z-10">
+                <tr>
+                  <For each={tableParams.columns}>
+                    {(column: any) => (
+                      <th
+                        scope="col"
+                        class="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700 first:pl-6 last:pr-6 bg-gray-50 dark:bg-gray-900/50"
+                        style={column.width ? { width: column.width } : {}}
+                      >
+                        {column.label}
+                      </th>
+                    )}
+                  </For>
+                </tr>
+              </thead>
+              <Show when={isVirtualizing()} fallback={<StandardTableBody />}>
+                <VirtualizedTableBody />
+              </Show>
+            </table>
+          </div>
+
+          <Show when={tableParams.pagination}>
+            <div class="mt-3 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+              <span>
+                Showing {tableParams.pagination.currentPage * tableParams.pagination.pageSize + 1} -{' '}
+                {Math.min(
+                  (tableParams.pagination.currentPage + 1) * tableParams.pagination.pageSize,
+                  tableParams.pagination.totalRows
+                )}{' '}
+                of {tableParams.pagination.totalRows}
+              </span>
+            </div>
+          </Show>
+        </div>
       </div>
-    </div>
+    </ExpandableWrapper>
   )
 }
 
