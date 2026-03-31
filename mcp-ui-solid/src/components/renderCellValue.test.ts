@@ -105,6 +105,30 @@ describe('renderCellValue', () => {
     expect(result).toContain('<code>npm install</code>')
   })
 
+  // Citation buttons with SVG (P1.2)
+  it('preserves citation <button> with data-citation-page', () => {
+    const result = renderCellValue('<button data-citation-page="5" class="citation-btn"><svg viewBox="0 0 24 24"><path d="M12 2L2 7v10l10 5 10-5V7z"/></svg></button>')
+    expect(result).toContain('<button')
+    expect(result).toContain('data-citation-page="5"')
+    expect(result).toContain('<svg')
+    expect(result).toContain('<path')
+  })
+
+  it('preserves citation button with data-citation-doc and data-citation-verified', () => {
+    const result = renderCellValue('<button data-citation-page="3" data-citation-doc="report.pdf" data-citation-verified="true">p.3</button>')
+    expect(result).toContain('data-citation-page="3"')
+    expect(result).toContain('data-citation-doc="report.pdf"')
+    expect(result).toContain('data-citation-verified="true"')
+  })
+
+  it('preserves mixed text with citation button', () => {
+    const result = renderCellValue('See source <button data-citation-page="7">[7]</button> for details')
+    expect(result).toContain('See source')
+    expect(result).toContain('<button')
+    expect(result).toContain('data-citation-page="7"')
+    expect(result).toContain('for details')
+  })
+
   // Plain text XSS prevention
   it('sanitizes plain text that looks like HTML injection', () => {
     const result = renderCellValue('<img src=x onerror=alert(1)>')

@@ -291,8 +291,8 @@ export function renderCellValue(value: any): string {
   const hasHtml = /<[a-z][\s\S]*>/i.test(strValue)
   if (hasHtml) {
     return DOMPurify.sanitize(strValue, {
-      ALLOWED_TAGS: ['a', 'strong', 'em', 'b', 'i', 'code', 'span', 'br'],
-      ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'data-citation-page', 'data-citation-source', 'title'],
+      ALLOWED_TAGS: ['a', 'strong', 'em', 'b', 'i', 'code', 'span', 'br', 'button', 'svg', 'path'],
+      ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'data-citation-page', 'data-citation-source', 'data-citation-doc', 'data-citation-verified', 'title', 'fill', 'stroke', 'viewBox', 'stroke-linecap', 'stroke-linejoin', 'stroke-width', 'd'],
       ADD_ATTR: ['target', 'rel'],
     })
   }
