@@ -596,10 +596,11 @@ export function getRegistryForLLM(): string {
 export function validateAgainstRegistry(
   componentType: ComponentType,
   params: any
-): { valid: boolean; errors?: string[] } {
+): { valid: boolean; errors?: string[]; warnings?: string[] } {
   const entry = getComponentEntry(componentType)
   if (!entry) {
-    return { valid: false, errors: [`Unknown component type: ${componentType}`] }
+    // Warn but don't block — renderer may exist even without registry entry
+    return { valid: true, warnings: [`No registry entry for type: ${componentType}`] }
   }
 
   // Basic validation (Phase 1 will add Zod schema validation)

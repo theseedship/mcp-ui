@@ -35,6 +35,7 @@ export { UIResourceRenderer, StreamingUIRenderer, GenerativeUIErrorBoundary } fr
 export { DraggableGridItem } from './components/DraggableGridItem'
 export { ResizeHandle } from './components/ResizeHandle'
 export { EditableUIResourceRenderer } from './components/EditableUIResourceRenderer'
+export { ExpandableWrapper } from './components/ExpandableWrapper'
 
 // Autocomplete Components
 export { GhostText, GhostTextInput } from './components/GhostText'
@@ -50,6 +51,7 @@ export type {
 export type { DraggableGridItemProps } from './components/DraggableGridItem'
 export type { ResizeHandleProps as ResizeHandleComponentProps } from './components/ResizeHandle'
 export type { EditableUIResourceRendererProps } from './components/EditableUIResourceRenderer'
+export type { ExpandableWrapperProps } from './components/ExpandableWrapper'
 export type { GhostTextProps, GhostTextInputProps } from './components/GhostText'
 export type { AutocompleteDropdownProps } from './components/AutocompleteDropdown'
 export type { AutocompleteFormFieldProps, AutocompleteFormFieldParams } from './components/AutocompleteFormField'
