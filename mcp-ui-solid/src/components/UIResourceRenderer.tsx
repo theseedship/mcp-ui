@@ -168,9 +168,55 @@ function ChartRenderer(props: {
     setIsLoading(false)
   }
 
-  // Use native Chart.js renderer
-  if (useNative()) {
-    return (
+  // Reactive switch between native Chart.js and iframe fallback
+  // Must use <Show> — signals in component body are not reactive in SolidJS
+  return (
+    <Show
+      when={useNative()}
+      fallback={
+        <div class="relative w-full h-full min-h-[300px] bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <Show when={isLoading()}>
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+            </div>
+          </Show>
+
+          <Show when={error()}>
+            <div class="absolute inset-0 flex items-center justify-center p-4">
+              <div class="text-center">
+                <p class="text-red-600 dark:text-red-400 text-sm font-medium">Chart Error</p>
+                <p class="text-gray-600 dark:text-gray-400 text-xs mt-1">{error()}</p>
+              </div>
+            </div>
+          </Show>
+
+          <Show when={iframeUrl() && !error()}>
+            <div class="w-full h-full p-4">
+              <Show when={params()?.title}>
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+                  {params()?.title}
+                </h3>
+              </Show>
+              <div class="w-full h-full" role="img" aria-label={params()?.title ? `Chart: ${params()?.title}` : 'Chart visualization'}>
+                <img
+                  src={iframeUrl()}
+                  alt={params()?.title ? `Chart: ${params()?.title}` : 'Chart visualization'}
+                  class="w-full h-auto max-h-[300px] object-contain"
+                  onError={() => {
+                    setError('Failed to load chart')
+                    props.onError?.({
+                      type: 'render',
+                      message: 'Chart rendering failed',
+                      componentId: props.component.id,
+                    })
+                  }}
+                />
+              </div>
+            </div>
+          </Show>
+        </div>
+      }
+    >
       <ChartJSRenderer
         component={props.component}
         onError={(err) => props.onError?.({
@@ -179,52 +225,7 @@ function ChartRenderer(props: {
           componentId: props.component.id,
         })}
       />
-    )
-  }
-
-  // Iframe fallback (Quickchart.io)
-  return (
-    <div class="relative w-full h-full min-h-[300px] bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-      <Show when={isLoading()}>
-        <div class="absolute inset-0 flex items-center justify-center">
-          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-        </div>
-      </Show>
-
-      <Show when={error()}>
-        <div class="absolute inset-0 flex items-center justify-center p-4">
-          <div class="text-center">
-            <p class="text-red-600 dark:text-red-400 text-sm font-medium">Chart Error</p>
-            <p class="text-gray-600 dark:text-gray-400 text-xs mt-1">{error()}</p>
-          </div>
-        </div>
-      </Show>
-
-      <Show when={iframeUrl() && !error()}>
-        <div class="w-full h-full p-4">
-          <Show when={params()?.title}>
-            <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">
-              {params()?.title}
-            </h3>
-          </Show>
-          <div class="w-full h-full" role="img" aria-label={params()?.title ? `Chart: ${params()?.title}` : 'Chart visualization'}>
-            <img
-              src={iframeUrl()}
-              alt={params()?.title ? `Chart: ${params()?.title}` : 'Chart visualization'}
-              class="w-full h-auto max-h-[300px] object-contain"
-              onError={() => {
-                setError('Failed to load chart')
-                props.onError?.({
-                  type: 'render',
-                  message: 'Chart rendering failed',
-                  componentId: props.component.id,
-                })
-              }}
-            />
-          </div>
-        </div>
-      </Show>
-    </div>
+    </Show>
   )
 }
 
