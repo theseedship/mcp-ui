@@ -7,14 +7,15 @@ A collection of TypeScript packages for building generative, streaming user inte
 [![npm version](https://img.shields.io/npm/v/@seed-ship/mcp-ui-solid.svg)](https://www.npmjs.com/package/@seed-ship/mcp-ui-solid)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## What's New in v2.2.x
+## What's New in v2.3.0
 
-- **ExpandableWrapper** - Generic fullscreen expand for tables, charts, and code blocks (DOM reparenting, no duplication)
-- **Table Export** - CSV/TSV/JSON download dropdown with configurable formats and filename
-- **Chart Export** - PNG download via `canvas.toDataURL` + configurable chart height
-- **CodeBlock Improvements** - Word wrap toggle, filename header bar
-- **HTML in Table Cells** - Raw HTML links and citation attributes preserved via DOMPurify sanitization
-- **Lenient Validation** - Known component types without registry entries pass with warnings, typos still rejected
+- **Complete ComponentRegistry** - All 19 component types registered with schemas, descriptions, and examples for LLM guidance
+- **Tiered Iframe Sandbox** - Trusted domains (Google, Stripe, Deposium) get `allow-same-origin`; untrusted whitelisted domains get restrictive sandbox
+- **Payment Platforms** - Polar.sh and Stripe domains added to iframe whitelist
+- **Comprehensive Validation** - All 18 component types validated (scatter/bubble/time-series charts, video domain check, carousel/gallery/form guards)
+- **ComponentToolbar** - Unified toolbar component with consistent icons, position, and feedback states
+- **ExpandableWrapper** - Generic fullscreen expand with DOM reparenting (no duplication)
+- **Table/Chart/Code Export** - CSV/TSV/JSON download, PNG export, word wrap toggle
 
 See [CHANGELOG.md](./CHANGELOG.md) for full details.
 
@@ -26,7 +27,7 @@ This monorepo contains three packages published under `@seed-ship/`:
 
 | Package | Version | Description |
 |---------|---------|-------------|
-| [`@seed-ship/mcp-ui-solid`](./mcp-ui-solid) | 2.2.4 | SolidJS components for rendering MCP-generated UI |
+| [`@seed-ship/mcp-ui-solid`](./mcp-ui-solid) | 2.3.0 | SolidJS components for rendering MCP-generated UI |
 | [`@seed-ship/mcp-ui-spec`](./mcp-ui-spec) | 2.0.0 | JSON schemas and Zod validators |
 | [`@seed-ship/mcp-ui-cli`](./mcp-ui-cli) | 2.0.0 | CLI for validation and type generation |
 

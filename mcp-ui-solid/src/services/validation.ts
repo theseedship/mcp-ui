@@ -160,6 +160,67 @@ export const DEFAULT_IFRAME_DOMAINS = [
   'www.clinicaltrials.gov',
   'linear.app',
   'www.linear.app',
+
+  // Payment platforms (v2.2.12)
+  'polar.sh',
+  'www.polar.sh',
+  'checkout.stripe.com',
+  'js.stripe.com',
+  'billing.stripe.com',
+  'buy.stripe.com',
+  'connect.stripe.com',
+  'invoice.stripe.com',
+]
+
+/**
+ * Trusted iframe domains that require allow-same-origin to function.
+ * These domains need access to their own cookies/storage for auth.
+ * All other whitelisted domains get a restrictive sandbox without allow-same-origin.
+ */
+export const TRUSTED_IFRAME_DOMAINS = [
+  // Deposium (own domains)
+  'deposium.com',
+  'deposium.vip',
+  'deposium.ai',
+  'localhost',
+
+  // Google services (need auth cookies)
+  'docs.google.com',
+  'drive.google.com',
+  'sheets.google.com',
+  'slides.google.com',
+  'maps.google.com',
+  'datastudio.google.com',
+  'lookerstudio.google.com',
+
+  // Productivity (need auth)
+  'notion.so',
+  'www.notion.so',
+  'airtable.com',
+  'figma.com',
+  'www.figma.com',
+  'miro.com',
+
+  // Payment (need auth + cookies for checkout)
+  'polar.sh',
+  'www.polar.sh',
+  'checkout.stripe.com',
+  'js.stripe.com',
+  'billing.stripe.com',
+  'buy.stripe.com',
+  'connect.stripe.com',
+  'invoice.stripe.com',
+
+  // Business tools (need auth)
+  'app.hubspot.com',
+  'share.hubspot.com',
+  'app.powerbi.com',
+  'linear.app',
+  'www.linear.app',
+  'calendly.com',
+  'typeform.com',
+  'cal.com',
+  'canva.com',
 ]
 
 /**
@@ -468,6 +529,45 @@ export function validateIframeDomain(
       ],
     }
   }
+}
+
+/**
+ * Get the appropriate sandbox attribute for an iframe URL.
+ *
+ * Trusted domains (Google, Deposium, payment, auth-requiring services) get
+ * `allow-same-origin` so they can access their own cookies/storage.
+ * All other whitelisted domains get a restrictive sandbox without it,
+ * preventing access to the parent page's localStorage/cookies.
+ *
+ * @param url - The iframe URL
+ * @param options - Optional custom trusted domains
+ * @returns sandbox attribute string
+ */
+export function getIframeSandbox(
+  url: string,
+  options?: { customTrustedDomains?: string[] }
+): string {
+  const baseSandbox = 'allow-scripts allow-popups'
+
+  try {
+    const domain = new URL(url).hostname
+    let trustedList = TRUSTED_IFRAME_DOMAINS
+    if (options?.customTrustedDomains) {
+      trustedList = [...TRUSTED_IFRAME_DOMAINS, ...options.customTrustedDomains]
+    }
+
+    const isTrusted = trustedList.some(
+      (trusted) => domain === trusted || domain.endsWith(`.${trusted}`)
+    )
+
+    if (isTrusted) {
+      return `${baseSandbox} allow-same-origin allow-forms`
+    }
+  } catch {
+    // Invalid URL — use restrictive sandbox
+  }
+
+  return baseSandbox
 }
 
 /**

@@ -7,7 +7,7 @@ import DOMPurify from 'dompurify'
 import { Component, createSignal, Show, For, createMemo, createEffect } from 'solid-js'
 import { isServer } from 'solid-js/web'
 import type { UIComponent, UILayout, RendererError, TableVirtualizeOptions } from '../types'
-import { validateComponent, DEFAULT_RESOURCE_LIMITS } from '../services/validation'
+import { validateComponent, DEFAULT_RESOURCE_LIMITS, getIframeSandbox } from '../services/validation'
 import { GenerativeUIErrorBoundary } from './GenerativeUIErrorBoundary'
 import { GridRenderer } from './GridRenderer'
 import { FooterRenderer } from './FooterRenderer'
@@ -775,7 +775,7 @@ function IframeRenderer(props: { component: UIComponent }) {
         title={params.title || 'Embedded content'}
         class="w-full border-0 flex-1"
         style={`height: ${params.height || '400px'}; min-height: 300px;`}
-        sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+        sandbox={getIframeSandbox(params.url)}
         loading="lazy"
       />
     </div>

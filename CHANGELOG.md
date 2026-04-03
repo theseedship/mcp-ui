@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.0] - 2026-04-03
+
+### Added
+- **Complete ComponentRegistry** — All 19 types registered with JSON schemas, LLM descriptions, and examples (code, map, form, modal, action-group, image-gallery, video, iframe, image, link)
+- **ComponentToolbar** — Unified toolbar component with consistent icon set (copy, download, expand, wordwrap), configurable position, and click feedback
+- **Tiered iframe sandbox** — `getIframeSandbox()` gives `allow-same-origin` only to trusted domains (Google, Stripe, Polar.sh, Deposium, etc.); untrusted domains get restrictive `allow-scripts allow-popups` only
+- **Payment platform support** — Polar.sh and Stripe domains (checkout, billing, connect, invoice) added to iframe whitelist and trusted list
+- **bubble/polarArea chart types** — Added to `ChartType` union
+
+### Fixed
+- **Chart validation** — scatter/bubble charts no longer require labels; time-series line charts with `{x, y}` object data pass validation; empty datasets skip length mismatch
+- **Comprehensive component validation** — All 18 types now validated: video (url + domain), carousel (items), image-gallery (images), form (fields), action-group (actions), code (content), map (center/markers), artifact (content)
+- **ArtifactRenderer** — Optional chaining on `mimeType?.includes()` prevents crash on undefined
+- **CodeBlockRenderer** — Guard against highlight.js missing `highlight()` method
+- **ChartRenderer reactivity** — Replaced synchronous `if(useNative())` with reactive `<Show>` so Chart.js is used when available
+- **Chart validation hardenings** — Null-checks for `params.data`, `datasets`, `labels` prevent TypeError crashes
+
+### Security
+- Iframe sandbox hardened: untrusted domains no longer get `allow-same-origin`, preventing access to parent localStorage/cookies
+
 ## [2.2.4] - 2026-03-31
 
 ### Changed

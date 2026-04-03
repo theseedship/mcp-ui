@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest'
-import { validateComponent, validateChartComponent } from './validation'
+import { validateComponent, validateChartComponent, getIframeSandbox } from './validation'
 import type { UIComponent, ComponentType } from '../types'
 
 /** Helper to create a minimal valid UIComponent for testing */
@@ -270,5 +270,60 @@ describe('validateChartComponent — H1 null guards', () => {
       data: { labels: ['A', 'B'], datasets: [{ label: 'X', data: [1, 2] }] },
     } as any)
     expect(result.valid).toBe(true)
+  })
+})
+
+describe('getIframeSandbox — tiered sandbox', () => {
+  it('gives full sandbox to trusted domains (Google)', () => {
+    const sandbox = getIframeSandbox('https://docs.google.com/spreadsheets/d/123')
+    expect(sandbox).toContain('allow-same-origin')
+    expect(sandbox).toContain('allow-scripts')
+    expect(sandbox).toContain('allow-forms')
+  })
+
+  it('gives full sandbox to Deposium domains', () => {
+    const sandbox = getIframeSandbox('https://deposium.com/embed/123')
+    expect(sandbox).toContain('allow-same-origin')
+  })
+
+  it('gives full sandbox to payment domains (Stripe)', () => {
+    const sandbox = getIframeSandbox('https://checkout.stripe.com/c/pay_123')
+    expect(sandbox).toContain('allow-same-origin')
+    expect(sandbox).toContain('allow-forms')
+  })
+
+  it('gives full sandbox to Polar.sh', () => {
+    const sandbox = getIframeSandbox('https://polar.sh/checkout/123')
+    expect(sandbox).toContain('allow-same-origin')
+  })
+
+  it('gives restrictive sandbox to untrusted whitelisted domains (quickchart)', () => {
+    const sandbox = getIframeSandbox('https://quickchart.io/chart?c={}')
+    expect(sandbox).toContain('allow-scripts')
+    expect(sandbox).toContain('allow-popups')
+    expect(sandbox).not.toContain('allow-same-origin')
+    expect(sandbox).not.toContain('allow-forms')
+  })
+
+  it('gives restrictive sandbox to YouTube', () => {
+    const sandbox = getIframeSandbox('https://www.youtube.com/embed/abc123')
+    expect(sandbox).not.toContain('allow-same-origin')
+  })
+
+  it('gives restrictive sandbox to unknown domains', () => {
+    const sandbox = getIframeSandbox('https://evil.example.com/page')
+    expect(sandbox).not.toContain('allow-same-origin')
+  })
+
+  it('handles invalid URLs gracefully', () => {
+    const sandbox = getIframeSandbox('not-a-url')
+    expect(sandbox).toBe('allow-scripts allow-popups')
+  })
+
+  it('supports custom trusted domains', () => {
+    const sandbox = getIframeSandbox('https://my-internal-tool.corp.com/dash', {
+      customTrustedDomains: ['my-internal-tool.corp.com'],
+    })
+    expect(sandbox).toContain('allow-same-origin')
   })
 })
