@@ -114,6 +114,15 @@ function ChartRenderer(props: {
   const params = () => props.component.params as any
   const rendererPref = () => params()?.renderer || 'auto'
 
+  // Guard: if data or datasets missing, show error instead of crashing Chart.js
+  if (!params()?.data?.datasets) {
+    return (
+      <div class="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+        <p class="text-red-500 dark:text-red-400 text-sm">Invalid chart data: missing data.datasets</p>
+      </div>
+    )
+  }
+
   // Check renderer preference and Chart.js availability
   createEffect(async () => {
     const pref = rendererPref()

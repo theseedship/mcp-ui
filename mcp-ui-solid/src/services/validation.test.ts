@@ -5,8 +5,8 @@
  * without UNKNOWN_COMPONENT_TYPE errors.
  */
 
-import { describe, it, expect } from 'vitest'
-import { validateComponent } from './validation'
+import { describe, it, expect, vi } from 'vitest'
+import { validateComponent, validateChartComponent } from './validation'
 import type { UIComponent, ComponentType } from '../types'
 
 /** Helper to create a minimal valid UIComponent for testing */
@@ -130,5 +130,43 @@ describe('validateComponent', () => {
       const result = validateComponent(component)
       expect(result.valid).toBe(false)
     })
+  })
+
+  describe('H2: missing component.params guard', () => {
+    it('rejects component with undefined params', () => {
+      const component = { id: 'test', type: 'chart' as any, position: { colStart: 1, colSpan: 12 }, params: undefined as any }
+      const result = validateComponent(component)
+      expect(result.valid).toBe(false)
+      expect(result.errors?.some((e) => e.code === 'MISSING_PARAMS')).toBe(true)
+    })
+  })
+})
+
+describe('validateChartComponent — H1 null guards', () => {
+
+  it('rejects chart with undefined data', () => {
+    const result = validateChartComponent({ type: 'bar', data: undefined as any } as any)
+    expect(result.valid).toBe(false)
+    expect(result.errors?.[0].code).toBe('MISSING_DATA')
+  })
+
+  it('rejects chart with missing datasets', () => {
+    const result = validateChartComponent({ type: 'bar', data: { labels: ['A'] } } as any)
+    expect(result.valid).toBe(false)
+    expect(result.errors?.[0].code).toBe('MISSING_DATASETS')
+  })
+
+  it('rejects chart with missing labels', () => {
+    const result = validateChartComponent({ type: 'bar', data: { datasets: [{ label: 'X', data: [1] }] } } as any)
+    expect(result.valid).toBe(false)
+    expect(result.errors?.[0].code).toBe('MISSING_LABELS')
+  })
+
+  it('validates chart with proper data', () => {
+    const result = validateChartComponent({
+      type: 'bar',
+      data: { labels: ['A', 'B'], datasets: [{ label: 'X', data: [1, 2] }] },
+    } as any)
+    expect(result.valid).toBe(true)
   })
 })

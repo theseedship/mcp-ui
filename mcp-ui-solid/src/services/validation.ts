@@ -237,6 +237,17 @@ export function validateChartComponent(
 ): ValidationResult {
   const errors: ValidationResult['errors'] = []
 
+  // Guard: params.data must exist with labels + datasets
+  if (!params?.data) {
+    return { valid: false, errors: [{ path: 'params.data', message: 'Missing chart data object', code: 'MISSING_DATA' }] }
+  }
+  if (!Array.isArray(params.data.datasets)) {
+    return { valid: false, errors: [{ path: 'params.data.datasets', message: 'Missing or invalid datasets array', code: 'MISSING_DATASETS' }] }
+  }
+  if (!Array.isArray(params.data.labels)) {
+    return { valid: false, errors: [{ path: 'params.data.labels', message: 'Missing or invalid labels array', code: 'MISSING_LABELS' }] }
+  }
+
   // Validate data points count
   const totalDataPoints = params.data.datasets.reduce(
     (sum, dataset) => sum + dataset.data.length,
@@ -448,6 +459,11 @@ export function validateComponent(
 ): ValidationResult {
   const limits = options?.limits ?? DEFAULT_RESOURCE_LIMITS
   const errors: ValidationResult['errors'] = []
+
+  // Guard: params must exist
+  if (!component.params) {
+    return { valid: false, errors: [{ path: 'params', message: 'Missing component params', code: 'MISSING_PARAMS' }] }
+  }
 
   // Validate grid position
   const gridResult = validateGridPosition(component.position)
