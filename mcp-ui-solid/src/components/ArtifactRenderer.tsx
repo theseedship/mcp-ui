@@ -10,9 +10,9 @@ export interface ArtifactComponentParams {
 
 export const ArtifactRenderer: Component<{ params: ArtifactComponentParams }> = (props) => {
     const getIcon = () => {
-        if (props.params.mimeType.includes('csv')) return '📊'
-        if (props.params.mimeType.includes('json')) return '{}'
-        if (props.params.mimeType.includes('pdf')) return '📄'
+        if (props.params.mimeType?.includes('csv')) return '📊'
+        if (props.params.mimeType?.includes('json')) return '{}'
+        if (props.params.mimeType?.includes('pdf')) return '📄'
         return '📁'
     }
 

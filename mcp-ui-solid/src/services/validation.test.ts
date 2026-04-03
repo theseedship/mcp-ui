@@ -142,6 +142,108 @@ describe('validateComponent', () => {
   })
 })
 
+describe('component-specific validation', () => {
+  it('rejects video without url', () => {
+    const result = validateComponent(makeComponent('video'))
+    expect(result.errors?.some((e) => e.code === 'INVALID_VIDEO')).toBe(true)
+  })
+
+  it('rejects carousel with empty items', () => {
+    const result = validateComponent(makeComponent('carousel', { items: [] }))
+    expect(result.errors?.some((e) => e.code === 'EMPTY_CAROUSEL')).toBe(true)
+  })
+
+  it('rejects image-gallery with empty images', () => {
+    const result = validateComponent(makeComponent('image-gallery', { images: [] }))
+    expect(result.errors?.some((e) => e.code === 'EMPTY_GALLERY')).toBe(true)
+  })
+
+  it('rejects form with empty fields', () => {
+    const result = validateComponent(makeComponent('form', { fields: [] }))
+    expect(result.errors?.some((e) => e.code === 'EMPTY_FORM')).toBe(true)
+  })
+
+  it('rejects action-group with empty actions', () => {
+    const result = validateComponent(makeComponent('action-group', { actions: [] }))
+    expect(result.errors?.some((e) => e.code === 'EMPTY_ACTION_GROUP')).toBe(true)
+  })
+
+  it('rejects code without code content', () => {
+    const result = validateComponent(makeComponent('code'))
+    expect(result.errors?.some((e) => e.code === 'INVALID_CODE')).toBe(true)
+  })
+
+  it('rejects map without center or markers', () => {
+    const result = validateComponent(makeComponent('map'))
+    expect(result.errors?.some((e) => e.code === 'INVALID_MAP')).toBe(true)
+  })
+
+  it('accepts map with markers but no center', () => {
+    const result = validateComponent(makeComponent('map', { markers: [{ position: [48, 2] }] }))
+    const mapError = result.errors?.find((e) => e.code === 'INVALID_MAP')
+    expect(mapError).toBeUndefined()
+  })
+
+  it('accepts modal with no params beyond type', () => {
+    const result = validateComponent(makeComponent('modal', { title: 'Test' }))
+    expect(result.valid).toBe(true)
+  })
+})
+
+describe('validateChartComponent — scatter/bubble/time-series', () => {
+  it('validates scatter chart without labels', () => {
+    const result = validateChartComponent({
+      type: 'scatter',
+      data: { datasets: [{ label: 'Test', data: [{ x: 1, y: 2 }, { x: 3, y: 4 }] }] },
+    } as any)
+    expect(result.valid).toBe(true)
+  })
+
+  it('validates bubble chart without labels', () => {
+    const result = validateChartComponent({
+      type: 'bubble',
+      data: { datasets: [{ label: 'Test', data: [{ x: 1, y: 2, r: 5 }] }] },
+    } as any)
+    expect(result.valid).toBe(true)
+  })
+
+  it('validates line chart with time-series object data', () => {
+    const result = validateChartComponent({
+      type: 'line',
+      data: { datasets: [{ label: 'Prix', data: [{ x: '2024-01-01', y: 42 }, { x: '2024-02-01', y: 45 }] }] },
+    } as any)
+    expect(result.valid).toBe(true)
+  })
+
+  it('rejects scatter with number data instead of {x,y}', () => {
+    const result = validateChartComponent({
+      type: 'scatter',
+      data: { datasets: [{ label: 'Test', data: [1, 2, 3] }] },
+    } as any)
+    expect(result.valid).toBe(false)
+    expect(result.errors?.some((e) => e.code === 'INVALID_POINT_DATA')).toBe(true)
+  })
+
+  it('rejects bar chart without labels', () => {
+    const result = validateChartComponent({
+      type: 'bar',
+      data: { datasets: [{ label: 'Test', data: [1, 2, 3] }] },
+    } as any)
+    expect(result.valid).toBe(false)
+    expect(result.errors?.some((e) => e.code === 'MISSING_LABELS')).toBe(true)
+  })
+
+  it('accepts empty dataset without length mismatch', () => {
+    const result = validateChartComponent({
+      type: 'bar',
+      data: { labels: ['A', 'B'], datasets: [{ label: 'Test', data: [] }] },
+    } as any)
+    // Empty dataset should not trigger DATA_LENGTH_MISMATCH
+    const mismatch = result.errors?.find((e) => e.code === 'DATA_LENGTH_MISMATCH')
+    expect(mismatch).toBeUndefined()
+  })
+})
+
 describe('validateChartComponent — H1 null guards', () => {
 
   it('rejects chart with undefined data', () => {

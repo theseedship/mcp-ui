@@ -244,13 +244,22 @@ export function validateChartComponent(
   if (!Array.isArray(params.data.datasets)) {
     return { valid: false, errors: [{ path: 'params.data.datasets', message: 'Missing or invalid datasets array', code: 'MISSING_DATASETS' }] }
   }
-  if (!Array.isArray(params.data.labels)) {
-    return { valid: false, errors: [{ path: 'params.data.labels', message: 'Missing or invalid labels array', code: 'MISSING_LABELS' }] }
+  // Detect point-based charts (scatter/bubble) or object data (time-series line)
+  const chartType = params.type || 'bar'
+  const firstDataPoint = params.data.datasets[0]?.data?.[0]
+  const hasObjectData = typeof firstDataPoint === 'object' && firstDataPoint !== null && 'x' in firstDataPoint
+  const isPointChart = chartType === 'scatter' || chartType === 'bubble' || hasObjectData
+
+  // Labels required only for categorical charts (not scatter/bubble/time-series)
+  if (!isPointChart) {
+    if (!Array.isArray(params.data.labels)) {
+      return { valid: false, errors: [{ path: 'params.data.labels', message: 'Missing or invalid labels array', code: 'MISSING_LABELS' }] }
+    }
   }
 
   // Validate data points count
   const totalDataPoints = params.data.datasets.reduce(
-    (sum, dataset) => sum + dataset.data.length,
+    (sum, dataset) => sum + (Array.isArray(dataset.data) ? dataset.data.length : 0),
     0
   )
 
@@ -262,27 +271,41 @@ export function validateChartComponent(
     })
   }
 
-  // Validate labels match dataset length
-  const expectedLength = params.data.labels.length
-  for (const [index, dataset] of params.data.datasets.entries()) {
-    if (dataset.data.length !== expectedLength) {
-      errors.push({
-        path: `params.data.datasets[${index}]`,
-        message: `Dataset length mismatch: expected ${expectedLength}, got ${dataset.data.length}`,
-        code: 'DATA_LENGTH_MISMATCH',
-      })
+  // Length mismatch check — only for categorical charts, skip empty datasets
+  if (!isPointChart && Array.isArray(params.data.labels)) {
+    const expectedLength = params.data.labels.length
+    for (const [index, dataset] of params.data.datasets.entries()) {
+      if (Array.isArray(dataset.data) && dataset.data.length > 0 && dataset.data.length !== expectedLength) {
+        errors.push({
+          path: `params.data.datasets[${index}]`,
+          message: `Dataset length mismatch: expected ${expectedLength}, got ${dataset.data.length}`,
+          code: 'DATA_LENGTH_MISMATCH',
+        })
+      }
     }
   }
 
-  // Validate numeric data
+  // Data type validation — numbers for categorical, {x,y} objects for point charts
   for (const [index, dataset] of params.data.datasets.entries()) {
+    if (!Array.isArray(dataset.data)) continue
     for (const [dataIndex, value] of dataset.data.entries()) {
-      if (typeof value !== 'number' || !Number.isFinite(value)) {
-        errors.push({
-          path: `params.data.datasets[${index}].data[${dataIndex}]`,
-          message: `Invalid data value: ${value} (must be finite number)`,
-          code: 'INVALID_DATA_TYPE',
-        })
+      if (isPointChart) {
+        const vObj = value as any
+        if (typeof value !== 'object' || value === null || vObj.x == null || typeof vObj.y !== 'number') {
+          errors.push({
+            path: `params.data.datasets[${index}].data[${dataIndex}]`,
+            message: `Invalid point data: expected {x, y} object`,
+            code: 'INVALID_POINT_DATA',
+          })
+        }
+      } else {
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+          errors.push({
+            path: `params.data.datasets[${index}].data[${dataIndex}]`,
+            message: `Invalid data value: ${value} (must be finite number)`,
+            code: 'INVALID_DATA_TYPE',
+          })
+        }
       }
     }
   }
@@ -578,6 +601,85 @@ export function validateComponent(
           message: 'Action component must have label',
           code: 'INVALID_ACTION',
         })
+      }
+      break
+    }
+
+    case 'video': {
+      const videoParams = component.params as any
+      if (!videoParams.url) {
+        errors.push({ path: 'params', message: 'Video component must have url', code: 'INVALID_VIDEO' })
+      } else {
+        // Reuse iframe domain validation for video URLs
+        const videoResult = validateIframeDomain(videoParams.url, {
+          policy: options?.iframePolicy,
+          customDomains: options?.customIframeDomains,
+        })
+        if (!videoResult.valid) {
+          errors.push(...(videoResult.errors || []))
+        }
+      }
+      break
+    }
+
+    case 'carousel': {
+      const carouselParams = component.params as any
+      if (!Array.isArray(carouselParams.items) || carouselParams.items.length === 0) {
+        errors.push({ path: 'params.items', message: 'Carousel must have non-empty items array', code: 'EMPTY_CAROUSEL' })
+      }
+      break
+    }
+
+    case 'image-gallery': {
+      const galleryParams = component.params as any
+      if (!Array.isArray(galleryParams.images) || galleryParams.images.length === 0) {
+        errors.push({ path: 'params.images', message: 'Gallery must have non-empty images array', code: 'EMPTY_GALLERY' })
+      }
+      break
+    }
+
+    case 'form': {
+      const formParams = component.params as any
+      if (!Array.isArray(formParams.fields) || formParams.fields.length === 0) {
+        errors.push({ path: 'params.fields', message: 'Form must have non-empty fields array', code: 'EMPTY_FORM' })
+      }
+      break
+    }
+
+    case 'action-group': {
+      const agParams = component.params as any
+      if (!Array.isArray(agParams.actions) || agParams.actions.length === 0) {
+        errors.push({ path: 'params.actions', message: 'Action group must have non-empty actions array', code: 'EMPTY_ACTION_GROUP' })
+      }
+      break
+    }
+
+    case 'code': {
+      const codeParams = component.params as any
+      if (!codeParams.code) {
+        errors.push({ path: 'params.code', message: 'Code component must have code content', code: 'INVALID_CODE' })
+      }
+      break
+    }
+
+    case 'map': {
+      // Map can auto-detect center from markers, so center is not strictly required
+      const mapParams = component.params as any
+      if (!mapParams.center && (!Array.isArray(mapParams.markers) || mapParams.markers.length === 0)) {
+        errors.push({ path: 'params', message: 'Map must have center or markers', code: 'INVALID_MAP' })
+      }
+      break
+    }
+
+    case 'modal': {
+      // Modal is valid with minimal params (title optional, content can be children)
+      break
+    }
+
+    case 'artifact': {
+      const artifactParams = component.params as any
+      if (!artifactParams.content) {
+        errors.push({ path: 'params.content', message: 'Artifact must have content', code: 'INVALID_ARTIFACT' })
       }
       break
     }

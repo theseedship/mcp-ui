@@ -41,7 +41,13 @@ export const CodeBlockRenderer: Component<CodeBlockRendererProps> = (props) => {
             try {
                 // Use the full highlight.js bundle with all languages for simplicity
                 const module = await import('highlight.js')
-                hljs = module.default || module
+                const resolved = module.default || module
+                // Guard: verify the resolved module has the expected API
+                if (typeof resolved?.highlight === 'function') {
+                    hljs = resolved
+                } else {
+                    console.warn('highlight.js loaded but missing highlight() method')
+                }
                 setIsHljsLoaded(true)
             } catch (e) {
                 console.warn('Failed to load highlight.js', e)

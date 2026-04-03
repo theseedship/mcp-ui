@@ -32,7 +32,7 @@ export type ComponentType =
 /**
  * Chart types (powered by Quickchart)
  */
-export type ChartType = 'bar' | 'line' | 'pie' | 'doughnut' | 'radar' | 'scatter'
+export type ChartType = 'bar' | 'line' | 'pie' | 'doughnut' | 'radar' | 'scatter' | 'bubble' | 'polarArea'
 
 /**
  * Grid layout specification (12-column system)
