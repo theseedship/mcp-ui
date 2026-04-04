@@ -104,6 +104,20 @@ describe('createEventEmitter', () => {
 
       expect(handler).toHaveBeenCalledTimes(2)
     })
+
+    it('filters onCustomEvent by streamKey in second arg', () => {
+      const emitter = createEventEmitter()
+      const handler = vi.fn()
+
+      emitter.on('onCustomEvent', handler, { streamKey: 'stream-1' })
+
+      // onCustomEvent signature: (type: string, event: ChatEventBase & { data })
+      emitter.emit('onCustomEvent', 'my_event', { streamKey: 'stream-1', data: 'yes' })
+      emitter.emit('onCustomEvent', 'my_event', { streamKey: 'stream-2', data: 'no' })
+
+      expect(handler).toHaveBeenCalledOnce()
+      expect(handler).toHaveBeenCalledWith('my_event', { streamKey: 'stream-1', data: 'yes' })
+    })
   })
 
   describe('throttle', () => {
@@ -129,6 +143,38 @@ describe('createEventEmitter', () => {
       vi.advanceTimersByTime(100)
       expect(handler).toHaveBeenCalledTimes(2)
       expect(handler).toHaveBeenLastCalledWith({ streamKey: 'abc', token: 'c' })
+    })
+
+    it('cancels pending throttle timer on unsubscribe', () => {
+      const emitter = createEventEmitter()
+      const handler = vi.fn()
+
+      const unsub = emitter.on('onToken', handler, { throttle: 100 })
+
+      emitter.emit('onToken', { streamKey: 'abc', token: 'a' })
+      expect(handler).toHaveBeenCalledOnce() // immediate
+
+      emitter.emit('onToken', { streamKey: 'abc', token: 'b' }) // queued
+      unsub() // should cancel the queued call
+
+      vi.advanceTimersByTime(200)
+      expect(handler).toHaveBeenCalledOnce() // still 1, queued was cancelled
+    })
+
+    it('catches errors in throttled deferred calls', () => {
+      const emitter = createEventEmitter()
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      const badHandler = vi.fn(() => { throw new Error('throttle boom') })
+
+      emitter.on('onToken', badHandler, { throttle: 50 })
+
+      emitter.emit('onToken', { streamKey: 'abc', token: 'a' }) // immediate — caught by emit
+      emitter.emit('onToken', { streamKey: 'abc', token: 'b' }) // deferred
+
+      vi.advanceTimersByTime(50) // fires deferred — should catch
+      expect(errorSpy).toHaveBeenCalled()
+
+      errorSpy.mockRestore()
     })
 
     it('non-throttled listeners fire immediately', () => {

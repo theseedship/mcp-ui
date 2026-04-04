@@ -40,6 +40,7 @@ export { ComponentToolbar } from './components/ComponentToolbar'
 
 // Chat Bus (v2.4.0 — @experimental)
 export { ChatBusProvider, useChatBus } from './hooks/useChatBus'
+export { ChatPrompt } from './components/ChatPrompt'
 
 // Autocomplete Components
 export { GhostText, GhostTextInput } from './components/GhostText'
@@ -57,6 +58,7 @@ export type { ResizeHandleProps as ResizeHandleComponentProps } from './componen
 export type { EditableUIResourceRendererProps } from './components/EditableUIResourceRenderer'
 export type { ExpandableWrapperProps } from './components/ExpandableWrapper'
 export type { ComponentToolbarProps, ToolbarAction, ToolbarIcon } from './components/ComponentToolbar'
+export type { ChatPromptProps } from './components/ChatPrompt'
 export type { GhostTextProps, GhostTextInputProps } from './components/GhostText'
 export type { AutocompleteDropdownProps } from './components/AutocompleteDropdown'
 export type { AutocompleteFormFieldProps, AutocompleteFormFieldParams } from './components/AutocompleteFormField'

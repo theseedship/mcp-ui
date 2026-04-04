@@ -36,12 +36,19 @@ interface Listener<F extends (...args: any[]) => any> {
 export function createEventEmitter(): ChatEventEmitter {
   const listeners = new Map<string, Set<Listener<any>>>()
 
-  function createThrottled<F extends (...args: any[]) => void>(fn: F, ms: number): F {
+  interface ThrottledFn<F> {
+    fn: F
+    cancel: () => void
+  }
+
+  function createThrottled<F extends (...args: any[]) => void>(fn: F, ms: number): ThrottledFn<F> {
     let lastCall = 0
     let timer: ReturnType<typeof setTimeout> | null = null
     let lastArgs: any[] | null = null
+    let cancelled = false
 
-    return ((...args: any[]) => {
+    const throttled = ((...args: any[]) => {
+      if (cancelled) return
       lastArgs = args
       const now = Date.now()
       const remaining = ms - (now - lastCall)
@@ -54,10 +61,17 @@ export function createEventEmitter(): ChatEventEmitter {
         timer = setTimeout(() => {
           lastCall = Date.now()
           timer = null
-          if (lastArgs) fn(...lastArgs)
+          if (lastArgs && !cancelled) {
+            try { fn(...lastArgs) } catch (err) { console.error('[ChatBus] Error in throttled handler:', err) }
+          }
         }, remaining)
       }
     }) as F
+
+    return {
+      fn: throttled,
+      cancel: () => { cancelled = true; if (timer) { clearTimeout(timer); timer = null } },
+    }
   }
 
   return {
@@ -69,14 +83,17 @@ export function createEventEmitter(): ChatEventEmitter {
       const listener: Listener<typeof handler> = { handler, options }
 
       // Apply throttle if requested
+      let throttleHandle: ThrottledFn<typeof handler> | null = null
       if (options?.throttle && options.throttle > 0) {
-        listener.throttledHandler = createThrottled(handler, options.throttle)
+        throttleHandle = createThrottled(handler, options.throttle)
+        listener.throttledHandler = throttleHandle.fn
       }
 
       listeners.get(event as string)!.add(listener)
 
-      // Return unsubscribe function
+      // Return unsubscribe function — cancels pending throttle timers
       return () => {
+        throttleHandle?.cancel()
         listeners.get(event as string)?.delete(listener)
       }
     },
@@ -87,10 +104,16 @@ export function createEventEmitter(): ChatEventEmitter {
 
       for (const listener of set) {
         // StreamKey filtering: skip if listener wants a specific streamKey
-        // and the event's first arg has a different one
-        const firstArg = args[0] as unknown as Record<string, unknown> | undefined
-        if (listener.options?.streamKey && firstArg && typeof firstArg === 'object' && 'streamKey' in firstArg) {
-          if (firstArg.streamKey !== listener.options.streamKey) continue
+        // For most events args[0] has streamKey; for onCustomEvent args[1] has it
+        if (listener.options?.streamKey) {
+          let streamKeyArg: unknown
+          for (const arg of args) {
+            if (arg && typeof arg === 'object' && 'streamKey' in (arg as any)) {
+              streamKeyArg = (arg as any).streamKey
+              break
+            }
+          }
+          if (streamKeyArg !== undefined && streamKeyArg !== listener.options.streamKey) continue
         }
 
         const fn = listener.throttledHandler || listener.handler
