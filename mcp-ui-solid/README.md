@@ -1,67 +1,20 @@
 # @seed-ship/mcp-ui-solid
 
-SolidJS components for rendering MCP-generated UI resources. Part of the MCP UI ecosystem.
+SolidJS components + chat toolkit for MCP-generated UI. Part of the [MCP UI ecosystem](https://github.com/theseedship/mcp-ui).
 
 [![npm version](https://img.shields.io/npm/v/@seed-ship/mcp-ui-solid.svg)](https://www.npmjs.com/package/@seed-ship/mcp-ui-solid)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## What's New in v2.0.0
+## What's New in v2.5.0
 
-### Highlights
-
-- **Configurable Iframe Whitelist** - Control iframe security with `IframePolicy`: `strict`, `extend`, or `allow-all`
-- **60+ Whitelisted Domains** - Expanded default whitelist for business use cases
-- **New Component Types** - Forms, Modals, Action Groups, Image Gallery, Video, Code, Map
-- **Table Virtualization** - Handle 10,000+ rows with smooth scrolling
-- **Map Clustering** - Auto-cluster markers for large datasets
-- **Native Chart.js Support** - Optional direct Chart.js rendering (no iframe)
-
-### Configurable Iframe Security
-
-```typescript
-import { validateComponent, DEFAULT_IFRAME_DOMAINS } from '@seed-ship/mcp-ui-solid'
-
-// Default: strict whitelist
-validateComponent(component)
-
-// Extend whitelist with custom domains
-validateComponent(component, {
-  iframePolicy: 'extend',
-  customIframeDomains: ['my-trusted-site.com']
-})
-
-// Disable whitelist (use with caution)
-validateComponent(component, { iframePolicy: 'allow-all' })
-
-// View default whitelist
-console.log(DEFAULT_IFRAME_DOMAINS)
-```
-
-### Whitelisted Domains (v2.0.0)
-
-| Category | Domains |
-|----------|---------|
-| **Video** | youtube.com, vimeo.com, loom.com, cloudflarestream.com, streamable.com |
-| **Diagrams** | mermaid.live, excalidraw.com, lucidchart.com, figma.com, miro.com |
-| **Code** | github.com, gitlab.com, codepen.io, codesandbox.io, stackblitz.com, replit.com |
-| **Google** | docs, sheets, slides, drive, maps, datastudio, lookerstudio |
-| **Business** | notion.so, airtable.com, calendly.com, typeform.com, cal.com |
-| **Analytics** | tableau.com, powerbi.com, observablehq.com |
-| **Design** | canva.com, figma.com |
-| **Maps** | maps.google.com, openstreetmap.org |
-| **Previews** | vercel.app, netlify.app |
-| **E-commerce** | amazon.com, amazon.fr, amazon.de, amazon.co.uk, etc. |
-
----
-
-## Overview
-
-`@seed-ship/mcp-ui-solid` provides a complete rendering solution for MCP (Model Context Protocol) generated UIs. It enables AI/LLM systems to generate structured, interactive dashboards that are rendered with SolidJS.
-
-**Key Use Cases:**
-- Render AI-generated dashboards and reports
-- Display streaming UI components progressively
-- Build interactive data visualizations from MCP resources
+- **Chat Bus** (`@experimental`) - Bidirectional event/command bus for agent interactions
+- **ChatPrompt** (`@experimental`) - Structured interactions above chat input (choice, confirm, form)
+- **19 component renderers** - chart, table, metric, text, code, map, form, modal, image-gallery, video, iframe, image, link, action, action-group, grid, carousel, artifact, footer
+- **ExpandableWrapper** - Fullscreen expand for tables, charts, code (DOM reparenting)
+- **Table/Chart/Code export** - CSV/TSV/JSON download, PNG export, word wrap toggle
+- **Tiered iframe sandbox** - Trusted domains get `allow-same-origin`; untrusted get restrictive sandbox
+- **Complete validation** - All 19 types validated, scatter/bubble/time-series chart support
+- **ComponentToolbar** - Unified toolbar with copy, download, expand, wordwrap actions
 
 ## Installation
 
@@ -71,15 +24,15 @@ pnpm add @seed-ship/mcp-ui-solid
 npm install @seed-ship/mcp-ui-solid
 ```
 
-**Peer Dependencies:**
-- `solid-js` ^1.9.0
+**Peer dependencies:** `solid-js` ^1.9.0
 
 ## Quick Start
 
-```tsx
-import { UIResourceRenderer, StreamingUIRenderer } from '@seed-ship/mcp-ui-solid'
+### Static UI Rendering
 
-// Static rendering of a pre-built layout
+```tsx
+import { UIResourceRenderer } from '@seed-ship/mcp-ui-solid'
+
 function Dashboard() {
   const layout = {
     id: 'dashboard-1',
@@ -88,358 +41,325 @@ function Dashboard() {
       {
         type: 'metric',
         id: 'revenue',
-        title: 'Total Revenue',
+        title: 'Revenue',
         value: '$125,430',
-        trend: { direction: 'up', value: '+12%' },
-        position: { x: 0, y: 0, width: 4, height: 1 }
+        position: { colStart: 1, colSpan: 4 }
       },
       {
         type: 'chart',
-        id: 'sales-chart',
-        chartType: 'line',
-        data: { /* chart data */ },
-        position: { x: 0, y: 1, width: 8, height: 2 }
+        id: 'trends',
+        params: { type: 'line', data: { labels: ['Q1','Q2','Q3'], datasets: [{ label: 'Sales', data: [10,20,30] }] } },
+        position: { colStart: 5, colSpan: 8 }
       }
     ]
   }
 
   return <UIResourceRenderer content={layout} />
 }
+```
 
-// Streaming rendering from an MCP server
+### Streaming UI with SSE
+
+```tsx
+import { StreamingUIRenderer } from '@seed-ship/mcp-ui-solid'
+
 function StreamingDashboard() {
   return (
     <StreamingUIRenderer
       query="Show me quarterly revenue trends"
       spaceIds={['analytics-space']}
-      onComplete={(metadata) => console.log('Render complete', metadata)}
-      onError={(error) => console.error('Render failed', error)}
+      onComplete={(metadata) => console.log('Complete', metadata)}
     />
   )
 }
 ```
 
-## Architecture
+## Chat Bus — Agent Interactions (`@experimental`)
+
+Bidirectional event/command system for agent-driven chat interactions. Your app keeps full control of its chat UI — the bus adds structured interactivity on top.
+
+### Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Your SolidJS App                         │
-├─────────────────────────────────────────────────────────────┤
-│  UIResourceRenderer        │  StreamingUIRenderer           │
-│  (static layouts)          │  (progressive SSE streaming)   │
-├─────────────────────────────────────────────────────────────┤
-│                    Component Registry                       │
-│  ┌─────────┬─────────┬────────┬──────────┬───────────────┐ │
-│  │ Chart   │ Table   │ Metric │ Text     │ Image/Link... │ │
-│  │Renderer │Renderer │Renderer│Renderer  │ Renderers     │ │
-│  └─────────┴─────────┴────────┴──────────┴───────────────┘ │
-├─────────────────────────────────────────────────────────────┤
-│  Validation │ Error Boundaries │ Grid Layout (12-col)       │
-└─────────────────────────────────────────────────────────────┘
+                    ┌──────────────────────┐
+                    │   AGENT LAYER        │
+                    │  (your app logic)    │
+                    └──┬──────────────┬────┘
+              events   │              │ commands
+                       ▼              ▼
+┌──────────────────────────────────────────────────┐
+│   Chat Messages (your app renders these)          │
+│   + UIResourceRenderer for MCP components         │
+├──────────────────────────────────────────────────┤
+│   ChatPrompt (MCP-UI) — choice | confirm | form   │
+├──────────────────────────────────────────────────┤
+│   Chat Input (your app controls this)             │
+└──────────────────────────────────────────────────┘
 ```
 
-## Components
+### Usage
 
-### Core Renderers
+```tsx
+import { ChatBusProvider, useChatBus, ChatPrompt, createChatBus } from '@seed-ship/mcp-ui-solid'
 
-| Component | Description | Key Props |
-|-----------|-------------|-----------|
-| `UIResourceRenderer` | Static layout rendering | `content`, `className` |
-| `StreamingUIRenderer` | Progressive SSE streaming | `query`, `spaceIds`, `onComplete`, `onError` |
-| `GenerativeUIErrorBoundary` | Error isolation with retry | `fallback`, `onError` |
-
-### Data Display Renderers
-
-| Component | Type | Description |
-|-----------|------|-------------|
-| `ChartRenderer` | `chart` | Line, bar, pie, area charts (Chart.js) |
-| `TableRenderer` | `table` | Data tables with sorting, markdown links |
-| `MetricRenderer` | `metric` | KPI cards with trends and sparklines |
-| `TextRenderer` | `text` | Markdown-enabled text blocks |
-| `ImageRenderer` | `image` | Responsive images with lazy loading |
-| `LinkRenderer` | `link` | External links with security attributes |
-| `IframeRenderer` | `iframe` | Secure iframe embedding (sandboxed) |
-
-### Layout Renderers
-
-| Component | Type | Description |
-|-----------|------|-------------|
-| `GridRenderer` | `grid` | **NEW v1.2.0** - Nested CSS Grid layouts for complex dashboards |
-
-### Interactive Renderers
-
-| Component | Type | Description |
-|-----------|------|-------------|
-| `ActionRenderer` | `action` | Interactive buttons with MCP tool calls |
-| `ArtifactRenderer` | `artifact` | File download/preview |
-| `CarouselRenderer` | `carousel` | Image/content carousel |
-| `FooterRenderer` | `footer` | Metadata and attribution display (auto-injected)
-
-## Exports
-
-### Main Export
-
-```typescript
-import {
-  UIResourceRenderer,
-  StreamingUIRenderer,
-  GenerativeUIErrorBoundary,
-  // Individual renderers
-  ChartRenderer,
-  TableRenderer,
-  MetricRenderer,
-  TextRenderer,
-  ActionRenderer,
-  // ...
-} from '@seed-ship/mcp-ui-solid'
-```
-
-### Hooks
-
-```typescript
-import { useStreamingUI, useAction, useToolAction } from '@seed-ship/mcp-ui-solid'
-
-// Streaming hook
-const { components, isComplete, error, metadata } = useStreamingUI({
-  query: 'Show revenue data',
-  spaceIds: ['space-1']
-})
-
-// Action hooks (NEW v1.2.0)
-const { execute, isExecuting, lastError } = useAction()
-await execute('search.hub', { query: 'revenue Q4' })
-
-// Bound to specific tool
-const { execute: searchExecute } = useToolAction('search.hub')
-await searchExecute({ query: 'test' })
-```
-
-### Context Provider (NEW v1.2.0)
-
-```typescript
-import { MCPActionProvider, useMCPAction } from '@seed-ship/mcp-ui-solid'
-
-// Wrap your app to enable typed action dispatch
+// 1. Wrap your app
 function App() {
   return (
-    <MCPActionProvider
-      spaceIds={['space-123']}
-      macroId="dashboard_template"
-      onAction={(req, res) => auditLog(req, res)}
-      onWebhook={(event) => triggerN8n(event)}
-    >
-      <UIResourceRenderer content={layout} />
-    </MCPActionProvider>
+    <ChatBusProvider>
+      <ChatInterface />
+      <AgentRouter />
+    </ChatBusProvider>
   )
 }
 
-// Inside any component
-function ActionButton() {
-  const { executeAction, isExecuting } = useMCPAction()
+// 2. Bridge your SSE events to the bus
+function ChatInterface() {
+  const bus = useChatBus()
+  const [activePrompt, setActivePrompt] = createSignal(null)
+
+  // Bridge SSE → bus events
+  onSSEEvent('done', (data) =>
+    bus.events.emit('onStreamEnd', { streamKey: 'main', metadata: data }))
+  onSSEEvent('ui_layout', (data) =>
+    bus.events.emit('onUILayout', { streamKey: 'main', layout: data }))
+
+  // Handle commands from agents
+  bus.commands.handle('injectPrompt', (text) => setInputValue(text))
+  bus.commands.handle('sendPrompt', (text) => {
+    setInputValue(text); handleSend(); return crypto.randomUUID()
+  })
+  bus.commands.handle('showChatPrompt', (config) => setActivePrompt(config))
 
   return (
-    <button
-      onClick={() => executeAction({ toolName: 'search.hub', params: { query: 'test' } })}
-      disabled={isExecuting()}
-    >
-      Search
-    </button>
+    <div>
+      <Messages />
+      <Show when={activePrompt()}>
+        <ChatPrompt
+          config={activePrompt()!}
+          onSubmit={(response) => {
+            bus.events.emit('onChatPromptResponse', { streamKey: 'main', response })
+            setActivePrompt(null)
+          }}
+          onDismiss={() => setActivePrompt(null)}
+        />
+      </Show>
+      <TextInput />
+    </div>
   )
 }
-```
 
-### Validation (SSR-Safe)
+// 3. Agents react to events and emit commands
+function AgentRouter() {
+  const bus = useChatBus()
 
-```typescript
-// Safe to import on server - no browser APIs
-import { validateUIResource, validateLayout } from '@seed-ship/mcp-ui-solid/validation'
+  bus.events.on('onStreamEnd', (event) => {
+    if (event.metadata.needs_clarification) {
+      bus.commands.exec('showChatPrompt', {
+        type: 'choice',
+        title: 'Which period?',
+        config: { options: [{ value: '2024', label: '2024' }, { value: '2025', label: '2025' }] }
+      })
+    }
+  })
 
-const result = validateUIResource(resource)
-if (!result.valid) {
-  console.error(result.errors)
+  return null
 }
 ```
 
-### Types Only (SSR-Safe)
+### Event Types (15)
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `onToken` | `{ token }` | Streaming text token (use throttle) |
+| `onStreamStart` | `{}` | Stream started |
+| `onStreamEnd` | `{ metadata }` | Stream completed with metadata |
+| `onError` | `{ error }` | Stream error |
+| `onUILayout` | `{ layout }` | MCP UI component to render |
+| `onCitation` | `{ citation }` | Citation reference |
+| `onToolCall` | `{ tool }` | Tool execution status |
+| `onSuggestions` | `{ items }` | Suggestion chips |
+| `onChatPromptResponse` | `{ response }` | User responded to ChatPrompt |
+| `onClarificationNeeded` | `{ clarification }` | Needs user clarification |
+| `onAgentSwitch` | `{ agent }` | Active agent changed |
+| `onBriefing` | `{ briefing }` | Briefing update |
+| `onCapabilityChange` | `{ capabilities }` | Agent capabilities changed |
+| `onCustomEvent` | `{ type, data }` | App-specific event |
+
+All events carry `ChatEventBase` (`streamKey`, `conversationId?`, `correlationId?`) for multi-stream support.
+
+### Command Types (10)
+
+| Command | Args | Returns | Description |
+|---------|------|---------|-------------|
+| `injectPrompt` | `text` | void | Fill input without sending |
+| `sendPrompt` | `text, metadata?` | `correlationId` | Fill + send, returns correlation ID |
+| `appendPrompt` | `text` | void | Append to current input |
+| `showChatPrompt` | `config, signal?` | `Promise<Response>` | Show structured prompt (AbortSignal for cleanup) |
+| `dismissChatPrompt` | — | void | Close active prompt |
+| `showSuggestions` | `items` | void | Show suggestion chips |
+| `toggleConnector` | `id, enabled` | void | Toggle a connector |
+| `setMode` | `mode` | void | Change chat mode |
+| `scrollToMessage` | `messageId` | void | Scroll to message |
+| `notify` | `message, type?` | void | Show notification |
+
+### Throttle + StreamKey Filtering
 
 ```typescript
-// Type-only imports - no runtime code
-import type { UIResource, UIComponent, GridPosition } from '@seed-ship/mcp-ui-solid/types-only'
+// Throttle hot-path events (recommended for onToken)
+bus.events.on('onToken', handler, { throttle: 100 })
+
+// Filter by stream (multi-stream support)
+bus.events.on('onStreamEnd', handler, { streamKey: 'stream-1' })
+```
+
+## ChatPrompt — Structured Interactions (`@experimental`)
+
+Three subtypes for common agent interaction patterns:
+
+```tsx
+// Choice — buttons with optional icons and descriptions
+<ChatPrompt config={{
+  type: 'choice',
+  title: 'Export format?',
+  config: {
+    options: [
+      { value: 'pdf', label: 'PDF', icon: '📄' },
+      { value: 'csv', label: 'CSV', icon: '📊', description: 'Raw data' },
+    ],
+    layout: 'horizontal', // or 'vertical' | 'grid'
+  }
+}} onSubmit={handleResponse} />
+
+// Confirm — with danger variant
+<ChatPrompt config={{
+  type: 'confirm',
+  title: 'Delete 47 documents?',
+  config: { message: 'This cannot be undone.', confirmLabel: 'Delete', variant: 'danger' }
+}} onSubmit={handleResponse} />
+
+// Form — quick fields with validation
+<ChatPrompt config={{
+  type: 'form',
+  title: 'Additional info',
+  config: {
+    fields: [
+      { name: 'title', label: 'Title', type: 'text', required: true },
+      { name: 'category', label: 'Category', type: 'select',
+        options: [{ label: 'Report', value: 'report' }] },
+    ],
+    submitLabel: 'Send',
+  }
+}} onSubmit={handleResponse} />
+```
+
+## Component Renderers (19 types)
+
+| Type | Renderer | Features |
+|------|----------|----------|
+| `chart` | ChartJSRenderer | Bar, line, pie, scatter, bubble, polarArea. Native Chart.js or Quickchart fallback. PNG export, configurable height. |
+| `table` | TableRenderer | Sortable columns, pagination, virtualization (10K+ rows). CSV/TSV/JSON export. |
+| `metric` | MetricRenderer | KPI cards with trends and sparklines |
+| `text` | TextRenderer | Markdown rendering via marked.js |
+| `code` | CodeBlockRenderer | Syntax highlighting (highlight.js), line numbers, word wrap toggle, filename header |
+| `map` | MapRenderer | Leaflet maps with markers, clustering, auto-fit bounds |
+| `form` | FormRenderer | Conditional fields, persistence, tool call submit |
+| `modal` | ModalRenderer | Portal overlay, sizes sm-full, Escape/backdrop close |
+| `image-gallery` | ImageGalleryRenderer | Grid layout, lightbox overlay, keyboard navigation |
+| `video` | VideoRenderer | YouTube/Vimeo/direct URL, auto-detect provider |
+| `iframe` | IframeRenderer | Tiered sandbox, 80+ whitelisted domains |
+| `image` | ImageRenderer | Responsive with lazy loading |
+| `link` | LinkRenderer | Styled link cards |
+| `action` | ActionRenderer | Tool call buttons |
+| `action-group` | ActionGroupRenderer | Grouped actions with layout options |
+| `grid` | GridRenderer | Nested 12-column CSS Grid |
+| `carousel` | CarouselRenderer | Content carousel |
+| `artifact` | ArtifactRenderer | File download/preview |
+| `footer` | FooterRenderer | Metadata display |
+
+All wrapped with `ExpandableWrapper` (fullscreen expand via DOM reparenting) where applicable.
+
+## Iframe Security
+
+Tiered sandbox system — trusted domains get `allow-same-origin`, untrusted get restrictive sandbox:
+
+```typescript
+import { getIframeSandbox, DEFAULT_IFRAME_DOMAINS, TRUSTED_IFRAME_DOMAINS } from '@seed-ship/mcp-ui-solid'
+
+// Automatic — IframeRenderer uses getIframeSandbox() internally
+// Manual usage:
+const sandbox = getIframeSandbox('https://docs.google.com/spreadsheets/...')
+// → "allow-scripts allow-popups allow-same-origin allow-forms" (trusted)
+
+const sandbox2 = getIframeSandbox('https://quickchart.io/chart?...')
+// → "allow-scripts allow-popups" (untrusted — no same-origin)
+```
+
+**80+ whitelisted domains** including: Google services, YouTube, Vimeo, GitHub, Figma, Notion, Stripe, Polar.sh, HubSpot, data.gouv.fr, and more.
+
+## Validation
+
+All 19 component types validated, including:
+- **Chart**: scatter/bubble (no labels required), time-series `{x,y}`, data type validation
+- **Table**: columns + rows structure
+- **Video**: URL + domain whitelist
+- **Form/Carousel/Gallery/ActionGroup**: non-empty arrays
+- **Code/Map/Artifact**: required content
+
+```typescript
+import { validateComponent, validateLayout } from '@seed-ship/mcp-ui-solid'
+
+const result = validateComponent(component)
+if (!result.valid) console.error(result.errors)
 ```
 
 ## SSR Compatibility
 
-This package is fully SSR-compatible with SolidStart, Astro, and other SSR frameworks.
-
-### For SolidStart Users
-
-Add `conditions` to your `app.config.ts` for optimal SSR behavior:
+Fully SSR-compatible with SolidStart, Astro, etc. Add to `app.config.ts`:
 
 ```typescript
-// app.config.ts
-import { defineConfig } from '@solidjs/start/config'
-
 export default defineConfig({
-  vite: {
-    resolve: {
-      conditions: ['solid', 'development', 'browser']
-    }
-  }
+  vite: { resolve: { conditions: ['solid', 'development', 'browser'] } }
 })
 ```
 
-### Why This Matters
-
-The `"solid"` condition enables Vite to use source exports, which are compiled in the same context as your app. This prevents:
-- Hydration mismatches between server and client
-- Module resolution conflicts with `solid-js/web`
-- SSR crashes from client-only APIs
-
-### SSR-Safe Imports
-
-For server-side code, use the dedicated sub-exports:
+## Exports
 
 ```typescript
-// Server-side file (.server.ts)
-import type { UIResource } from '@seed-ship/mcp-ui-solid/types-only'
-import { validateUIResource } from '@seed-ship/mcp-ui-solid/validation'
+// Components
+import {
+  UIResourceRenderer, StreamingUIRenderer, GenerativeUIErrorBoundary,
+  ExpandableWrapper, ComponentToolbar, ChatPrompt,
+} from '@seed-ship/mcp-ui-solid'
 
-// These imports don't trigger browser APIs
-```
+// Chat Bus
+import {
+  ChatBusProvider, useChatBus,
+  createChatBus, createEventEmitter, createCommandHandler,
+} from '@seed-ship/mcp-ui-solid'
 
-## Grid System
+// Validation + Security
+import {
+  validateComponent, validateLayout, validateIframeDomain,
+  getIframeSandbox, DEFAULT_IFRAME_DOMAINS, TRUSTED_IFRAME_DOMAINS,
+  ComponentRegistry,
+} from '@seed-ship/mcp-ui-solid'
 
-Components use a 12-column responsive grid:
-
-```typescript
-interface GridPosition {
-  x: number      // Column start (0-11)
-  y: number      // Row start
-  width: number  // Columns span (1-12)
-  height: number // Rows span
-}
-
-// Example: Full-width header
-{ x: 0, y: 0, width: 12, height: 1 }
-
-// Example: Two columns
-{ x: 0, y: 1, width: 6, height: 2 }  // Left half
-{ x: 6, y: 1, width: 6, height: 2 }  // Right half
-```
-
-## Advanced Usage
-
-### Nested Grid Layouts (NEW v1.2.0)
-
-Use `GridRenderer` for complex dashboard layouts:
-
-```typescript
-const dashboardLayout = {
-  id: 'dashboard',
-  type: 'grid',
-  params: {
-    columns: 12,
-    gap: '1rem',
-    areas: [
-      ['header', 'header', 'header'],
-      ['sidebar', 'main', 'main'],
-      ['footer', 'footer', 'footer']
-    ],
-    children: [
-      { id: 'nav', type: 'text', params: { content: 'Navigation' }, position: { colStart: 1, colSpan: 3 } },
-      { id: 'content', type: 'chart', params: { /* ... */ }, position: { colStart: 4, colSpan: 9 } }
-    ]
-  }
-}
-```
-
-### Auto-Footer (NEW v1.2.0)
-
-Footers are automatically injected when `layout.metadata` contains execution info:
-
-```typescript
-const layout = {
-  id: 'report',
-  components: [/* ... */],
-  metadata: {
-    executionTime: 1234,      // Shows "1234ms"
-    sourceCount: 5,           // Shows "5 sources"
-    llmModel: 'gpt-4',        // Shows model name
-    // hideFooter: true       // Opt-out of auto-footer
-  }
-}
-// Footer automatically added showing "Powered by Deposium | 1234ms | gpt-4 | 5 sources"
-```
-
-### Custom Component Registry
-
-```typescript
-import { registerComponent } from '@seed-ship/mcp-ui-solid'
-
-// Register a custom renderer
-registerComponent('custom-widget', (props) => {
-  return <div class="custom-widget">{props.content}</div>
-})
-```
-
-### Error Handling
-
-```tsx
-import { GenerativeUIErrorBoundary } from '@seed-ship/mcp-ui-solid'
-
-<GenerativeUIErrorBoundary
-  fallback={(error, reset) => (
-    <div>
-      <p>Something went wrong: {error.message}</p>
-      <button onClick={reset}>Try Again</button>
-    </div>
-  )}
-  onError={(error) => {
-    // Log to error tracking service
-    Sentry.captureException(error)
-  }}
->
-  <UIResourceRenderer content={layout} />
-</GenerativeUIErrorBoundary>
-```
-
-### Streaming with Custom SSE Endpoint
-
-```tsx
-import { useStreamingUI } from '@seed-ship/mcp-ui-solid/hooks'
-
-function CustomStreaming() {
-  const { components, isComplete } = useStreamingUI({
-    endpoint: '/api/custom-mcp/stream',
-    query: 'Generate report',
-    headers: {
-      'Authorization': 'Bearer token'
-    }
-  })
-
-  return (
-    <div>
-      {components().map(comp => (
-        <UIResourceRenderer content={comp} />
-      ))}
-    </div>
-  )
-}
+// Types
+import type {
+  ChatBus, ChatEvents, ChatCommands,
+  ChatPromptConfig, ChatPromptResponse,
+  AgentContext, BriefingEvent,
+  UIComponent, UILayout, ComponentType,
+} from '@seed-ship/mcp-ui-solid'
 ```
 
 ## Related Packages
 
 | Package | Description |
 |---------|-------------|
-| [`@seed-ship/mcp-ui-spec`](../mcp-ui-spec) | JSON schemas and Zod validators |
-| [`@seed-ship/mcp-ui-cli`](../mcp-ui-cli) | CLI for validation and type generation |
-
-## Versioning
-
-This package follows [Semantic Versioning](https://semver.org/). See [CHANGELOG.md](./CHANGELOG.md) for release notes.
-
-**Current Version:** 2.0.1
+| [`@seed-ship/mcp-ui-spec`](https://www.npmjs.com/package/@seed-ship/mcp-ui-spec) | Zod schemas and JSON Schema definitions |
+| [`@seed-ship/mcp-ui-cli`](https://www.npmjs.com/package/@seed-ship/mcp-ui-cli) | CLI: validate, generate-types, test-examples |
 
 ## License
 
-MIT
+MIT — **Built by [The Seed Ship](https://github.com/theseedship)**
