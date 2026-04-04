@@ -7,7 +7,7 @@ A collection of TypeScript packages for building generative, streaming user inte
 [![npm version](https://img.shields.io/npm/v/@seed-ship/mcp-ui-solid.svg)](https://www.npmjs.com/package/@seed-ship/mcp-ui-solid)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## What's New in v2.4.0
+## What's New in v2.5.0
 
 - **Chat Bus** (`@experimental`) - Event-driven toolkit for agent interactions: `useChatBus()`, `ChatBusProvider`, `createChatBus()` with typed events (15 types) and commands (10 types)
 - **ChatPrompt** (`@experimental`) - Ephemeral structured interactions above chat input: choice buttons, confirm dialog, quick form. Slide-up animation, dismiss, AbortSignal cleanup
@@ -26,7 +26,7 @@ This monorepo contains three packages published under `@seed-ship/`:
 
 | Package | Version | Description |
 |---------|---------|-------------|
-| [`@seed-ship/mcp-ui-solid`](./mcp-ui-solid) | 2.4.0 | SolidJS components for rendering MCP-generated UI |
+| [`@seed-ship/mcp-ui-solid`](./mcp-ui-solid) | 2.5.0 | SolidJS components for rendering MCP-generated UI |
 | [`@seed-ship/mcp-ui-spec`](./mcp-ui-spec) | 2.0.0 | JSON schemas and Zod validators |
 | [`@seed-ship/mcp-ui-cli`](./mcp-ui-cli) | 2.0.0 | CLI for validation and type generation |
 
