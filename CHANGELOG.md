@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.0] - 2026-04-04
+
+### Added
+- **Chat Bus** (`@experimental`) — Event-driven toolkit for chat agent interactions
+  - `createEventEmitter()` with throttle support + streamKey filtering
+  - `createCommandHandler()` for typed command dispatch
+  - `createChatBus()` factory combining events + commands
+  - `useChatBus()` SolidJS hook + `ChatBusProvider` context
+  - 15 event types: `onToken`, `onStreamEnd`, `onUILayout`, `onCitation`, `onToolCall`, `onChatPromptResponse`, `onAgentSwitch`, `onBriefing`, etc.
+  - 10 command types: `injectPrompt`, `sendPrompt` (with correlationId), `showChatPrompt` (with AbortSignal), `toggleConnector`, `setMode`, etc.
+  - `ChatEventBase` with `streamKey`/`conversationId` for multi-stream support
+  - `EventSubscribeOptions` with throttle + streamKey filter
+- **ChatPrompt** (`@experimental`) — Ephemeral structured interactions above chat input
+  - 3 subtypes: choice (buttons with icons/descriptions), confirm (with danger variant), form (text/number/select/textarea with validation)
+  - Slide-up animation, dismiss button, accessible (`role="dialog"`)
+  - Promise-based response with AbortSignal cleanup
+- **Agent types** (`@experimental`) — `AgentContext`, `BriefingEvent` (with `ephemeral` flag), `BriefingSection`
+- **Stream types** — `StreamDoneMetadata`, `ChatError`, `Citation`, `ToolCallEvent`, `ClarificationEvent`
+
+### Fixed
+- Throttle timer now cancelled on unsubscribe (prevents stale callbacks after unmount)
+- Error isolation in throttled deferred calls (try/catch)
+- `onCustomEvent` streamKey filtering (searches all args, not just first)
+
+### Security
+- lodash 4.17.23 → 4.18.1 (Code Injection + Prototype Pollution CVEs)
+
 ## [2.3.0] - 2026-04-03
 
 ### Added
