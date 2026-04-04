@@ -38,6 +38,10 @@ export { EditableUIResourceRenderer } from './components/EditableUIResourceRende
 export { ExpandableWrapper } from './components/ExpandableWrapper'
 export { ComponentToolbar } from './components/ComponentToolbar'
 
+// Chat Bus (v2.4.0 — @experimental)
+export { ChatBusProvider, useChatBus } from './hooks/useChatBus'
+export { ChatPrompt } from './components/ChatPrompt'
+
 // Autocomplete Components
 export { GhostText, GhostTextInput } from './components/GhostText'
 export { AutocompleteDropdown } from './components/AutocompleteDropdown'
@@ -54,6 +58,7 @@ export type { ResizeHandleProps as ResizeHandleComponentProps } from './componen
 export type { EditableUIResourceRendererProps } from './components/EditableUIResourceRenderer'
 export type { ExpandableWrapperProps } from './components/ExpandableWrapper'
 export type { ComponentToolbarProps, ToolbarAction, ToolbarIcon } from './components/ComponentToolbar'
+export type { ChatPromptProps } from './components/ChatPrompt'
 export type { GhostTextProps, GhostTextInputProps } from './components/GhostText'
 export type { AutocompleteDropdownProps } from './components/AutocompleteDropdown'
 export type { AutocompleteFormFieldProps, AutocompleteFormFieldParams } from './components/AutocompleteFormField'
@@ -205,4 +210,33 @@ export {
   DEFAULT_IFRAME_DOMAINS,
   TRUSTED_IFRAME_DOMAINS,
   ComponentRegistry,
+  createEventEmitter,
+  createCommandHandler,
+  createChatBus,
 } from './services'
+
+// Chat Bus Types (v2.4.0 — @experimental)
+export type {
+  ChatEventBase,
+  ChatEvents,
+  ChatCommands,
+  ChatBus,
+  ChatEventEmitter,
+  ChatCommandHandler,
+  EventSubscribeOptions,
+  ChatPromptConfig,
+  ChatPromptResponse,
+  ChoicePromptConfig,
+  ConfirmPromptConfig,
+  FormPromptConfig,
+  SelectPromptConfig,
+  SuggestionItem,
+  AgentContext,
+  BriefingEvent,
+  BriefingSection,
+  StreamDoneMetadata,
+  ChatError,
+  Citation,
+  ToolCallEvent,
+  ClarificationEvent,
+} from './types/chat-bus'

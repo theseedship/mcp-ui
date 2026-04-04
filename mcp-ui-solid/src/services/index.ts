@@ -15,3 +15,5 @@ export {
 } from './validation'
 
 export { ComponentRegistry } from './component-registry'
+
+export { createEventEmitter, createCommandHandler, createChatBus } from './chat-bus'
