@@ -52,6 +52,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 - Iframe sandbox hardened: untrusted domains no longer get `allow-same-origin`, preventing access to parent localStorage/cookies
 
+## [2.2.5] - [2.2.11] - 2026-03-31 to 2026-04-03
+
+Incremental releases consolidating fixes and features between v2.2.4 and v2.3.0:
+
+### Added (v2.2.6)
+- **Complete ComponentRegistry** — 10 missing entries added (code, map, form, modal, action-group, image-gallery, video, iframe, image, link) with schemas and examples
+- **ComponentToolbar** — Unified toolbar component with consistent icons
+
+### Fixed (v2.2.8)
+- **Citation buttons in table cells** — DOMPurify now allows `<button>`, `<svg>`, `<path>` and SVG attributes for citation buttons with inline icons
+
+### Fixed (v2.2.9)
+- **ChartRenderer reactivity** — Replaced synchronous `if(useNative())` with reactive `<Show>` so Chart.js is used when available
+
+### Fixed (v2.2.10)
+- **Chart validation hardenings** — Null-checks for `params.data`, `datasets`, `labels` prevent TypeError crashes
+- **validateComponent params guard** — Rejects components with undefined params
+
+### Added (v2.2.7)
+- **MCP connector domains** — gamma.app, hubspot.com, data.gouv.fr, clinicaltrials.gov, linear.app added to iframe whitelist
+
+### Fixed (v2.2.11)
+- **Scatter/bubble/time-series chart validation** — Labels optional for point-based charts, `{x,y}` data validated
+- **9 component validators added** — video (url + domain), carousel, image-gallery, form, action-group, code, map, modal, artifact
+- **ArtifactRenderer** — `mimeType?.includes()` prevents crash on undefined
+- **CodeBlockRenderer** — Guard against missing `highlight()` method
+- **bubble/polarArea** added to `ChartType` union
+
 ## [2.2.4] - 2026-03-31
 
 ### Changed

@@ -32,13 +32,17 @@ This monorepo contains three packages published under `@seed-ship/`:
 
 ### @seed-ship/mcp-ui-solid
 
-**SolidJS components for rendering MCP-generated UI**
+**SolidJS components + chat toolkit for MCP-generated UI**
 
-- `UIResourceRenderer` - Render static and composite MCP resources
-- `StreamingUIRenderer` - Progressive streaming UI with SSE
-- Error boundaries and fallback handling
-- TypeScript-first with full type safety
-- **SSR-compatible** with SolidStart, Astro, etc.
+- **19 component renderers** - chart, table, metric, text, code, map, form, modal, image-gallery, video, iframe, image, link, action, action-group, grid, carousel, artifact, footer
+- **Chat Bus** (`@experimental`) - Bidirectional event/command bus for agent interactions
+- **ChatPrompt** (`@experimental`) - Structured interactions above chat input (choice, confirm, form)
+- `UIResourceRenderer` + `StreamingUIRenderer` - Static and SSE-based progressive rendering
+- `ExpandableWrapper` - Fullscreen expand for tables, charts, code (DOM reparenting)
+- `ComponentToolbar` - Unified toolbar with copy, download, expand, wordwrap actions
+- **Tiered iframe sandbox** - `allow-same-origin` only for trusted domains
+- **Complete validation** - All 19 types validated, scatter/bubble/time-series chart support
+- TypeScript-first, SSR-compatible (SolidStart, Astro)
 
 ```bash
 pnpm add @seed-ship/mcp-ui-solid
@@ -118,6 +122,128 @@ function StreamingDashboard() {
 }
 ```
 
+### Chat Bus — Agent Interactions (`@experimental`)
+
+The Chat Bus provides a bidirectional event/command system for agent-driven chat interactions. The host app keeps full control of its chat UI — the bus adds structured interactivity on top.
+
+```tsx
+import { ChatBusProvider, useChatBus, ChatPrompt, createChatBus } from '@seed-ship/mcp-ui-solid'
+
+// 1. Wrap your app with the provider
+function App() {
+  return (
+    <ChatBusProvider>
+      <ChatInterface />
+      <AgentRouter />
+    </ChatBusProvider>
+  )
+}
+
+// 2. Host app bridges SSE events to the bus
+function ChatInterface() {
+  const bus = useChatBus()
+
+  // Bridge SSE callbacks → bus events
+  onSSEEvent('token', (data) => bus.events.emit('onToken', { streamKey: 'main', token: data.token }))
+  onSSEEvent('done', (data) => bus.events.emit('onStreamEnd', { streamKey: 'main', metadata: data }))
+  onSSEEvent('ui_layout', (data) => bus.events.emit('onUILayout', { streamKey: 'main', layout: data }))
+
+  // Handle commands from agents
+  bus.commands.handle('injectPrompt', (text) => setInputValue(text))
+  bus.commands.handle('sendPrompt', (text) => { setInputValue(text); handleSend(); return crypto.randomUUID() })
+  bus.commands.handle('showChatPrompt', (config) => setActivePrompt(config))
+
+  return (
+    <div>
+      <Messages />
+      <Show when={activePrompt()}>
+        <ChatPrompt
+          config={activePrompt()!}
+          onSubmit={(response) => {
+            bus.events.emit('onChatPromptResponse', { streamKey: 'main', response })
+            setActivePrompt(null)
+          }}
+          onDismiss={() => setActivePrompt(null)}
+        />
+      </Show>
+      <TextInput />
+    </div>
+  )
+}
+
+// 3. Agents consume events and emit commands
+function AgentRouter() {
+  const bus = useChatBus()
+
+  bus.events.on('onStreamEnd', (event) => {
+    if (event.metadata.needs_clarification) {
+      bus.commands.exec('showChatPrompt', {
+        type: 'choice',
+        title: 'Which period?',
+        config: {
+          options: [
+            { value: '2024', label: '2024' },
+            { value: '2025', label: '2025' },
+          ]
+        }
+      })
+    }
+  })
+
+  // Throttle onToken for performance (C3)
+  bus.events.on('onToken', (event) => {
+    updateProgressIndicator(event.token)
+  }, { throttle: 100 })
+
+  return null
+}
+```
+
+### ChatPrompt — Structured Interactions (`@experimental`)
+
+Three subtypes for common agent interaction patterns:
+
+```tsx
+// Choice — buttons with optional icons and descriptions
+<ChatPrompt config={{
+  type: 'choice',
+  title: 'Export format?',
+  config: {
+    options: [
+      { value: 'pdf', label: 'PDF', icon: '📄' },
+      { value: 'csv', label: 'CSV', icon: '📊', description: 'Raw data' },
+    ],
+    layout: 'horizontal', // or 'vertical' | 'grid'
+  }
+}} onSubmit={handleResponse} />
+
+// Confirm — with danger variant
+<ChatPrompt config={{
+  type: 'confirm',
+  title: 'Delete 47 documents?',
+  config: {
+    message: 'This action cannot be undone.',
+    confirmLabel: 'Delete',
+    cancelLabel: 'Keep',
+    variant: 'danger',
+  }
+}} onSubmit={handleResponse} />
+
+// Form — quick fields with validation
+<ChatPrompt config={{
+  type: 'form',
+  title: 'Additional info',
+  config: {
+    fields: [
+      { name: 'title', label: 'Title', type: 'text', required: true },
+      { name: 'category', label: 'Category', type: 'select',
+        options: [{ label: 'Report', value: 'report' }, { label: 'Invoice', value: 'invoice' }] },
+    ],
+    submitLabel: 'Send',
+  }
+}} onSubmit={handleResponse} />
+```
+
 ### CLI Usage
 
 ```bash
@@ -134,28 +260,36 @@ mcp-ui test-examples ./examples/
 ## Architecture
 
 ```
-┌────────────────────────────────────────────────────────────────┐
-│                     MCP UI Ecosystem                           │
-├────────────────────────────────────────────────────────────────┤
-│                                                                │
-│   ┌──────────────────┐    ┌──────────────────┐                │
-│   │  mcp-ui-solid    │    │  Your MCP Server │                │
-│   │  (SolidJS UI)    │◄───│  (generates UI)  │                │
-│   └────────┬─────────┘    └──────────────────┘                │
-│            │                                                   │
-│            ▼                                                   │
-│   ┌──────────────────┐                                        │
-│   │  mcp-ui-spec     │  ◄── Shared schemas & types            │
-│   │  (Zod + JSON)    │                                        │
-│   └────────┬─────────┘                                        │
-│            │                                                   │
-│            ▼                                                   │
-│   ┌──────────────────┐                                        │
-│   │  mcp-ui-cli      │  ◄── Validation & code generation      │
-│   │  (CLI tools)     │                                        │
-│   └──────────────────┘                                        │
-│                                                                │
-└────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                      Your Application                             │
+│                                                                   │
+│   ┌─ Chat Messages ──────────────────────────────────────────┐   │
+│   │  Rendered by your app (markdown, citations, etc.)         │   │
+│   │  + UIResourceRenderer for MCP components                  │   │
+│   └───────────────────────────────────────────────────────────┘   │
+│                         ▲ events              commands ▼          │
+│   ┌─────────────────────┴──────────────────────┴─────────────┐   │
+│   │                    Chat Bus                               │   │
+│   │  Events: onToken, onStreamEnd, onUILayout, onBriefing...  │   │
+│   │  Commands: injectPrompt, sendPrompt, showChatPrompt...    │   │
+│   └───────────────────────────────────────────────────────────┘   │
+│                         ▲                      ▼                  │
+│   ┌─ ChatPrompt ────────┴──────────────────────┴─────────────┐   │
+│   │  Choice buttons | Confirm dialog | Quick form             │   │
+│   └───────────────────────────────────────────────────────────┘   │
+│   ┌─ Your Chat Input ────────────────────────────────────────┐   │
+│   │  Textarea, connectors, modes, voice (you control this)    │   │
+│   └───────────────────────────────────────────────────────────┘   │
+│                                                                   │
+│   ┌─ Agent Layer (your app) ─────────────────────────────────┐   │
+│   │  AgentRouter, personas, briefings — consumes bus events   │   │
+│   └───────────────────────────────────────────────────────────┘   │
+└──────────────────────────────────────────────────────────────────┘
+
+Packages:
+  mcp-ui-solid  ─── Components + Chat Bus + Validation
+  mcp-ui-spec   ─── Zod schemas & JSON Schema definitions
+  mcp-ui-cli    ─── CLI: validate, generate-types, test-examples
 ```
 
 ## Development
@@ -209,7 +343,8 @@ See [mcp-ui-solid README](./mcp-ui-solid/README.md#ssr-compatibility) for detail
 - [x] **Phase 3**: npm package publication (@seed-ship scope)
 - [x] **Phase 4**: SSR compatibility + Production hardening
 - [x] **Phase 5**: Advanced components (forms, modals, maps, galleries, video, code)
-- [ ] **Phase 6**: Framework adapters (React, Vue, Svelte)
+- [x] **Phase 6**: Chat Bus + ChatPrompt (agent interactions toolkit)
+- [ ] **Phase 7**: Framework adapters (React, Vue, Svelte)
 
 ## Links
 
