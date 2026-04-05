@@ -16,6 +16,8 @@ import type {
   ConfirmPromptConfig,
   FormPromptConfig,
 } from '../types/chat-bus'
+import { FormFieldRenderer } from './FormFieldRenderer'
+import type { FormFieldParams } from '../types'
 
 export interface ChatPromptProps {
   /** Prompt configuration */
@@ -185,25 +187,24 @@ const ConfirmBody: Component<{
   )
 }
 
-// ─── Form ────────────────────────────────────────────────────
+// ─── Form (delegates to FormFieldRenderer for all field types) ───
 
 const FormBody: Component<{
   config: FormPromptConfig
   onSubmit: (data: Record<string, unknown>, label: string) => void
 }> = (props) => {
-  const [formData, setFormData] = createSignal<Record<string, string>>({})
+  const [formData, setFormData] = createSignal<Record<string, any>>({})
 
-  const updateField = (name: string, value: string) => {
+  const updateField = (name: string, value: any) => {
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
   const handleSubmit = (e: Event) => {
     e.preventDefault()
     const data = formData()
-    // Build a human-readable label from the form values
     const label = Object.entries(data)
-      .filter(([, v]) => v)
-      .map(([k, v]) => `${k}: ${v}`)
+      .filter(([, v]) => v !== undefined && v !== '' && !(Array.isArray(v) && v.length === 0))
+      .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`)
       .join(', ')
     props.onSubmit(data, label || 'Form submitted')
   }
@@ -212,53 +213,24 @@ const FormBody: Component<{
     const data = formData()
     return (props.config.fields || [])
       .filter((f) => f.required)
-      .every((f) => data[f.name]?.trim())
+      .every((f) => {
+        const val = data[f.name]
+        if (Array.isArray(val)) return val.length > 0
+        if (typeof val === 'boolean') return true
+        return val !== undefined && val !== ''
+      })
   }
 
   return (
     <form onSubmit={handleSubmit} class="flex flex-col gap-3">
       <For each={props.config.fields}>
         {(field) => (
-          <div>
-            <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-              {field.label}
-              <Show when={field.required}>
-                <span class="text-red-500 ml-0.5">*</span>
-              </Show>
-            </label>
-            <Switch>
-              <Match when={field.type === 'textarea'}>
-                <textarea
-                  value={formData()[field.name] || ''}
-                  onInput={(e) => updateField(field.name, e.currentTarget.value)}
-                  placeholder={field.placeholder}
-                  rows={3}
-                  class="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:border-blue-400 focus:ring-1 focus:ring-blue-400 outline-none transition-colors"
-                />
-              </Match>
-              <Match when={field.type === 'select'}>
-                <select
-                  value={formData()[field.name] || ''}
-                  onChange={(e) => updateField(field.name, e.currentTarget.value)}
-                  class="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:border-blue-400 focus:ring-1 focus:ring-blue-400 outline-none transition-colors"
-                >
-                  <option value="">{field.placeholder || 'Select...'}</option>
-                  <For each={field.options}>
-                    {(opt) => <option value={opt.value}>{opt.label}</option>}
-                  </For>
-                </select>
-              </Match>
-              <Match when={true}>
-                <input
-                  type={field.type === 'number' ? 'number' : 'text'}
-                  value={formData()[field.name] || ''}
-                  onInput={(e) => updateField(field.name, e.currentTarget.value)}
-                  placeholder={field.placeholder}
-                  class="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:border-blue-400 focus:ring-1 focus:ring-blue-400 outline-none transition-colors"
-                />
-              </Match>
-            </Switch>
-          </div>
+          <FormFieldRenderer
+            field={field as FormFieldParams}
+            value={formData()[field.name]}
+            onChange={(val) => updateField(field.name, val)}
+            formData={formData}
+          />
         )}
       </For>
       <div class="flex justify-end">

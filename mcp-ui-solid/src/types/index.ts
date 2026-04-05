@@ -267,6 +267,7 @@ export type FormFieldType =
   | 'select'
   | 'checkbox'
   | 'radio'
+  | 'autocomplete'
 
 /**
  * Operators for conditional field display
@@ -324,6 +325,24 @@ export interface FormFieldParams {
 
   // Select/Radio specific
   options?: FormFieldOption[]
+  /** Enable multi-select (returns array of values) */
+  multiple?: boolean
+
+  // Autocomplete specific
+  /** API URL for autocomplete suggestions */
+  apiUrl?: string
+  /** Query parameter name (e.g. 'nom', 'q') */
+  searchParam?: string
+  /** Field in API response to display */
+  labelField?: string
+  /** Field in API response to use as value */
+  valueField?: string
+  /** Extra query parameters */
+  extraParams?: Record<string, string>
+  /** Min characters before triggering (default: 2) */
+  minChars?: number
+  /** Debounce delay in ms (default: 300) */
+  debounceMs?: number
 
   // Checkbox specific
   checkboxLabel?: string

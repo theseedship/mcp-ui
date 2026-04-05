@@ -197,10 +197,30 @@ export interface FormPromptConfig {
   fields: Array<{
     name: string
     label: string
-    type: 'text' | 'number' | 'select' | 'textarea'
+    type: 'text' | 'number' | 'select' | 'textarea' | 'checkbox' | 'radio' | 'date' | 'email' | 'autocomplete'
     required?: boolean
     placeholder?: string
     options?: Array<{ label: string; value: string }>
+    /** Enable multi-select (returns array) */
+    multiple?: boolean
+    /** Autocomplete: API URL */
+    apiUrl?: string
+    /** Autocomplete: query param name */
+    searchParam?: string
+    /** Autocomplete: field in response for display */
+    labelField?: string
+    /** Autocomplete: field in response for value */
+    valueField?: string
+    /** Autocomplete: extra query params */
+    extraParams?: Record<string, string>
+    /** Autocomplete: min chars before trigger (default: 2) */
+    minChars?: number
+    /** Autocomplete: debounce ms (default: 300) */
+    debounceMs?: number
+    /** Checkbox label text */
+    checkboxLabel?: string
+    /** Help text below field */
+    helpText?: string
   }>
   submitLabel?: string
 }

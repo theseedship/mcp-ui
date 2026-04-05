@@ -4,7 +4,7 @@
  * Sprint 2: Conditional field visibility (showWhen)
  */
 
-import { Component, Show, For, Switch, Match, Accessor } from 'solid-js'
+import { Component, Show, For, Switch, Match, Accessor, createSignal, createEffect, onCleanup } from 'solid-js'
 import type { FormFieldParams } from '../types'
 import { useConditionalField } from '../hooks/useConditionalField'
 
@@ -133,8 +133,8 @@ export const FormFieldRenderer: Component<FormFieldRendererProps> = (props) => {
           />
         </Match>
 
-        {/* Select */}
-        <Match when={props.field.type === 'select'}>
+        {/* Select (single) */}
+        <Match when={props.field.type === 'select' && !props.field.multiple}>
           <select
             id={fieldId()}
             name={props.field.name}
@@ -182,6 +182,28 @@ export const FormFieldRenderer: Component<FormFieldRendererProps> = (props) => {
           </label>
         </Match>
 
+        {/* Multi-Select with chips */}
+        <Match when={props.field.type === 'select' && props.field.multiple}>
+          <MultiSelectField
+            field={props.field}
+            value={props.value || []}
+            onChange={props.onChange}
+            disabled={props.disabled}
+            baseClass={baseInputClass()}
+          />
+        </Match>
+
+        {/* Autocomplete with API fetch */}
+        <Match when={props.field.type === 'autocomplete'}>
+          <AutocompleteField
+            field={props.field}
+            value={props.value || ''}
+            onChange={props.onChange}
+            disabled={props.disabled}
+            baseClass={baseInputClass()}
+          />
+        </Match>
+
         {/* Radio Group */}
         <Match when={props.field.type === 'radio'}>
           <div
@@ -225,5 +247,198 @@ export const FormFieldRenderer: Component<FormFieldRendererProps> = (props) => {
       </Show>
     </div>
     </Show>
+  )
+}
+
+// ─── Multi-Select with Chips ─────────────────────────────────
+
+const MultiSelectField: Component<{
+  field: FormFieldParams
+  value: string[]
+  onChange: (value: string[]) => void
+  disabled?: boolean
+  baseClass: string
+}> = (props) => {
+  const [open, setOpen] = createSignal(false)
+
+  const toggle = (val: string) => {
+    const current = props.value || []
+    if (current.includes(val)) {
+      props.onChange(current.filter((v) => v !== val))
+    } else {
+      props.onChange([...current, val])
+    }
+  }
+
+  const removeChip = (val: string) => {
+    props.onChange((props.value || []).filter((v) => v !== val))
+  }
+
+  const getLabel = (val: string) =>
+    props.field.options?.find((o) => o.value === val)?.label || val
+
+  return (
+    <div class="relative">
+      {/* Selected chips */}
+      <Show when={props.value.length > 0}>
+        <div class="flex flex-wrap gap-1 mb-1">
+          <For each={props.value}>
+            {(val) => (
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">
+                {getLabel(val)}
+                <button
+                  type="button"
+                  onClick={() => removeChip(val)}
+                  class="hover:text-blue-900 dark:hover:text-blue-100"
+                  aria-label={`Remove ${getLabel(val)}`}
+                >
+                  &times;
+                </button>
+              </span>
+            )}
+          </For>
+        </div>
+      </Show>
+
+      {/* Trigger button */}
+      <button
+        type="button"
+        onClick={() => setOpen(!open())}
+        disabled={props.disabled}
+        class={`${props.baseClass} text-left flex items-center justify-between`}
+      >
+        <span class={props.value.length ? 'text-gray-900 dark:text-white' : 'text-gray-400'}>
+          {props.value.length
+            ? `${props.value.length} selected`
+            : props.field.placeholder || 'Select...'}
+        </span>
+        <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {/* Dropdown */}
+      <Show when={open()}>
+        <div class="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg max-h-48 overflow-auto">
+          <For each={props.field.options}>
+            {(option) => (
+              <label class="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-sm">
+                <input
+                  type="checkbox"
+                  checked={(props.value || []).includes(option.value)}
+                  onChange={() => toggle(option.value)}
+                  class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600"
+                />
+                <span class="text-gray-900 dark:text-white">{option.label}</span>
+              </label>
+            )}
+          </For>
+        </div>
+      </Show>
+    </div>
+  )
+}
+
+// ─── Autocomplete with API fetch ─────────────────────────────
+
+const AutocompleteField: Component<{
+  field: FormFieldParams
+  value: string
+  onChange: (value: string) => void
+  disabled?: boolean
+  baseClass: string
+}> = (props) => {
+  const [query, setQuery] = createSignal('')
+  const [suggestions, setSuggestions] = createSignal<Array<{ label: string; value: string }>>([])
+  const [isOpen, setIsOpen] = createSignal(false)
+  const [selectedLabel, setSelectedLabel] = createSignal('')
+  let debounceTimer: ReturnType<typeof setTimeout> | null = null
+
+  const minChars = () => props.field.minChars ?? 2
+  const debounceMs = () => props.field.debounceMs ?? 300
+
+  const fetchSuggestions = async (q: string) => {
+    if (!props.field.apiUrl || !props.field.searchParam) return
+
+    try {
+      const params = new URLSearchParams({ [props.field.searchParam]: q })
+      if (props.field.extraParams) {
+        for (const [k, v] of Object.entries(props.field.extraParams)) {
+          params.set(k, v)
+        }
+      }
+      const res = await fetch(`${props.field.apiUrl}?${params}`)
+      if (!res.ok) return
+
+      const data = await res.json()
+      const items = Array.isArray(data) ? data : data.results || data.features || []
+      const labelField = props.field.labelField || 'label'
+      const valueField = props.field.valueField || 'value'
+
+      setSuggestions(items.slice(0, 10).map((item: any) => ({
+        label: item[labelField] || String(item),
+        value: String(item[valueField] || item[labelField] || item),
+      })))
+      setIsOpen(true)
+    } catch {
+      setSuggestions([])
+    }
+  }
+
+  const handleInput = (value: string) => {
+    setQuery(value)
+    setSelectedLabel('')
+    props.onChange('')
+
+    if (debounceTimer) clearTimeout(debounceTimer)
+    if (value.length < minChars()) {
+      setSuggestions([])
+      setIsOpen(false)
+      return
+    }
+    debounceTimer = setTimeout(() => fetchSuggestions(value), debounceMs())
+  }
+
+  const selectSuggestion = (item: { label: string; value: string }) => {
+    props.onChange(item.value)
+    setSelectedLabel(item.label)
+    setQuery(item.label)
+    setIsOpen(false)
+    setSuggestions([])
+  }
+
+  onCleanup(() => { if (debounceTimer) clearTimeout(debounceTimer) })
+
+  return (
+    <div class="relative">
+      <input
+        type="text"
+        value={query()}
+        onInput={(e) => handleInput(e.currentTarget.value)}
+        onFocus={() => { if (suggestions().length) setIsOpen(true) }}
+        onBlur={() => setTimeout(() => setIsOpen(false), 200)}
+        placeholder={props.field.placeholder}
+        disabled={props.disabled}
+        class={props.baseClass}
+        autocomplete="off"
+      />
+
+      <Show when={isOpen() && suggestions().length > 0}>
+        <div class="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg max-h-48 overflow-auto">
+          <For each={suggestions()}>
+            {(item) => (
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => selectSuggestion(item)}
+                class="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-900 dark:text-white"
+              >
+                {item.label}
+              </button>
+            )}
+          </For>
+        </div>
+      </Show>
+    </div>
   )
 }
