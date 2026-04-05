@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.4] - 2026-04-05
+
+### Fixed
+- **ChatPrompt overflow-hidden** — Root container had `overflow-hidden` clipping all dropdowns (multi-select, autocomplete). Changed to `overflow-visible`.
+- **Multi-select scroll** — Dropdown now uses inline scroll styles + z-50 for maximum compatibility. Filter input added when options > 10.
+- **Multi-autocomplete** — `{ type: 'autocomplete', multiple: true }` adds chips after each selection, clears input for next search. Returns `string[]`.
+- **FormFieldRenderer fallback** — Unknown field types now render as text input with visible amber warning instead of rendering nothing silently.
+- **ChatPrompt null guard** — Early return if `props.config` is null/undefined.
+- **ChatPrompt dismissLabel** — New prop replaces X icon with text button (e.g. "Envoyer directement" / "Send as-is").
+
 ## [2.6.0] - 2026-04-05
 
 ### Added
