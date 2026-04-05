@@ -234,6 +234,21 @@ export const FormFieldRenderer: Component<FormFieldRendererProps> = (props) => {
             </For>
           </div>
         </Match>
+
+        {/* Fallback for unknown field types — renders as text input with warning */}
+        <Match when={true}>
+          <input
+            id={fieldId()}
+            type="text"
+            name={props.field.name}
+            value={props.value || ''}
+            onInput={(e) => props.onChange(e.currentTarget.value)}
+            placeholder={props.field.placeholder || `(${props.field.type})`}
+            disabled={props.disabled}
+            class={baseInputClass()}
+          />
+          <p class="text-xs text-amber-500 mt-0.5">Unknown field type: {props.field.type}</p>
+        </Match>
       </Switch>
 
       <Show when={props.field.helpText && !props.error}>
