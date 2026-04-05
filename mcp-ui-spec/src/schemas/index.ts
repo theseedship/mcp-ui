@@ -54,6 +54,7 @@ export const FormFieldTypeSchema = z.enum([
   'select',
   'checkbox',
   'radio',
+  'autocomplete',
 ])
 
 // Show when operator schema
@@ -103,6 +104,24 @@ export const FormFieldSchema = z.object({
   maxDate: z.string().optional(),
   // Select/Radio specific
   options: z.array(FormFieldOptionSchema).optional(),
+  // Multi-select (v2.6.0)
+  multiple: z.boolean().optional(),
+  // Autocomplete specific (v2.6.0)
+  apiUrl: z.string().url().optional(),
+  searchParam: z.string().optional(),
+  labelField: z.string().optional(),
+  valueField: z.string().optional(),
+  extraParams: z.record(z.string()).optional(),
+  minChars: z.number().int().min(0).optional(),
+  debounceMs: z.number().int().min(0).optional(),
+  // Dependent field (v2.7.0)
+  dependsOn: z.object({
+    field: z.string(),
+    apiUrl: z.string(),
+    labelField: z.string(),
+    valueField: z.string(),
+    extraParams: z.record(z.string()).optional(),
+  }).optional(),
   // Checkbox specific
   checkboxLabel: z.string().optional(),
   // Textarea specific
