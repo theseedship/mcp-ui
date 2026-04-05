@@ -344,6 +344,21 @@ export interface FormFieldParams {
   /** Debounce delay in ms (default: 300) */
   debounceMs?: number
 
+  // Dependent field — update options when parent changes
+  /** Field dependency configuration */
+  dependsOn?: {
+    /** Name of the parent field */
+    field: string
+    /** API URL template — use {value} for parent value (e.g. '/departements/{value}/communes') */
+    apiUrl: string
+    /** Field in API response to display */
+    labelField: string
+    /** Field in API response for value */
+    valueField: string
+    /** Extra query parameters */
+    extraParams?: Record<string, string>
+  }
+
   // Checkbox specific
   checkboxLabel?: string
 

@@ -8,7 +8,7 @@
  * Supports AbortSignal for cleanup on navigation (C4).
  */
 
-import { Component, Show, For, createSignal, onCleanup, Switch, Match } from 'solid-js'
+import { Component, Show, For, createSignal, createEffect, onCleanup, Switch, Match } from 'solid-js'
 import type {
   ChatPromptConfig,
   ChatPromptResponse,
@@ -194,10 +194,85 @@ const FormBody: Component<{
   onSubmit: (data: Record<string, unknown>, label: string) => void
 }> = (props) => {
   const [formData, setFormData] = createSignal<Record<string, any>>({})
+  const [dynamicOptions, setDynamicOptions] = createSignal<Record<string, Array<{ label: string; value: string }>>>({})
+  const [previewText, setPreviewText] = createSignal<string>('')
+  const [previewLoading, setPreviewLoading] = createSignal(false)
+  let previewTimer: ReturnType<typeof setTimeout> | null = null
 
   const updateField = (name: string, value: any) => {
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
+
+  // --- depends_on: fetch child options when parent changes ---
+  createEffect(() => {
+    const data = formData()
+    for (const field of props.config.fields || []) {
+      const dep = field.dependsOn || (field as any).depends_on
+      if (!dep) continue
+      const parentValue = data[dep.field]
+      if (!parentValue) continue
+
+      const apiUrl = (dep.apiUrl || dep.api_url || '').replace('{value}', encodeURIComponent(parentValue))
+      if (!apiUrl) continue
+
+      const params = new URLSearchParams(dep.extraParams || dep.extra_params || {})
+      fetch(`${apiUrl}?${params}`)
+        .then((r) => r.json())
+        .then((items) => {
+          const arr = Array.isArray(items) ? items : items.results || items.features || []
+          const labelKey = dep.labelField || dep.label_field || 'label'
+          const valueKey = dep.valueField || dep.value_field || 'value'
+          setDynamicOptions((prev) => ({
+            ...prev,
+            [field.name]: arr.map((item: any) => ({
+              label: item[labelKey] || String(item),
+              value: String(item[valueKey] || item[labelKey] || item),
+            })),
+          }))
+        })
+        .catch(() => {})
+    }
+  })
+
+  // --- preview: debounced live preview ---
+  createEffect(() => {
+    const preview = props.config.preview
+    if (!preview) return
+
+    const data = formData()
+    // Check if any preview field has a value
+    const hasValues = preview.fields.some((f) => {
+      const v = data[f]
+      return v !== undefined && v !== '' && !(Array.isArray(v) && v.length === 0)
+    })
+    if (!hasValues) { setPreviewText(''); return }
+
+    if (previewTimer) clearTimeout(previewTimer)
+    previewTimer = setTimeout(async () => {
+      setPreviewLoading(true)
+      try {
+        const body: Record<string, any> = {}
+        for (const f of preview.fields) {
+          if (data[f] !== undefined) body[f] = data[f]
+        }
+        const res = await fetch(preview.endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(body),
+        })
+        if (res.ok) {
+          const result = await res.json()
+          setPreviewText(result.summary_fr || result.summary || result.message || JSON.stringify(result))
+        }
+      } catch {
+        setPreviewText('')
+      }
+      setPreviewLoading(false)
+    }, preview.debounceMs || 500)
+  })
+
+  onCleanup(() => { if (previewTimer) clearTimeout(previewTimer) })
 
   const handleSubmit = (e: Event) => {
     e.preventDefault()
@@ -221,18 +296,39 @@ const FormBody: Component<{
       })
   }
 
+  // Build field with dynamic options override
+  const getField = (field: any): FormFieldParams => {
+    const dynOpts = dynamicOptions()[field.name]
+    if (dynOpts) {
+      return { ...field, options: dynOpts } as FormFieldParams
+    }
+    return field as FormFieldParams
+  }
+
   return (
     <form onSubmit={handleSubmit} class="flex flex-col gap-3">
       <For each={props.config.fields}>
         {(field) => (
           <FormFieldRenderer
-            field={field as FormFieldParams}
+            field={getField(field)}
             value={formData()[field.name]}
             onChange={(val) => updateField(field.name, val)}
             formData={formData}
           />
         )}
       </For>
+
+      {/* Live preview */}
+      <Show when={previewText() || previewLoading()}>
+        <div class="px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 text-sm">
+          <Show when={previewLoading()} fallback={
+            <p class="text-blue-700 dark:text-blue-300">{previewText()}</p>
+          }>
+            <p class="text-blue-400 animate-pulse">Loading preview...</p>
+          </Show>
+        </div>
+      </Show>
+
       <div class="flex justify-end">
         <button
           type="submit"

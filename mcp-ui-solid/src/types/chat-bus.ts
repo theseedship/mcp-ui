@@ -221,8 +221,29 @@ export interface FormPromptConfig {
     checkboxLabel?: string
     /** Help text below field */
     helpText?: string
+    /** Dependent field — update options when parent field changes */
+    dependsOn?: {
+      field: string
+      apiUrl: string
+      labelField: string
+      valueField: string
+      extraParams?: Record<string, string>
+    }
+    /** Conditional visibility (show/hide based on another field value) */
+    showWhen?: { field: string; operator: 'equals' | 'not_equals' | 'in'; value: any }
   }>
   submitLabel?: string
+  /** Live preview configuration — shows stats as user fills the form */
+  preview?: {
+    /** API endpoint to call for preview */
+    endpoint: string
+    /** Debounce delay in ms (default: 500) */
+    debounceMs?: number
+    /** Fields to include in the preview request */
+    fields: string[]
+    /** Display format */
+    format?: 'text' | 'stats'
+  }
 }
 
 export interface SelectPromptConfig {

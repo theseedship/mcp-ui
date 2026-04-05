@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.7.0] - 2026-04-05
+
+### Added
+- **Dependent fields** (`dependsOn`) — Child field fetches options from API when parent value changes. Example: selecting department filters commune autocomplete to that department's communes. Supports `apiUrl` with `{value}` template, `labelField`, `valueField`, `extraParams`.
+- **Live preview** (`preview`) — Form shows real-time stats as user fills fields. Debounced POST to preview endpoint with selected field values. Shows count/summary before submit. Designed to prevent open data hallucinations.
+- **showWhen in ChatPrompt** — Conditional field visibility now supported in ChatPrompt forms via FormFieldRenderer delegation.
+
 ## [2.6.4] - 2026-04-05
 
 ### Fixed
