@@ -58,6 +58,9 @@ export interface ChatEvents {
   onBriefing: (event: ChatEventBase & { briefing: BriefingEvent }) => void
   onCapabilityChange: (event: ChatEventBase & { capabilities: string[] }) => void
 
+  // --- Scratchpad (HITL shared workspace) ---
+  onScratchpad: (event: ChatEventBase & { scratchpad: ScratchpadEvent }) => void
+
   // --- Fallback ---
   onCustomEvent: (type: string, event: ChatEventBase & { data: unknown }) => void
 }
@@ -312,6 +315,52 @@ export interface BriefingSection {
   title: string
   content: string
   components?: UIComponent[]
+}
+
+// ─── Scratchpad types ────────────────────────────────────────
+
+/**
+ * @experimental
+ * Scratchpad state — shared workspace between agent and human.
+ * The agent fills sections, the human can edit filters and validate.
+ */
+export interface ScratchpadState {
+  id: string
+  title: string
+  sections: ScratchpadSection[]
+  /** Active filters — human can add/remove */
+  filters: Record<string, string | string[]>
+  /** Live preview (auto-updated when filters change) */
+  preview?: { count: number; rows?: Record<string, unknown>[]; summary: string }
+  /** Agent messages (explanations, questions) */
+  agentMessages: Array<{ text: string; type: 'info' | 'question' | 'warning' }>
+  status: 'loading' | 'ready' | 'waiting_human' | 'processing' | 'complete'
+}
+
+export interface ScratchpadSection {
+  id: string
+  title: string
+  type: 'data' | 'filter' | 'preview' | 'message' | 'action' | 'steps' | 'form'
+  content: unknown
+  /** Can the human edit this section? */
+  editable: boolean
+  /** Who filled this section */
+  source: 'agent' | 'human' | 'api'
+}
+
+/**
+ * @experimental
+ * SSE event for scratchpad create/update/close.
+ */
+export interface ScratchpadEvent {
+  id: string
+  action: 'create' | 'update' | 'close'
+  title?: string
+  sections?: ScratchpadSection[]
+  filters?: Record<string, string | string[]>
+  preview?: { count: number; rows?: Record<string, unknown>[]; summary: string }
+  agentMessages?: Array<{ text: string; type: 'info' | 'question' | 'warning' }>
+  status?: ScratchpadState['status']
 }
 
 // ─── SSE / Stream types ──────────────────────────────────────

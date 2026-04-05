@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.8.0] - 2026-04-06
+
+### Added
+- **ScratchpadPanel** (`@experimental`) — HITL/AITL shared workspace between agent and human. Agent fills sections, human can edit filters and validate. Supports data, filter (editable chips), preview (live stats), message, action, steps, and form section types. Status badges (loading/ready/waiting_human/processing/complete). Preview with mini-table. Agent messages with info/question/warning icons.
+- **Scratchpad types** — `ScratchpadState`, `ScratchpadSection`, `ScratchpadEvent` in chat-bus types. SSE event `onScratchpad` added to `ChatEvents`.
+- **Universal HITL pattern** — Same component works for Human-In-The-Loop (human supervises agent) and Agent-In-The-Loop (agent supervises human/other agent). The scratchpad is a shared state, not directional.
+
 ## [2.7.0] - 2026-04-05
 
 ### Added
