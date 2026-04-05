@@ -259,6 +259,61 @@ describe('ChatPrompt', () => {
     })
   })
 
+  // ─── dismissLabel ────────────────────────────────────
+
+  describe('dismissLabel', () => {
+    it('shows X icon by default (no dismissLabel)', () => {
+      const config: ChatPromptConfig = {
+        type: 'choice',
+        title: 'Test',
+        config: { options: [{ value: 'a', label: 'A' }] },
+      }
+      const { getByLabelText } = render(() => (
+        <ChatPrompt config={config} onSubmit={() => {}} />
+      ))
+
+      expect(getByLabelText('Dismiss')).toBeDefined()
+      expect(getByLabelText('Dismiss').querySelector('svg')).not.toBeNull()
+    })
+
+    it('shows text button when dismissLabel is provided', () => {
+      const config: ChatPromptConfig = {
+        type: 'choice',
+        title: 'Test',
+        config: { options: [{ value: 'a', label: 'A' }] },
+      }
+      const { getByText, getByLabelText } = render(() => (
+        <ChatPrompt config={config} onSubmit={() => {}} dismissLabel="Send as-is" />
+      ))
+
+      expect(getByText('Send as-is')).toBeDefined()
+      expect(getByLabelText('Send as-is')).toBeDefined()
+    })
+
+    it('calls onDismiss + onSubmit when dismissLabel button clicked', () => {
+      const onSubmit = vi.fn()
+      const onDismiss = vi.fn()
+      const config: ChatPromptConfig = {
+        type: 'choice',
+        title: 'Test',
+        config: { options: [{ value: 'a', label: 'A' }] },
+      }
+      const { getByText } = render(() => (
+        <ChatPrompt config={config} onSubmit={onSubmit} onDismiss={onDismiss} dismissLabel="Envoyer directement" />
+      ))
+
+      fireEvent.click(getByText('Envoyer directement'))
+
+      expect(onDismiss).toHaveBeenCalled()
+      expect(onSubmit).toHaveBeenCalledWith({
+        type: 'choice',
+        value: '',
+        label: '',
+        dismissed: true,
+      })
+    })
+  })
+
   // ─── Null guard (F1) ──────────────────────────────────
 
   describe('null guard', () => {

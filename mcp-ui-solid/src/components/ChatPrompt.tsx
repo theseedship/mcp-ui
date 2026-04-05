@@ -22,8 +22,10 @@ export interface ChatPromptProps {
   config: ChatPromptConfig
   /** Called when user responds */
   onSubmit: (response: ChatPromptResponse) => void
-  /** Called when user dismisses */
+  /** Called when user dismisses (e.g. "send as-is") */
   onDismiss?: () => void
+  /** Label for the dismiss button (replaces X icon). Default: shows X icon. */
+  dismissLabel?: string
 }
 
 /**
@@ -57,12 +59,19 @@ export const ChatPrompt: Component<ChatPromptProps> = (props) => {
             props.onDismiss?.()
             props.onSubmit({ type: props.config.type, value: '', label: '', dismissed: true })
           }}
-          class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-          aria-label="Dismiss"
+          class={props.dismissLabel
+            ? 'px-3 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors'
+            : 'p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors'
+          }
+          aria-label={props.dismissLabel || 'Dismiss'}
         >
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
+          <Show when={props.dismissLabel} fallback={
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          }>
+            {props.dismissLabel}
+          </Show>
         </button>
       </div>
 
