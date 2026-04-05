@@ -259,6 +259,26 @@ describe('ChatPrompt', () => {
     })
   })
 
+  // ─── Null guard (F1) ──────────────────────────────────
+
+  describe('null guard', () => {
+    it('does not crash when config is null', () => {
+      expect(() => {
+        render(() => (
+          <ChatPrompt config={null as any} onSubmit={() => {}} />
+        ))
+      }).not.toThrow()
+    })
+
+    it('does not crash when config is undefined', () => {
+      expect(() => {
+        render(() => (
+          <ChatPrompt config={undefined as any} onSubmit={() => {}} />
+        ))
+      }).not.toThrow()
+    })
+  })
+
   // ─── Accessibility ───────────────────────────────────
 
   describe('accessibility', () => {

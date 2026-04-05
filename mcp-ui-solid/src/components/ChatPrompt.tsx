@@ -39,6 +39,9 @@ export interface ChatPromptProps {
  * />
  */
 export const ChatPrompt: Component<ChatPromptProps> = (props) => {
+  // F1: Guard against null/undefined config (e.g. after dismiss clears state)
+  if (!props.config) return null
+
   return (
     <div
       class="w-full max-w-2xl mx-auto mb-2 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden"
