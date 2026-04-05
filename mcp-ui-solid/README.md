@@ -5,16 +5,15 @@ SolidJS components + chat toolkit for MCP-generated UI. Part of the [MCP UI ecos
 [![npm version](https://img.shields.io/npm/v/@seed-ship/mcp-ui-solid.svg)](https://www.npmjs.com/package/@seed-ship/mcp-ui-solid)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## What's New in v2.6.0
+## What's New in v2.8.0
 
-- **Multi-select fields** - `{ type: 'select', multiple: true }` with dropdown checkboxes + removable chips
-- **Autocomplete fields** - Debounced API fetch for large datasets (communes 35K+, SIRENE, addresses)
-- **ChatPrompt form refactor** - All 10 field types now available in ChatPrompt (was 4)
-- **ChatPrompt dismissLabel** - "Send as-is" button replaces X icon for better UX
-- **Chat Bus** (`@experimental`) - Bidirectional event/command bus for agent interactions (15 events, 10 commands)
-- **ChatPrompt** (`@experimental`) - Structured interactions above chat input (choice, confirm, form)
+- **ScratchpadPanel** (`@experimental`) - HITL/AITL shared workspace: agent fills sections, human edits filters and validates. Sections: data, filter (chips), preview (live stats), message, action, steps
+- **Dependent fields** (`dependsOn`) - Child field fetches options from API when parent changes (e.g. department → commune)
+- **Live preview** - Form shows real-time stats as user fills fields (debounced POST to preview endpoint)
+- **Multi-select + Autocomplete** - Dropdown checkboxes with chips, API fetch for large datasets (35K+ communes)
+- **Chat Bus** (`@experimental`) - Bidirectional event/command bus for agent interactions (16 events, 10 commands)
+- **ChatPrompt** (`@experimental`) - Structured interactions above chat input (choice, confirm, form, dismissLabel)
 - **19 component renderers** - chart, table, metric, text, code, map, form, modal, image-gallery, video, iframe, image, link, action, action-group, grid, carousel, artifact, footer
-- **Tiered iframe sandbox** - Trusted domains get `allow-same-origin`; untrusted get restrictive sandbox
 
 ## Installation
 
@@ -283,6 +282,57 @@ Three subtypes for common agent interaction patterns:
 // → response.value = { commune: "34172" }
 ```
 
+## ScratchpadPanel — HITL/AITL Shared Workspace (`@experimental`)
+
+A shared workspace where agent and human collaborate in real-time. The agent fills sections (data, filters, preview), the human can edit filters and validate. Works for both HITL (human supervises agent) and AITL (agent supervises human/other agent).
+
+```tsx
+import { ScratchpadPanel } from '@seed-ship/mcp-ui-solid'
+import type { ScratchpadState } from '@seed-ship/mcp-ui-solid'
+
+function WorkspaceView() {
+  const [state, setState] = createSignal<ScratchpadState>(/* from SSE */)
+
+  // Listen for scratchpad SSE events
+  bus.events.on('onScratchpad', (event) => {
+    if (event.scratchpad.action === 'create') setState(event.scratchpad)
+    if (event.scratchpad.action === 'update') setState(prev => ({ ...prev, ...event.scratchpad }))
+  })
+
+  return (
+    <ScratchpadPanel
+      state={state()}
+      onFilterChange={(filters) => {
+        // Send updated filters to agent
+        fetch('/api/chat-stream/scratchpad-update', {
+          method: 'POST',
+          body: JSON.stringify({ id: state().id, filters })
+        })
+      }}
+      onAction={(action) => {
+        if (action === 'validate') bus.commands.exec('sendPrompt', 'Valider et synthetiser')
+      }}
+    />
+  )
+}
+```
+
+### Section Types
+
+| Type | Renders | Editable | Use case |
+|------|---------|:--------:|----------|
+| `data` | Key-value pairs | No | Dataset info, column list |
+| `filter` | Editable chips + remove | Yes | Active filters (dept, year) |
+| `preview` | Count badge + summary + mini-table | No | Live result count |
+| `message` | Agent bubble (info/question/warning) | No | Agent explanations |
+| `action` | Buttons (primary/danger/default) | No | Validate, refine, change |
+| `steps` | Stepper (done/active/pending) | No | Pipeline progress |
+| `form` | Embedded form | Yes | Configuration |
+
+### Status Badges
+
+`loading` → `ready` → `waiting_human` (pulsing) → `processing` → `complete`
+
 ## Component Renderers (19 types)
 
 | Type | Renderer | Features |
@@ -359,7 +409,7 @@ export default defineConfig({
 // Components
 import {
   UIResourceRenderer, StreamingUIRenderer, GenerativeUIErrorBoundary,
-  ExpandableWrapper, ComponentToolbar, ChatPrompt,
+  ExpandableWrapper, ComponentToolbar, ChatPrompt, ScratchpadPanel,
 } from '@seed-ship/mcp-ui-solid'
 
 // Chat Bus
@@ -380,6 +430,7 @@ import type {
   ChatBus, ChatEvents, ChatCommands,
   ChatPromptConfig, ChatPromptResponse,
   AgentContext, BriefingEvent,
+  ScratchpadState, ScratchpadSection, ScratchpadEvent,
   UIComponent, UILayout, ComponentType,
 } from '@seed-ship/mcp-ui-solid'
 ```
