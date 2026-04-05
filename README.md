@@ -7,14 +7,14 @@ A collection of TypeScript packages for building generative, streaming user inte
 [![npm version](https://img.shields.io/npm/v/@seed-ship/mcp-ui-solid.svg)](https://www.npmjs.com/package/@seed-ship/mcp-ui-solid)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## What's New in v2.5.0
+## What's New in v2.6.0
 
-- **Chat Bus** (`@experimental`) - Event-driven toolkit for agent interactions: `useChatBus()`, `ChatBusProvider`, `createChatBus()` with typed events (15 types) and commands (10 types)
-- **ChatPrompt** (`@experimental`) - Ephemeral structured interactions above chat input: choice buttons, confirm dialog, quick form. Slide-up animation, dismiss, AbortSignal cleanup
-- **Throttle + StreamKey filtering** - `onToken` event opt-in throttle for hot-path performance, per-stream event filtering for multi-stream support
-- **Complete ComponentRegistry** - All 19 component types registered with schemas, descriptions, and examples
-- **Tiered Iframe Sandbox** - Trusted domains get `allow-same-origin`; untrusted get restrictive sandbox
-- **Comprehensive Validation** - All 18 component types validated (scatter/bubble/time-series, video domain, etc.)
+- **Multi-select fields** - `{ type: 'select', multiple: true }` with dropdown checkboxes + removable chips, returns `string[]`
+- **Autocomplete fields** - Debounced API fetch for large datasets (communes, SIRENE, addresses) with `apiUrl`, `searchParam`, `labelField`, `valueField`
+- **ChatPrompt form refactor** - All FormFieldRenderer types (text, email, number, date, checkbox, radio, select, textarea) now available in ChatPrompt forms
+- **ChatPrompt dismissLabel** - Replaces X with text button (e.g. "Envoyer directement") for send-as-is UX
+- **Chat Bus** (`@experimental`) - Event-driven toolkit for agent interactions (15 events, 10 commands)
+- **ChatPrompt** (`@experimental`) - Structured interactions above chat input (choice, confirm, form)
 
 See [CHANGELOG.md](./CHANGELOG.md) for full details.
 
@@ -26,7 +26,7 @@ This monorepo contains three packages published under `@seed-ship/`:
 
 | Package | Version | Description |
 |---------|---------|-------------|
-| [`@seed-ship/mcp-ui-solid`](./mcp-ui-solid) | 2.5.0 | SolidJS components for rendering MCP-generated UI |
+| [`@seed-ship/mcp-ui-solid`](./mcp-ui-solid) | 2.6.0 | SolidJS components for rendering MCP-generated UI |
 | [`@seed-ship/mcp-ui-spec`](./mcp-ui-spec) | 2.0.0 | JSON schemas and Zod validators |
 | [`@seed-ship/mcp-ui-cli`](./mcp-ui-cli) | 2.0.0 | CLI for validation and type generation |
 

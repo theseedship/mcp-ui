@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.0] - 2026-04-05
+
+### Added
+- **Multi-select field** — `{ type: 'select', multiple: true }` renders dropdown with checkboxes + removable chips. Returns `string[]`. Designed for DVF year/department multi-selection.
+- **Autocomplete field** — `{ type: 'autocomplete', apiUrl, searchParam, labelField, valueField }` with debounced API fetch and dropdown suggestions. Supports communes (35K), SIRENE, addresses.
+- **FormBody refactored** — ChatPrompt form now delegates to `FormFieldRenderer`, making all existing field types (text, email, password, number, date, textarea, select, checkbox, radio) automatically available in ChatPrompt forms.
+
+### Fixed
+- **ChatPrompt null guard** (v2.5.2) — Early return if `props.config` is null/undefined
+- **ChatPrompt dismissLabel** (v2.5.3) — New `dismissLabel` prop replaces X icon with text button (e.g. "Envoyer directement")
+
 ## [2.5.0] - 2026-04-04
 
 ### Changed

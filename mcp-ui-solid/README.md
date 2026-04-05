@@ -5,16 +5,16 @@ SolidJS components + chat toolkit for MCP-generated UI. Part of the [MCP UI ecos
 [![npm version](https://img.shields.io/npm/v/@seed-ship/mcp-ui-solid.svg)](https://www.npmjs.com/package/@seed-ship/mcp-ui-solid)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## What's New in v2.5.0
+## What's New in v2.6.0
 
-- **Chat Bus** (`@experimental`) - Bidirectional event/command bus for agent interactions
+- **Multi-select fields** - `{ type: 'select', multiple: true }` with dropdown checkboxes + removable chips
+- **Autocomplete fields** - Debounced API fetch for large datasets (communes 35K+, SIRENE, addresses)
+- **ChatPrompt form refactor** - All 10 field types now available in ChatPrompt (was 4)
+- **ChatPrompt dismissLabel** - "Send as-is" button replaces X icon for better UX
+- **Chat Bus** (`@experimental`) - Bidirectional event/command bus for agent interactions (15 events, 10 commands)
 - **ChatPrompt** (`@experimental`) - Structured interactions above chat input (choice, confirm, form)
 - **19 component renderers** - chart, table, metric, text, code, map, form, modal, image-gallery, video, iframe, image, link, action, action-group, grid, carousel, artifact, footer
-- **ExpandableWrapper** - Fullscreen expand for tables, charts, code (DOM reparenting)
-- **Table/Chart/Code export** - CSV/TSV/JSON download, PNG export, word wrap toggle
 - **Tiered iframe sandbox** - Trusted domains get `allow-same-origin`; untrusted get restrictive sandbox
-- **Complete validation** - All 19 types validated, scatter/bubble/time-series chart support
-- **ComponentToolbar** - Unified toolbar with copy, download, expand, wordwrap actions
 
 ## Installation
 
@@ -250,6 +250,37 @@ Three subtypes for common agent interaction patterns:
     submitLabel: 'Send',
   }
 }} onSubmit={handleResponse} />
+
+// Multi-select — dropdown checkboxes + chips (v2.6.0)
+<ChatPrompt config={{
+  type: 'form',
+  title: 'DVF Parameters',
+  config: {
+    fields: [
+      { name: 'years', label: 'Years', type: 'select', multiple: true,
+        options: [{ label: '2024', value: '2024' }, { label: '2023', value: '2023' }, { label: '2022', value: '2022' }] },
+    ],
+    submitLabel: 'Search',
+  }
+}} onSubmit={handleResponse} />
+// → response.value = { years: ["2024", "2023"] }
+
+// Autocomplete — API fetch for large datasets (v2.6.0)
+<ChatPrompt config={{
+  type: 'form',
+  title: 'Select commune',
+  config: {
+    fields: [
+      { name: 'commune', label: 'Commune', type: 'autocomplete',
+        apiUrl: 'https://geo.api.gouv.fr/communes', searchParam: 'nom',
+        labelField: 'nom', valueField: 'code',
+        extraParams: { fields: 'nom,code', limit: '10' }, minChars: 2 },
+    ],
+    submitLabel: 'Search',
+  }
+}} onSubmit={handleResponse} />
+// → type "Mont" → dropdown [Montpellier, Montreuil, ...]
+// → response.value = { commune: "34172" }
 ```
 
 ## Component Renderers (19 types)
