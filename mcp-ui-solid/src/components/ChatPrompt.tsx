@@ -48,7 +48,7 @@ export const ChatPrompt: Component<ChatPromptProps> = (props) => {
 
   return (
     <div
-      class="w-full max-w-2xl mx-auto mb-2 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden"
+      class="w-full max-w-2xl mx-auto mb-2 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg overflow-visible"
       style={{ animation: 'chat-prompt-slide-up 0.2s ease-out' }}
       role="dialog"
       aria-label={props.config.title}

@@ -343,10 +343,13 @@ const MultiSelectField: Component<{
 
       {/* Dropdown with filter */}
       <Show when={open()}>
-        <div class="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg overflow-hidden">
+        <div
+          class="absolute z-50 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg"
+          style={{ "max-height": "320px", display: "flex", "flex-direction": "column" }}
+        >
           {/* Search filter */}
           <Show when={(props.field.options?.length || 0) > 10}>
-            <div class="p-2 border-b border-gray-200 dark:border-gray-600">
+            <div class="p-2 border-b border-gray-200 dark:border-gray-600 flex-shrink-0">
               <input
                 type="text"
                 value={filter()}
@@ -357,8 +360,8 @@ const MultiSelectField: Component<{
               />
             </div>
           </Show>
-          {/* Options list */}
-          <div class="max-h-72 overflow-y-auto">
+          {/* Options list — scrollable */}
+          <div style={{ "overflow-y": "auto", "flex": "1", "-webkit-overflow-scrolling": "touch" }}>
             <For each={filteredOptions()}>
               {(option) => (
                 <label class="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-sm">
