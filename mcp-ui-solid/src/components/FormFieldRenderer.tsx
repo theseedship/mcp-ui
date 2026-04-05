@@ -275,6 +275,7 @@ const MultiSelectField: Component<{
   baseClass: string
 }> = (props) => {
   const [open, setOpen] = createSignal(false)
+  const [filter, setFilter] = createSignal('')
 
   const toggle = (val: string) => {
     const current = props.value || []
@@ -291,6 +292,14 @@ const MultiSelectField: Component<{
 
   const getLabel = (val: string) =>
     props.field.options?.find((o) => o.value === val)?.label || val
+
+  const filteredOptions = () => {
+    const q = filter().toLowerCase()
+    if (!q) return props.field.options || []
+    return (props.field.options || []).filter(
+      (o) => o.label.toLowerCase().includes(q) || o.value.toLowerCase().includes(q)
+    )
+  }
 
   return (
     <div class="relative">
@@ -318,7 +327,7 @@ const MultiSelectField: Component<{
       {/* Trigger button */}
       <button
         type="button"
-        onClick={() => setOpen(!open())}
+        onClick={() => { setOpen(!open()); if (!open()) setFilter('') }}
         disabled={props.disabled}
         class={`${props.baseClass} text-left flex items-center justify-between`}
       >
@@ -332,22 +341,41 @@ const MultiSelectField: Component<{
         </svg>
       </button>
 
-      {/* Dropdown */}
+      {/* Dropdown with filter */}
       <Show when={open()}>
-        <div class="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg max-h-48 overflow-auto">
-          <For each={props.field.options}>
-            {(option) => (
-              <label class="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-sm">
-                <input
-                  type="checkbox"
-                  checked={(props.value || []).includes(option.value)}
-                  onChange={() => toggle(option.value)}
-                  class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600"
-                />
-                <span class="text-gray-900 dark:text-white">{option.label}</span>
-              </label>
-            )}
-          </For>
+        <div class="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg overflow-hidden">
+          {/* Search filter */}
+          <Show when={(props.field.options?.length || 0) > 10}>
+            <div class="p-2 border-b border-gray-200 dark:border-gray-600">
+              <input
+                type="text"
+                value={filter()}
+                onInput={(e) => setFilter(e.currentTarget.value)}
+                placeholder="Filter..."
+                class="w-full px-2 py-1 text-sm border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:border-blue-400 outline-none"
+                autofocus
+              />
+            </div>
+          </Show>
+          {/* Options list */}
+          <div class="max-h-72 overflow-y-auto">
+            <For each={filteredOptions()}>
+              {(option) => (
+                <label class="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-sm">
+                  <input
+                    type="checkbox"
+                    checked={(props.value || []).includes(option.value)}
+                    onChange={() => toggle(option.value)}
+                    class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600"
+                  />
+                  <span class="text-gray-900 dark:text-white">{option.label}</span>
+                </label>
+              )}
+            </For>
+            <Show when={filteredOptions().length === 0}>
+              <p class="px-3 py-2 text-sm text-gray-400">No matches</p>
+            </Show>
+          </div>
         </div>
       </Show>
     </div>
@@ -358,17 +386,19 @@ const MultiSelectField: Component<{
 
 const AutocompleteField: Component<{
   field: FormFieldParams
-  value: string
-  onChange: (value: string) => void
+  value: string | string[]
+  onChange: (value: string | string[]) => void
   disabled?: boolean
   baseClass: string
 }> = (props) => {
   const [query, setQuery] = createSignal('')
   const [suggestions, setSuggestions] = createSignal<Array<{ label: string; value: string }>>([])
   const [isOpen, setIsOpen] = createSignal(false)
-  const [selectedLabel, setSelectedLabel] = createSignal('')
+  const [selectedLabels, setSelectedLabels] = createSignal<Map<string, string>>(new Map())
   let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
+  const isMultiple = () => props.field.multiple === true
+  const selectedValues = () => isMultiple() ? (Array.isArray(props.value) ? props.value : []) : []
   const minChars = () => props.field.minChars ?? 2
   const debounceMs = () => props.field.debounceMs ?? 300
 
@@ -402,8 +432,9 @@ const AutocompleteField: Component<{
 
   const handleInput = (value: string) => {
     setQuery(value)
-    setSelectedLabel('')
-    props.onChange('')
+    if (!isMultiple()) {
+      props.onChange('')
+    }
 
     if (debounceTimer) clearTimeout(debounceTimer)
     if (value.length < minChars()) {
@@ -415,42 +446,92 @@ const AutocompleteField: Component<{
   }
 
   const selectSuggestion = (item: { label: string; value: string }) => {
-    props.onChange(item.value)
-    setSelectedLabel(item.label)
-    setQuery(item.label)
-    setIsOpen(false)
-    setSuggestions([])
+    if (isMultiple()) {
+      const current = selectedValues()
+      if (!current.includes(item.value)) {
+        props.onChange([...current, item.value])
+        setSelectedLabels((prev) => new Map(prev).set(item.value, item.label))
+      }
+      setQuery('')
+      setSuggestions([])
+      setIsOpen(false)
+    } else {
+      props.onChange(item.value)
+      setSelectedLabels((prev) => new Map(prev).set(item.value, item.label))
+      setQuery(item.label)
+      setIsOpen(false)
+      setSuggestions([])
+    }
   }
+
+  const removeChip = (val: string) => {
+    props.onChange(selectedValues().filter((v) => v !== val))
+    setSelectedLabels((prev) => { const m = new Map(prev); m.delete(val); return m })
+  }
+
+  const getLabel = (val: string) => selectedLabels().get(val) || val
 
   onCleanup(() => { if (debounceTimer) clearTimeout(debounceTimer) })
 
   return (
     <div class="relative">
+      {/* Multi chips */}
+      <Show when={isMultiple() && selectedValues().length > 0}>
+        <div class="flex flex-wrap gap-1 mb-1">
+          <For each={selectedValues()}>
+            {(val) => (
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">
+                {getLabel(val)}
+                <button
+                  type="button"
+                  onClick={() => removeChip(val)}
+                  class="hover:text-blue-900 dark:hover:text-blue-100"
+                  aria-label={`Remove ${getLabel(val)}`}
+                >
+                  &times;
+                </button>
+              </span>
+            )}
+          </For>
+        </div>
+      </Show>
+
       <input
         type="text"
         value={query()}
         onInput={(e) => handleInput(e.currentTarget.value)}
         onFocus={() => { if (suggestions().length) setIsOpen(true) }}
         onBlur={() => setTimeout(() => setIsOpen(false), 200)}
-        placeholder={props.field.placeholder}
+        placeholder={isMultiple() && selectedValues().length
+          ? 'Add more...'
+          : props.field.placeholder}
         disabled={props.disabled}
         class={props.baseClass}
         autocomplete="off"
       />
 
       <Show when={isOpen() && suggestions().length > 0}>
-        <div class="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg max-h-48 overflow-auto">
+        <div class="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg max-h-72 overflow-y-auto">
           <For each={suggestions()}>
-            {(item) => (
-              <button
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => selectSuggestion(item)}
-                class="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-900 dark:text-white"
-              >
-                {item.label}
-              </button>
-            )}
+            {(item) => {
+              const isSelected = () => isMultiple() && selectedValues().includes(item.value)
+              return (
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => selectSuggestion(item)}
+                  class={`w-full text-left px-3 py-2 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 ${
+                    isSelected() ? 'text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/10' : 'text-gray-900 dark:text-white'
+                  }`}
+                  disabled={isSelected()}
+                >
+                  {item.label}
+                  <Show when={isSelected()}>
+                    <span class="ml-2 text-xs">&#10003;</span>
+                  </Show>
+                </button>
+              )
+            }}
           </For>
         </div>
       </Show>
