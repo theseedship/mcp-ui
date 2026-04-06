@@ -36,7 +36,7 @@ export interface ScratchpadPanelProps {
 
 const STATUS_BADGES: Record<ScratchpadState['status'], { label: string; class: string }> = {
   loading: { label: 'Loading...', class: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' },
-  ready: { label: 'Ready', class: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
+  ready: { label: 'Action available', class: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400' },
   waiting_human: { label: 'Your turn', class: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 animate-pulse' },
   processing: { label: 'Processing...', class: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
   complete: { label: 'Complete', class: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' },
@@ -123,7 +123,7 @@ export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
         props.state.status === 'waiting_human'
           ? 'border-blue-300 dark:border-blue-600'
           : 'border-gray-200 dark:border-gray-700'
-      }`}
+      } ${props.pinned ? 'sticky top-0 z-40' : ''}`}
       style={{ animation: 'scratchpad-slide-down 0.2s ease-out' }}
     >
       {/* Header */}
@@ -547,7 +547,7 @@ const EnrichedStepsSection: Component<{
     <div class="space-y-3">
       <For each={stepsData().steps}>
         {(step: any) => (
-          <div class={`rounded-lg ${step.status === 'active' ? 'bg-blue-50/50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 p-3' : 'px-1'}`}>
+          <div class={`rounded-lg ${step.status === 'active' ? 'bg-blue-50/50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 p-3 animate-pulse' : 'px-1'}`}>
             <div class={`flex items-center gap-2 text-sm font-medium ${
               step.status === 'done' ? 'text-green-600 dark:text-green-400'
               : step.status === 'active' ? 'text-blue-600 dark:text-blue-400'
@@ -822,7 +822,7 @@ const StepperProgressSection: Component<{ content: unknown }> = (props) => {
               </Show>
               <div class={`flex items-center gap-1 px-2 py-1 rounded text-xs ${
                 step.status === 'done' ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400'
-                : step.status === 'active' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-medium'
+                : step.status === 'active' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-medium animate-pulse'
                 : step.status === 'error' ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'
                 : 'text-gray-400'
               }`}>
