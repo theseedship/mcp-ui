@@ -63,10 +63,49 @@ export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
     console.log(`[ScratchpadPanel:${props.state.id}] ${event}`, data || '')
   }
 
+  // ─── DX1: Proactive console messages (always, not just debug) ───
+
+  const VALID_TRANSITIONS: Record<string, string[]> = {
+    loading: ['processing', 'waiting_human', 'error'],
+    waiting_human: ['processing', 'ready', 'complete', 'error'],
+    processing: ['ready', 'complete', 'error', 'waiting_human'],
+    ready: ['processing', 'complete', 'error', 'waiting_human'],
+    complete: [],
+    error: ['processing', 'ready', 'waiting_human'],
+  }
+  let prevStatus = props.state.status
+
+  // Etape 1: create log
+  console.info(
+    `%c[MCP-UI] Scratchpad created%c id=${props.state.id} sections=${props.state.sections?.length || 0} status=${props.state.status}${props.pinned ? ' pinned=true' : ''}`,
+    'color: #10b981; font-weight: bold', 'color: inherit'
+  )
+
+  // Etape 3: status transitions + Etape 4: auto-close info
+  createEffect(() => {
+    const newStatus = props.state.status
+    if (newStatus !== prevStatus) {
+      console.info(`%c[MCP-UI] Scratchpad status%c ${props.state.id}: ${prevStatus} → ${newStatus}`, 'color: #3b82f6; font-weight: bold', 'color: inherit')
+      if (!VALID_TRANSITIONS[prevStatus]?.includes(newStatus)) {
+        console.warn(`[MCP-UI] Scratchpad ${props.state.id}: unusual transition ${prevStatus} → ${newStatus}. Expected: ${VALID_TRANSITIONS[prevStatus]?.join(', ') || 'none (terminal)'}`)
+      }
+      prevStatus = newStatus
+    }
+    // Etape 4
+    if (props.autoCloseDelay && newStatus !== 'complete') {
+      console.info(`[MCP-UI] Scratchpad ${props.state.id}: autoCloseDelay=${props.autoCloseDelay}ms but status='${newStatus}' — auto-close will NOT trigger.`)
+    }
+  })
+
   // Action aliases that auto-close the scratchpad
   const CLOSE_ALIASES = new Set(['done', 'close', 'dismiss', 'validate', 'cancel', 'sufficient'])
 
   const handleAction = (action: string, data?: unknown) => {
+    // DX1 Etape 5: action dispatch
+    console.info(`%c[MCP-UI] Action dispatched%c value='${action}' asyncAction=${!!props.asyncAction}`, 'color: #f59e0b; font-weight: bold', 'color: inherit')
+    if (!props.asyncAction && /^(try_alt:|retry|fetch|load)/.test(action)) {
+      console.warn(`[MCP-UI] ScratchpadPanel: action '${action}' looks async but asyncAction prop is not set. The button will NOT show a loading state.`)
+    }
     debugLog('onAction', { action, asyncAction: props.asyncAction, data })
     if (props.asyncAction && !CLOSE_ALIASES.has(action)) {
       setLoadingAction(action)
@@ -503,6 +542,9 @@ const EmbeddedFormSection: Component<{
         .filter(([, v]) => v !== undefined && v !== '' && !(Array.isArray(v) && v.length === 0))
     )
 
+    // DX1 Etape 7: form submit log
+    console.info(`%c[MCP-UI] Form submitted%c section=${props.sectionId} fields=${Object.keys(values).join(',')}`, 'color: #8b5cf6; font-weight: bold', 'color: inherit')
+
     if (props.onSubmit) {
       props.onSubmit(props.sectionId, values)
     } else {
@@ -849,7 +891,10 @@ const ErrorSectionRenderer: Component<{
   const [showDetails, setShowDetails] = createSignal(false)
   const data = () => {
     const c = props.content as any
-    return { message: c?.message || 'Error', severity: c?.severity || 'error', retryAction: c?.retryAction, retryLabel: c?.retryLabel || 'Retry', details: c?.details, timestamp: c?.timestamp }
+    const d = { message: c?.message || 'Error', severity: c?.severity || 'error', retryAction: c?.retryAction, retryLabel: c?.retryLabel || 'Retry', details: c?.details, timestamp: c?.timestamp }
+    // DX1 Etape 8
+    console.info(`%c[MCP-UI] Error section rendered%c severity=${d.severity} retry=${!!d.retryAction}`, 'color: #ef4444; font-weight: bold', 'color: inherit')
+    return d
   }
   const isWarning = () => data().severity === 'warning'
 
