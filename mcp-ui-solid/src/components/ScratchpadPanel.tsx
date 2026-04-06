@@ -20,6 +20,10 @@ export interface ScratchpadPanelProps {
   /** Called when user clicks retry on error state */
   onRetry?: () => void
   onClose?: () => void
+  /** When true, action buttons show loading spinner and stay open until next server update */
+  asyncAction?: boolean
+  /** When true (set by server), scratchpad stays visible during stream */
+  pinned?: boolean
   closable?: boolean
   autoCloseDelay?: number
   collapsible?: boolean
@@ -38,6 +42,7 @@ const STATUS_BADGES: Record<ScratchpadState['status'], { label: string; class: s
 export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
   const [collapsed, setCollapsed] = createSignal(false)
   const [localPreview, setLocalPreview] = createSignal<ScratchpadState['preview']>(undefined)
+  const [loadingAction, setLoadingAction] = createSignal<string | null>(null)
   let previewTimer: ReturnType<typeof setTimeout> | null = null
   const badge = () => STATUS_BADGES[props.state.status] || STATUS_BADGES.loading
   const isClosable = () => props.closable !== false
@@ -49,17 +54,24 @@ export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
   const CLOSE_ALIASES = new Set(['done', 'close', 'dismiss', 'validate', 'cancel', 'sufficient'])
 
   const handleAction = (action: string, data?: unknown) => {
+    if (props.asyncAction && !CLOSE_ALIASES.has(action)) {
+      setLoadingAction(action)
+    }
     props.onAction?.(action, data)
     if (CLOSE_ALIASES.has(action) && props.onClose) {
       props.onClose()
     }
   }
 
-  // Auto-close on complete
+  // Auto-close on complete (unless pinned)
   createEffect(() => {
-    if (props.state.status === 'complete' && props.autoCloseDelay) {
+    if (props.state.status === 'complete' && props.autoCloseDelay && !props.pinned) {
       const timer = setTimeout(() => props.onClose?.(), props.autoCloseDelay)
       onCleanup(() => clearTimeout(timer))
+    }
+    // Clear loading action when server responds
+    if (props.state.status !== 'processing' && loadingAction()) {
+      setLoadingAction(null)
     }
   })
 
@@ -285,6 +297,9 @@ const SectionRenderer: Component<{
         <Match when={props.section.type === 'feedback'}><FeedbackSection content={props.section.content} onAction={props.onAction} /></Match>
         <Match when={props.section.type === 'prompt'}><PromptSection content={props.section.content} onAction={props.onAction} /></Match>
         <Match when={props.section.type === 'stepper'}><StepperProgressSection content={props.section.content} /></Match>
+        <Match when={props.section.type === 'error'}><ErrorSectionRenderer content={props.section.content} onAction={props.onAction} /></Match>
+        <Match when={props.section.type === 'source_card'}><SourceCardSection content={props.section.content} /></Match>
+        <Match when={props.section.type === 'diff'}><DiffSection content={props.section.content} /></Match>
         <Match when={true}><pre class="text-xs text-gray-500 overflow-auto">{JSON.stringify(props.section.content, null, 2)}</pre></Match>
       </Switch>
     </div>
@@ -796,5 +811,118 @@ const StepperProgressSection: Component<{ content: unknown }> = (props) => {
         </For>
       </div>
     </Show>
+  )
+}
+
+// ─── Error Section (F6) ──────────────────────────────────────
+
+const ErrorSectionRenderer: Component<{
+  content: unknown
+  onAction?: (action: string, data?: unknown) => void
+}> = (props) => {
+  const [showDetails, setShowDetails] = createSignal(false)
+  const data = () => {
+    const c = props.content as any
+    return { message: c?.message || 'Error', severity: c?.severity || 'error', retryAction: c?.retryAction, retryLabel: c?.retryLabel || 'Retry', details: c?.details, timestamp: c?.timestamp }
+  }
+  const isWarning = () => data().severity === 'warning'
+
+  return (
+    <div class={`rounded-lg px-3 py-2 text-sm ${isWarning() ? 'bg-amber-50 dark:bg-amber-900/10 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800' : 'bg-red-50 dark:bg-red-900/10 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800'}`}>
+      <div class="flex items-start gap-2">
+        <span class="flex-shrink-0">{isWarning() ? '⚠️' : '❌'}</span>
+        <div class="flex-1">
+          <p>{data().message}</p>
+          <div class="flex gap-2 mt-2">
+            <Show when={data().retryAction}>
+              <button type="button" onClick={() => props.onAction?.(data().retryAction!)} class={`px-2 py-1 text-xs font-medium rounded ${isWarning() ? 'bg-amber-600 text-white hover:bg-amber-700' : 'bg-red-600 text-white hover:bg-red-700'} transition-colors`}>&#128260; {data().retryLabel}</button>
+            </Show>
+            <Show when={data().details}>
+              <button type="button" onClick={() => setShowDetails(!showDetails())} class="px-2 py-1 text-xs opacity-70 hover:opacity-100">&#9654; Details</button>
+            </Show>
+          </div>
+          <Show when={showDetails() && data().details}>
+            <pre class="mt-2 text-xs opacity-70 overflow-x-auto">{data().details}</pre>
+          </Show>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Source Card Section (F9) ────────────────────────────────
+
+const SourceCardSection: Component<{ content: unknown }> = (props) => {
+  const data = () => {
+    const c = props.content as any
+    return { name: c?.name || 'Source', status: c?.status || 'available', capabilities: c?.capabilities || [], latency_ms: c?.latency_ms, freshness: c?.freshness, row_count: c?.row_count }
+  }
+  const statusIcon = () => ({ queried: '✅', available: '📦', error: '❌' } as Record<string, string>)[data().status] || '📦'
+
+  return (
+    <div class="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
+      <div class="flex items-center justify-between mb-1.5">
+        <span class="text-sm font-medium text-gray-900 dark:text-white">{statusIcon()} {data().name}</span>
+        <Show when={data().row_count !== undefined}>
+          <span class="text-xs font-bold text-blue-600 dark:text-blue-400">{data().row_count?.toLocaleString()} results</span>
+        </Show>
+      </div>
+      <div class="flex flex-wrap gap-1.5 mb-1">
+        <For each={data().capabilities}>
+          {(cap: any) => (
+            <span class={`text-[10px] px-1.5 py-0.5 rounded ${cap.supported ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'}`}>
+              {cap.supported ? '✅' : '❌'} {cap.label}
+            </span>
+          )}
+        </For>
+      </div>
+      <Show when={data().freshness || data().latency_ms}>
+        <p class="text-[10px] text-gray-400">{[data().freshness, data().latency_ms ? `${data().latency_ms}ms` : ''].filter(Boolean).join(' · ')}</p>
+      </Show>
+    </div>
+  )
+}
+
+// ─── Diff Section (F10) ──────────────────────────────────────
+
+const DiffSection: Component<{ content: unknown }> = (props) => {
+  const data = () => {
+    const c = props.content as any
+    return { left: c?.left || { label: 'A', rows: [] }, right: c?.right || { label: 'B', rows: [] }, highlight: c?.highlight_columns || [] }
+  }
+  const allKeys = () => {
+    const l = data().left.rows[0] || {}
+    const r = data().right.rows[0] || {}
+    return [...new Set([...Object.keys(l), ...Object.keys(r)])]
+  }
+
+  return (
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-xs">
+        <thead>
+          <tr>
+            <th class="px-2 py-1 text-left text-gray-500 dark:text-gray-400"></th>
+            <th class="px-2 py-1 text-left font-medium text-blue-600 dark:text-blue-400">{data().left.label}</th>
+            <th class="px-2 py-1 text-left font-medium text-purple-600 dark:text-purple-400">{data().right.label}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <For each={allKeys()}>
+            {(key) => {
+              const lVal = () => data().left.rows[0]?.[key]
+              const rVal = () => data().right.rows[0]?.[key]
+              const isDiff = () => String(lVal()) !== String(rVal()) && data().highlight.includes(key)
+              return (
+                <tr class={`border-t border-gray-100 dark:border-gray-700 ${isDiff() ? 'bg-yellow-50 dark:bg-yellow-900/10' : ''}`}>
+                  <td class="px-2 py-1 font-mono text-gray-500 dark:text-gray-400">{key}</td>
+                  <td class="px-2 py-1 text-gray-900 dark:text-white">{lVal() !== undefined ? String(lVal()) : '—'}</td>
+                  <td class="px-2 py-1 text-gray-900 dark:text-white">{rVal() !== undefined ? String(rVal()) : '—'}</td>
+                </tr>
+              )
+            }}
+          </For>
+        </tbody>
+      </table>
+    </div>
   )
 }

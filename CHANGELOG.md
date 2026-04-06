@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.14.0] - 2026-04-06
+
+### Added (Multi-Source Scratchpad v2)
+- **Section type `error`** (F6) — Error display with severity (warning/error), retry button, collapsible details. `retryAction` triggers `onAction()`.
+- **Section type `source_card`** (F9) — Source metadata card: capabilities (supported/unsupported badges), row count, freshness, latency.
+- **Section type `diff`** (F10) — Side-by-side source comparison table with highlighted diff columns.
+- **`asyncAction` prop** (F7) — When true, action button clicks show loading state and keep scratchpad open until next server update.
+- **`pinned` prop** (F8) — Scratchpad stays visible during stream, no auto-close on complete. Closes only on explicit `action: 'close'`.
+- **14 section types total**: data, filter, preview, message, action, steps, form, understanding, feedback, prompt, stepper, error, source_card, diff
+
 ## [2.13.0] - 2026-04-06
 
 ### Added (Scratchpad Multi-Source)

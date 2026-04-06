@@ -366,7 +366,7 @@ export interface ScratchpadState {
 export interface ScratchpadSection {
   id: string
   title: string
-  type: 'data' | 'filter' | 'preview' | 'message' | 'action' | 'steps' | 'form' | 'understanding' | 'feedback' | 'prompt' | 'stepper'
+  type: 'data' | 'filter' | 'preview' | 'message' | 'action' | 'steps' | 'form' | 'understanding' | 'feedback' | 'prompt' | 'stepper' | 'error' | 'source_card' | 'diff'
   content: unknown
   /** Can the human edit this section? */
   editable: boolean
@@ -385,6 +385,8 @@ export interface ScratchpadEvent {
   sections?: ScratchpadSection[]
   /** How to merge sections on update (default: 'replace') */
   sectionMode?: 'replace' | 'append' | 'upsert'
+  /** If true, scratchpad stays visible during stream (no auto-close on complete) */
+  pinned?: boolean
   filters?: Record<string, string | string[]>
   preview?: { count: number; rows?: Record<string, unknown>[]; summary: string }
   agentMessages?: Array<{ text: string; type: 'info' | 'question' | 'warning' }>
