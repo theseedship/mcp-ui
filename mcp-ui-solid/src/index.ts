@@ -42,6 +42,7 @@ export { ComponentToolbar } from './components/ComponentToolbar'
 export { ChatBusProvider, useChatBus } from './hooks/useChatBus'
 export { ChatPrompt } from './components/ChatPrompt'
 export { ScratchpadPanel } from './components/ScratchpadPanel'
+export { dispatchScratchpad, useScratchpadState } from './stores/scratchpad-store'
 
 // Autocomplete Components
 export { GhostText, GhostTextInput } from './components/GhostText'
