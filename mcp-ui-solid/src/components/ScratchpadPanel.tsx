@@ -24,6 +24,10 @@ export interface ScratchpadPanelProps {
   asyncAction?: boolean
   /** When true (set by server), scratchpad stays visible during stream */
   pinned?: boolean
+  /** Log events/actions to console */
+  debug?: boolean
+  /** Show mini debug overlay */
+  debugOverlay?: boolean
   closable?: boolean
   autoCloseDelay?: number
   collapsible?: boolean
@@ -49,11 +53,21 @@ export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
   const isCollapsible = () => props.collapsible !== false
   const preview = () => localPreview() || props.state.preview
   const hasFilters = () => Object.keys(props.state.filters || {}).length > 0
+  const [eventCount, setEventCount] = createSignal(0)
+  const [lastEvent, setLastEvent] = createSignal('')
+
+  const debugLog = (event: string, data?: any) => {
+    if (!props.debug) return
+    setEventCount(c => c + 1)
+    setLastEvent(event)
+    console.log(`[ScratchpadPanel:${props.state.id}] ${event}`, data || '')
+  }
 
   // Action aliases that auto-close the scratchpad
   const CLOSE_ALIASES = new Set(['done', 'close', 'dismiss', 'validate', 'cancel', 'sufficient'])
 
   const handleAction = (action: string, data?: unknown) => {
+    debugLog('onAction', { action, asyncAction: props.asyncAction, data })
     if (props.asyncAction && !CLOSE_ALIASES.has(action)) {
       setLoadingAction(action)
     }
@@ -62,6 +76,11 @@ export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
       props.onClose()
     }
   }
+
+  // Debug: log state changes
+  createEffect(() => {
+    debugLog('state', { status: props.state.status, sections: props.state.sections?.length, filters: Object.keys(props.state.filters || {}), turn: props.state.turn })
+  })
 
   // Auto-close on complete (unless pinned)
   createEffect(() => {
@@ -269,6 +288,13 @@ export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
       <style>{`
         @keyframes scratchpad-slide-down { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
+
+      {/* Debug overlay */}
+      <Show when={props.debugOverlay}>
+        <div class="absolute bottom-1 right-1 px-2 py-1 text-[9px] font-mono bg-black/80 text-green-400 rounded z-50 pointer-events-none">
+          {props.state.id} | ev:{eventCount()} | sec:{props.state.sections?.length || 0} | {props.state.status} | last:{lastEvent()}
+        </div>
+      </Show>
     </div>
   )
 }
