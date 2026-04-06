@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.9.0] - 2026-04-06
+
+### Added (ScratchpadPanel v3 — HITL interactive)
+- **Interactive filter chips** (#4, #5) — Click chip to edit inline (text input or select dropdown). Click "+" to add new filter. Filter definitions support type, options, placeholder.
+- **Search button** (#5) — Prominent "Search" button when `status=waiting_human` and filters have values. Calls `onAction('search', { filters })`.
+- **Embedded form sections** (#7, #8) — Section `type='form'` renders a full interactive form using FormFieldRenderer. Supports all field types (select, autocomplete, multi-select, etc.).
+- **Reactive depends_on in forms** (#9) — Form fields in scratchpad sections support `depends_on` with `options_endpoint` template. Parent field change triggers child options fetch.
+- **Enriched stepper** (#6) — Steps can contain embedded sections (form, filter, etc.) in their `content` field. Active step renders its embedded content. "Next" button per step.
+- **Preview auto-refresh** (#10, #11) — `previewEndpoint` + `previewDebounce` on ScratchpadState. Filters change → debounced POST → preview updates automatically.
+- **updateScratchpad command** (#9) — New ChatBus command `updateScratchpad(id, { filters?, formData? })` for sending changes back to the agent.
+- **waiting_human border** — Blue border pulse when status is `waiting_human` to attract attention.
+
 ## [2.8.2] - 2026-04-06
 
 ### Fixed (ScratchpadPanel v2)

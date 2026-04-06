@@ -60,6 +60,7 @@ export interface ChatEvents {
 
   // --- Scratchpad (HITL shared workspace) ---
   onScratchpad: (event: ChatEventBase & { scratchpad: ScratchpadEvent }) => void
+  onScratchpadPreview: (event: ChatEventBase & { id: string; preview: ScratchpadState['preview'] }) => void
 
   // --- Fallback ---
   onCustomEvent: (type: string, event: ChatEventBase & { data: unknown }) => void
@@ -99,6 +100,10 @@ export interface ChatCommands {
   dismissChatPrompt: () => void
   /** Show suggestion chips */
   showSuggestions: (items: SuggestionItem[]) => void
+
+  // --- Scratchpad ---
+  /** Send scratchpad filter/form changes to the agent */
+  updateScratchpad: (id: string, update: { filters?: Record<string, string | string[]>; formData?: Record<string, unknown> }) => void
 
   // --- Configuration ---
   /** Toggle a connector on/off */
@@ -335,6 +340,10 @@ export interface ScratchpadState {
   /** Agent messages (explanations, questions) */
   agentMessages: Array<{ text: string; type: 'info' | 'question' | 'warning' }>
   status: 'loading' | 'ready' | 'waiting_human' | 'processing' | 'complete'
+  /** Endpoint for auto-refresh preview when filters change */
+  previewEndpoint?: string
+  /** Debounce delay for preview refresh (ms, default 500) */
+  previewDebounce?: number
 }
 
 export interface ScratchpadSection {
