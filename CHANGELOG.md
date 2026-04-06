@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.8.2] - 2026-04-06
+
+### Fixed (ScratchpadPanel v2)
+- **Close button** — `onClose` + `closable` props. X button in header, stops propagation to collapse.
+- **Collapsible** — Click header to toggle body. Chevron rotates. `collapsible` prop (default: true).
+- **Auto-close on complete** — `autoCloseDelay` prop: calls `onClose()` after N ms when status=complete.
+- **Empty state** — Preview with count=0 shows "No results" message + "Modify filters" button.
+- **Scrollable body** — `maxHeight` prop (default: 400px) with overflow-y auto.
+- **Slide-down animation** — Entry animation on render.
+- **Agent message styling** — question type gets blue bg + border, warning gets amber bg, info gets gray bg.
+- **Filter remove buttons** — Only shown when `onFilterChange` is provided. Empty state "No filters applied".
+- **Action icons** — Optional `icon` prop on action buttons.
+
 ## [2.8.0] - 2026-04-06
 
 ### Added
