@@ -7,14 +7,12 @@ A collection of TypeScript packages for building generative, streaming user inte
 [![npm version](https://img.shields.io/npm/v/@seed-ship/mcp-ui-solid.svg)](https://www.npmjs.com/package/@seed-ship/mcp-ui-solid)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## What's New in v2.8.0
+## What's New in v2.10.0
 
-- **ScratchpadPanel** (`@experimental`) - HITL/AITL shared workspace: agent fills sections, human edits filters and validates. Data, filter chips, preview, messages, actions, steps.
-- **Dependent fields** - Child field options update from API when parent changes (`dependsOn`)
-- **Live preview** - Real-time stats in forms before submit (debounced preview endpoint)
-- **Multi-select + Autocomplete** - Dropdown checkboxes with chips, API fetch for large datasets
-- **Chat Bus** (`@experimental`) - Bidirectional event/command bus (16 events, 10 commands)
-- **ChatPrompt** (`@experimental`) - Structured interactions (choice, confirm, form, dismissLabel)
+- **HITL multi-tour** - ScratchpadPanel with turn state, understanding/feedback/prompt sections for agent/human collaboration across conversation turns
+- **ScratchpadPanel** (`@experimental`) - Full HITL workspace: 10 section types, interactive filters, embedded forms, preview auto-refresh, search button
+- **Chat Bus** (`@experimental`) - Bidirectional event/command bus (17 events, 11 commands)
+- **ChatPrompt** (`@experimental`) - Structured interactions (choice, confirm, form, multi-select, autocomplete)
 
 See [CHANGELOG.md](./CHANGELOG.md) for full details.
 
@@ -26,7 +24,7 @@ This monorepo contains three packages published under `@seed-ship/`:
 
 | Package | Version | Description |
 |---------|---------|-------------|
-| [`@seed-ship/mcp-ui-solid`](./mcp-ui-solid) | 2.8.0 | SolidJS components for rendering MCP-generated UI |
+| [`@seed-ship/mcp-ui-solid`](./mcp-ui-solid) | 2.10.0 | SolidJS components for rendering MCP-generated UI |
 | [`@seed-ship/mcp-ui-spec`](./mcp-ui-spec) | 2.0.0 | JSON schemas and Zod validators |
 | [`@seed-ship/mcp-ui-cli`](./mcp-ui-cli) | 2.0.0 | CLI for validation and type generation |
 

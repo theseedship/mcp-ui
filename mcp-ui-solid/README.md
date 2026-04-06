@@ -5,15 +5,18 @@ SolidJS components + chat toolkit for MCP-generated UI. Part of the [MCP UI ecos
 [![npm version](https://img.shields.io/npm/v/@seed-ship/mcp-ui-solid.svg)](https://www.npmjs.com/package/@seed-ship/mcp-ui-solid)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## What's New in v2.8.0
+## What's New in v2.10.0
 
-- **ScratchpadPanel** (`@experimental`) - HITL/AITL shared workspace: agent fills sections, human edits filters and validates. Sections: data, filter (chips), preview (live stats), message, action, steps
-- **Dependent fields** (`dependsOn`) - Child field fetches options from API when parent changes (e.g. department → commune)
-- **Live preview** - Form shows real-time stats as user fills fields (debounced POST to preview endpoint)
-- **Multi-select + Autocomplete** - Dropdown checkboxes with chips, API fetch for large datasets (35K+ communes)
-- **Chat Bus** (`@experimental`) - Bidirectional event/command bus for agent interactions (16 events, 10 commands)
-- **ChatPrompt** (`@experimental`) - Structured interactions above chat input (choice, confirm, form, dismissLabel)
-- **19 component renderers** - chart, table, metric, text, code, map, form, modal, image-gallery, video, iframe, image, link, action, action-group, grid, carousel, artifact, footer
+- **HITL multi-tour** (`@experimental`) - ScratchpadPanel with turn state, progression stepper, and 3 new section types for agent/human collaboration across conversation turns
+- **Section type="understanding"** - Agent shows detected parameters with confidence badges (high/medium/low) + data warnings
+- **Section type="feedback"** - Thumbs up/down with optional comment for validating agent approach
+- **Section type="prompt"** - Agent interpretation display (original query, extracted params, plan)
+- **Interactive filter chips** - Click to edit inline (text or select dropdown), "+" to add new filters
+- **Embedded forms** - Full FormFieldRenderer in scratchpad sections with depends_on reactive fields
+- **Search button** - Prominent search when waiting_human + filters set
+- **Preview auto-refresh** - `previewEndpoint` + debounce on filter change
+- **Chat Bus** (`@experimental`) - Bidirectional event/command bus (17 events, 11 commands incl. updateScratchpad)
+- **19 component renderers** - chart, table, metric, code, map, form, modal, gallery, video, iframe + more
 
 ## Installation
 
@@ -326,8 +329,11 @@ function WorkspaceView() {
 | `preview` | Count badge + summary + mini-table | No | Live result count |
 | `message` | Agent bubble (info/question/warning) | No | Agent explanations |
 | `action` | Buttons (primary/danger/default) | No | Validate, refine, change |
-| `steps` | Stepper (done/active/pending) | No | Pipeline progress |
-| `form` | Embedded form | Yes | Configuration |
+| `steps` | Stepper with embedded content | No | Guided workflow |
+| `form` | Full FormFieldRenderer (select, autocomplete, depends_on) | Yes | Interactive parameters |
+| `understanding` | Confidence badges (high/medium/low) + warnings | No | Agent comprehension display |
+| `feedback` | Thumbs up/down + optional comment | Yes | Validate/reject agent approach |
+| `prompt` | Original query + extracted params + plan | Optional | Agent interpretation |
 
 ### Status Badges
 
