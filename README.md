@@ -7,14 +7,15 @@ A collection of TypeScript packages for building generative, streaming user inte
 [![npm version](https://img.shields.io/npm/v/@seed-ship/mcp-ui-solid.svg)](https://www.npmjs.com/package/@seed-ship/mcp-ui-solid)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## What's New in v3.0.0
+## What's New in v4.0.0
 
-- **18 form field types** - range/slider, tags/chips, toggle, fieldset + all existing types
-- **14 scratchpad sections** - HITL multi-tour with understanding, feedback, error, source_card, diff
-- **Smart field status** - required/unsupported/unknown per field with auto-exclude
-- **Smart field status** - `fieldStatus` (required/unsupported/unknown) with `statusReason`
-- **Universal HITL protocol** - ScratchpadPanel for ALL connectors
-- **ScratchpadPanel** (`@experimental`) - 10 section types, multi-tour, interactive filters, embedded forms, preview auto-refresh
+- **Data Verification Layer** - Anti-hallucination: `validateAgainstSource()` detects ~90% of numerical hallucinations, <1ms, $0.00
+- **VerifiedText component** - Inline badges (verified/hallucinated) with highlight, strip, annotate modes
+- **DataPreviewSection** - Paginated data table with CSV/JSON export, source attribution
+- **GeoJSON maps** - Polygon/line/point rendering, choropleth coloring, feature popups, multi-layer
+- **PMTiles** - Vector tiles for large datasets (>5000 features) via optional `protomaps-leaflet`
+- **Time-series charts** - `timeAxis` config for date-based x-axis
+- **18 scratchpad section types** - Added verified_text, data_preview, map, chart
 - **Chat Bus** (`@experimental`) - Bidirectional event/command bus (18 events, 11 commands)
 - **ChatPrompt** (`@experimental`) - Structured interactions (choice, confirm, form, multi-select, autocomplete)
 
@@ -28,7 +29,7 @@ This monorepo contains three packages published under `@seed-ship/`:
 
 | Package | Version | Description |
 |---------|---------|-------------|
-| [`@seed-ship/mcp-ui-solid`](./mcp-ui-solid) | 3.0.0 | SolidJS components for rendering MCP-generated UI |
+| [`@seed-ship/mcp-ui-solid`](./mcp-ui-solid) | 4.0.0 | SolidJS components for rendering MCP-generated UI |
 | [`@seed-ship/mcp-ui-spec`](./mcp-ui-spec) | 2.0.0 | JSON schemas and Zod validators |
 | [`@seed-ship/mcp-ui-cli`](./mcp-ui-cli) | 2.0.0 | CLI for validation and type generation |
 
@@ -37,6 +38,8 @@ This monorepo contains three packages published under `@seed-ship/`:
 **SolidJS components + chat toolkit for MCP-generated UI**
 
 - **19 component renderers** - chart, table, metric, text, code, map, form, modal, image-gallery, video, iframe, image, link, action, action-group, grid, carousel, artifact, footer
+- **Data Verification** - `validateAgainstSource()`, `VerifiedText`, `DataPreviewSection` for anti-hallucination
+- **GeoJSON maps** - Choropleth, popups, multi-layer, PMTiles support
 - **Chat Bus** (`@experimental`) - Bidirectional event/command bus for agent interactions
 - **ChatPrompt** (`@experimental`) - Structured interactions above chat input (choice, confirm, form)
 - `UIResourceRenderer` + `StreamingUIRenderer` - Static and SSE-based progressive rendering
@@ -346,7 +349,8 @@ See [mcp-ui-solid README](./mcp-ui-solid/README.md#ssr-compatibility) for detail
 - [x] **Phase 4**: SSR compatibility + Production hardening
 - [x] **Phase 5**: Advanced components (forms, modals, maps, galleries, video, code)
 - [x] **Phase 6**: Chat Bus + ChatPrompt (agent interactions toolkit)
-- [ ] **Phase 7**: Framework adapters (React, Vue, Svelte)
+- [x] **Phase 7**: Data Verification Layer + GeoJSON maps + time-series
+- [ ] **Phase 8**: Framework adapters (React, Vue, Svelte)
 
 ## Links
 

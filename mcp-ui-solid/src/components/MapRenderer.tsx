@@ -1,12 +1,12 @@
 /**
  * MapRenderer - Interactive map Component
- * Sprint 6: Code & Maps
- * Sprint Ultimate U.2: Marker Clustering Support
+ * Sprint 6: Markers + clustering
+ * v3.1.0: GeoJSON, choropleth, popups, multi-layer, PMTiles
  */
 
 import { Component, createEffect, onCleanup, createSignal, Show } from 'solid-js'
 import { isServer } from 'solid-js/web'
-import type { UIComponent, MapComponentParams, MapClusterOptions } from '../types'
+import type { UIComponent, MapComponentParams, MapClusterOptions, MapGeoJSONStyle, MapPopupConfig, MapLayer, MapPMTilesConfig } from '../types'
 
 // Lazy load leaflet (it doesn't support SSR well)
 let L: any = null
@@ -24,6 +24,146 @@ export interface MapRendererProps {
      */
     params?: MapComponentParams
 }
+
+// ─── Helpers ────────────────────────────────────────────────
+
+/**
+ * Resolve choropleth color for a feature based on property value and scale stops.
+ */
+function getChoroplethColor(
+    value: unknown,
+    scale: Array<[number, string]>,
+    fallback: string
+): string {
+    if (value == null || typeof value !== 'number' || !isFinite(value)) return fallback
+
+    // Scale is sorted ascending: [[0, '#eff3ff'], [100, '#084594']]
+    if (scale.length === 0) return fallback
+    if (value <= scale[0][0]) return scale[0][1]
+    if (value >= scale[scale.length - 1][0]) return scale[scale.length - 1][1]
+
+    // Find surrounding stops and interpolate (use upper bracket color)
+    for (let i = 1; i < scale.length; i++) {
+        if (value <= scale[i][0]) return scale[i][1]
+    }
+    return scale[scale.length - 1][1]
+}
+
+/**
+ * Build a Leaflet style function from MapGeoJSONStyle config.
+ */
+function buildStyleFn(style: MapGeoJSONStyle | undefined): (feature: any) => Record<string, unknown> {
+    if (!style) {
+        return () => ({
+            fillColor: '#3388ff',
+            fillOpacity: 0.6,
+            color: '#333',
+            weight: 1,
+            opacity: 1,
+        })
+    }
+
+    return (feature: any) => {
+        let fillColor = style.fillColor || '#3388ff'
+
+        // Choropleth: override fillColor based on feature property
+        if (style.choroplethField && style.choroplethScale && feature?.properties) {
+            const val = feature.properties[style.choroplethField]
+            fillColor = getChoroplethColor(val, style.choroplethScale, style.choroplethFallback || '#ccc')
+        }
+
+        return {
+            fillColor,
+            fillOpacity: style.fillOpacity ?? 0.6,
+            color: style.strokeColor || '#333',
+            weight: style.strokeWeight ?? 1,
+            opacity: style.strokeOpacity ?? 1,
+        }
+    }
+}
+
+/**
+ * Build popup HTML from a feature's properties using popup config.
+ */
+function buildPopupContent(feature: any, popup: MapPopupConfig | undefined): string | null {
+    if (!popup || !feature?.properties) return null
+    const props = feature.properties
+
+    // Custom template
+    if (popup.template) {
+        return popup.template.replace(/\{\{(\w+)\}\}/g, (_, key) => {
+            const val = props[key]
+            return val != null ? String(val) : ''
+        })
+    }
+
+    // Auto-generated popup
+    const parts: string[] = []
+
+    if (popup.titleField && props[popup.titleField] != null) {
+        parts.push(`<strong>${escapeHtml(String(props[popup.titleField]))}</strong>`)
+    }
+
+    const fields = popup.fields || Object.keys(props).slice(0, 8)
+    for (const key of fields) {
+        if (key === popup.titleField) continue
+        const val = props[key]
+        if (val == null) continue
+        const formatted = typeof val === 'number' ? val.toLocaleString('fr-FR') : String(val)
+        parts.push(`<span style="color:#666;font-size:11px">${escapeHtml(key)}</span>: ${escapeHtml(formatted)}`)
+    }
+
+    return parts.join('<br/>')
+}
+
+function escapeHtml(str: string): string {
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+}
+
+/**
+ * Add a GeoJSON layer to the map with style and popup support.
+ * Returns the layer for bounds calculation.
+ */
+function addGeoJSONLayer(
+    mapInst: any,
+    leaflet: any,
+    geojson: unknown,
+    style?: MapGeoJSONStyle,
+    popup?: MapPopupConfig
+): any {
+    const styleFn = buildStyleFn(style)
+
+    const layer = leaflet.geoJSON(geojson, {
+        style: styleFn,
+        pointToLayer: (feature: any, latlng: any) => {
+            // Render points as circle markers for consistency
+            const s = styleFn(feature)
+            return leaflet.circleMarker(latlng, {
+                radius: 6,
+                fillColor: s.fillColor,
+                fillOpacity: s.fillOpacity,
+                color: s.color,
+                weight: s.weight,
+                opacity: s.opacity,
+            })
+        },
+        onEachFeature: (feature: any, featureLayer: any) => {
+            const html = buildPopupContent(feature, popup)
+            if (html) {
+                featureLayer.bindPopup(html, { maxWidth: 300 })
+            }
+        },
+    })
+
+    layer.addTo(mapInst)
+    return layer
+}
+
+// ─── Component ──────────────────────────────────────────────
 
 export const MapRenderer: Component<MapRendererProps> = (props) => {
     let mapContainer: HTMLDivElement | undefined
@@ -82,38 +222,33 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
             })
         }
 
-        // Update markers and view - Sprint Ultimate U.2: Clustering support
+        // Update markers and view
         if (mapInstance && L) {
             const p = params()
+            const allBoundsLayers: any[] = []
 
-            // Clear existing layers (markers and cluster groups)
+            // Clear existing layers (markers, cluster groups, GeoJSON)
             mapInstance.eachLayer((layer: any) => {
-                if (layer instanceof L.Marker || layer._group || layer._featureGroup) {
+                if (layer instanceof L.Marker || layer instanceof L.GeoJSON
+                    || layer instanceof L.CircleMarker
+                    || layer._group || layer._featureGroup) {
                     mapInstance.removeLayer(layer)
                 }
             })
 
+            // ─── Markers (legacy) ────────────────────────
             const markers: any[] = []
             const shouldCluster = p?.clustering && p?.markers && p.markers.length > 0
 
             if (shouldCluster) {
-                // Sprint Ultimate U.2: Use marker clustering
                 try {
-                    // Lazy load markercluster plugin
-                    // Import markercluster plugin for side-effects (registers with Leaflet)
                     await import('leaflet.markercluster')
-
-                    // Load cluster CSS if not already loaded
                     if (!clusterCssLoaded) {
                         await import('leaflet.markercluster/dist/MarkerCluster.css')
                         await import('leaflet.markercluster/dist/MarkerCluster.Default.css')
                         clusterCssLoaded = true
                     }
-
-                    // Get cluster options
                     const clusterOpts: MapClusterOptions = typeof p.clustering === 'object' ? p.clustering : {}
-
-                    // Create cluster group with options
                     const clusterGroup = (L as any).markerClusterGroup({
                         maxClusterRadius: clusterOpts.maxClusterRadius ?? 80,
                         spiderfyOnMaxZoom: clusterOpts.spiderfyOnMaxZoom ?? true,
@@ -121,53 +256,119 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
                         disableClusteringAtZoom: clusterOpts.disableClusteringAtZoom,
                         animate: clusterOpts.animateAddingMarkers ?? true
                     })
-
-                    // Add markers to cluster group
                     p?.markers?.forEach(marker => {
                         const m = L.marker(marker.position)
-                        if (marker.tooltip) {
-                            m.bindTooltip(marker.tooltip)
-                        }
-                        if (marker.popup) {
-                            m.bindPopup(marker.popup)
-                        }
+                        if (marker.tooltip) m.bindTooltip(marker.tooltip)
+                        if (marker.popup) m.bindPopup(marker.popup)
                         clusterGroup.addLayer(m)
                         markers.push(m)
                     })
-
                     mapInstance.addLayer(clusterGroup)
-                } catch (e) {
-                    console.warn('Failed to load leaflet.markercluster, falling back to regular markers', e)
-                    // Fallback to regular markers
+                } catch {
                     p?.markers?.forEach(marker => {
                         const m = L.marker(marker.position).addTo(mapInstance)
-                        if (marker.tooltip) {
-                            m.bindTooltip(marker.tooltip)
-                        }
-                        if (marker.popup) {
-                            m.bindPopup(marker.popup)
-                        }
+                        if (marker.tooltip) m.bindTooltip(marker.tooltip)
+                        if (marker.popup) m.bindPopup(marker.popup)
                         markers.push(m)
                     })
                 }
             } else {
-                // Standard marker rendering (no clustering)
                 p?.markers?.forEach(marker => {
                     const m = L.marker(marker.position).addTo(mapInstance)
-                    if (marker.tooltip) {
-                        m.bindTooltip(marker.tooltip)
-                    }
-                    if (marker.popup) {
-                        m.bindPopup(marker.popup)
-                    }
+                    if (marker.tooltip) m.bindTooltip(marker.tooltip)
+                    if (marker.popup) m.bindPopup(marker.popup)
                     markers.push(m)
                 })
             }
 
-            // Handle fitBounds
-            if (p?.fitBounds && markers.length > 0) {
-                const group = L.featureGroup(markers)
-                mapInstance.fitBounds(group.getBounds().pad(0.1))
+            if (markers.length > 0) {
+                allBoundsLayers.push(...markers)
+            }
+
+            // ─── GeoJSON (v3.1.0) ───────────────────────
+            if (p?.geojson) {
+                const geoLayer = addGeoJSONLayer(mapInstance, L, p.geojson, p.geojsonStyle, p.popup)
+                allBoundsLayers.push(geoLayer)
+            }
+
+            // ─── Named layers (v3.1.0) ──────────────────
+            if (p?.layers && p.layers.length > 0) {
+                const overlays: Record<string, any> = {}
+
+                for (const layerDef of p.layers) {
+                    const geoLayer = addGeoJSONLayer(
+                        mapInstance, L,
+                        layerDef.geojson,
+                        layerDef.style || p?.geojsonStyle,
+                        layerDef.popup || p?.popup
+                    )
+
+                    overlays[layerDef.name] = geoLayer
+                    allBoundsLayers.push(geoLayer)
+
+                    // Respect initial visibility
+                    if (layerDef.visible === false) {
+                        mapInstance.removeLayer(geoLayer)
+                    }
+                }
+
+                // Add layer control if multiple layers
+                if (Object.keys(overlays).length > 1) {
+                    L.control.layers(null, overlays, { collapsed: true }).addTo(mapInstance)
+                }
+            }
+
+            // ─── PMTiles (v3.1.0) ────────────────────────
+            if (p?.pmtiles) {
+                try {
+                    // @ts-ignore — optional peer dependency, may not be installed
+                    const protomaps = await import(/* @vite-ignore */ 'protomaps-leaflet')
+                    const pmConfig = p.pmtiles
+
+                    const paintRules = pmConfig.paintRules?.map(rule => ({
+                        dataLayer: rule.dataLayer,
+                        symbolizer: new (protomaps as any)[
+                            rule.symbolizer === 'polygon' ? 'PolygonSymbolizer' :
+                            rule.symbolizer === 'line' ? 'LineSymbolizer' :
+                            'CircleSymbolizer'
+                        ]({
+                            fill: rule.color || '#3388ff',
+                            stroke: rule.color || '#333',
+                            width: rule.width ?? 1,
+                            opacity: rule.opacity ?? 0.6,
+                        }),
+                    })) || []
+
+                    const labelRules = pmConfig.labelRules?.map(rule => ({
+                        dataLayer: rule.dataLayer,
+                        symbolizer: new (protomaps as any).TextSymbolizer({
+                            label_props: [rule.textField],
+                            fontSize: rule.fontSize ?? 12,
+                        }),
+                    })) || []
+
+                    const pmLayer = (protomaps as any).leafletLayer({
+                        url: pmConfig.url,
+                        attribution: pmConfig.attribution,
+                        paintRules,
+                        labelRules,
+                        maxZoom: pmConfig.maxZoom,
+                        minZoom: pmConfig.minZoom,
+                    })
+
+                    pmLayer.addTo(mapInstance)
+                } catch (e) {
+                    console.warn('[MCP-UI] Failed to load protomaps-leaflet for PMTiles:', e)
+                }
+            }
+
+            // ─── Fit bounds ─────────────────────────────
+            if (p?.fitBounds && allBoundsLayers.length > 0) {
+                const group = L.featureGroup(allBoundsLayers)
+                const bounds = group.getBounds()
+                if (bounds.isValid()) {
+                    mapInstance.fitBounds(bounds.pad(0.1))
+                }
             } else if (p?.center) {
                 mapInstance.setView(p.center, p.zoom || mapInstance.getZoom())
             }
@@ -183,7 +384,7 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
     })
 
     return (
-        <div class="w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class={`w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden ${params()?.className || ''}`}>
             <Show when={error()}>
                 <div class="p-4 text-red-500 bg-red-50 dark:bg-red-900/20 text-center">
                     {error()}

@@ -17,3 +17,5 @@ export {
 export { ComponentRegistry } from './component-registry'
 
 export { createEventEmitter, createCommandHandler, createChatBus, mergeScratchpadSections } from './chat-bus'
+
+export { validateAgainstSource } from './data-validator'

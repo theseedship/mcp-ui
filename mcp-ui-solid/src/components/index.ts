@@ -64,6 +64,13 @@ export type { CodeBlockRendererProps } from './CodeBlockRenderer'
 export { MapRenderer } from './MapRenderer'
 export type { MapRendererProps } from './MapRenderer'
 
+// Data Verification (v3.1.0 — anti-hallucination)
+export { VerifiedText } from './VerifiedText'
+export type { VerifiedTextProps } from './VerifiedText'
+
+export { DataPreviewSection } from './DataPreviewSection'
+export type { DataPreviewSectionProps } from './DataPreviewSection'
+
 // Sprint Ultimate: RenderContext for circular dependency resolution
 export { RenderContext, RenderProvider, useRenderContext } from './RenderContext'
 export type { RenderContextValue, RenderComponentFn } from './RenderContext'

@@ -366,7 +366,7 @@ export interface ScratchpadState {
 export interface ScratchpadSection {
   id: string
   title: string
-  type: 'data' | 'filter' | 'preview' | 'message' | 'action' | 'steps' | 'form' | 'understanding' | 'feedback' | 'prompt' | 'stepper' | 'error' | 'source_card' | 'diff'
+  type: 'data' | 'filter' | 'preview' | 'message' | 'action' | 'steps' | 'form' | 'understanding' | 'feedback' | 'prompt' | 'stepper' | 'error' | 'source_card' | 'diff' | 'verified_text' | 'data_preview' | 'map' | 'chart'
   content: unknown
   /** Can the human edit this section? */
   editable: boolean
@@ -437,4 +437,101 @@ export interface ClarificationEvent {
     file_id?: number
   }>
   original_message?: string
+}
+
+// ─── Data Validation (v3.1.0 — anti-hallucination) ──────────
+
+/**
+ * Result of validating LLM text against source data.
+ * Pure regex-based — zero LLM cost, <1ms latency.
+ */
+export interface DataValidation {
+  /** Is the text free of hallucinated numbers? */
+  valid: boolean
+  /** Numbers found in the LLM text */
+  llmNumbers: LLMNumber[]
+  /** Numbers present in the source data */
+  sourceNumbers: Set<number>
+  /** Numbers from the LLM NOT found in the source */
+  hallucinated: HallucinatedNumber[]
+  /** Confidence score 0-1 (1 = all numbers verified) */
+  confidence: number
+}
+
+export interface LLMNumber {
+  value: number
+  /** Character index in the text */
+  position: number
+  /** ~20 chars surrounding context */
+  context: string
+}
+
+export interface HallucinatedNumber extends LLMNumber {
+  /** Closest number in source data */
+  closest?: number
+  /** Distance as ratio (0.18 = 18% off) */
+  distance?: number
+}
+
+/** Options for validateAgainstSource */
+export interface DataValidationOptions {
+  /** Tolerance for rounding (default: 0.01 = 1%) */
+  tolerance?: number
+  /** Columns to ignore (e.g. 'id', 'code_geo') */
+  ignoreColumns?: string[]
+  /** Number patterns to ignore (e.g. years, postal codes) */
+  ignorePatterns?: RegExp[]
+}
+
+/** Content for verified_text scratchpad section */
+export interface VerifiedTextContent {
+  /** Original LLM text */
+  text: string
+  /** Validation result from validateAgainstSource */
+  validation: DataValidation
+  /** Display mode */
+  mode?: 'highlight' | 'strip' | 'annotate'
+}
+
+/** Column definition for data_preview section */
+export interface DataPreviewColumn {
+  key: string
+  label: string
+  type?: 'number' | 'string' | 'date'
+  format?: string
+  align?: 'left' | 'right' | 'center'
+}
+
+/** Content for data_preview scratchpad section */
+export interface DataPreviewContent {
+  columns: DataPreviewColumn[]
+  rows: Record<string, unknown>[]
+  /** Total rows (if paginated — e.g. 22306 total, 30 displayed) */
+  totalRows?: number
+  /** Data source attribution */
+  source?: string
+  /** Data freshness label */
+  freshness?: string
+  /** Enable export buttons (CSV/JSON) */
+  exportable?: boolean
+  /** Rows per page (default: 25) */
+  pageSize?: number
+}
+
+/** Content for map scratchpad section (v3.1.0) */
+export interface MapSectionContent {
+  /** GeoJSON FeatureCollection */
+  geojson: unknown
+  /** Map center [lat, lng] */
+  center?: [number, number]
+  /** Zoom level */
+  zoom?: number
+  /** GeoJSON style (including choropleth) */
+  style?: import('./index').MapGeoJSONStyle
+  /** Popup config for feature click */
+  popup?: import('./index').MapPopupConfig
+  /** Named layers */
+  layers?: import('./index').MapLayer[]
+  /** Map height (CSS, default: '300px') */
+  height?: string
 }

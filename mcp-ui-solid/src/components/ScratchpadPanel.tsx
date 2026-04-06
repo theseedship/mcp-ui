@@ -6,9 +6,13 @@
  */
 
 import { Component, Show, For, Switch, Match, createSignal, createEffect, onCleanup } from 'solid-js'
-import type { ScratchpadState, ScratchpadSection } from '../types/chat-bus'
-import type { FormFieldParams } from '../types'
+import type { ScratchpadState, ScratchpadSection, VerifiedTextContent, DataPreviewContent, MapSectionContent } from '../types/chat-bus'
+import type { FormFieldParams, ChartComponentParams } from '../types'
 import { FormFieldRenderer } from './FormFieldRenderer'
+import { VerifiedText } from './VerifiedText'
+import { DataPreviewSection } from './DataPreviewSection'
+import { MapRenderer } from './MapRenderer'
+import { ChartJSRenderer } from './ChartJSRenderer'
 
 export interface ScratchpadPanelProps {
   state: ScratchpadState
@@ -365,6 +369,10 @@ const SectionRenderer: Component<{
         <Match when={props.section.type === 'error'}><ErrorSectionRenderer content={props.section.content} onAction={props.onAction} /></Match>
         <Match when={props.section.type === 'source_card'}><SourceCardSection content={props.section.content} /></Match>
         <Match when={props.section.type === 'diff'}><DiffSection content={props.section.content} /></Match>
+        <Match when={props.section.type === 'verified_text'}><VerifiedText {...(props.section.content as VerifiedTextContent)} onHallucinationClick={(h) => props.onAction?.('hallucination_click', h)} /></Match>
+        <Match when={props.section.type === 'data_preview'}><DataPreviewSection content={props.section.content as DataPreviewContent} /></Match>
+        <Match when={props.section.type === 'map'}>{(() => { const c = props.section.content as MapSectionContent; return <MapRenderer params={{ geojson: c.geojson, center: c.center, zoom: c.zoom, geojsonStyle: c.style, popup: c.popup, layers: c.layers, height: c.height || '300px', fitBounds: true }} /> })()}</Match>
+        <Match when={props.section.type === 'chart'}><ChartJSRenderer component={{ id: props.section.id, type: 'chart', position: { colStart: 1, colSpan: 12 }, params: { ...(props.section.content as ChartComponentParams), renderer: 'native', height: (props.section.content as any)?.height || '250px' } }} /></Match>
         <Match when={true}><pre class="text-xs text-gray-500 overflow-auto">{JSON.stringify(props.section.content, null, 2)}</pre></Match>
       </Switch>
     </div>

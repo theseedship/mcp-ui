@@ -117,23 +117,45 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
         chartInstance = null
       }
 
+      // Build options, merging time-axis config if present (v3.1.0)
+      const baseOptions: any = {
+        responsive: true,
+        maintainAspectRatio: false,
+        ...chartParams.options,
+        plugins: {
+          ...chartParams.options?.plugins,
+          legend: {
+            display: true,
+            position: 'bottom',
+            ...chartParams.options?.plugins?.legend,
+          },
+        },
+      }
+
+      // Time-series axis (v3.1.0)
+      if (chartParams.timeAxis) {
+        const ta = chartParams.timeAxis
+        baseOptions.scales = {
+          ...baseOptions.scales,
+          x: {
+            ...baseOptions.scales?.x,
+            type: 'time',
+            time: {
+              parser: ta.parser,
+              unit: ta.unit,
+              tooltipFormat: ta.tooltipFormat,
+            },
+            ...(ta.min ? { min: ta.min } : {}),
+            ...(ta.max ? { max: ta.max } : {}),
+          },
+        }
+      }
+
       // Create new chart
       chartInstance = new Chart(canvasRef, {
         type: chartParams.type,
         data: chartParams.data,
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          ...chartParams.options,
-          plugins: {
-            ...chartParams.options?.plugins,
-            legend: {
-              display: true,
-              position: 'bottom',
-              ...chartParams.options?.plugins?.legend,
-            },
-          },
-        },
+        options: baseOptions,
       })
 
       setIsLoading(false)

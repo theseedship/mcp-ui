@@ -1,6 +1,6 @@
 /**
  * MapRenderer Tests
- * Sprint 6 Refinement
+ * Sprint 6 + v3.1.0: GeoJSON, choropleth, popups
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -24,6 +24,7 @@ const mapMock = {
     remove: removeMock,
     getZoom: vi.fn(() => 13),
     fitBounds: fitBoundsMock.mockReturnThis(),
+    addLayer: addLayerMock,
 }
 
 const markerMock = {
@@ -37,11 +38,21 @@ const tileLayerMock = {
 }
 
 const controlMock = {
-    attribution: vi.fn(() => ({ addTo: vi.fn() }))
+    attribution: vi.fn(() => ({ addTo: vi.fn() })),
+    layers: vi.fn(() => ({ addTo: vi.fn() }))
 }
 
 const featureGroupMock = {
-    getBounds: vi.fn(() => ({ pad: vi.fn() }))
+    getBounds: vi.fn(() => ({ pad: vi.fn(), isValid: vi.fn(() => true) }))
+}
+
+const geoJSONMock = {
+    addTo: vi.fn().mockReturnThis(),
+    getBounds: vi.fn(() => ({ pad: vi.fn(), isValid: vi.fn(() => true) })),
+}
+
+const circleMarkerMock = {
+    bindPopup: vi.fn().mockReturnThis(),
 }
 
 vi.mock('leaflet', () => ({
@@ -51,6 +62,11 @@ vi.mock('leaflet', () => ({
         marker: vi.fn(() => markerMock),
         featureGroup: vi.fn(() => featureGroupMock),
         control: controlMock,
+        geoJSON: vi.fn(() => geoJSONMock),
+        circleMarker: vi.fn(() => circleMarkerMock),
+        GeoJSON: class {},
+        CircleMarker: class {},
+        Marker: class {},
         Icon: {
             Default: {
                 prototype: { _getIconUrl: vi.fn() },
@@ -82,8 +98,7 @@ describe('MapRenderer', () => {
         expect(mapDiv).toBeTruthy()
     })
 
-    it('renders with new marker format', () => {
-        // This test mostly verifies type check and structural validity since actual logic is mocked
+    it('renders with marker format', () => {
         const { container } = render(() => <MapRenderer params={{
             markers: [{ position: [10, 20], tooltip: 'Hello', popup: 'World' }]
         }} />)
@@ -96,5 +111,79 @@ describe('MapRenderer', () => {
             fitBounds: true
         }} />)
         expect(container).toBeTruthy()
+    })
+
+    // ─── GeoJSON tests (v3.1.0) ────────────────────────
+
+    const SAMPLE_GEOJSON = {
+        type: 'FeatureCollection',
+        features: [
+            {
+                type: 'Feature',
+                geometry: { type: 'Polygon', coordinates: [[[2.3, 48.8], [2.4, 48.8], [2.4, 48.9], [2.3, 48.9], [2.3, 48.8]]] },
+                properties: { name: 'Zone A', prix_m2: 3500 }
+            },
+            {
+                type: 'Feature',
+                geometry: { type: 'Polygon', coordinates: [[[2.4, 48.8], [2.5, 48.8], [2.5, 48.9], [2.4, 48.9], [2.4, 48.8]]] },
+                properties: { name: 'Zone B', prix_m2: 4200 }
+            }
+        ]
+    }
+
+    it('renders with GeoJSON data', () => {
+        const { container } = render(() => <MapRenderer params={{
+            geojson: SAMPLE_GEOJSON,
+            fitBounds: true,
+        }} />)
+        expect(container).toBeTruthy()
+    })
+
+    it('renders with GeoJSON + popup config', () => {
+        const { container } = render(() => <MapRenderer params={{
+            geojson: SAMPLE_GEOJSON,
+            popup: { titleField: 'name', fields: ['prix_m2'] },
+        }} />)
+        expect(container).toBeTruthy()
+    })
+
+    it('renders with choropleth style', () => {
+        const { container } = render(() => <MapRenderer params={{
+            geojson: SAMPLE_GEOJSON,
+            geojsonStyle: {
+                choroplethField: 'prix_m2',
+                choroplethScale: [[2000, '#eff3ff'], [3000, '#6baed6'], [5000, '#084594']],
+                fillOpacity: 0.7,
+            },
+        }} />)
+        expect(container).toBeTruthy()
+    })
+
+    it('renders with multiple named layers', () => {
+        const { container } = render(() => <MapRenderer params={{
+            layers: [
+                { name: 'Zones', geojson: SAMPLE_GEOJSON, visible: true },
+                { name: 'Points', geojson: { type: 'FeatureCollection', features: [] }, visible: false },
+            ],
+        }} />)
+        expect(container).toBeTruthy()
+    })
+
+    it('renders with custom height', () => {
+        const { container } = render(() => <MapRenderer params={{
+            geojson: SAMPLE_GEOJSON,
+            height: '600px',
+        }} />)
+        const mapDiv = container.querySelector('div[style*="height: 600px"]')
+        expect(mapDiv).toBeTruthy()
+    })
+
+    it('renders with className', () => {
+        const { container } = render(() => <MapRenderer params={{
+            geojson: SAMPLE_GEOJSON,
+            className: 'custom-map',
+        }} />)
+        const wrapper = container.querySelector('.custom-map')
+        expect(wrapper).toBeTruthy()
     })
 })

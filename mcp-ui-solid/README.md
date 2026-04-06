@@ -5,17 +5,15 @@ SolidJS components + chat toolkit for MCP-generated UI. Part of the [MCP UI ecos
 [![npm version](https://img.shields.io/npm/v/@seed-ship/mcp-ui-solid.svg)](https://www.npmjs.com/package/@seed-ship/mcp-ui-solid)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## What's New in v3.0.0
+## What's New in v4.0.0
 
-- **18 form field types** - Added range/slider, tags/chips input, toggle switch, fieldset group. Total: text, email, password, number, date, textarea, select (multi), checkbox, radio, autocomplete (multi), range, tags, toggle, fieldset
-- **14 scratchpad section types** - data, filter, preview, message, action, steps, form, understanding, feedback, prompt, stepper, error, source_card, diff
-- **Smart field status** - `fieldStatus` (required/unsupported/unknown) + `statusReason`. Auto-exclude unsupported from submit.
-- **Multi-source HITL** - sectionMode append/upsert, asyncAction, pinned, debug overlay, turn state
-- **HITL multi-tour** - Turn state, progression stepper, understanding/feedback/prompt sections
-- **Interactive filter chips** - Click to edit (text or select), "+" to add filters
-- **Embedded forms** - FormFieldRenderer in scratchpad with depends_on reactive fields
-- **Preview auto-refresh** - `previewEndpoint` + configurable method/headers + debounce
-- **Chat Bus** (`@experimental`) - Bidirectional event/command bus (18 events, 11 commands)
+- **Data Verification Layer** - Anti-hallucination: `validateAgainstSource()` detects ~90% of numerical hallucinations, zero LLM cost, <1ms
+- **VerifiedText component** - Inline badges (verified/hallucinated) with highlight, strip, annotate modes
+- **DataPreviewSection** - Paginated data table with CSV/JSON export, source attribution, FR locale formatting
+- **GeoJSON maps** - Polygon/line/point rendering, choropleth coloring, feature popups, multi-layer support
+- **PMTiles** - Vector tiles for large datasets (>5000 features) via optional `protomaps-leaflet`
+- **Time-series charts** - `timeAxis` config for date-based x-axis in ChartJSRenderer
+- **18 scratchpad section types** - Added verified_text, data_preview, map, chart (was 14)
 - **19 component renderers** - chart, table, metric, code, map, form, modal, gallery, video, iframe + more
 
 ## Installation
@@ -27,6 +25,14 @@ npm install @seed-ship/mcp-ui-solid
 ```
 
 **Peer dependencies:** `solid-js` ^1.9.0
+
+**Optional peer deps** (install as needed):
+- `chart.js` — native chart rendering
+- `leaflet` + `leaflet.markercluster` — maps
+- `highlight.js` — code syntax highlighting
+- `protomaps-leaflet` — PMTiles vector tiles
+- `@duckdb/duckdb-wasm` — DuckDB plugin
+- `@tanstack/solid-virtual` — table virtualization
 
 ## Quick Start
 
@@ -76,6 +82,163 @@ function StreamingDashboard() {
 }
 ```
 
+## Data Verification — Anti-Hallucination (v4.0.0)
+
+### validateAgainstSource — Pure function
+
+Detects numerical hallucinations by comparing LLM text against source data. Zero dependencies, <1ms.
+
+```typescript
+import { validateAgainstSource } from '@seed-ship/mcp-ui-solid'
+
+const rows = [
+  { type: 'Appartement', ventes: 22306, prix_m2: 3337 },
+  { type: 'Maison', ventes: 2492, prix_m2: 4230 },
+]
+
+const result = validateAgainstSource(
+  "On observe 22 306 ventes a 3 337 EUR/m2. En 2023, 18 245 ventes.",
+  rows
+)
+
+// result.valid === false
+// result.hallucinated === [{ value: 18245, closest: 22306, distance: 0.18 }]
+// result.confidence === 0.67
+```
+
+Options: `tolerance` (default 1%), `ignoreColumns`, `ignorePatterns` (years, postal codes ignored by default).
+
+### useDataValidator — Reactive hook
+
+```tsx
+import { useDataValidator } from '@seed-ship/mcp-ui-solid'
+
+const { valid, confidence, hallucinatedCount } = useDataValidator(
+  () => llmText(),
+  () => sourceRows(),
+  { tolerance: 0.02 }
+)
+```
+
+### VerifiedText — Inline badges
+
+```tsx
+import { VerifiedText } from '@seed-ship/mcp-ui-solid'
+
+<VerifiedText
+  text={llmResponse}
+  validation={validationResult}
+  mode="highlight"  // or "strip" | "annotate"
+  onHallucinationClick={(item) => console.log('Hallucinated:', item)}
+/>
+```
+
+### DataPreviewSection — Source data table
+
+```tsx
+import { DataPreviewSection } from '@seed-ship/mcp-ui-solid'
+
+<DataPreviewSection content={{
+  columns: [
+    { key: 'type', label: 'Type', type: 'string' },
+    { key: 'ventes', label: 'Ventes', type: 'number' },
+    { key: 'prix_m2', label: 'Prix moy. EUR/m2', type: 'number' },
+  ],
+  rows: sourceRows,
+  source: 'data.gouv.fr - Stats DVF',
+  freshness: 'Donnees 2025',
+  exportable: true,
+  pageSize: 25,
+}} />
+```
+
+## GeoJSON Maps (v4.0.0)
+
+### GeoJSON + Choropleth + Popups
+
+```tsx
+import { MapRenderer } from '@seed-ship/mcp-ui-solid'
+
+<MapRenderer params={{
+  geojson: featureCollection,
+  geojsonStyle: {
+    choroplethField: 'prix_m2',
+    choroplethScale: [
+      [2000, '#eff3ff'],
+      [3000, '#6baed6'],
+      [5000, '#084594'],
+    ],
+    fillOpacity: 0.7,
+  },
+  popup: {
+    titleField: 'name',
+    fields: ['prix_m2', 'ventes'],
+  },
+  fitBounds: true,
+  height: '500px',
+}} />
+```
+
+### Multi-layer Maps
+
+```tsx
+<MapRenderer params={{
+  layers: [
+    { name: 'Parcelles', geojson: parcelles, visible: true,
+      style: { choroplethField: 'prix', choroplethScale: [[100, '#fee'], [500, '#c00']] } },
+    { name: 'Risques', geojson: risques, visible: false,
+      style: { fillColor: 'orange', fillOpacity: 0.3 } },
+  ],
+  fitBounds: true,
+}} />
+```
+
+### PMTiles — Large Datasets
+
+```tsx
+<MapRenderer params={{
+  pmtiles: {
+    url: 'https://cdn.example.com/data.pmtiles',
+    paintRules: [
+      { dataLayer: 'buildings', symbolizer: 'polygon', color: '#3388ff', opacity: 0.6 },
+    ],
+    maxZoom: 16,
+  },
+  center: [43.6, 3.87],
+  zoom: 12,
+}} />
+```
+
+Requires `protomaps-leaflet` peer dependency.
+
+## Time-Series Charts (v4.0.0)
+
+```tsx
+<ChartJSRenderer component={{
+  id: 'ndvi-timeline',
+  type: 'chart',
+  position: { colStart: 1, colSpan: 12 },
+  params: {
+    type: 'line',
+    data: {
+      labels: ['2024-01-15', '2024-02-15', '2024-03-15', '2024-04-15'],
+      datasets: [{
+        label: 'NDVI',
+        data: [0.45, 0.42, 0.55, 0.68],
+        borderColor: '#10b981',
+        fill: true,
+        tension: 0.3,
+      }],
+    },
+    timeAxis: {
+      unit: 'month',
+      tooltipFormat: 'MMM yyyy',
+    },
+    exportable: true,
+  },
+}} />
+```
+
 ## Chat Bus — Agent Interactions (`@experimental`)
 
 Bidirectional event/command system for agent-driven chat interactions. Your app keeps full control of its chat UI — the bus adds structured interactivity on top.
@@ -83,20 +246,20 @@ Bidirectional event/command system for agent-driven chat interactions. Your app 
 ### Architecture
 
 ```
-                    ┌──────────────────────┐
-                    │   AGENT LAYER        │
-                    │  (your app logic)    │
-                    └──┬──────────────┬────┘
-              events   │              │ commands
-                       ▼              ▼
-┌──────────────────────────────────────────────────┐
-│   Chat Messages (your app renders these)          │
-│   + UIResourceRenderer for MCP components         │
-├──────────────────────────────────────────────────┤
-│   ChatPrompt (MCP-UI) — choice | confirm | form   │
-├──────────────────────────────────────────────────┤
-│   Chat Input (your app controls this)             │
-└──────────────────────────────────────────────────┘
+                    +----------------------+
+                    |   AGENT LAYER        |
+                    |  (your app logic)    |
+                    +--+----------+-------+
+              events   |          | commands
+                       v          v
++--------------------------------------------------+
+|   Chat Messages (your app renders these)          |
+|   + UIResourceRenderer for MCP components         |
++--------------------------------------------------+
+|   ChatPrompt (MCP-UI) - choice | confirm | form   |
++--------------------------------------------------+
+|   Chat Input (your app controls this)             |
++--------------------------------------------------+
 ```
 
 ### Usage
@@ -119,285 +282,88 @@ function ChatInterface() {
   const bus = useChatBus()
   const [activePrompt, setActivePrompt] = createSignal(null)
 
-  // Bridge SSE → bus events
   onSSEEvent('done', (data) =>
     bus.events.emit('onStreamEnd', { streamKey: 'main', metadata: data }))
-  onSSEEvent('ui_layout', (data) =>
-    bus.events.emit('onUILayout', { streamKey: 'main', layout: data }))
 
-  // Handle commands from agents
   bus.commands.handle('injectPrompt', (text) => setInputValue(text))
-  bus.commands.handle('sendPrompt', (text) => {
-    setInputValue(text); handleSend(); return crypto.randomUUID()
-  })
   bus.commands.handle('showChatPrompt', (config) => setActivePrompt(config))
 
   return (
     <div>
       <Messages />
       <Show when={activePrompt()}>
-        <ChatPrompt
-          config={activePrompt()!}
-          onSubmit={(response) => {
-            bus.events.emit('onChatPromptResponse', { streamKey: 'main', response })
-            setActivePrompt(null)
-          }}
-          onDismiss={() => setActivePrompt(null)}
-        />
+        <ChatPrompt config={activePrompt()!} onSubmit={handleResponse} onDismiss={() => setActivePrompt(null)} />
       </Show>
       <TextInput />
     </div>
   )
 }
-
-// 3. Agents react to events and emit commands
-function AgentRouter() {
-  const bus = useChatBus()
-
-  bus.events.on('onStreamEnd', (event) => {
-    if (event.metadata.needs_clarification) {
-      bus.commands.exec('showChatPrompt', {
-        type: 'choice',
-        title: 'Which period?',
-        config: { options: [{ value: '2024', label: '2024' }, { value: '2025', label: '2025' }] }
-      })
-    }
-  })
-
-  return null
-}
 ```
 
-### Event Types (15)
+### Event Types (18) / Command Types (11)
 
-| Event | Payload | Description |
-|-------|---------|-------------|
-| `onToken` | `{ token }` | Streaming text token (use throttle) |
-| `onStreamStart` | `{}` | Stream started |
-| `onStreamEnd` | `{ metadata }` | Stream completed with metadata |
-| `onError` | `{ error }` | Stream error |
-| `onUILayout` | `{ layout }` | MCP UI component to render |
-| `onCitation` | `{ citation }` | Citation reference |
-| `onToolCall` | `{ tool }` | Tool execution status |
-| `onSuggestions` | `{ items }` | Suggestion chips |
-| `onChatPromptResponse` | `{ response }` | User responded to ChatPrompt |
-| `onClarificationNeeded` | `{ clarification }` | Needs user clarification |
-| `onAgentSwitch` | `{ agent }` | Active agent changed |
-| `onBriefing` | `{ briefing }` | Briefing update |
-| `onCapabilityChange` | `{ capabilities }` | Agent capabilities changed |
-| `onCustomEvent` | `{ type, data }` | App-specific event |
-
-All events carry `ChatEventBase` (`streamKey`, `conversationId?`, `correlationId?`) for multi-stream support.
-
-### Command Types (10)
-
-| Command | Args | Returns | Description |
-|---------|------|---------|-------------|
-| `injectPrompt` | `text` | void | Fill input without sending |
-| `sendPrompt` | `text, metadata?` | `correlationId` | Fill + send, returns correlation ID |
-| `appendPrompt` | `text` | void | Append to current input |
-| `showChatPrompt` | `config, signal?` | `Promise<Response>` | Show structured prompt (AbortSignal for cleanup) |
-| `dismissChatPrompt` | — | void | Close active prompt |
-| `showSuggestions` | `items` | void | Show suggestion chips |
-| `toggleConnector` | `id, enabled` | void | Toggle a connector |
-| `setMode` | `mode` | void | Change chat mode |
-| `scrollToMessage` | `messageId` | void | Scroll to message |
-| `notify` | `message, type?` | void | Show notification |
-
-### Throttle + StreamKey Filtering
-
-```typescript
-// Throttle hot-path events (recommended for onToken)
-bus.events.on('onToken', handler, { throttle: 100 })
-
-// Filter by stream (multi-stream support)
-bus.events.on('onStreamEnd', handler, { streamKey: 'stream-1' })
-```
-
-## ChatPrompt — Structured Interactions (`@experimental`)
-
-Three subtypes for common agent interaction patterns:
-
-```tsx
-// Choice — buttons with optional icons and descriptions
-<ChatPrompt config={{
-  type: 'choice',
-  title: 'Export format?',
-  config: {
-    options: [
-      { value: 'pdf', label: 'PDF', icon: '📄' },
-      { value: 'csv', label: 'CSV', icon: '📊', description: 'Raw data' },
-    ],
-    layout: 'horizontal', // or 'vertical' | 'grid'
-  }
-}} onSubmit={handleResponse} />
-
-// Confirm — with danger variant
-<ChatPrompt config={{
-  type: 'confirm',
-  title: 'Delete 47 documents?',
-  config: { message: 'This cannot be undone.', confirmLabel: 'Delete', variant: 'danger' }
-}} onSubmit={handleResponse} />
-
-// Form — quick fields with validation
-<ChatPrompt config={{
-  type: 'form',
-  title: 'Additional info',
-  config: {
-    fields: [
-      { name: 'title', label: 'Title', type: 'text', required: true },
-      { name: 'category', label: 'Category', type: 'select',
-        options: [{ label: 'Report', value: 'report' }] },
-    ],
-    submitLabel: 'Send',
-  }
-}} onSubmit={handleResponse} />
-
-// Multi-select — dropdown checkboxes + chips (v2.6.0)
-<ChatPrompt config={{
-  type: 'form',
-  title: 'DVF Parameters',
-  config: {
-    fields: [
-      { name: 'years', label: 'Years', type: 'select', multiple: true,
-        options: [{ label: '2024', value: '2024' }, { label: '2023', value: '2023' }, { label: '2022', value: '2022' }] },
-    ],
-    submitLabel: 'Search',
-  }
-}} onSubmit={handleResponse} />
-// → response.value = { years: ["2024", "2023"] }
-
-// Autocomplete — API fetch for large datasets (v2.6.0)
-<ChatPrompt config={{
-  type: 'form',
-  title: 'Select commune',
-  config: {
-    fields: [
-      { name: 'commune', label: 'Commune', type: 'autocomplete',
-        apiUrl: 'https://geo.api.gouv.fr/communes', searchParam: 'nom',
-        labelField: 'nom', valueField: 'code',
-        extraParams: { fields: 'nom,code', limit: '10' }, minChars: 2 },
-    ],
-    submitLabel: 'Search',
-  }
-}} onSubmit={handleResponse} />
-// → type "Mont" → dropdown [Montpellier, Montreuil, ...]
-// → response.value = { commune: "34172" }
-```
+See [Chat Bus documentation](https://github.com/theseedship/mcp-ui#chat-bus--agent-interactions-experimental) for the full event/command reference.
 
 ## ScratchpadPanel — HITL/AITL Shared Workspace (`@experimental`)
 
-A shared workspace where agent and human collaborate in real-time. The agent fills sections (data, filters, preview), the human can edit filters and validate. Works for both HITL (human supervises agent) and AITL (agent supervises human/other agent).
+A shared workspace where agent and human collaborate in real-time. 18 section types:
+
+| Type | Renders | Use case |
+|------|---------|----------|
+| `data` | Key-value pairs | Dataset info |
+| `filter` | Editable chips | Active filters |
+| `preview` | Count + mini-table | Live result count |
+| `message` | Agent bubble | Explanations |
+| `action` | Buttons | Validate, refine |
+| `steps` | Stepper | Guided workflow |
+| `form` | FormFieldRenderer | Interactive params |
+| `understanding` | Confidence badges | Agent comprehension |
+| `feedback` | Thumbs up/down | User validation |
+| `prompt` | Query + params | Agent interpretation |
+| `stepper` | Progress stepper | Multi-turn progress |
+| `error` | Error card | Error display + retry |
+| `source_card` | Source info card | Data source details |
+| `diff` | Before/after diff | Change preview |
+| `verified_text` | Inline badges | Data verification |
+| `data_preview` | Paginated table | Source data display |
+| `map` | GeoJSON map | Geographic data |
+| `chart` | Chart.js chart | Time-series, analytics |
+
+### Direct store (recommended)
 
 ```tsx
-import { ScratchpadPanel } from '@seed-ship/mcp-ui-solid'
-import type { ScratchpadState } from '@seed-ship/mcp-ui-solid'
+import { dispatchScratchpad, useScratchpadState } from '@seed-ship/mcp-ui-solid'
 
-function WorkspaceView() {
-  const [state, setState] = createSignal<ScratchpadState>(/* from SSE */)
+// In your SSE callback — ONE LINE
+onScratchpad: (data) => dispatchScratchpad(data as ScratchpadEvent)
 
-  // Listen for scratchpad SSE events
-  bus.events.on('onScratchpad', (event) => {
-    if (event.scratchpad.action === 'create') setState(event.scratchpad)
-    if (event.scratchpad.action === 'update') setState(prev => ({ ...prev, ...event.scratchpad }))
-  })
-
-  return (
-    <ScratchpadPanel
-      state={state()}
-      onFilterChange={(filters) => {
-        // Send updated filters to agent
-        fetch('/api/chat-stream/scratchpad-update', {
-          method: 'POST',
-          body: JSON.stringify({ id: state().id, filters })
-        })
-      }}
-      onAction={(action) => {
-        if (action === 'validate') bus.commands.exec('sendPrompt', 'Valider et synthetiser')
-      }}
-    />
-  )
-}
+// In your component
+const { state, pinned, close } = useScratchpadState()
 ```
-
-### Section Types
-
-| Type | Renders | Editable | Use case |
-|------|---------|:--------:|----------|
-| `data` | Key-value pairs | No | Dataset info, column list |
-| `filter` | Editable chips + remove | Yes | Active filters (dept, year) |
-| `preview` | Count badge + summary + mini-table | No | Live result count |
-| `message` | Agent bubble (info/question/warning) | No | Agent explanations |
-| `action` | Buttons (primary/danger/default) | No | Validate, refine, change |
-| `steps` | Stepper with embedded content | No | Guided workflow |
-| `form` | Full FormFieldRenderer (select, autocomplete, depends_on) | Yes | Interactive parameters |
-| `understanding` | Confidence badges (high/medium/low) + warnings | No | Agent comprehension display |
-| `feedback` | Thumbs up/down + optional comment | Yes | Validate/reject agent approach |
-| `prompt` | Original query + extracted params + plan | Optional | Agent interpretation |
-
-### Status Badges
-
-`loading` → `ready` → `waiting_human` (pulsing) → `processing` → `complete`
 
 ## Component Renderers (19 types)
 
-| Type | Renderer | Features |
-|------|----------|----------|
-| `chart` | ChartJSRenderer | Bar, line, pie, scatter, bubble, polarArea. Native Chart.js or Quickchart fallback. PNG export, configurable height. |
-| `table` | TableRenderer | Sortable columns, pagination, virtualization (10K+ rows). CSV/TSV/JSON export. |
-| `metric` | MetricRenderer | KPI cards with trends and sparklines |
-| `text` | TextRenderer | Markdown rendering via marked.js |
-| `code` | CodeBlockRenderer | Syntax highlighting (highlight.js), line numbers, word wrap toggle, filename header |
-| `map` | MapRenderer | Leaflet maps with markers, clustering, auto-fit bounds |
-| `form` | FormRenderer | Conditional fields, persistence, tool call submit |
-| `modal` | ModalRenderer | Portal overlay, sizes sm-full, Escape/backdrop close |
-| `image-gallery` | ImageGalleryRenderer | Grid layout, lightbox overlay, keyboard navigation |
-| `video` | VideoRenderer | YouTube/Vimeo/direct URL, auto-detect provider |
-| `iframe` | IframeRenderer | Tiered sandbox, 80+ whitelisted domains |
-| `image` | ImageRenderer | Responsive with lazy loading |
-| `link` | LinkRenderer | Styled link cards |
-| `action` | ActionRenderer | Tool call buttons |
-| `action-group` | ActionGroupRenderer | Grouped actions with layout options |
-| `grid` | GridRenderer | Nested 12-column CSS Grid |
-| `carousel` | CarouselRenderer | Content carousel |
-| `artifact` | ArtifactRenderer | File download/preview |
-| `footer` | FooterRenderer | Metadata display |
-
-All wrapped with `ExpandableWrapper` (fullscreen expand via DOM reparenting) where applicable.
-
-## Iframe Security
-
-Tiered sandbox system — trusted domains get `allow-same-origin`, untrusted get restrictive sandbox:
-
-```typescript
-import { getIframeSandbox, DEFAULT_IFRAME_DOMAINS, TRUSTED_IFRAME_DOMAINS } from '@seed-ship/mcp-ui-solid'
-
-// Automatic — IframeRenderer uses getIframeSandbox() internally
-// Manual usage:
-const sandbox = getIframeSandbox('https://docs.google.com/spreadsheets/...')
-// → "allow-scripts allow-popups allow-same-origin allow-forms" (trusted)
-
-const sandbox2 = getIframeSandbox('https://quickchart.io/chart?...')
-// → "allow-scripts allow-popups" (untrusted — no same-origin)
-```
-
-**80+ whitelisted domains** including: Google services, YouTube, Vimeo, GitHub, Figma, Notion, Stripe, Polar.sh, HubSpot, data.gouv.fr, and more.
-
-## Validation
-
-All 19 component types validated, including:
-- **Chart**: scatter/bubble (no labels required), time-series `{x,y}`, data type validation
-- **Table**: columns + rows structure
-- **Video**: URL + domain whitelist
-- **Form/Carousel/Gallery/ActionGroup**: non-empty arrays
-- **Code/Map/Artifact**: required content
-
-```typescript
-import { validateComponent, validateLayout } from '@seed-ship/mcp-ui-solid'
-
-const result = validateComponent(component)
-if (!result.valid) console.error(result.errors)
-```
+| Type | Features |
+|------|----------|
+| `chart` | Bar, line, pie, scatter, bubble, polarArea, time-series. Native Chart.js or Quickchart fallback. PNG export. |
+| `table` | Sortable, pagination, virtualization (10K+), CSV/TSV/JSON export |
+| `metric` | KPI cards with trends and sparklines |
+| `text` | Markdown via marked.js |
+| `code` | Syntax highlighting (highlight.js), line numbers, word wrap |
+| `map` | Leaflet: markers, clustering, GeoJSON, choropleth, popups, multi-layer, PMTiles |
+| `form` | 18 field types, conditional fields, persistence, tool call submit |
+| `modal` | Portal overlay, sizes sm-full, Escape/backdrop close |
+| `image-gallery` | Grid layout, lightbox, keyboard nav |
+| `video` | YouTube/Vimeo/direct URL |
+| `iframe` | Tiered sandbox, 80+ whitelisted domains |
+| `image` | Responsive with lazy loading |
+| `link` | Styled link cards |
+| `action` | Tool call buttons |
+| `action-group` | Grouped actions with layout options |
+| `grid` | Nested 12-column CSS Grid |
+| `carousel` | Content carousel |
+| `artifact` | File download/preview |
+| `footer` | Metadata display |
 
 ## SSR Compatibility
 
@@ -415,27 +381,34 @@ export default defineConfig({
 // Components
 import {
   UIResourceRenderer, StreamingUIRenderer, GenerativeUIErrorBoundary,
-  ExpandableWrapper, ComponentToolbar, ChatPrompt, ScratchpadPanel,
+  ExpandableWrapper, ComponentToolbar,
+  ChatPrompt, ScratchpadPanel,
+  VerifiedText, DataPreviewSection,
 } from '@seed-ship/mcp-ui-solid'
+
+// Data Verification
+import { validateAgainstSource } from '@seed-ship/mcp-ui-solid'
+import { useDataValidator } from '@seed-ship/mcp-ui-solid'
 
 // Chat Bus
 import {
   ChatBusProvider, useChatBus,
+  dispatchScratchpad, useScratchpadState,
   createChatBus, createEventEmitter, createCommandHandler,
 } from '@seed-ship/mcp-ui-solid'
 
 // Validation + Security
 import {
-  validateComponent, validateLayout, validateIframeDomain,
+  validateComponent, validateLayout,
   getIframeSandbox, DEFAULT_IFRAME_DOMAINS, TRUSTED_IFRAME_DOMAINS,
-  ComponentRegistry,
 } from '@seed-ship/mcp-ui-solid'
 
 // Types
 import type {
+  DataValidation, HallucinatedNumber, DataValidationOptions,
+  VerifiedTextContent, DataPreviewContent, MapSectionContent,
+  MapGeoJSONStyle, MapPopupConfig, MapLayer, MapPMTilesConfig,
   ChatBus, ChatEvents, ChatCommands,
-  ChatPromptConfig, ChatPromptResponse,
-  AgentContext, BriefingEvent,
   ScratchpadState, ScratchpadSection, ScratchpadEvent,
   UIComponent, UILayout, ComponentType,
 } from '@seed-ship/mcp-ui-solid'

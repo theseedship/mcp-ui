@@ -44,6 +44,10 @@ export { ChatPrompt } from './components/ChatPrompt'
 export { ScratchpadPanel } from './components/ScratchpadPanel'
 export { dispatchScratchpad, useScratchpadState } from './stores/scratchpad-store'
 
+// Data Verification Components (v3.1.0)
+export { VerifiedText } from './components/VerifiedText'
+export { DataPreviewSection } from './components/DataPreviewSection'
+
 // Autocomplete Components
 export { GhostText, GhostTextInput } from './components/GhostText'
 export { AutocompleteDropdown } from './components/AutocompleteDropdown'
@@ -62,6 +66,8 @@ export type { ExpandableWrapperProps } from './components/ExpandableWrapper'
 export type { ComponentToolbarProps, ToolbarAction, ToolbarIcon } from './components/ComponentToolbar'
 export type { ChatPromptProps } from './components/ChatPrompt'
 export type { ScratchpadPanelProps } from './components/ScratchpadPanel'
+export type { VerifiedTextProps } from './components/VerifiedText'
+export type { DataPreviewSectionProps } from './components/DataPreviewSection'
 export type { GhostTextProps, GhostTextInputProps } from './components/GhostText'
 export type { AutocompleteDropdownProps } from './components/AutocompleteDropdown'
 export type { AutocompleteFormFieldProps, AutocompleteFormFieldParams } from './components/AutocompleteFormField'
@@ -81,6 +87,8 @@ export {
   useResize,
   // Autocomplete hooks
   useAutocomplete,
+  // Data Validator hooks (v3.1.0)
+  useDataValidator,
 } from './hooks'
 
 export type {
@@ -107,6 +115,9 @@ export type {
   // Autocomplete types
   UseAutocompleteOptions,
   UseAutocompleteReturn,
+  // Data Validator types (v3.1.0)
+  UseDataValidatorOptions,
+  UseDataValidatorReturn,
 } from './hooks'
 
 // Context (Phase 5.0)
@@ -177,10 +188,14 @@ export type {
   GalleryImage,
   ImageGalleryParams,
   VideoComponentParams,
-  // Code & Maps types (Sprint 6)
+  // Code & Maps types (Sprint 6 + v3.1.0)
   CodeComponentParams,
   MapMarker,
   MapComponentParams,
+  MapPopupConfig,
+  MapGeoJSONStyle,
+  MapLayer,
+  MapPMTilesConfig,
   // Validation options (v2.0.0)
   IframePolicy,
   ValidationOptions,
@@ -217,6 +232,7 @@ export {
   createCommandHandler,
   createChatBus,
   mergeScratchpadSections,
+  validateAgainstSource,
 } from './services'
 
 // Chat Bus Types (v2.4.0 — @experimental)
@@ -246,4 +262,13 @@ export type {
   Citation,
   ToolCallEvent,
   ClarificationEvent,
+  // Data Validation types (v3.1.0)
+  DataValidation,
+  LLMNumber,
+  HallucinatedNumber,
+  DataValidationOptions,
+  VerifiedTextContent,
+  DataPreviewColumn,
+  DataPreviewContent,
+  MapSectionContent,
 } from './types/chat-bus'

@@ -94,10 +94,14 @@ export interface ChartComponentParams {
     labels: string[]
     datasets: Array<{
       label: string
-      data: number[]
+      data: number[] | Array<{ x: string | number; y: number }>
       backgroundColor?: string | string[]
       borderColor?: string | string[]
       borderWidth?: number
+      /** Fill area under line (useful for time-series) */
+      fill?: boolean | string
+      /** Line tension (0 = straight, 0.4 = smooth) */
+      tension?: number
     }>
   }
   options?: {
@@ -118,6 +122,22 @@ export interface ChartComponentParams {
    * Enable PNG export button (v2.2.0)
    */
   exportable?: boolean
+  /**
+   * Time-series axis configuration (v3.1.0).
+   * When set, x-axis labels are parsed as dates.
+   */
+  timeAxis?: {
+    /** Date format for parsing labels (Chart.js adapter format, e.g. 'yyyy-MM-dd') */
+    parser?: string
+    /** Display unit for x-axis ticks */
+    unit?: 'day' | 'week' | 'month' | 'quarter' | 'year'
+    /** Date format for tooltip display */
+    tooltipFormat?: string
+    /** Min date (ISO string) */
+    min?: string
+    /** Max date (ISO string) */
+    max?: string
+  }
   /**
    * Chart container height as CSS value (v2.2.0, default '250px')
    */
@@ -751,8 +771,59 @@ export interface MapClusterOptions {
 }
 
 /**
+ * GeoJSON feature popup configuration (v3.1.0)
+ */
+export interface MapPopupConfig {
+  /** Property key used as popup title */
+  titleField?: string
+  /** Property keys to display in popup body */
+  fields?: string[]
+  /** Custom HTML template (use {{property}} placeholders) */
+  template?: string
+}
+
+/**
+ * GeoJSON style configuration (v3.1.0)
+ * Supports static styles and choropleth (data-driven) coloring.
+ */
+export interface MapGeoJSONStyle {
+  /** Fill color (CSS color or choropleth config) */
+  fillColor?: string
+  /** Fill opacity (0-1, default: 0.6) */
+  fillOpacity?: number
+  /** Stroke color (default: '#333') */
+  strokeColor?: string
+  /** Stroke width (default: 1) */
+  strokeWeight?: number
+  /** Stroke opacity (0-1, default: 1) */
+  strokeOpacity?: number
+  /** Choropleth: property key for data-driven coloring */
+  choroplethField?: string
+  /** Choropleth: color scale stops [value, color][] sorted ascending */
+  choroplethScale?: Array<[number, string]>
+  /** Choropleth: color for features with missing/null values */
+  choroplethFallback?: string
+}
+
+/**
+ * Named GeoJSON layer for multi-layer maps (v3.1.0)
+ */
+export interface MapLayer {
+  /** Layer name (shown in layer control) */
+  name: string
+  /** Is this layer visible by default? */
+  visible?: boolean
+  /** GeoJSON FeatureCollection (inline or from API) */
+  geojson: unknown // GeoJSON.FeatureCollection — kept as unknown for zero-dep types
+  /** Per-layer style override */
+  style?: MapGeoJSONStyle
+  /** Per-layer popup config */
+  popup?: MapPopupConfig
+}
+
+/**
  * Map component parameters (Sprint 6)
- * Updated Sprint Ultimate U.2: Added clustering support
+ * Updated v3.1.0: GeoJSON, choropleth, popups, layers
  */
 export interface MapComponentParams {
   /**
@@ -776,7 +847,7 @@ export interface MapComponentParams {
   height?: string
 
   /**
-   * Auto-fit bounds to show all markers (default: false)
+   * Auto-fit bounds to show all markers/features (default: false)
    */
   fitBounds?: boolean
 
@@ -802,9 +873,6 @@ export interface MapComponentParams {
 
   /**
    * Enable marker clustering (Sprint Ultimate U.2)
-   * - true: Enable with default options
-   * - false: Disable clustering
-   * - MapClusterOptions: Enable with custom options
    */
   clustering?: boolean | MapClusterOptions
 
@@ -812,6 +880,77 @@ export interface MapComponentParams {
    * Custom CSS class (Sprint 7)
    */
   className?: string
+
+  // ─── GeoJSON (v3.1.0) ────────────────────
+
+  /**
+   * GeoJSON FeatureCollection to render on the map.
+   * Use this for polygons, lines, points from structured data.
+   */
+  geojson?: unknown // GeoJSON.FeatureCollection
+
+  /**
+   * Style for the GeoJSON layer.
+   * Supports static colors and choropleth (data-driven) coloring.
+   */
+  geojsonStyle?: MapGeoJSONStyle
+
+  /**
+   * Popup configuration for GeoJSON features.
+   * Shown on feature click.
+   */
+  popup?: MapPopupConfig
+
+  /**
+   * Named layers for multi-layer maps.
+   * Each layer has its own GeoJSON, style, and popup config.
+   * A Leaflet layer control is added when layers are present.
+   */
+  layers?: MapLayer[]
+
+  // ─── PMTiles (v3.1.0) ────────────────────
+
+  /**
+   * PMTiles vector tile source for large datasets (>5000 features).
+   * Requires protomaps-leaflet peer dependency.
+   * Pipeline: GeoParquet -> Tippecanoe -> PMTiles (static file on S3/CDN).
+   */
+  pmtiles?: MapPMTilesConfig
+}
+
+/**
+ * PMTiles configuration for large vector tile datasets (v3.1.0)
+ */
+export interface MapPMTilesConfig {
+  /** URL to the .pmtiles file (S3, CDN, local) */
+  url: string
+  /** Attribution text for this tile source */
+  attribution?: string
+  /** Style rules for vector features */
+  paintRules?: Array<{
+    /** Layer name in the PMTiles source */
+    dataLayer: string
+    /** Symbol type */
+    symbolizer: 'polygon' | 'line' | 'circle'
+    /** Fill/stroke color (CSS color or function name) */
+    color?: string
+    /** Stroke width */
+    width?: number
+    /** Fill opacity */
+    opacity?: number
+  }>
+  /** Label rules for text labels */
+  labelRules?: Array<{
+    dataLayer: string
+    /** Property key for label text */
+    textField: string
+    /** Font size */
+    fontSize?: number
+  }>
+  /** Max zoom level */
+  maxZoom?: number
+  /** Min zoom level */
+  minZoom?: number
 }
 
 /**

@@ -57,3 +57,10 @@ export type {
   UseAutocompleteOptions,
   UseAutocompleteReturn,
 } from './useAutocomplete'
+
+// Data Validator hooks (v3.1.0 — anti-hallucination)
+export { useDataValidator } from './useDataValidator'
+export type {
+  UseDataValidatorOptions,
+  UseDataValidatorReturn,
+} from './useDataValidator'

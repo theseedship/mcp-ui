@@ -1,6 +1,6 @@
 {
   "name": "@seed-ship/mcp-ui-solid",
-  "version": "3.0.5",
+  "version": "4.0.0",
   "description": "SolidJS components for rendering MCP-generated UI resources",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -127,6 +127,7 @@
     "highlight.js": "^11.9.0",
     "leaflet": "^1.9.4",
     "leaflet.markercluster": "^1.5.0",
+    "protomaps-leaflet": "^4.0.0",
     "solid-js": "^1.9.0"
   },
   "peerDependenciesMeta": {
@@ -146,6 +147,9 @@
       "optional": true
     },
     "@tanstack/solid-virtual": {
+      "optional": true
+    },
+    "protomaps-leaflet": {
       "optional": true
     }
   },

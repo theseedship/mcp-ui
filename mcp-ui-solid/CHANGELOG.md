@@ -5,6 +5,121 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.0] - 2026-04-07
+
+### Added — Data Verification Layer (anti-hallucination)
+
+#### `validateAgainstSource()` — Pure data validator
+- Compares numbers in LLM-generated text against source data rows
+- Regex-based extraction — zero LLM calls, <1ms latency, $0.00 cost
+- Configurable tolerance for rounding (default 1%)
+- Ignore patterns for years, postal codes, indices
+- Returns `DataValidation` with confidence score, verified/hallucinated breakdown
+
+#### `useDataValidator()` — Reactive SolidJS hook
+- Wraps `validateAgainstSource()` in a `createMemo`
+- Auto-re-validates when text or source rows change
+- Returns `valid()`, `confidence()`, `hallucinatedCount()` accessors
+
+#### `VerifiedText` component — Inline verification badges
+- **highlight** mode: green badges for verified numbers, amber for hallucinated
+- **strip** mode: replaces hallucinated numbers with `[non vérifié]`
+- **annotate** mode: tooltip on hover with closest source number and distance
+- Confidence progress bar with color coding (green/amber/red)
+- `onHallucinationClick` callback for interactive analysis
+
+#### `DataPreviewSection` component — Source data table
+- Paginated table with configurable page size (default: 25)
+- Column type support (number right-aligned, date formatted, string left-aligned)
+- French locale number formatting
+- CSV/JSON export buttons
+- Source attribution + data freshness label
+- Total row count indicator for paginated datasets
+
+### Added — GeoJSON Map Rendering
+
+#### MapRenderer v3.1.0 — GeoJSON, choropleth, popups
+- **GeoJSON** layer rendering (polygons, lines, circle markers for points)
+- **Choropleth** coloring by property value with configurable color scale stops
+- **Feature popups** on click — auto-generated or custom HTML template
+- **Multi-layer** support with Leaflet layer control
+- **Named layers** with per-layer style and popup overrides
+- **PMTiles** vector tile support via optional `protomaps-leaflet` peer dep
+- Backward-compatible — existing marker/clustering APIs unchanged
+
+#### New types
+- `MapGeoJSONStyle` — fill/stroke/opacity + choropleth field/scale
+- `MapPopupConfig` — titleField, fields, or custom template
+- `MapLayer` — named layer with geojson/style/popup
+- `MapPMTilesConfig` — URL, paint rules, label rules, zoom limits
+
+### Added — Time-series Chart Support
+
+#### ChartJSRenderer v3.1.0 — Time axis
+- `timeAxis` config on `ChartComponentParams` for date-based x-axis
+- Configurable parser format, display unit, tooltip format
+- Min/max date bounds
+- Dataset `data` now accepts `Array<{x, y}>` for scatter/time-series
+
+### Added — New Scratchpad Section Types (18 total)
+
+- `verified_text` — renders `VerifiedText` with inline badges
+- `data_preview` — renders `DataPreviewSection` with pagination + export
+- `map` — renders `MapRenderer` with GeoJSON/choropleth/popups
+- `chart` — renders `ChartJSRenderer` for embedded time-series/charts
+
+### Changed
+- `ScratchpadSection.type` union now includes 18 types (was 14)
+- `ChartComponentParams.data.datasets[].data` accepts `{x,y}[]` in addition to `number[]`
+- `ChartComponentParams.data.datasets[]` now has `fill` and `tension` properties
+- `protomaps-leaflet` added as optional peer dependency
+
+### Technical
+- 423 tests (was 417), all passing
+- Zero new runtime dependencies
+- Full backward compatibility with v3.x APIs
+
+## [3.0.5] - 2026-04-06
+
+### Fixed
+- **Autocomplete valueField bug**: `handleInput` was clearing stored value on every keystroke. Now only clears when user text differs from selected label.
+
+## [3.0.4] - 2026-04-06
+
+### Fixed
+- **npm README**: Updated package-level README.md for npm display
+
+## [3.0.3] - 2026-04-05
+
+### Added — ARCH1: Direct scratchpad store
+- `dispatchScratchpad()` — singleton reactive store, eliminates ChatBus relay chain race condition
+- `useScratchpadState()` — hook for components to read scratchpad state reactively
+- DX1 lifecycle console messages (create/update/close)
+
+## [3.0.2] - 2026-04-05
+
+### Added
+- DX1 console messages for ScratchpadPanel lifecycle
+- Debug overlay for scratchpad state inspection
+
+## [3.0.1] - 2026-04-05
+
+### Fixed
+- Multi-select scroll in FormFieldRenderer (increased max-h, inline scroll styles, search filter)
+- ChatPrompt overflow-visible (was overflow-hidden, clipping dropdown menus)
+
+## [3.0.0] - 2026-04-04
+
+### Added — v3.0.0 Milestone
+- **18 form field types** — range/slider, tags/chips, toggle switch, fieldset group
+- **14 scratchpad section types** — error, source_card, diff + all previous
+- **Smart field status** — `fieldStatus` (required/unsupported/unknown) + `statusReason`
+- **Multi-source HITL** — sectionMode append/upsert, asyncAction, pinned mode, debug overlay
+- **HITL multi-tour** — Turn state, progression stepper
+- **Interactive filter chips** — Click to edit, "+" to add
+- **Embedded forms** — FormFieldRenderer in scratchpad with depends_on
+- **Preview auto-refresh** — previewEndpoint + configurable method/headers
+
 ## [1.2.6] - 2025-11-26
 
 ### Fixed - Sprint 12: Component Rendering (tagged release)
