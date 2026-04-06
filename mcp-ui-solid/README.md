@@ -5,11 +5,12 @@ SolidJS components + chat toolkit for MCP-generated UI. Part of the [MCP UI ecos
 [![npm version](https://img.shields.io/npm/v/@seed-ship/mcp-ui-solid.svg)](https://www.npmjs.com/package/@seed-ship/mcp-ui-solid)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## What's New in v2.14.0
+## What's New in v3.0.0
 
-- **Multi-source scratchpad** - 14 section types incl. `error` (retry), `source_card` (capabilities), `diff` (comparison). `asyncAction` loading state, `pinned` mode. `sectionMode` append/upsert, `stepper`, action aliases.
-- **Smart field status** - `fieldStatus` per field: `required`/`unsupported`/`unknown`. `statusReason` explains why.
-- **Universal HITL protocol** - ScratchpadPanel for ALL connectors with `onSubmit`, error+retry, feedback
+- **18 form field types** - Added range/slider, tags/chips input, toggle switch, fieldset group. Total: text, email, password, number, date, textarea, select (multi), checkbox, radio, autocomplete (multi), range, tags, toggle, fieldset
+- **14 scratchpad section types** - data, filter, preview, message, action, steps, form, understanding, feedback, prompt, stepper, error, source_card, diff
+- **Smart field status** - `fieldStatus` (required/unsupported/unknown) + `statusReason`. Auto-exclude unsupported from submit.
+- **Multi-source HITL** - sectionMode append/upsert, asyncAction, pinned, debug overlay, turn state
 - **HITL multi-tour** - Turn state, progression stepper, understanding/feedback/prompt sections
 - **Interactive filter chips** - Click to edit (text or select), "+" to add filters
 - **Embedded forms** - FormFieldRenderer in scratchpad with depends_on reactive fields

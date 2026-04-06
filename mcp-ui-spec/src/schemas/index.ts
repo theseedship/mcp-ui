@@ -55,6 +55,10 @@ export const FormFieldTypeSchema = z.enum([
   'checkbox',
   'radio',
   'autocomplete',
+  'range',
+  'tags',
+  'toggle',
+  'fieldset',
 ])
 
 // Show when operator schema

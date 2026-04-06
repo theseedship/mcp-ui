@@ -268,6 +268,10 @@ export type FormFieldType =
   | 'checkbox'
   | 'radio'
   | 'autocomplete'
+  | 'range'
+  | 'tags'
+  | 'toggle'
+  | 'fieldset'
 
 /**
  * Operators for conditional field display

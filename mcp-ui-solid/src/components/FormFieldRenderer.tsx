@@ -246,6 +246,55 @@ export const FormFieldRenderer: Component<FormFieldRendererProps> = (props) => {
           </div>
         </Match>
 
+        {/* Range/Slider */}
+        <Match when={props.field.type === 'range'}>
+          <div class="flex items-center gap-3">
+            <input
+              id={fieldId()}
+              type="range"
+              name={props.field.name}
+              value={props.value ?? props.field.min ?? 0}
+              onInput={(e) => props.onChange(Number(e.currentTarget.value))}
+              min={props.field.min}
+              max={props.field.max}
+              step={props.field.step || 1}
+              disabled={isFieldDisabled()}
+              class="flex-1 h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer accent-blue-600"
+            />
+            <span class="text-sm font-mono text-gray-700 dark:text-gray-300 min-w-[3rem] text-right">{props.value ?? props.field.min ?? 0}</span>
+          </div>
+        </Match>
+
+        {/* Tags/Chips Input */}
+        <Match when={props.field.type === 'tags'}>
+          <TagsField value={props.value || []} onChange={props.onChange} placeholder={props.field.placeholder} disabled={isFieldDisabled()} baseClass={baseInputClass()} />
+        </Match>
+
+        {/* Toggle */}
+        <Match when={props.field.type === 'toggle'}>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={!!props.value}
+              onClick={() => props.onChange(!props.value)}
+              disabled={isFieldDisabled()}
+              class={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${props.value ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'} ${isFieldDisabled() ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              <span class={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${props.value ? 'translate-x-4' : 'translate-x-0.5'}`} />
+            </button>
+            <span class="text-sm text-gray-700 dark:text-gray-300">{props.field.checkboxLabel || props.field.label}</span>
+          </label>
+        </Match>
+
+        {/* Fieldset/Group */}
+        <Match when={props.field.type === 'fieldset'}>
+          <fieldset class="border border-gray-200 dark:border-gray-600 rounded-lg p-3">
+            <legend class="text-xs font-medium text-gray-500 dark:text-gray-400 px-1">{props.field.label}</legend>
+            <p class="text-xs text-gray-400">{props.field.helpText || 'Group container'}</p>
+          </fieldset>
+        </Match>
+
         {/* Fallback for unknown field types — renders as text input with warning */}
         <Match when={true}>
           <input
@@ -560,6 +609,67 @@ const AutocompleteField: Component<{
           </For>
         </div>
       </Show>
+    </div>
+  )
+}
+
+// ─── Tags/Chips Input ────────────────────────────────────────
+
+const TagsField: Component<{
+  value: string[]
+  onChange: (value: string[]) => void
+  placeholder?: string
+  disabled?: boolean
+  baseClass: string
+}> = (props) => {
+  const [input, setInput] = createSignal('')
+
+  const addTag = () => {
+    const val = input().trim()
+    if (val && !(props.value || []).includes(val)) {
+      props.onChange([...(props.value || []), val])
+    }
+    setInput('')
+  }
+
+  const removeTag = (tag: string) => {
+    props.onChange((props.value || []).filter(t => t !== tag))
+  }
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault()
+      addTag()
+    }
+    if (e.key === 'Backspace' && !input() && (props.value || []).length > 0) {
+      removeTag(props.value[props.value.length - 1])
+    }
+  }
+
+  return (
+    <div>
+      <Show when={(props.value || []).length > 0}>
+        <div class="flex flex-wrap gap-1 mb-1">
+          <For each={props.value || []}>
+            {(tag) => (
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">
+                {tag}
+                <button type="button" onClick={() => removeTag(tag)} class="hover:text-blue-900 dark:hover:text-blue-100" aria-label={`Remove ${tag}`}>&times;</button>
+              </span>
+            )}
+          </For>
+        </div>
+      </Show>
+      <input
+        type="text"
+        value={input()}
+        onInput={(e) => setInput(e.currentTarget.value)}
+        onKeyDown={handleKeyDown}
+        onBlur={addTag}
+        placeholder={props.placeholder || 'Type and press Enter...'}
+        disabled={props.disabled}
+        class={props.baseClass}
+      />
     </div>
   )
 }

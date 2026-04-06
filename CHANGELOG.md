@@ -5,6 +5,54 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] - 2026-04-06
+
+### Major Release — Complete HITL Chat Toolkit
+
+**All 3 packages bumped to 3.0.0** (solid, spec, cli).
+
+### Added (v3.0.0)
+- **Range/slider field** — `type: 'range'` with min/max/step, live value display
+- **Tags/chips input** — `type: 'tags'` with Enter/comma to add, Backspace to remove, blur to add
+- **Toggle field** — `type: 'toggle'` switch button (alternative to checkbox)
+- **Fieldset/group** — `type: 'fieldset'` visual grouping container
+
+### Summary: v2.0 → v3.0 (this session)
+
+**Components:**
+- `UIResourceRenderer` — 19 component types, expandable, table/chart/code export
+- `ChatPrompt` — choice, confirm, form (10+ field types), dismissLabel
+- `ScratchpadPanel` — 14 section types, multi-tour HITL, interactive filters, embedded forms
+- `ComponentToolbar` — unified toolbar (copy, download, expand, wordwrap)
+- `ExpandableWrapper` — fullscreen expand with DOM reparenting
+
+**Chat Bus:**
+- 18 event types (token, streamEnd, UILayout, citation, scratchpad, feedback...)
+- 11 command types (injectPrompt, sendPrompt, showChatPrompt, updateScratchpad...)
+- Throttle + streamKey filtering, correlationId, AbortSignal
+
+**Form Fields (18 types):**
+- text, email, password, number, date, textarea, select (single+multi), checkbox, radio
+- autocomplete (single+multi with API fetch), range, tags, toggle, fieldset
+- fieldStatus (required/optional/unsupported/unknown) + statusReason
+- dependsOn reactive fields, showWhen conditional visibility
+
+**ScratchpadPanel (14 section types):**
+- data, filter (interactive chips), preview (auto-refresh), message, action
+- steps (enriched with embedded content), form (full FormFieldRenderer)
+- understanding (confidence badges), feedback (options + comment), prompt (interpretation)
+- stepper (multi-source progress), error (retry), source_card (capabilities), diff (comparison)
+- sectionMode (replace/append/upsert), asyncAction, pinned, debug/debugOverlay
+- Turn state (turn, totalTurns, turnHistory), auto-close, collapsible
+
+**Validation:**
+- All 19 component types validated
+- Scatter/bubble/time-series chart support
+- Tiered iframe sandbox (80+ domains, trusted vs untrusted)
+- Payment platforms (Stripe, Polar.sh)
+
+**Security patches:** dompurify, ajv, picomatch, flatted, minimatch, lodash
+
 ## [2.15.0] - 2026-04-06
 
 ### Added
