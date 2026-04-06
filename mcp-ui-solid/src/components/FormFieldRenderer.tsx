@@ -506,8 +506,14 @@ const AutocompleteField: Component<{
 
   const handleInput = (value: string) => {
     setQuery(value)
+    // Only clear the stored value if user is actively changing the text
+    // (not just focusing/blurring with the selected label intact)
     if (!isMultiple()) {
-      props.onChange('')
+      // Check if the current query still matches the selected label
+      const currentLabel = selectedLabels().get(String(props.value))
+      if (currentLabel !== value) {
+        props.onChange('')
+      }
     }
 
     if (debounceTimer) clearTimeout(debounceTimer)
