@@ -122,6 +122,9 @@ export const FormFieldSchema = z.object({
     valueField: z.string(),
     extraParams: z.record(z.string()).optional(),
   }).optional(),
+  // Field status — API capability indicator (v2.11.0)
+  fieldStatus: z.enum(['required', 'optional', 'unsupported', 'unknown']).optional(),
+  statusReason: z.string().optional(),
   // Checkbox specific
   checkboxLabel: z.string().optional(),
   // Textarea specific

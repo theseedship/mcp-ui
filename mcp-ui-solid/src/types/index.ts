@@ -359,6 +359,12 @@ export interface FormFieldParams {
     extraParams?: Record<string, string>
   }
 
+  // Field status — API capability indicator
+  /** Whether this field is supported by the target API/dataset */
+  fieldStatus?: 'required' | 'optional' | 'unsupported' | 'unknown'
+  /** Human-readable explanation of the status */
+  statusReason?: string
+
   // Checkbox specific
   checkboxLabel?: string
 

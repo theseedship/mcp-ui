@@ -7,9 +7,10 @@ A collection of TypeScript packages for building generative, streaming user inte
 [![npm version](https://img.shields.io/npm/v/@seed-ship/mcp-ui-solid.svg)](https://www.npmjs.com/package/@seed-ship/mcp-ui-solid)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## What's New in v2.11.0
+## What's New in v2.12.0
 
-- **Universal HITL protocol** - ScratchpadPanel as standard interaction for ALL connectors. `onSubmit`, error+retry, feedback options array.
+- **Smart field status** - `fieldStatus` per field (required/optional/unsupported/unknown) with `statusReason`. Prevents filling unsupported fields.
+- **Universal HITL protocol** - ScratchpadPanel for ALL connectors. `onSubmit`, error+retry, feedback options.
 - **ScratchpadPanel** (`@experimental`) - 10 section types, multi-tour, interactive filters, embedded forms, preview auto-refresh
 - **Chat Bus** (`@experimental`) - Bidirectional event/command bus (18 events, 11 commands)
 - **ChatPrompt** (`@experimental`) - Structured interactions (choice, confirm, form, multi-select, autocomplete)
@@ -24,7 +25,7 @@ This monorepo contains three packages published under `@seed-ship/`:
 
 | Package | Version | Description |
 |---------|---------|-------------|
-| [`@seed-ship/mcp-ui-solid`](./mcp-ui-solid) | 2.11.0 | SolidJS components for rendering MCP-generated UI |
+| [`@seed-ship/mcp-ui-solid`](./mcp-ui-solid) | 2.12.0 | SolidJS components for rendering MCP-generated UI |
 | [`@seed-ship/mcp-ui-spec`](./mcp-ui-spec) | 2.0.0 | JSON schemas and Zod validators |
 | [`@seed-ship/mcp-ui-cli`](./mcp-ui-cli) | 2.0.0 | CLI for validation and type generation |
 

@@ -27,6 +27,10 @@ export const FormFieldRenderer: Component<FormFieldRendererProps> = (props) => {
     formData: props.formData || (() => ({})),
   })
 
+  const status = () => props.field.fieldStatus || 'optional'
+  const isUnsupported = () => status() === 'unsupported'
+  const isFieldDisabled = () => props.disabled || isUnsupported()
+
   const baseInputClass = () => `
     w-full px-3 py-2 border rounded-md
     focus:ring-2 focus:ring-blue-500 focus:border-blue-500
@@ -35,6 +39,7 @@ export const FormFieldRenderer: Component<FormFieldRendererProps> = (props) => {
       ? 'border-red-500 focus:ring-red-500'
       : 'border-gray-300 dark:border-gray-600'}
     dark:bg-gray-700 dark:text-white
+    ${isUnsupported() ? 'opacity-50' : ''}
   `
 
   const fieldId = () => `field-${props.field.name}`
@@ -46,11 +51,17 @@ export const FormFieldRenderer: Component<FormFieldRendererProps> = (props) => {
       <Show when={props.field.label && props.field.type !== 'checkbox'}>
         <label
           for={fieldId()}
-          class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+          class={`block text-sm font-medium ${isUnsupported() ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300'}`}
         >
           {props.field.label}
-          <Show when={props.field.required}>
+          <Show when={props.field.required || status() === 'required'}>
             <span class="text-red-500 ml-1" aria-hidden="true">*</span>
+          </Show>
+          <Show when={isUnsupported()}>
+            <span class="ml-2 text-[10px] font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 px-1.5 py-0.5 rounded">Not supported</span>
+          </Show>
+          <Show when={status() === 'unknown'}>
+            <span class="ml-2 text-[10px] font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 px-1.5 py-0.5 rounded">?</span>
           </Show>
         </label>
       </Show>
@@ -251,7 +262,18 @@ export const FormFieldRenderer: Component<FormFieldRendererProps> = (props) => {
         </Match>
       </Switch>
 
-      <Show when={props.field.helpText && !props.error}>
+      <Show when={props.field.statusReason}>
+        <p class={`text-xs ${
+          isUnsupported() ? 'text-orange-500 dark:text-orange-400'
+          : status() === 'unknown' ? 'text-yellow-500 dark:text-yellow-400'
+          : status() === 'required' ? 'text-blue-500 dark:text-blue-400'
+          : 'text-gray-500 dark:text-gray-400'
+        }`}>
+          {props.field.statusReason}
+        </p>
+      </Show>
+
+      <Show when={props.field.helpText && !props.error && !props.field.statusReason}>
         <p class="text-xs text-gray-500 dark:text-gray-400">{props.field.helpText}</p>
       </Show>
 

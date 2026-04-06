@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.12.0] - 2026-04-06
+
+### Added
+- **`fieldStatus`** — Per-field API capability indicator on `FormFieldParams`: `'required'` (blocks submit), `'optional'` (default), `'unsupported'` (disabled + grayed + badge), `'unknown'` (yellow badge). Prevents users from filling fields the API ignores.
+- **`statusReason`** — Human-readable explanation shown below the field (colored by status: orange for unsupported, yellow for unknown, blue for required).
+- **Smart submit** — Unsupported fields automatically excluded from submitted values. Required fields block submit if empty.
+
+### Changed
+- `mcp-ui-spec` v2.2.0 — `fieldStatus` and `statusReason` added to `FormFieldSchema` Zod definition.
+
 ## [2.11.0] - 2026-04-06
 
 ### Added (Universal HITL protocol)

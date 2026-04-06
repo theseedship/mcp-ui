@@ -440,11 +440,21 @@ const EmbeddedFormSection: Component<{
 
   const handleSubmit = (e: Event) => {
     e.preventDefault()
-    // Use dedicated onSubmit if provided, fallback to onAction
+
+    // Filter out unsupported fields, keep only values with content
+    const values = Object.fromEntries(
+      Object.entries(formData())
+        .filter(([key]) => {
+          const field = config().fields.find((f: any) => f.name === key)
+          return field?.fieldStatus !== 'unsupported'
+        })
+        .filter(([, v]) => v !== undefined && v !== '' && !(Array.isArray(v) && v.length === 0))
+    )
+
     if (props.onSubmit) {
-      props.onSubmit(props.sectionId, formData())
+      props.onSubmit(props.sectionId, values)
     } else {
-      props.onAction?.('submit_form', { sectionId: props.sectionId, values: formData() })
+      props.onAction?.('submit_form', { sectionId: props.sectionId, values })
     }
   }
 
