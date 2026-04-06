@@ -107,6 +107,30 @@ export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
       {/* Body */}
       <Show when={!collapsed()}>
         <div style={{ "max-height": props.maxHeight || "500px", "overflow-y": "auto" }}>
+          {/* Turn history header */}
+          <Show when={props.state.turnHistory && props.state.turnHistory.length > 0}>
+            <div class="px-4 py-2 border-b border-gray-100 dark:border-gray-700 flex flex-wrap items-center gap-1.5">
+              <For each={props.state.turnHistory}>
+                {(turn, i) => (
+                  <>
+                    <Show when={i() > 0}>
+                      <svg class="w-3 h-3 text-gray-300 dark:text-gray-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+                    </Show>
+                    <span class={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                      turn.status === 'done' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                      : turn.status === 'active' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+                      : turn.status === 'skipped' ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 line-through'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-400'
+                    }`}>
+                      {turn.status === 'done' ? '✅' : turn.status === 'active' ? '●' : '○'} {turn.label}
+                      <Show when={turn.summary}><span class="ml-1 font-normal opacity-75">— {turn.summary}</span></Show>
+                    </span>
+                  </>
+                )}
+              </For>
+            </div>
+          </Show>
+
           {/* Sections */}
           <div class="divide-y divide-gray-100 dark:divide-gray-700">
             <For each={props.state.sections}>
@@ -211,6 +235,9 @@ const SectionRenderer: Component<{
         <Match when={props.section.type === 'action'}><ActionSection content={props.section.content} onAction={props.onAction} /></Match>
         <Match when={props.section.type === 'steps'}><EnrichedStepsSection content={props.section.content} onAction={props.onAction} onFilterChange={props.onFilterChange} /></Match>
         <Match when={props.section.type === 'form'}><EmbeddedFormSection content={props.section.content} sectionId={props.section.id} onAction={props.onAction} /></Match>
+        <Match when={props.section.type === 'understanding'}><UnderstandingSection content={props.section.content} /></Match>
+        <Match when={props.section.type === 'feedback'}><FeedbackSection content={props.section.content} onAction={props.onAction} /></Match>
+        <Match when={props.section.type === 'prompt'}><PromptSection content={props.section.content} onAction={props.onAction} /></Match>
         <Match when={true}><pre class="text-xs text-gray-500 overflow-auto">{JSON.stringify(props.section.content, null, 2)}</pre></Match>
       </Switch>
     </div>
@@ -479,6 +506,153 @@ const ActionSection: Component<{
           </button>
         )}
       </For>
+    </div>
+  )
+}
+
+// ─── Understanding Section — agent comprehension ─────────────
+
+const UnderstandingSection: Component<{ content: unknown }> = (props) => {
+  const data = () => {
+    const c = props.content as any
+    return { detections: c?.detections || [], warnings: c?.warnings || [] }
+  }
+
+  const confidenceClass = (conf?: string) => {
+    switch (conf) {
+      case 'high': return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+      case 'medium': return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
+      case 'low': return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+      default: return 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+    }
+  }
+
+  return (
+    <div class="space-y-2">
+      <div class="space-y-1.5">
+        <For each={data().detections}>
+          {(det: any) => (
+            <div class="flex items-center gap-2 text-sm">
+              <span class={`px-1.5 py-0.5 text-xs font-medium rounded ${confidenceClass(det.confidence)}`}>
+                {det.label}
+              </span>
+              <span class="text-gray-900 dark:text-white">{det.value}</span>
+            </div>
+          )}
+        </For>
+      </div>
+      <Show when={data().warnings.length > 0}>
+        <div class="space-y-1">
+          <For each={data().warnings}>
+            {(w: string) => (
+              <div class="flex items-start gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+                <span class="flex-shrink-0">⚠️</span>
+                <span>{w}</span>
+              </div>
+            )}
+          </For>
+        </div>
+      </Show>
+    </div>
+  )
+}
+
+// ─── Feedback Section — thumbs up/down ───────────────────────
+
+const FeedbackSection: Component<{
+  content: unknown
+  onAction?: (action: string, data?: unknown) => void
+}> = (props) => {
+  const [comment, setComment] = createSignal('')
+  const data = () => {
+    const c = props.content as any
+    return {
+      question: c?.question || '',
+      approve: c?.approve || { label: 'Yes', value: 'approve' },
+      reject: c?.reject || { label: 'No', value: 'reject' },
+      allowComment: c?.allowComment ?? false,
+      commentPlaceholder: c?.commentPlaceholder || 'Add a comment...',
+    }
+  }
+
+  const handleFeedback = (approved: boolean) => {
+    const d = data()
+    props.onAction?.('feedback', {
+      approved,
+      value: approved ? d.approve.value : d.reject.value,
+      comment: comment(),
+    })
+  }
+
+  return (
+    <div class="space-y-3">
+      <p class="text-sm text-gray-700 dark:text-gray-300">{data().question}</p>
+      <div class="flex gap-2">
+        <button type="button" onClick={() => handleFeedback(true)}
+          class="px-3 py-1.5 text-sm font-medium rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors flex items-center gap-1">
+          &#128077; {data().approve.label}
+        </button>
+        <button type="button" onClick={() => handleFeedback(false)}
+          class="px-3 py-1.5 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center gap-1">
+          &#128078; {data().reject.label}
+        </button>
+      </div>
+      <Show when={data().allowComment}>
+        <input
+          type="text"
+          value={comment()}
+          onInput={(e) => setComment(e.currentTarget.value)}
+          placeholder={data().commentPlaceholder}
+          class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:border-blue-400 outline-none"
+        />
+      </Show>
+    </div>
+  )
+}
+
+// ─── Prompt Section — agent interpretation ───────────────────
+
+const PromptSection: Component<{
+  content: unknown
+  onAction?: (action: string, data?: unknown) => void
+}> = (props) => {
+  const data = () => {
+    const c = props.content as any
+    return {
+      originalQuery: c?.originalQuery || '',
+      interpretation: c?.interpretation || '',
+      extracted: c?.extracted || {},
+      plan: c?.plan || '',
+      editable: c?.editable ?? false,
+    }
+  }
+
+  return (
+    <div class="space-y-2">
+      <Show when={data().originalQuery}>
+        <p class="text-xs text-gray-500 dark:text-gray-400 italic">"{data().originalQuery}"</p>
+      </Show>
+      <div class="space-y-1">
+        <For each={Object.entries(data().extracted)}>
+          {([key, value]) => (
+            <div class="flex gap-2 text-sm">
+              <span class="text-gray-500 dark:text-gray-400 font-medium min-w-[80px]">{key}:</span>
+              <span class="text-gray-900 dark:text-white">{String(value)}</span>
+            </div>
+          )}
+        </For>
+      </div>
+      <Show when={data().plan}>
+        <div class="mt-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/10 rounded-lg text-sm text-blue-700 dark:text-blue-300">
+          <span class="font-medium">Plan:</span> {data().plan}
+        </div>
+      </Show>
+      <Show when={data().editable}>
+        <button type="button" onClick={() => props.onAction?.('edit_prompt', data())}
+          class="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
+          &#9998; Modify
+        </button>
+      </Show>
     </div>
   )
 }

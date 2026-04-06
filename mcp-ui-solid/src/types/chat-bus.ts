@@ -344,12 +344,23 @@ export interface ScratchpadState {
   previewEndpoint?: string
   /** Debounce delay for preview refresh (ms, default 500) */
   previewDebounce?: number
+  /** Current turn number (multi-tour) */
+  turn?: number
+  /** Total expected turns */
+  totalTurns?: number
+  /** History of completed turns */
+  turnHistory?: Array<{
+    turn: number
+    label: string
+    summary: string
+    status: 'done' | 'active' | 'pending' | 'skipped'
+  }>
 }
 
 export interface ScratchpadSection {
   id: string
   title: string
-  type: 'data' | 'filter' | 'preview' | 'message' | 'action' | 'steps' | 'form'
+  type: 'data' | 'filter' | 'preview' | 'message' | 'action' | 'steps' | 'form' | 'understanding' | 'feedback' | 'prompt'
   content: unknown
   /** Can the human edit this section? */
   editable: boolean

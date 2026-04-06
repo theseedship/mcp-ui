@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.10.0] - 2026-04-06
+
+### Added (ScratchpadPanel HITL multi-tour)
+- **Section type="understanding"** — Agent shows its comprehension: detected parameters with confidence badges (high=green, medium=yellow, low=red) + data warnings
+- **Section type="feedback"** — Thumbs up/down with optional comment input. Calls `onAction('feedback', { approved, value, comment })`
+- **Section type="prompt"** — Agent interpretation display: original query, extracted parameters, planned action. Optional "Modify" button for editable prompts
+- **Turn state** — `ScratchpadState.turn`, `totalTurns`, `turnHistory[]` with stepper header showing progression (done/active/pending/skipped) across conversation turns
+- **Turn history header** — Visual stepper with chevrons between turns, color-coded badges, and summary text per completed turn
+
 ## [2.9.0] - 2026-04-06
 
 ### Added (ScratchpadPanel v3 — HITL interactive)
