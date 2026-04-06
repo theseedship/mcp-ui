@@ -5,17 +5,17 @@ SolidJS components + chat toolkit for MCP-generated UI. Part of the [MCP UI ecos
 [![npm version](https://img.shields.io/npm/v/@seed-ship/mcp-ui-solid.svg)](https://www.npmjs.com/package/@seed-ship/mcp-ui-solid)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## What's New in v2.10.0
+## What's New in v2.11.0
 
-- **HITL multi-tour** (`@experimental`) - ScratchpadPanel with turn state, progression stepper, and 3 new section types for agent/human collaboration across conversation turns
-- **Section type="understanding"** - Agent shows detected parameters with confidence badges (high/medium/low) + data warnings
-- **Section type="feedback"** - Thumbs up/down with optional comment for validating agent approach
-- **Section type="prompt"** - Agent interpretation display (original query, extracted params, plan)
-- **Interactive filter chips** - Click to edit inline (text or select dropdown), "+" to add new filters
-- **Embedded forms** - Full FormFieldRenderer in scratchpad sections with depends_on reactive fields
-- **Search button** - Prominent search when waiting_human + filters set
-- **Preview auto-refresh** - `previewEndpoint` + debounce on filter change
-- **Chat Bus** (`@experimental`) - Bidirectional event/command bus (17 events, 11 commands incl. updateScratchpad)
+- **Universal HITL protocol** - ScratchpadPanel as the standard interaction pattern for ALL connectors (data.gouv.fr, HubSpot, Notion, Leexi, Tavily, Google, ClinicalTrials...)
+- **`onSubmit` callback** - Dedicated form submission handler (cleaner than onAction). All connectors use the same pattern.
+- **Error state + retry** - `status: 'error'` with message, code, retryable flag. Handles API failures (429, timeout, auth expired).
+- **Feedback options array** - Universal feedback with N options (icons, variants, needsComment), free-text comment
+- **HITL multi-tour** - Turn state, progression stepper, understanding/feedback/prompt sections
+- **Interactive filter chips** - Click to edit (text or select), "+" to add filters
+- **Embedded forms** - FormFieldRenderer in scratchpad with depends_on reactive fields
+- **Preview auto-refresh** - `previewEndpoint` + configurable method/headers + debounce
+- **Chat Bus** (`@experimental`) - Bidirectional event/command bus (18 events, 11 commands)
 - **19 component renderers** - chart, table, metric, code, map, form, modal, gallery, video, iframe + more
 
 ## Installation

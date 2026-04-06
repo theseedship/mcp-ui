@@ -339,11 +339,17 @@ export interface ScratchpadState {
   preview?: { count: number; rows?: Record<string, unknown>[]; summary: string }
   /** Agent messages (explanations, questions) */
   agentMessages: Array<{ text: string; type: 'info' | 'question' | 'warning' }>
-  status: 'loading' | 'ready' | 'waiting_human' | 'processing' | 'complete'
+  status: 'loading' | 'ready' | 'waiting_human' | 'processing' | 'complete' | 'error'
+  /** Error details when status is 'error' */
+  error?: { message: string; code?: string; retryable?: boolean }
   /** Endpoint for auto-refresh preview when filters change */
   previewEndpoint?: string
   /** Debounce delay for preview refresh (ms, default 500) */
   previewDebounce?: number
+  /** HTTP method for preview (default POST) */
+  previewMethod?: 'GET' | 'POST'
+  /** Extra headers for preview fetch */
+  previewHeaders?: Record<string, string>
   /** Current turn number (multi-tour) */
   turn?: number
   /** Total expected turns */

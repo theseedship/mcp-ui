@@ -15,6 +15,10 @@ export interface ScratchpadPanelProps {
   onFilterChange?: (filters: Record<string, string | string[]>) => void
   onAction?: (action: string, data?: unknown) => void
   onSectionEdit?: (sectionId: string, content: unknown) => void
+  /** Dedicated callback for form submissions (cleaner than onAction) */
+  onSubmit?: (sectionId: string, values: Record<string, unknown>) => void
+  /** Called when user clicks retry on error state */
+  onRetry?: () => void
   onClose?: () => void
   closable?: boolean
   autoCloseDelay?: number
@@ -28,6 +32,7 @@ const STATUS_BADGES: Record<ScratchpadState['status'], { label: string; class: s
   waiting_human: { label: 'Your turn', class: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 animate-pulse' },
   processing: { label: 'Processing...', class: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
   complete: { label: 'Complete', class: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' },
+  error: { label: 'Error', class: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' },
 }
 
 export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
@@ -59,8 +64,8 @@ export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
     previewTimer = setTimeout(async () => {
       try {
         const res = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: props.state.previewMethod || 'POST',
+          headers: { 'Content-Type': 'application/json', ...props.state.previewHeaders },
           credentials: 'include',
           body: JSON.stringify({ filters }),
         })
@@ -141,6 +146,7 @@ export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
                   onFilterChange={props.onFilterChange}
                   onAction={props.onAction}
                   onSectionEdit={props.onSectionEdit}
+                  onSubmit={props.onSubmit}
                 />
               )}
             </For>
@@ -193,6 +199,35 @@ export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
             </div>
           </Show>
 
+          {/* Error state with retry */}
+          <Show when={props.state.status === 'error' && props.state.error}>
+            <div class="px-4 py-3 border-t border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10">
+              <div class="flex items-start gap-2 text-sm text-red-700 dark:text-red-400">
+                <span class="flex-shrink-0 mt-0.5">⚠️</span>
+                <div class="flex-1">
+                  <p class="font-medium">{props.state.error!.message}</p>
+                  <Show when={props.state.error!.code}>
+                    <p class="text-xs text-red-500 dark:text-red-500 mt-0.5">Code: {props.state.error!.code}</p>
+                  </Show>
+                </div>
+              </div>
+              <div class="flex gap-2 mt-2">
+                <Show when={props.state.error!.retryable !== false}>
+                  <button type="button" onClick={() => props.onRetry?.()}
+                    class="px-3 py-1.5 text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors flex items-center gap-1">
+                    &#128260; Retry
+                  </button>
+                </Show>
+                <Show when={props.onClose}>
+                  <button type="button" onClick={() => props.onClose?.()}
+                    class="px-3 py-1.5 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    Close
+                  </button>
+                </Show>
+              </div>
+            </div>
+          </Show>
+
           {/* Search button when waiting_human */}
           <Show when={props.state.status === 'waiting_human' && hasFilters()}>
             <div class="px-4 py-3 border-t border-gray-100 dark:border-gray-700">
@@ -224,6 +259,7 @@ const SectionRenderer: Component<{
   onFilterChange?: (filters: Record<string, string | string[]>) => void
   onAction?: (action: string, data?: unknown) => void
   onSectionEdit?: (sectionId: string, content: unknown) => void
+  onSubmit?: (sectionId: string, values: Record<string, unknown>) => void
 }> = (props) => {
   return (
     <div class="px-4 py-3">
@@ -234,7 +270,7 @@ const SectionRenderer: Component<{
         <Match when={props.section.type === 'message'}><p class="text-sm text-gray-700 dark:text-gray-300">{String(props.section.content)}</p></Match>
         <Match when={props.section.type === 'action'}><ActionSection content={props.section.content} onAction={props.onAction} /></Match>
         <Match when={props.section.type === 'steps'}><EnrichedStepsSection content={props.section.content} onAction={props.onAction} onFilterChange={props.onFilterChange} /></Match>
-        <Match when={props.section.type === 'form'}><EmbeddedFormSection content={props.section.content} sectionId={props.section.id} onAction={props.onAction} /></Match>
+        <Match when={props.section.type === 'form'}><EmbeddedFormSection content={props.section.content} sectionId={props.section.id} onAction={props.onAction} onSubmit={props.onSubmit} /></Match>
         <Match when={props.section.type === 'understanding'}><UnderstandingSection content={props.section.content} /></Match>
         <Match when={props.section.type === 'feedback'}><FeedbackSection content={props.section.content} onAction={props.onAction} /></Match>
         <Match when={props.section.type === 'prompt'}><PromptSection content={props.section.content} onAction={props.onAction} /></Match>
@@ -362,6 +398,7 @@ const EmbeddedFormSection: Component<{
   content: unknown
   sectionId: string
   onAction?: (action: string, data?: unknown) => void
+  onSubmit?: (sectionId: string, values: Record<string, unknown>) => void
 }> = (props) => {
   const [formData, setFormData] = createSignal<Record<string, any>>({})
   const [dynamicOptions, setDynamicOptions] = createSignal<Record<string, Array<{ label: string; value: string }>>>({})
@@ -403,7 +440,12 @@ const EmbeddedFormSection: Component<{
 
   const handleSubmit = (e: Event) => {
     e.preventDefault()
-    props.onAction?.('submit_form', { sectionId: props.sectionId, values: formData() })
+    // Use dedicated onSubmit if provided, fallback to onAction
+    if (props.onSubmit) {
+      props.onSubmit(props.sectionId, formData())
+    } else {
+      props.onAction?.('submit_form', { sectionId: props.sectionId, values: formData() })
+    }
   }
 
   return (
@@ -564,47 +606,56 @@ const FeedbackSection: Component<{
   onAction?: (action: string, data?: unknown) => void
 }> = (props) => {
   const [comment, setComment] = createSignal('')
+  const [showComment, setShowComment] = createSignal(false)
   const data = () => {
     const c = props.content as any
+    // Support both formats: options array (universal) and approve/reject (simple)
+    const options = c?.options || [
+      { value: c?.approve?.value || 'approve', label: c?.approve?.label || 'Yes', icon: '👍', variant: 'primary' },
+      { value: c?.reject?.value || 'reject', label: c?.reject?.label || 'No', icon: '👎' },
+    ]
     return {
       question: c?.question || '',
-      approve: c?.approve || { label: 'Yes', value: 'approve' },
-      reject: c?.reject || { label: 'No', value: 'reject' },
-      allowComment: c?.allowComment ?? false,
-      commentPlaceholder: c?.commentPlaceholder || 'Add a comment...',
+      options: options as Array<{ value: string; label: string; icon?: string; variant?: string; needsComment?: boolean }>,
+      allowFreeText: c?.allowFreeText ?? c?.allowComment ?? false,
+      placeholder: c?.placeholder || c?.commentPlaceholder || 'Add a comment...',
     }
   }
 
-  const handleFeedback = (approved: boolean) => {
-    const d = data()
-    props.onAction?.('feedback', {
-      approved,
-      value: approved ? d.approve.value : d.reject.value,
-      comment: comment(),
-    })
+  const handleOption = (option: any) => {
+    if (option.needsComment) {
+      setShowComment(true)
+      return
+    }
+    props.onAction?.('feedback', { option: option.value, comment: comment() })
   }
 
   return (
     <div class="space-y-3">
       <p class="text-sm text-gray-700 dark:text-gray-300">{data().question}</p>
-      <div class="flex gap-2">
-        <button type="button" onClick={() => handleFeedback(true)}
-          class="px-3 py-1.5 text-sm font-medium rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors flex items-center gap-1">
-          &#128077; {data().approve.label}
-        </button>
-        <button type="button" onClick={() => handleFeedback(false)}
-          class="px-3 py-1.5 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center gap-1">
-          &#128078; {data().reject.label}
-        </button>
+      <div class="flex flex-wrap gap-2">
+        <For each={data().options}>
+          {(option) => (
+            <button type="button" onClick={() => handleOption(option)}
+              class={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex items-center gap-1 ${
+                option.variant === 'primary' ? 'bg-blue-600 text-white hover:bg-blue-700'
+                : option.variant === 'danger' ? 'bg-red-600 text-white hover:bg-red-700'
+                : 'border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+              }`}>
+              <Show when={option.icon}><span>{option.icon}</span></Show>
+              {option.label}
+            </button>
+          )}
+        </For>
       </div>
-      <Show when={data().allowComment}>
-        <input
-          type="text"
-          value={comment()}
-          onInput={(e) => setComment(e.currentTarget.value)}
-          placeholder={data().commentPlaceholder}
-          class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:border-blue-400 outline-none"
-        />
+      <Show when={data().allowFreeText || showComment()}>
+        <div class="flex gap-1">
+          <input type="text" value={comment()} onInput={(e) => setComment(e.currentTarget.value)}
+            placeholder={data().placeholder} autofocus={showComment()}
+            class="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:border-blue-400 outline-none" />
+          <button type="button" onClick={() => props.onAction?.('feedback', { option: 'comment', comment: comment() })}
+            class="px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">Send</button>
+        </div>
       </Show>
     </div>
   )

@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.11.0] - 2026-04-06
+
+### Added (Universal HITL protocol)
+- **`onSubmit` callback** — Dedicated form submission handler on ScratchpadPanel. Cleaner than onAction('submit_form'). All connectors use the same pattern.
+- **`status: 'error'` + retry** — Error state with message, code, retryable flag. Shows error panel with retry/close buttons. Handles API failures (429, timeout, auth).
+- **`previewMethod` / `previewHeaders`** — Configurable HTTP method and headers for preview auto-fetch. Supports GET endpoints and auth headers.
+- **`onRetry` callback** — Dedicated retry handler on error state.
+- **Feedback options array** — FeedbackSection now supports `options[]` format (universal) alongside approve/reject (simple). Each option can have icon, variant, and needsComment flag.
+- **Free-text comment in feedback** — `allowFreeText` shows input, `needsComment` on option shows input after click.
+
 ## [2.10.0] - 2026-04-06
 
 ### Added (ScratchpadPanel HITL multi-tour)
