@@ -12,6 +12,7 @@ import type {
   ChatCommandHandler,
   ChatBus,
   EventSubscribeOptions,
+  ScratchpadSection,
 } from '../types/chat-bus'
 
 // ─── Event Emitter ───────────────────────────────────────────
@@ -179,5 +180,48 @@ export function createChatBus(): ChatBus {
   return {
     events: createEventEmitter(),
     commands: createCommandHandler(),
+  }
+}
+
+// ─── Scratchpad Section Merge Helper ─────────────────────────
+
+/**
+ * Merge sections from a ScratchpadEvent into existing state sections.
+ * Handles replace/append/upsert modes.
+ *
+ * @example
+ * const newSections = mergeScratchpadSections(
+ *   currentState.sections,
+ *   event.sections,
+ *   event.sectionMode
+ * )
+ */
+export function mergeScratchpadSections(
+  existing: ScratchpadSection[],
+  incoming: ScratchpadSection[] | undefined,
+  mode: 'replace' | 'append' | 'upsert' = 'replace'
+): ScratchpadSection[] {
+  if (!incoming) return existing
+
+  switch (mode) {
+    case 'append':
+      return [...existing, ...incoming]
+
+    case 'upsert': {
+      const result = [...existing]
+      for (const section of incoming) {
+        const idx = result.findIndex((s) => s.id === section.id)
+        if (idx >= 0) {
+          result[idx] = section
+        } else {
+          result.push(section)
+        }
+      }
+      return result
+    }
+
+    case 'replace':
+    default:
+      return incoming
   }
 }

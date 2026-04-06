@@ -5,11 +5,11 @@ SolidJS components + chat toolkit for MCP-generated UI. Part of the [MCP UI ecos
 [![npm version](https://img.shields.io/npm/v/@seed-ship/mcp-ui-solid.svg)](https://www.npmjs.com/package/@seed-ship/mcp-ui-solid)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## What's New in v2.12.0
+## What's New in v2.13.0
 
-- **Smart field status** - `fieldStatus` per field: `required` (blocks submit), `unsupported` (disabled + badge), `unknown` (yellow badge). `statusReason` explains why. Unsupported fields auto-excluded from submit.
-- **Universal HITL protocol** - ScratchpadPanel as the standard interaction pattern for ALL connectors
-- **`onSubmit` + error + retry** - Dedicated form submit, error state with retry, feedback options array
+- **Multi-source scratchpad** - `sectionMode` (replace/append/upsert) for multi-tour without re-sending all sections. `mergeScratchpadSections()` helper. `stepper` section type for multi-source progress. Action aliases auto-close.
+- **Smart field status** - `fieldStatus` per field: `required`/`unsupported`/`unknown`. `statusReason` explains why.
+- **Universal HITL protocol** - ScratchpadPanel for ALL connectors with `onSubmit`, error+retry, feedback
 - **HITL multi-tour** - Turn state, progression stepper, understanding/feedback/prompt sections
 - **Interactive filter chips** - Click to edit (text or select), "+" to add filters
 - **Embedded forms** - FormFieldRenderer in scratchpad with depends_on reactive fields

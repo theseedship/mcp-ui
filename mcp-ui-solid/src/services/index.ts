@@ -16,4 +16,4 @@ export {
 
 export { ComponentRegistry } from './component-registry'
 
-export { createEventEmitter, createCommandHandler, createChatBus } from './chat-bus'
+export { createEventEmitter, createCommandHandler, createChatBus, mergeScratchpadSections } from './chat-bus'

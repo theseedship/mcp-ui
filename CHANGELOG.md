@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.13.0] - 2026-04-06
+
+### Added (Scratchpad Multi-Source)
+- **`sectionMode`** on `ScratchpadEvent` — `'replace'` (default), `'append'` (add sections), `'upsert'` (update by id or append). Enables multi-tour without re-sending all sections.
+- **`mergeScratchpadSections()`** — Exported helper for consumers to merge sections with replace/append/upsert logic.
+- **Section type `stepper`** — Multi-source progress indicator with horizontal/vertical orientation. Shows status (done/active/error/pending), summary text, and duration_ms per step.
+- **Action aliases** — Actions `done`, `close`, `dismiss`, `validate`, `cancel`, `sufficient` auto-close the scratchpad (+ still call onAction callback).
+- **`ready` status distinction** — Blue badge (distinct from `complete` green). Prevents auto-close, shows action buttons prominently.
+
 ## [2.12.0] - 2026-04-06
 
 ### Added

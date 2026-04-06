@@ -28,7 +28,7 @@ export interface ScratchpadPanelProps {
 
 const STATUS_BADGES: Record<ScratchpadState['status'], { label: string; class: string }> = {
   loading: { label: 'Loading...', class: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' },
-  ready: { label: 'Ready', class: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
+  ready: { label: 'Ready', class: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
   waiting_human: { label: 'Your turn', class: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 animate-pulse' },
   processing: { label: 'Processing...', class: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
   complete: { label: 'Complete', class: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' },
@@ -44,6 +44,16 @@ export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
   const isCollapsible = () => props.collapsible !== false
   const preview = () => localPreview() || props.state.preview
   const hasFilters = () => Object.keys(props.state.filters || {}).length > 0
+
+  // Action aliases that auto-close the scratchpad
+  const CLOSE_ALIASES = new Set(['done', 'close', 'dismiss', 'validate', 'cancel', 'sufficient'])
+
+  const handleAction = (action: string, data?: unknown) => {
+    props.onAction?.(action, data)
+    if (CLOSE_ALIASES.has(action) && props.onClose) {
+      props.onClose()
+    }
+  }
 
   // Auto-close on complete
   createEffect(() => {
@@ -144,7 +154,7 @@ export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
                   section={section}
                   filters={props.state.filters}
                   onFilterChange={props.onFilterChange}
-                  onAction={props.onAction}
+                  onAction={handleAction}
                   onSectionEdit={props.onSectionEdit}
                   onSubmit={props.onSubmit}
                 />
@@ -233,7 +243,7 @@ export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
             <div class="px-4 py-3 border-t border-gray-100 dark:border-gray-700">
               <button
                 type="button"
-                onClick={() => props.onAction?.('search', { filters: props.state.filters })}
+                onClick={() => handleAction('search', { filters: props.state.filters })}
                 class="w-full px-4 py-2.5 text-sm font-semibold rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
               >
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
@@ -274,6 +284,7 @@ const SectionRenderer: Component<{
         <Match when={props.section.type === 'understanding'}><UnderstandingSection content={props.section.content} /></Match>
         <Match when={props.section.type === 'feedback'}><FeedbackSection content={props.section.content} onAction={props.onAction} /></Match>
         <Match when={props.section.type === 'prompt'}><PromptSection content={props.section.content} onAction={props.onAction} /></Match>
+        <Match when={props.section.type === 'stepper'}><StepperProgressSection content={props.section.content} /></Match>
         <Match when={true}><pre class="text-xs text-gray-500 overflow-auto">{JSON.stringify(props.section.content, null, 2)}</pre></Match>
       </Switch>
     </div>
@@ -715,5 +726,75 @@ const PromptSection: Component<{
         </button>
       </Show>
     </div>
+  )
+}
+
+// ─── Stepper Progress Section (multi-source) ─────────────────
+
+const StepperProgressSection: Component<{ content: unknown }> = (props) => {
+  const data = () => {
+    const c = props.content as any
+    return {
+      steps: (c?.steps || []) as Array<{ id: string; label: string; status: string; summary?: string; duration_ms?: number }>,
+      orientation: c?.orientation || 'horizontal',
+    }
+  }
+
+  const statusIcon = (status: string) => {
+    switch (status) {
+      case 'done': return '✅'
+      case 'active': return '🔄'
+      case 'error': return '❌'
+      default: return '⏳'
+    }
+  }
+
+  const isHorizontal = () => data().orientation === 'horizontal'
+
+  return (
+    <Show when={isHorizontal()} fallback={
+      <div class="space-y-2">
+        <For each={data().steps}>
+          {(step) => (
+            <div class={`flex items-start gap-2 text-sm ${step.status === 'active' ? 'font-medium' : ''} ${step.status === 'pending' ? 'text-gray-400' : 'text-gray-700 dark:text-gray-300'}`}>
+              <span class="flex-shrink-0">{statusIcon(step.status)}</span>
+              <div>
+                <span>{step.label}</span>
+                <Show when={step.summary}>
+                  <span class="ml-1 text-xs text-gray-500 dark:text-gray-400">— {step.summary}</span>
+                </Show>
+                <Show when={step.duration_ms}>
+                  <span class="ml-1 text-xs text-gray-400">({step.duration_ms}ms)</span>
+                </Show>
+              </div>
+            </div>
+          )}
+        </For>
+      </div>
+    }>
+      <div class="flex items-center gap-1 flex-wrap">
+        <For each={data().steps}>
+          {(step, i) => (
+            <>
+              <Show when={i() > 0}>
+                <svg class="w-3 h-3 text-gray-300 dark:text-gray-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+              </Show>
+              <div class={`flex items-center gap-1 px-2 py-1 rounded text-xs ${
+                step.status === 'done' ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400'
+                : step.status === 'active' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-medium'
+                : step.status === 'error' ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'
+                : 'text-gray-400'
+              }`}>
+                <span>{statusIcon(step.status)}</span>
+                <span>{step.label}</span>
+                <Show when={step.summary}>
+                  <span class="text-[10px] opacity-75">{step.summary}</span>
+                </Show>
+              </div>
+            </>
+          )}
+        </For>
+      </div>
+    </Show>
   )
 }

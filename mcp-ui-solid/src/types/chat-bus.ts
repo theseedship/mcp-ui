@@ -366,7 +366,7 @@ export interface ScratchpadState {
 export interface ScratchpadSection {
   id: string
   title: string
-  type: 'data' | 'filter' | 'preview' | 'message' | 'action' | 'steps' | 'form' | 'understanding' | 'feedback' | 'prompt'
+  type: 'data' | 'filter' | 'preview' | 'message' | 'action' | 'steps' | 'form' | 'understanding' | 'feedback' | 'prompt' | 'stepper'
   content: unknown
   /** Can the human edit this section? */
   editable: boolean
@@ -383,6 +383,8 @@ export interface ScratchpadEvent {
   action: 'create' | 'update' | 'close'
   title?: string
   sections?: ScratchpadSection[]
+  /** How to merge sections on update (default: 'replace') */
+  sectionMode?: 'replace' | 'append' | 'upsert'
   filters?: Record<string, string | string[]>
   preview?: { count: number; rows?: Record<string, unknown>[]; summary: string }
   agentMessages?: Array<{ text: string; type: 'info' | 'question' | 'warning' }>

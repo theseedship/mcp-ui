@@ -215,6 +215,7 @@ export {
   createEventEmitter,
   createCommandHandler,
   createChatBus,
+  mergeScratchpadSections,
 } from './services'
 
 // Chat Bus Types (v2.4.0 — @experimental)
