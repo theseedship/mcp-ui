@@ -1,19 +1,11 @@
 /**
  * DataPreviewSection — paginated, sortable data table with export
- * v4.0.3: Sortable columns (click header: asc → desc → reset)
+ * v4.0.4: Full pagination spec (auto-activate, pageSize=0 disable, showPageInfo, onPageChange)
  *
  * @experimental
- *
- * Features:
- * - Sortable columns (type-aware: number, string, date)
- * - Column types (number right-aligned, string left-aligned)
- * - Pagination (configurable page size)
- * - CSV / JSON export buttons
- * - Source attribution + freshness label
- * - Number formatting (FR locale)
  */
 
-import { createSignal, createMemo, For, Show } from 'solid-js'
+import { createSignal, createMemo, createEffect, For, Show } from 'solid-js'
 import type { DataPreviewContent, DataPreviewColumn } from '../types/chat-bus'
 
 export interface DataPreviewSectionProps {
@@ -22,7 +14,8 @@ export interface DataPreviewSectionProps {
 
 type SortDir = 'asc' | 'desc' | null
 
-/** Format a number for display (French locale) */
+// ─── Formatting helpers ─────────────────────────────────────
+
 function formatNumber(value: unknown, format?: string): string {
   if (typeof value !== 'number' || !isFinite(value)) return String(value ?? '')
   if (format === 'percent') return `${(value * 100).toFixed(1)}%`
@@ -31,26 +24,19 @@ function formatNumber(value: unknown, format?: string): string {
   return value.toLocaleString('fr-FR', { maximumFractionDigits: 2 })
 }
 
-/** Format a cell value based on column type */
 function formatCell(value: unknown, col: DataPreviewColumn): string {
   if (value == null) return '\u2014'
   if (col.type === 'number') return formatNumber(value, col.format)
   if (col.type === 'date' && typeof value === 'string') {
-    try {
-      return new Date(value).toLocaleDateString('fr-FR')
-    } catch {
-      return value
-    }
+    try { return new Date(value).toLocaleDateString('fr-FR') } catch { return value }
   }
   return String(value)
 }
 
-/** Compare two values for sorting, type-aware */
 function compareValues(a: unknown, b: unknown, type?: string): number {
   if (a == null && b == null) return 0
   if (a == null) return 1
   if (b == null) return -1
-
   if (type === 'number') {
     const na = typeof a === 'number' ? a : Number(a)
     const nb = typeof b === 'number' ? b : Number(b)
@@ -59,7 +45,6 @@ function compareValues(a: unknown, b: unknown, type?: string): number {
     if (isNaN(nb)) return -1
     return na - nb
   }
-
   if (type === 'date') {
     const da = new Date(String(a)).getTime()
     const db = new Date(String(b)).getTime()
@@ -68,11 +53,11 @@ function compareValues(a: unknown, b: unknown, type?: string): number {
     if (isNaN(db)) return -1
     return da - db
   }
-
   return String(a).localeCompare(String(b), 'fr', { sensitivity: 'base' })
 }
 
-/** Generate CSV from columns + rows */
+// ─── Export helpers ─────────────────────────────────────────
+
 function toCSV(columns: DataPreviewColumn[], rows: Record<string, unknown>[]): string {
   const header = columns.map(c => `"${c.label.replace(/"/g, '""')}"`).join(';')
   const body = rows.map(row =>
@@ -86,7 +71,6 @@ function toCSV(columns: DataPreviewColumn[], rows: Record<string, unknown>[]): s
   return `${header}\n${body}`
 }
 
-/** Trigger browser download */
 function downloadFile(content: string, filename: string, mimeType: string) {
   const blob = new Blob([content], { type: mimeType })
   const url = URL.createObjectURL(blob)
@@ -97,50 +81,51 @@ function downloadFile(content: string, filename: string, mimeType: string) {
   URL.revokeObjectURL(url)
 }
 
-/**
- * Extract a valid DataPreviewContent from props.content.
- * Handles: direct DataPreviewContent, or wrapped in an extra layer.
- */
+// ─── Content resolver ───────────────────────────────────────
+
 function resolveContent(raw: unknown): DataPreviewContent | null {
   if (!raw || typeof raw !== 'object') return null
   const obj = raw as Record<string, unknown>
-
   if (Array.isArray(obj.columns) && Array.isArray(obj.rows)) {
     return obj as unknown as DataPreviewContent
   }
-
   if (obj.content && typeof obj.content === 'object') {
     const inner = obj.content as Record<string, unknown>
     if (Array.isArray(inner.columns) && Array.isArray(inner.rows)) {
       return inner as unknown as DataPreviewContent
     }
   }
-
   return null
 }
+
+// ─── Component ──────────────────────────────────────────────
 
 export function DataPreviewSection(props: DataPreviewSectionProps) {
   const content = createMemo(() => {
     const resolved = resolveContent(props.content)
     if (!resolved) {
-      console.warn(
-        '[MCP-UI] DataPreviewSection: invalid content — expected { columns: [...], rows: [...] }, got:',
-        props.content
-      )
+      console.warn('[MCP-UI] DataPreviewSection: invalid content — expected { columns, rows }', props.content)
     }
     return resolved
   })
 
   const columns = () => content()?.columns || []
   const rawRows = () => content()?.rows || []
-  const pageSize = () => content()?.pageSize || 25
-  const [page, setPage] = createSignal(0)
+  const pageSizeVal = () => content()?.pageSize ?? 25
+  const showPageInfo = () => content()?.showPageInfo !== false
+
+  const [page, setPage] = createSignal(content()?.initialPage ?? 0)
   const [sortKey, setSortKey] = createSignal<string | null>(null)
   const [sortDir, setSortDir] = createSignal<SortDir>(null)
 
+  // Notify parent on page change
+  createEffect(() => {
+    const p = page()
+    content()?.onPageChange?.(p)
+  })
+
   const handleSort = (key: string) => {
     if (sortKey() === key) {
-      // Cycle: asc → desc → reset
       if (sortDir() === 'asc') setSortDir('desc')
       else { setSortKey(null); setSortDir(null) }
     } else {
@@ -155,34 +140,36 @@ export function DataPreviewSection(props: DataPreviewSectionProps) {
     const key = sortKey()
     const dir = sortDir()
     if (!key || !dir) return r
-
     const col = columns().find(c => c.key === key)
-    const type = col?.type
-
     return [...r].sort((a, b) => {
-      const cmp = compareValues(a[key], b[key], type)
+      const cmp = compareValues(a[key], b[key], col?.type)
       return dir === 'desc' ? -cmp : cmp
     })
   })
 
-  const totalRows = () => sortedRows().length
-  const totalPages = () => Math.max(1, Math.ceil(totalRows() / pageSize()))
+  // Pagination: auto-enabled when rows > pageSize, disabled when pageSize=0
+  const isPaginated = () => pageSizeVal() > 0 && sortedRows().length > pageSizeVal()
+  const totalPages = () => isPaginated() ? Math.ceil(sortedRows().length / pageSizeVal()) : 1
 
-  const pagedRows = createMemo(() => {
-    const start = page() * pageSize()
-    return sortedRows().slice(start, start + pageSize())
+  const visibleRows = createMemo(() => {
+    if (!isPaginated()) return sortedRows()
+    const start = page() * pageSizeVal()
+    return sortedRows().slice(start, start + pageSizeVal())
   })
 
+  const rangeStart = () => isPaginated() ? page() * pageSizeVal() + 1 : 1
+  const rangeEnd = () => isPaginated()
+    ? Math.min((page() + 1) * pageSizeVal(), sortedRows().length)
+    : sortedRows().length
+
+  // Export ALL rows (not just page)
   const handleExportCSV = () => {
     const c = content()
     if (!c) return
-    const csv = toCSV(c.columns, sortedRows())
-    downloadFile(csv, 'data-export.csv', 'text/csv;charset=utf-8')
+    downloadFile(toCSV(c.columns, sortedRows()), 'data-export.csv', 'text/csv;charset=utf-8')
   }
-
   const handleExportJSON = () => {
-    const json = JSON.stringify(sortedRows(), null, 2)
-    downloadFile(json, 'data-export.json', 'application/json')
+    downloadFile(JSON.stringify(sortedRows(), null, 2), 'data-export.json', 'application/json')
   }
 
   const columnAlign = (col: DataPreviewColumn) => {
@@ -192,8 +179,8 @@ export function DataPreviewSection(props: DataPreviewSectionProps) {
   }
 
   const sortIndicator = (key: string) => {
-    if (sortKey() !== key) return '\u2195'  // ↕ neutral
-    return sortDir() === 'asc' ? '\u2191' : '\u2193'  // ↑ or ↓
+    if (sortKey() !== key) return '\u2195'
+    return sortDir() === 'asc' ? '\u2191' : '\u2193'
   }
 
   return (
@@ -204,7 +191,7 @@ export function DataPreviewSection(props: DataPreviewSectionProps) {
     }>
       {(c) => (
         <div class="data-preview-section">
-          {/* Header with source + export */}
+          {/* Header: source + export */}
           <div class="flex items-center justify-between mb-2">
             <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
               <Show when={c().source}>
@@ -216,20 +203,19 @@ export function DataPreviewSection(props: DataPreviewSectionProps) {
                 </span>
               </Show>
             </div>
-
             <Show when={c().exportable !== false}>
               <div class="flex items-center gap-1">
                 <button
                   class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                   onClick={handleExportCSV}
-                  title="Export CSV (sorted)"
+                  title={`Export CSV (${sortedRows().length} rows)`}
                 >
                   CSV
                 </button>
                 <button
                   class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                   onClick={handleExportJSON}
-                  title="Export JSON (sorted)"
+                  title={`Export JSON (${sortedRows().length} rows)`}
                 >
                   JSON
                 </button>
@@ -268,7 +254,7 @@ export function DataPreviewSection(props: DataPreviewSectionProps) {
                 </tr>
               </thead>
               <tbody>
-                <For each={pagedRows()}>
+                <For each={visibleRows()}>
                   {(row, i) => (
                     <tr
                       class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
@@ -291,30 +277,38 @@ export function DataPreviewSection(props: DataPreviewSectionProps) {
             </table>
           </div>
 
-          {/* Footer: pagination + row count */}
+          {/* Footer: pagination + page info */}
           <div class="flex items-center justify-between mt-2 text-xs text-gray-500 dark:text-gray-400">
-            <span>
-              {c().totalRows
-                ? `${totalRows()} / ${c().totalRows!.toLocaleString('fr-FR')} rows`
-                : `${totalRows()} row${totalRows() !== 1 ? 's' : ''}`}
-            </span>
+            <Show when={showPageInfo()}>
+              <span>
+                {isPaginated()
+                  ? `Showing ${rangeStart()}\u2013${rangeEnd()} of ${sortedRows().length.toLocaleString('fr-FR')}`
+                  : `${sortedRows().length} row${sortedRows().length !== 1 ? 's' : ''}`
+                }
+                {c().totalRows && c().totalRows! > sortedRows().length
+                  ? ` (${c().totalRows!.toLocaleString('fr-FR')} total)`
+                  : ''
+                }
+              </span>
+            </Show>
+            <Show when={!showPageInfo()}><span /></Show>
 
-            <Show when={totalPages() > 1}>
+            <Show when={isPaginated()}>
               <div class="flex items-center gap-1">
                 <button
-                  class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 transition-colors"
+                  class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   disabled={page() === 0}
                   onClick={() => setPage(p => p - 1)}
                 >
-                  &laquo;
+                  &#x25C0; Prev
                 </button>
-                <span>{page() + 1} / {totalPages()}</span>
+                <span class="px-2">Page {page() + 1} / {totalPages()}</span>
                 <button
-                  class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 transition-colors"
+                  class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   disabled={page() >= totalPages() - 1}
                   onClick={() => setPage(p => p + 1)}
                 >
-                  &raquo;
+                  Next &#x25B6;
                 </button>
               </div>
             </Show>

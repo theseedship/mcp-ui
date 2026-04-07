@@ -330,6 +330,24 @@ function TableRenderer(props: {
   const tableParams = props.component.params as any
   let scrollContainerRef: HTMLDivElement | undefined
 
+  // Client-side pagination (v4.0.4) — auto-enabled when rows > pageSize, no server config needed
+  const clientPageSize = () => tableParams.pageSize ?? 25
+  const hasServerPagination = () => !!tableParams.pagination
+  const allRows = () => tableParams.rows || []
+  const needsClientPagination = () =>
+    !hasServerPagination() && clientPageSize() > 0 && allRows().length > clientPageSize()
+  const [clientPage, setClientPage] = createSignal(tableParams.initialPage ?? 0)
+  const clientTotalPages = () => needsClientPagination() ? Math.ceil(allRows().length / clientPageSize()) : 1
+  const clientVisibleRows = createMemo(() => {
+    if (!needsClientPagination()) return allRows()
+    const start = clientPage() * clientPageSize()
+    return allRows().slice(start, start + clientPageSize())
+  })
+  const clientRangeStart = () => needsClientPagination() ? clientPage() * clientPageSize() + 1 : 1
+  const clientRangeEnd = () => needsClientPagination()
+    ? Math.min((clientPage() + 1) * clientPageSize(), allRows().length)
+    : allRows().length
+
   // Virtualization state
   const [virtualizer, setVirtualizer] = createSignal<any>(null)
   const [isVirtualizing, setIsVirtualizing] = createSignal(false)
@@ -464,10 +482,10 @@ function TableRenderer(props: {
 
   const tableId = `table-${Math.random().toString(36).slice(2, 9)}`
 
-  // Standard table body (non-virtualized)
+  // Standard table body (non-virtualized) — uses client pagination when active
   const StandardTableBody = () => (
     <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-      <For each={tableParams.rows.slice(0, DEFAULT_RESOURCE_LIMITS.maxTableRows)}>
+      <For each={clientVisibleRows().slice(0, DEFAULT_RESOURCE_LIMITS.maxTableRows)}>
         {(row: any, i) => (
           <tr class={`hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${i() % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50/30 dark:bg-gray-800/50'}`}>
             <For each={tableParams.columns}>
@@ -597,6 +615,7 @@ function TableRenderer(props: {
             </table>
           </div>
 
+          {/* Server-side pagination (legacy) */}
           <Show when={tableParams.pagination}>
             <div class="mt-3 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
               <span>
@@ -607,6 +626,32 @@ function TableRenderer(props: {
                 )}{' '}
                 of {tableParams.pagination.totalRows}
               </span>
+            </div>
+          </Show>
+
+          {/* Client-side auto-pagination (v4.0.4) */}
+          <Show when={needsClientPagination()}>
+            <div class="mt-3 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+              <span>
+                Showing {clientRangeStart()}&ndash;{clientRangeEnd()} of {allRows().length.toLocaleString('fr-FR')}
+              </span>
+              <div class="flex items-center gap-1">
+                <button
+                  class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  disabled={clientPage() === 0}
+                  onClick={() => setClientPage(p => p - 1)}
+                >
+                  &#x25C0; Prev
+                </button>
+                <span class="px-2">Page {clientPage() + 1} / {clientTotalPages()}</span>
+                <button
+                  class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  disabled={clientPage() >= clientTotalPages() - 1}
+                  onClick={() => setClientPage(p => p + 1)}
+                >
+                  Next &#x25B6;
+                </button>
+              </div>
             </div>
           </Show>
         </div>

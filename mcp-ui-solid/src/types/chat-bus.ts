@@ -514,8 +514,14 @@ export interface DataPreviewContent {
   freshness?: string
   /** Enable export buttons (CSV/JSON) */
   exportable?: boolean
-  /** Rows per page (default: 25) */
+  /** Rows per page (default: 25). Set 0 to disable pagination. */
   pageSize?: number
+  /** Initial page (0-indexed, default: 0) */
+  initialPage?: number
+  /** Show "Showing X-Y of Z" counter (default: true) */
+  showPageInfo?: boolean
+  /** Callback when page changes (for server-side pagination) */
+  onPageChange?: (page: number) => void
 }
 
 /** Content for map scratchpad section (v3.1.0) */
