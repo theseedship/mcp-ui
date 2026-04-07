@@ -644,7 +644,15 @@ const ActionSection: Component<{
   content: unknown
   onAction?: (action: string, data?: unknown) => void
 }> = (props) => {
-  const actions = () => Array.isArray(props.content) ? props.content as Array<{ label: string; value?: string; action?: string; variant?: string; icon?: string }> : []
+  const actions = () => {
+    if (Array.isArray(props.content)) return props.content as Array<{ label: string; value?: string; action?: string; variant?: string; icon?: string }>
+    const obj = props.content as Record<string, unknown> | null
+    if (obj && Array.isArray(obj.actions)) {
+      console.warn('[MCP-UI] ActionSection: content should be an array, got { actions: [...] }. Unwrapping automatically.')
+      return obj.actions as Array<{ label: string; value?: string; action?: string; variant?: string; icon?: string }>
+    }
+    return []
+  }
   return (
     <div class="flex flex-wrap gap-2">
       <For each={actions()}>
