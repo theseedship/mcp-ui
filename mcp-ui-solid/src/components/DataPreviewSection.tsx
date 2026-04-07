@@ -1,10 +1,11 @@
 /**
- * DataPreviewSection — paginated data table with export
- * v4.0.1: Fixed rendering — defensive guards for store proxy content
+ * DataPreviewSection — paginated, sortable data table with export
+ * v4.0.3: Sortable columns (click header: asc → desc → reset)
  *
  * @experimental
  *
  * Features:
+ * - Sortable columns (type-aware: number, string, date)
  * - Column types (number right-aligned, string left-aligned)
  * - Pagination (configurable page size)
  * - CSV / JSON export buttons
@@ -18,6 +19,8 @@ import type { DataPreviewContent, DataPreviewColumn } from '../types/chat-bus'
 export interface DataPreviewSectionProps {
   content: DataPreviewContent
 }
+
+type SortDir = 'asc' | 'desc' | null
 
 /** Format a number for display (French locale) */
 function formatNumber(value: unknown, format?: string): string {
@@ -40,6 +43,33 @@ function formatCell(value: unknown, col: DataPreviewColumn): string {
     }
   }
   return String(value)
+}
+
+/** Compare two values for sorting, type-aware */
+function compareValues(a: unknown, b: unknown, type?: string): number {
+  if (a == null && b == null) return 0
+  if (a == null) return 1
+  if (b == null) return -1
+
+  if (type === 'number') {
+    const na = typeof a === 'number' ? a : Number(a)
+    const nb = typeof b === 'number' ? b : Number(b)
+    if (isNaN(na) && isNaN(nb)) return 0
+    if (isNaN(na)) return 1
+    if (isNaN(nb)) return -1
+    return na - nb
+  }
+
+  if (type === 'date') {
+    const da = new Date(String(a)).getTime()
+    const db = new Date(String(b)).getTime()
+    if (isNaN(da) && isNaN(db)) return 0
+    if (isNaN(da)) return 1
+    if (isNaN(db)) return -1
+    return da - db
+  }
+
+  return String(a).localeCompare(String(b), 'fr', { sensitivity: 'base' })
 }
 
 /** Generate CSV from columns + rows */
@@ -75,12 +105,10 @@ function resolveContent(raw: unknown): DataPreviewContent | null {
   if (!raw || typeof raw !== 'object') return null
   const obj = raw as Record<string, unknown>
 
-  // Direct shape: { columns: [...], rows: [...] }
   if (Array.isArray(obj.columns) && Array.isArray(obj.rows)) {
     return obj as unknown as DataPreviewContent
   }
 
-  // Wrapped shape: { content: { columns: [...], rows: [...] } }
   if (obj.content && typeof obj.content === 'object') {
     const inner = obj.content as Record<string, unknown>
     if (Array.isArray(inner.columns) && Array.isArray(inner.rows)) {
@@ -104,27 +132,56 @@ export function DataPreviewSection(props: DataPreviewSectionProps) {
   })
 
   const columns = () => content()?.columns || []
-  const rows = () => content()?.rows || []
+  const rawRows = () => content()?.rows || []
   const pageSize = () => content()?.pageSize || 25
   const [page, setPage] = createSignal(0)
+  const [sortKey, setSortKey] = createSignal<string | null>(null)
+  const [sortDir, setSortDir] = createSignal<SortDir>(null)
 
-  const totalRows = () => rows().length
+  const handleSort = (key: string) => {
+    if (sortKey() === key) {
+      // Cycle: asc → desc → reset
+      if (sortDir() === 'asc') setSortDir('desc')
+      else { setSortKey(null); setSortDir(null) }
+    } else {
+      setSortKey(key)
+      setSortDir('asc')
+    }
+    setPage(0)
+  }
+
+  const sortedRows = createMemo(() => {
+    const r = rawRows()
+    const key = sortKey()
+    const dir = sortDir()
+    if (!key || !dir) return r
+
+    const col = columns().find(c => c.key === key)
+    const type = col?.type
+
+    return [...r].sort((a, b) => {
+      const cmp = compareValues(a[key], b[key], type)
+      return dir === 'desc' ? -cmp : cmp
+    })
+  })
+
+  const totalRows = () => sortedRows().length
   const totalPages = () => Math.max(1, Math.ceil(totalRows() / pageSize()))
 
   const pagedRows = createMemo(() => {
     const start = page() * pageSize()
-    return rows().slice(start, start + pageSize())
+    return sortedRows().slice(start, start + pageSize())
   })
 
   const handleExportCSV = () => {
     const c = content()
     if (!c) return
-    const csv = toCSV(c.columns, c.rows)
+    const csv = toCSV(c.columns, sortedRows())
     downloadFile(csv, 'data-export.csv', 'text/csv;charset=utf-8')
   }
 
   const handleExportJSON = () => {
-    const json = JSON.stringify(rows(), null, 2)
+    const json = JSON.stringify(sortedRows(), null, 2)
     downloadFile(json, 'data-export.json', 'application/json')
   }
 
@@ -132,6 +189,11 @@ export function DataPreviewSection(props: DataPreviewSectionProps) {
     if (col.align) return col.align
     if (col.type === 'number') return 'right'
     return 'left'
+  }
+
+  const sortIndicator = (key: string) => {
+    if (sortKey() !== key) return '\u2195'  // ↕ neutral
+    return sortDir() === 'asc' ? '\u2191' : '\u2193'  // ↑ or ↓
   }
 
   return (
@@ -160,14 +222,14 @@ export function DataPreviewSection(props: DataPreviewSectionProps) {
                 <button
                   class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                   onClick={handleExportCSV}
-                  title="Export CSV"
+                  title="Export CSV (sorted)"
                 >
                   CSV
                 </button>
                 <button
                   class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                   onClick={handleExportJSON}
-                  title="Export JSON"
+                  title="Export JSON (sorted)"
                 >
                   JSON
                 </button>
@@ -183,10 +245,23 @@ export function DataPreviewSection(props: DataPreviewSectionProps) {
                   <For each={columns()}>
                     {(col) => (
                       <th
-                        class="px-3 py-2 font-medium text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700"
+                        class="px-3 py-2 font-medium text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700 cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
                         style={{ "text-align": columnAlign(col) }}
+                        onClick={() => handleSort(col.key)}
+                        title={`Sort by ${col.label}`}
                       >
-                        {col.label}
+                        <span class="inline-flex items-center gap-1">
+                          {col.label}
+                          <span
+                            class="text-[10px] leading-none"
+                            classList={{
+                              'opacity-30': sortKey() !== col.key,
+                              'opacity-100 text-blue-600 dark:text-blue-400': sortKey() === col.key,
+                            }}
+                          >
+                            {sortIndicator(col.key)}
+                          </span>
+                        </span>
                       </th>
                     )}
                   </For>
