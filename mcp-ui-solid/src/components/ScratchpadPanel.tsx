@@ -342,6 +342,16 @@ export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
   )
 }
 
+// ─── Helpers ────────────────────────────────────────────────
+
+/** Parse content that may arrive as a JSON string from SSE transport */
+function parseContent(content: unknown): unknown {
+  if (typeof content === 'string') {
+    try { return JSON.parse(content) } catch { return content }
+  }
+  return content
+}
+
 // ─── Section Renderer ────────────────────────────────────────
 
 const SectionRenderer: Component<{
@@ -356,23 +366,23 @@ const SectionRenderer: Component<{
     <div class="px-4 py-3">
       <h4 class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">{props.section.title}</h4>
       <Switch>
-        <Match when={props.section.type === 'data'}><DataSection content={props.section.content} /></Match>
-        <Match when={props.section.type === 'filter'}><InteractiveFilterSection content={props.section.content} filters={props.filters} onFilterChange={props.onFilterChange} /></Match>
+        <Match when={props.section.type === 'data'}><DataSection content={parseContent(props.section.content)} /></Match>
+        <Match when={props.section.type === 'filter'}><InteractiveFilterSection content={parseContent(props.section.content)} filters={props.filters} onFilterChange={props.onFilterChange} /></Match>
         <Match when={props.section.type === 'message'}><p class="text-sm text-gray-700 dark:text-gray-300">{String(props.section.content)}</p></Match>
-        <Match when={props.section.type === 'action'}><ActionSection content={props.section.content} onAction={props.onAction} /></Match>
-        <Match when={props.section.type === 'steps'}><EnrichedStepsSection content={props.section.content} onAction={props.onAction} onFilterChange={props.onFilterChange} /></Match>
-        <Match when={props.section.type === 'form'}><EmbeddedFormSection content={props.section.content} sectionId={props.section.id} onAction={props.onAction} onSubmit={props.onSubmit} /></Match>
-        <Match when={props.section.type === 'understanding'}><UnderstandingSection content={props.section.content} /></Match>
-        <Match when={props.section.type === 'feedback'}><FeedbackSection content={props.section.content} onAction={props.onAction} /></Match>
-        <Match when={props.section.type === 'prompt'}><PromptSection content={props.section.content} onAction={props.onAction} /></Match>
-        <Match when={props.section.type === 'stepper'}><StepperProgressSection content={props.section.content} /></Match>
-        <Match when={props.section.type === 'error'}><ErrorSectionRenderer content={props.section.content} onAction={props.onAction} /></Match>
-        <Match when={props.section.type === 'source_card'}><SourceCardSection content={props.section.content} /></Match>
-        <Match when={props.section.type === 'diff'}><DiffSection content={props.section.content} /></Match>
-        <Match when={props.section.type === 'verified_text'}><VerifiedText {...(props.section.content as VerifiedTextContent)} onHallucinationClick={(h) => props.onAction?.('hallucination_click', h)} /></Match>
-        <Match when={props.section.type === 'data_preview'}><DataPreviewSection content={props.section.content as DataPreviewContent} /></Match>
-        <Match when={props.section.type === 'map'}>{(() => { const c = props.section.content as MapSectionContent; return <MapRenderer params={{ geojson: c.geojson, center: c.center, zoom: c.zoom, geojsonStyle: c.style, popup: c.popup, layers: c.layers, height: c.height || '300px', fitBounds: true }} /> })()}</Match>
-        <Match when={props.section.type === 'chart'}><ChartJSRenderer component={{ id: props.section.id, type: 'chart', position: { colStart: 1, colSpan: 12 }, params: { ...(props.section.content as ChartComponentParams), renderer: 'native', height: (props.section.content as any)?.height || '250px' } }} /></Match>
+        <Match when={props.section.type === 'action'}><ActionSection content={parseContent(props.section.content)} onAction={props.onAction} /></Match>
+        <Match when={props.section.type === 'steps'}><EnrichedStepsSection content={parseContent(props.section.content)} onAction={props.onAction} onFilterChange={props.onFilterChange} /></Match>
+        <Match when={props.section.type === 'form'}><EmbeddedFormSection content={parseContent(props.section.content)} sectionId={props.section.id} onAction={props.onAction} onSubmit={props.onSubmit} /></Match>
+        <Match when={props.section.type === 'understanding'}><UnderstandingSection content={parseContent(props.section.content)} /></Match>
+        <Match when={props.section.type === 'feedback'}><FeedbackSection content={parseContent(props.section.content)} onAction={props.onAction} /></Match>
+        <Match when={props.section.type === 'prompt'}><PromptSection content={parseContent(props.section.content)} onAction={props.onAction} /></Match>
+        <Match when={props.section.type === 'stepper'}><StepperProgressSection content={parseContent(props.section.content)} /></Match>
+        <Match when={props.section.type === 'error'}><ErrorSectionRenderer content={parseContent(props.section.content)} onAction={props.onAction} /></Match>
+        <Match when={props.section.type === 'source_card'}><SourceCardSection content={parseContent(props.section.content)} /></Match>
+        <Match when={props.section.type === 'diff'}><DiffSection content={parseContent(props.section.content)} /></Match>
+        <Match when={props.section.type === 'verified_text'}><VerifiedText {...(parseContent(props.section.content) as VerifiedTextContent)} onHallucinationClick={(h) => props.onAction?.('hallucination_click', h)} /></Match>
+        <Match when={props.section.type === 'data_preview'}><DataPreviewSection content={parseContent(props.section.content) as DataPreviewContent} /></Match>
+        <Match when={props.section.type === 'map'}>{(() => { const c = parseContent(props.section.content) as MapSectionContent; return <MapRenderer params={{ geojson: c.geojson, center: c.center, zoom: c.zoom, geojsonStyle: c.style, popup: c.popup, layers: c.layers, height: c.height || '300px', fitBounds: true }} /> })()}</Match>
+        <Match when={props.section.type === 'chart'}>{(() => { const c = parseContent(props.section.content) as ChartComponentParams; return <ChartJSRenderer component={{ id: props.section.id, type: 'chart', position: { colStart: 1, colSpan: 12 }, params: { ...c, renderer: 'native', height: (c as any)?.height || '250px' } }} /> })()}</Match>
         <Match when={true}><pre class="text-xs text-gray-500 overflow-auto">{JSON.stringify(props.section.content, null, 2)}</pre></Match>
       </Switch>
     </div>
