@@ -330,30 +330,74 @@ function TableRenderer(props: {
   const tableParams = props.component.params as any
   let scrollContainerRef: HTMLDivElement | undefined
 
-  // Client-side pagination (v4.0.4) — auto-enabled when rows > pageSize, no server config needed
+  // ─── Client-side sorting (v4.0.5) ────────────────────────
+  const allRows = () => tableParams.rows || []
+  const columns = () => tableParams.columns || []
+  const [sortKey, setSortKey] = createSignal<string | null>(null)
+  const [sortDir, setSortDir] = createSignal<'asc' | 'desc' | null>(null)
+
+  const handleSort = (key: string) => {
+    if (sortKey() === key) {
+      if (sortDir() === 'asc') setSortDir('desc')
+      else { setSortKey(null); setSortDir(null) }
+    } else {
+      setSortKey(key)
+      setSortDir('asc')
+    }
+    setClientPage(0)
+  }
+
+  const sortedRows = createMemo(() => {
+    const r = allRows()
+    const key = sortKey()
+    const dir = sortDir()
+    if (!key || !dir) return r
+    const col = columns().find((c: any) => c.key === key)
+    const isNum = col?.type === 'number' || (r.length > 0 && typeof r[0]?.[key] === 'number')
+    return [...r].sort((a: any, b: any) => {
+      const va = a[key], vb = b[key]
+      if (va == null && vb == null) return 0
+      if (va == null) return 1
+      if (vb == null) return -1
+      let cmp: number
+      if (isNum) {
+        cmp = (Number(va) || 0) - (Number(vb) || 0)
+      } else {
+        cmp = String(va).localeCompare(String(vb), 'fr', { sensitivity: 'base' })
+      }
+      return dir === 'desc' ? -cmp : cmp
+    })
+  })
+
+  const sortIndicator = (key: string) => {
+    if (sortKey() !== key) return '\u2195'
+    return sortDir() === 'asc' ? '\u2191' : '\u2193'
+  }
+
+  // ─── Client-side pagination (v4.0.4) ─────────────────────
   const clientPageSize = () => tableParams.pageSize ?? 25
   const hasServerPagination = () => !!tableParams.pagination
-  const allRows = () => tableParams.rows || []
   const needsClientPagination = () =>
-    !hasServerPagination() && clientPageSize() > 0 && allRows().length > clientPageSize()
+    !hasServerPagination() && clientPageSize() > 0 && sortedRows().length > clientPageSize()
   const [clientPage, setClientPage] = createSignal(tableParams.initialPage ?? 0)
-  const clientTotalPages = () => needsClientPagination() ? Math.ceil(allRows().length / clientPageSize()) : 1
+  const clientTotalPages = () => needsClientPagination() ? Math.ceil(sortedRows().length / clientPageSize()) : 1
   const clientVisibleRows = createMemo(() => {
-    if (!needsClientPagination()) return allRows()
+    if (!needsClientPagination()) return sortedRows()
     const start = clientPage() * clientPageSize()
-    return allRows().slice(start, start + clientPageSize())
+    return sortedRows().slice(start, start + clientPageSize())
   })
   const clientRangeStart = () => needsClientPagination() ? clientPage() * clientPageSize() + 1 : 1
   const clientRangeEnd = () => needsClientPagination()
-    ? Math.min((clientPage() + 1) * clientPageSize(), allRows().length)
-    : allRows().length
+    ? Math.min((clientPage() + 1) * clientPageSize(), sortedRows().length)
+    : sortedRows().length
 
-  // Virtualization state
+  // ─── Virtualization ──────────────────────────────────────
   const [virtualizer, setVirtualizer] = createSignal<any>(null)
   const [isVirtualizing, setIsVirtualizing] = createSignal(false)
 
-  // Determine if virtualization should be enabled
+  // Disable virtualization when client pagination is active (they conflict)
   const shouldVirtualize = createMemo(() => {
+    if (needsClientPagination()) return false // pagination handles slicing
     const opts = tableParams.virtualize
     if (opts === false) return false
     if (opts === true) return true
@@ -362,7 +406,6 @@ function TableRenderer(props: {
       const threshold = opts.threshold ?? 100
       return (tableParams.rows?.length ?? 0) > threshold
     }
-    // Auto-enable if > 100 rows by default
     return (tableParams.rows?.length ?? 0) > 100
   })
 
@@ -600,10 +643,23 @@ function TableRenderer(props: {
                     {(column: any) => (
                       <th
                         scope="col"
-                        class="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700 first:pl-6 last:pr-6 bg-gray-50 dark:bg-gray-900/50"
+                        class="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700 first:pl-6 last:pr-6 bg-gray-50 dark:bg-gray-900/50 cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors"
                         style={column.width ? { width: column.width } : {}}
+                        onClick={() => handleSort(column.key)}
+                        title={`Sort by ${column.label}`}
                       >
-                        {column.label}
+                        <span class="inline-flex items-center gap-1">
+                          {column.label}
+                          <span
+                            class="text-[10px] leading-none"
+                            classList={{
+                              'opacity-30': sortKey() !== column.key,
+                              'opacity-100 text-blue-600 dark:text-blue-400': sortKey() === column.key,
+                            }}
+                          >
+                            {sortIndicator(column.key)}
+                          </span>
+                        </span>
                       </th>
                     )}
                   </For>
