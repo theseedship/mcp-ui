@@ -6,13 +6,17 @@
  */
 
 import { Component, Show, For, Switch, Match, createSignal, createEffect, onCleanup } from 'solid-js'
-import type { ScratchpadState, ScratchpadSection, VerifiedTextContent, DataPreviewContent, MapSectionContent } from '../types/chat-bus'
+import type { ScratchpadState, ScratchpadSection, VerifiedTextContent, DataPreviewContent, MapSectionContent, AgentCardContent, SplitStepperContent, AgentHandoffContent, BriefingDiffContent } from '../types/chat-bus'
 import type { FormFieldParams, ChartComponentParams } from '../types'
 import { FormFieldRenderer } from './FormFieldRenderer'
 import { VerifiedText } from './VerifiedText'
 import { DataPreviewSection } from './DataPreviewSection'
 import { MapRenderer } from './MapRenderer'
 import { ChartJSRenderer } from './ChartJSRenderer'
+import { AgentCard, AgentStatusBadge } from './AgentCard'
+import { SplitStepper } from './SplitStepper'
+import { AgentHandoff } from './AgentHandoff'
+import { BriefingDiff } from './BriefingDiff'
 
 export interface ScratchpadPanelProps {
   state: ScratchpadState
@@ -177,6 +181,14 @@ export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
         <div class="flex items-center gap-2">
           <span class="text-base">&#128221;</span>
           <h3 class="text-sm font-semibold text-gray-900 dark:text-white">{props.state.title}</h3>
+          {/* AgentStatusBadge — auto-detected from agent_card sections (v4.1.0) */}
+          {(() => {
+            const agentSection = props.state.sections.find(s => s.type === 'agent_card')
+            if (!agentSection) return null
+            const ac = parseContent(agentSection.content) as AgentCardContent | null
+            if (!ac?.name) return null
+            return <AgentStatusBadge agentName={ac.name} status={ac.status || 'idle'} />
+          })()}
           <Show when={isCollapsible()}>
             <svg class={`w-3.5 h-3.5 text-gray-400 transition-transform ${collapsed() ? '-rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
@@ -363,7 +375,7 @@ const SectionRenderer: Component<{
   onSubmit?: (sectionId: string, values: Record<string, unknown>) => void
 }> = (props) => {
   return (
-    <div class="px-4 py-3">
+    <div class="px-4 py-3 animate-[slideDown_0.2s_ease-out]">
       <h4 class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">{props.section.title}</h4>
       <Switch>
         <Match when={props.section.type === 'data'}><DataSection content={parseContent(props.section.content)} /></Match>
@@ -383,6 +395,10 @@ const SectionRenderer: Component<{
         <Match when={props.section.type === 'data_preview'}><DataPreviewSection content={parseContent(props.section.content) as DataPreviewContent} /></Match>
         <Match when={props.section.type === 'map'}>{(() => { const c = parseContent(props.section.content) as MapSectionContent; return <MapRenderer params={{ geojson: c.geojson, center: c.center, zoom: c.zoom, geojsonStyle: c.style, popup: c.popup, layers: c.layers, height: c.height || '300px', fitBounds: true }} /> })()}</Match>
         <Match when={props.section.type === 'chart'}>{(() => { const c = parseContent(props.section.content) as ChartComponentParams; return <ChartJSRenderer component={{ id: props.section.id, type: 'chart', position: { colStart: 1, colSpan: 12 }, params: { ...c, renderer: 'native', height: (c as any)?.height || '250px' } }} /> })()}</Match>
+        <Match when={props.section.type === 'agent_card'}><AgentCard content={parseContent(props.section.content) as AgentCardContent} /></Match>
+        <Match when={props.section.type === 'split_stepper'}><SplitStepper content={parseContent(props.section.content) as SplitStepperContent} /></Match>
+        <Match when={props.section.type === 'agent_handoff'}><AgentHandoff content={parseContent(props.section.content) as AgentHandoffContent} /></Match>
+        <Match when={props.section.type === 'briefing_diff'}><BriefingDiff content={parseContent(props.section.content) as BriefingDiffContent} /></Match>
         <Match when={true}><pre class="text-xs text-gray-500 overflow-auto">{JSON.stringify(props.section.content, null, 2)}</pre></Match>
       </Switch>
     </div>
@@ -654,30 +670,63 @@ const ActionSection: Component<{
   content: unknown
   onAction?: (action: string, data?: unknown) => void
 }> = (props) => {
-  const actions = () => {
-    if (Array.isArray(props.content)) return props.content as Array<{ label: string; value?: string; action?: string; variant?: string; icon?: string }>
-    const obj = props.content as Record<string, unknown> | null
-    if (obj && Array.isArray(obj.actions)) {
-      console.warn('[MCP-UI] ActionSection: content should be an array, got { actions: [...] }. Unwrapping automatically.')
-      return obj.actions as Array<{ label: string; value?: string; action?: string; variant?: string; icon?: string }>
-    }
-    return []
+  const data = () => {
+    const c = props.content as any
+    if (Array.isArray(c)) return { actions: c, title: undefined, preview: undefined, validation: undefined }
+    if (c && Array.isArray(c.actions)) return { actions: c.actions, title: c.title, preview: c.preview, validation: c.validation }
+    return { actions: [], title: undefined, preview: undefined, validation: undefined }
   }
+
   return (
-    <div class="flex flex-wrap gap-2">
-      <For each={actions()}>
-        {(item) => (
-          <button type="button" onClick={() => props.onAction?.(item.value || item.action || item.label, item)}
-            class={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
-              item.variant === 'primary' ? 'bg-blue-600 text-white hover:bg-blue-700'
-              : item.variant === 'danger' ? 'bg-red-600 text-white hover:bg-red-700'
-              : 'border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-            }`}>
-            <Show when={item.icon}><span class="mr-1">{item.icon}</span></Show>
-            {item.label}
-          </button>
+    <div>
+      {/* Confirm checkpoint: title + preview (v4.1.0) */}
+      <Show when={data().title}>
+        <p class="text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">{data().title}</p>
+      </Show>
+      <Show when={data().preview}>
+        {(preview) => (
+          <div class="mb-2 p-2 rounded bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs text-gray-600 dark:text-gray-400">
+            <Show when={preview().count != null}>
+              <span class="font-medium text-gray-800 dark:text-gray-200">{preview().count}</span> items
+            </Show>
+            <Show when={preview().summary}>
+              <span class="ml-1">&mdash; {preview().summary}</span>
+            </Show>
+          </div>
         )}
-      </For>
+      </Show>
+      <Show when={data().validation && data().validation.confidence != null}>
+        <div class="mb-2 flex items-center gap-2 text-xs">
+          <span classList={{
+            'text-green-600 dark:text-green-400': data().validation.confidence >= 0.8,
+            'text-amber-600 dark:text-amber-400': data().validation.confidence >= 0.5 && data().validation.confidence < 0.8,
+            'text-red-600 dark:text-red-400': data().validation.confidence < 0.5,
+          }}>
+            {Math.round(data().validation.confidence * 100)}% verified
+          </span>
+          <Show when={data().validation.hallucinated?.length > 0}>
+            <span class="text-amber-600">({data().validation.hallucinated.length} unverified)</span>
+          </Show>
+        </div>
+      </Show>
+
+      {/* Action buttons */}
+      <div class="flex flex-wrap gap-2">
+        <For each={data().actions as Array<{ label: string; value?: string; action?: string; variant?: string; icon?: string }>}>
+          {(item) => (
+            <button type="button" on:click={() => props.onAction?.(item.value || item.action || item.label, item)}
+              class={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                item.variant === 'primary' ? 'bg-blue-600 text-white hover:bg-blue-700'
+                : item.variant === 'danger' ? 'bg-red-600 text-white hover:bg-red-700'
+                : item.variant === 'secondary' ? 'border border-blue-300 dark:border-blue-600 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                : 'border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+              }`}>
+              <Show when={item.icon}><span class="mr-1">{item.icon}</span></Show>
+              {item.label}
+            </button>
+          )}
+        </For>
+      </div>
     </div>
   )
 }
@@ -737,18 +786,21 @@ const FeedbackSection: Component<{
 }> = (props) => {
   const [comment, setComment] = createSignal('')
   const [showComment, setShowComment] = createSignal(false)
+  const [submitted, setSubmitted] = createSignal<string | null>(null)
   const data = () => {
     const c = props.content as any
-    // Support both formats: options array (universal) and approve/reject (simple)
     const options = c?.options || [
-      { value: c?.approve?.value || 'approve', label: c?.approve?.label || 'Yes', icon: '👍', variant: 'primary' },
-      { value: c?.reject?.value || 'reject', label: c?.reject?.label || 'No', icon: '👎' },
+      { value: c?.approve?.value || 'approve', label: c?.approve?.label || 'Yes', icon: '\uD83D\uDC4D', variant: 'primary' },
+      { value: c?.reject?.value || 'reject', label: c?.reject?.label || 'No', icon: '\uD83D\uDC4E' },
     ]
     return {
       question: c?.question || '',
       options: options as Array<{ value: string; label: string; icon?: string; variant?: string; needsComment?: boolean }>,
       allowFreeText: c?.allowFreeText ?? c?.allowComment ?? false,
       placeholder: c?.placeholder || c?.commentPlaceholder || 'Add a comment...',
+      // v4.1.0: per-step feedback
+      agentId: c?.agentId as string | undefined,
+      stepId: c?.stepId as string | undefined,
     }
   }
 
@@ -757,35 +809,65 @@ const FeedbackSection: Component<{
       setShowComment(true)
       return
     }
-    props.onAction?.('feedback', { option: option.value, comment: comment() })
+    setSubmitted(option.value)
+    const payload = {
+      option: option.value,
+      comment: comment(),
+      ...(data().agentId ? { agentId: data().agentId } : {}),
+      ...(data().stepId ? { stepId: data().stepId } : {}),
+    }
+    console.info('[MCP-UI:HITL] user responded', {
+      agentId: data().agentId, stepId: data().stepId, action: option.value,
+    })
+    props.onAction?.('feedback', payload)
   }
 
   return (
     <div class="space-y-3">
       <p class="text-sm text-gray-700 dark:text-gray-300">{data().question}</p>
-      <div class="flex flex-wrap gap-2">
-        <For each={data().options}>
-          {(option) => (
-            <button type="button" onClick={() => handleOption(option)}
-              class={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex items-center gap-1 ${
-                option.variant === 'primary' ? 'bg-blue-600 text-white hover:bg-blue-700'
-                : option.variant === 'danger' ? 'bg-red-600 text-white hover:bg-red-700'
-                : 'border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-              }`}>
-              <Show when={option.icon}><span>{option.icon}</span></Show>
-              {option.label}
-            </button>
-          )}
-        </For>
-      </div>
-      <Show when={data().allowFreeText || showComment()}>
-        <div class="flex gap-1">
-          <input type="text" value={comment()} onInput={(e) => setComment(e.currentTarget.value)}
-            placeholder={data().placeholder} autofocus={showComment()}
-            class="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:border-blue-400 outline-none" />
-          <button type="button" onClick={() => props.onAction?.('feedback', { option: 'comment', comment: comment() })}
-            class="px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">Send</button>
+
+      {/* Already submitted — show micro-badge */}
+      <Show when={submitted()}>
+        <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+          <span classList={{
+            'text-green-600': submitted() === 'approve',
+            'text-red-600': submitted() === 'reject',
+            'text-blue-600': submitted() !== 'approve' && submitted() !== 'reject',
+          }}>
+            {submitted() === 'approve' ? '\u2705' : submitted() === 'reject' ? '\u274C' : '\uD83D\uDCAC'} {submitted()}
+          </span>
+          <Show when={comment()}>
+            <span class="italic">&mdash; {comment()}</span>
+          </Show>
         </div>
+      </Show>
+
+      {/* Buttons — hidden after submit */}
+      <Show when={!submitted()}>
+        <div class="flex flex-wrap gap-2">
+          <For each={data().options}>
+            {(option) => (
+              <button type="button" on:click={() => handleOption(option)}
+                class={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex items-center gap-1 ${
+                  option.variant === 'primary' ? 'bg-blue-600 text-white hover:bg-blue-700'
+                  : option.variant === 'danger' ? 'bg-red-600 text-white hover:bg-red-700'
+                  : 'border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                }`}>
+                <Show when={option.icon}><span>{option.icon}</span></Show>
+                {option.label}
+              </button>
+            )}
+          </For>
+        </div>
+        <Show when={data().allowFreeText || showComment()}>
+          <div class="flex gap-1">
+            <input type="text" value={comment()} onInput={(e) => setComment(e.currentTarget.value)}
+              placeholder={data().placeholder} autofocus={showComment()}
+              class="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:border-blue-400 outline-none" />
+            <button type="button" on:click={() => { setSubmitted('comment'); props.onAction?.('feedback', { option: 'comment', comment: comment(), agentId: data().agentId, stepId: data().stepId }) }}
+              class="px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">Send</button>
+          </div>
+        </Show>
       </Show>
     </div>
   )

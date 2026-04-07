@@ -48,6 +48,12 @@ export { dispatchScratchpad, useScratchpadState } from './stores/scratchpad-stor
 export { VerifiedText } from './components/VerifiedText'
 export { DataPreviewSection } from './components/DataPreviewSection'
 
+// Agent AITL Components (v4.1.0)
+export { AgentCard, AgentStatusBadge } from './components/AgentCard'
+export { SplitStepper } from './components/SplitStepper'
+export { AgentHandoff } from './components/AgentHandoff'
+export { BriefingDiff } from './components/BriefingDiff'
+
 // Autocomplete Components
 export { GhostText, GhostTextInput } from './components/GhostText'
 export { AutocompleteDropdown } from './components/AutocompleteDropdown'
@@ -68,6 +74,10 @@ export type { ChatPromptProps } from './components/ChatPrompt'
 export type { ScratchpadPanelProps } from './components/ScratchpadPanel'
 export type { VerifiedTextProps } from './components/VerifiedText'
 export type { DataPreviewSectionProps } from './components/DataPreviewSection'
+export type { AgentCardProps, AgentStatusBadgeProps } from './components/AgentCard'
+export type { SplitStepperProps } from './components/SplitStepper'
+export type { AgentHandoffProps } from './components/AgentHandoff'
+export type { BriefingDiffProps } from './components/BriefingDiff'
 export type { GhostTextProps, GhostTextInputProps } from './components/GhostText'
 export type { AutocompleteDropdownProps } from './components/AutocompleteDropdown'
 export type { AutocompleteFormFieldProps, AutocompleteFormFieldParams } from './components/AutocompleteFormField'
@@ -271,4 +281,9 @@ export type {
   DataPreviewColumn,
   DataPreviewContent,
   MapSectionContent,
+  // Agent AITL types (v4.1.0)
+  AgentCardContent,
+  SplitStepperContent,
+  AgentHandoffContent,
+  BriefingDiffContent,
 } from './types/chat-bus'

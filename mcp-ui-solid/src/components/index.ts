@@ -64,6 +64,19 @@ export type { CodeBlockRendererProps } from './CodeBlockRenderer'
 export { MapRenderer } from './MapRenderer'
 export type { MapRendererProps } from './MapRenderer'
 
+// Agent AITL (v4.1.0)
+export { AgentCard, AgentStatusBadge } from './AgentCard'
+export type { AgentCardProps, AgentStatusBadgeProps } from './AgentCard'
+
+export { SplitStepper } from './SplitStepper'
+export type { SplitStepperProps } from './SplitStepper'
+
+export { AgentHandoff } from './AgentHandoff'
+export type { AgentHandoffProps } from './AgentHandoff'
+
+export { BriefingDiff } from './BriefingDiff'
+export type { BriefingDiffProps } from './BriefingDiff'
+
 // Data Verification (v3.1.0 — anti-hallucination)
 export { VerifiedText } from './VerifiedText'
 export type { VerifiedTextProps } from './VerifiedText'

@@ -111,6 +111,10 @@ export interface ChatCommands {
   /** Change the chat mode */
   setMode: (mode: string) => void
 
+  // --- Agents (v4.1.0) ---
+  /** Trigger an agent from the chat (replaces /macro command) */
+  triggerAgent: (agentId: string, params?: Record<string, unknown>) => void
+
   // --- UI ---
   /** Scroll to a specific message */
   scrollToMessage: (messageId: string) => void
@@ -366,7 +370,7 @@ export interface ScratchpadState {
 export interface ScratchpadSection {
   id: string
   title: string
-  type: 'data' | 'filter' | 'preview' | 'message' | 'action' | 'steps' | 'form' | 'understanding' | 'feedback' | 'prompt' | 'stepper' | 'error' | 'source_card' | 'diff' | 'verified_text' | 'data_preview' | 'map' | 'chart'
+  type: 'data' | 'filter' | 'preview' | 'message' | 'action' | 'steps' | 'form' | 'understanding' | 'feedback' | 'prompt' | 'stepper' | 'error' | 'source_card' | 'diff' | 'verified_text' | 'data_preview' | 'map' | 'chart' | 'agent_card' | 'split_stepper' | 'agent_handoff' | 'briefing_diff'
   content: unknown
   /** Can the human edit this section? */
   editable: boolean
@@ -540,4 +544,69 @@ export interface MapSectionContent {
   layers?: import('./index').MapLayer[]
   /** Map height (CSS, default: '300px') */
   height?: string
+}
+
+// ─── Agent section types (v4.1.0 — AITL sprint) ────────────
+
+/** Content for agent_card scratchpad section */
+export interface AgentCardContent {
+  agentId: string
+  name: string
+  /** Avatar icon key (e.g. 'scales', 'chart', 'search') or emoji */
+  avatar?: string
+  status: 'idle' | 'running' | 'waiting' | 'done' | 'error'
+  /** Agent capabilities as string badges */
+  capabilities?: string[]
+  /** LLM model used */
+  model?: string
+  /** Current step info (shown when running) */
+  currentStep?: { id: string; label: string }
+}
+
+/** Content for split_stepper scratchpad section (parallel agents) */
+export interface SplitStepperContent {
+  agents: Array<{
+    id: string
+    name: string
+    steps: Array<{ id: string; label: string; status: 'done' | 'active' | 'pending' | 'skipped' | 'error' }>
+    status: 'done' | 'active' | 'pending' | 'error'
+  }>
+  /** Final synthesis step (activates when all agents are done) */
+  synthesis?: {
+    status: 'done' | 'active' | 'pending'
+    label: string
+  }
+}
+
+/** Content for agent_handoff scratchpad section */
+export interface AgentHandoffContent {
+  from: { id: string; name: string; avatar?: string }
+  to: { id: string; name: string; avatar?: string }
+  /** Data keys transferred */
+  dataKeys?: string[]
+  /** Summary of what was transferred */
+  summary?: string
+  /** Count of items transferred */
+  itemCount?: number
+}
+
+/** Content for briefing_diff scratchpad section */
+export interface BriefingDiffContent {
+  /** Title of the comparison */
+  title?: string
+  /** When was the previous version */
+  previousDate?: string
+  /** When is the current version */
+  currentDate?: string
+  /** List of changes */
+  changes: Array<{
+    type: 'added' | 'removed' | 'changed'
+    label: string
+    /** Previous value (for 'changed' and 'removed') */
+    previous?: string
+    /** Current value (for 'changed' and 'added') */
+    current?: string
+  }>
+  /** Summary stats */
+  stats?: { added: number; removed: number; changed: number }
 }
