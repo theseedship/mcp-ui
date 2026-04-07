@@ -645,7 +645,7 @@ function TableRenderer(props: {
                         scope="col"
                         class="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700 first:pl-6 last:pr-6 bg-gray-50 dark:bg-gray-900/50 cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors"
                         style={column.width ? { width: column.width } : {}}
-                        onClick={() => handleSort(column.key)}
+                        on:click={() => handleSort(column.key)}
                         title={`Sort by ${column.label}`}
                       >
                         <span class="inline-flex items-center gap-1">
