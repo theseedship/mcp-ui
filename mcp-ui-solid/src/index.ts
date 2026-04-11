@@ -35,7 +35,7 @@ export { UIResourceRenderer, StreamingUIRenderer, GenerativeUIErrorBoundary } fr
 export { DraggableGridItem } from './components/DraggableGridItem'
 export { ResizeHandle } from './components/ResizeHandle'
 export { EditableUIResourceRenderer } from './components/EditableUIResourceRenderer'
-export { ExpandableWrapper } from './components/ExpandableWrapper'
+export { ExpandableWrapper, useExpanded } from './components/ExpandableWrapper'
 export { ComponentToolbar } from './components/ComponentToolbar'
 
 // Chat Bus (v2.4.0 — @experimental)

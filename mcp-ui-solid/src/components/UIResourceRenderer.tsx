@@ -21,7 +21,7 @@ import { ImageGalleryRenderer } from './ImageGalleryRenderer'
 import { VideoRenderer } from './VideoRenderer'
 import { CodeBlockRenderer } from './CodeBlockRenderer'
 import { MapRenderer } from './MapRenderer'
-import { ExpandableWrapper } from './ExpandableWrapper'
+import { ExpandableWrapper, useExpanded } from './ExpandableWrapper'
 import { RenderProvider } from './RenderContext'
 import { useAction } from '../hooks/useAction'
 import { marked } from 'marked'
@@ -409,8 +409,11 @@ function TableRenderer(props: {
     )
   })
 
-  // ─── Client-side pagination (v4.0.4, progressive mode v4.3.2) ─────
-  const clientPageSize = () => tableParams.pageSize ?? 25
+  // ─── Client-side pagination (v4.0.4, progressive v4.3.2, context-aware v4.3.4) ─────
+  const isExpanded = useExpanded()
+  const fullPageSize = () => tableParams.pageSize ?? 25
+  const chatPageSize = () => tableParams.chatPageSize ?? Math.min(10, fullPageSize())
+  const clientPageSize = () => isExpanded() ? fullPageSize() : chatPageSize()
   const hasServerPagination = () => !!tableParams.pagination
   const isProgressiveMode = () => !!tableParams.showAllLabel
   const needsClientPagination = () =>

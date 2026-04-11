@@ -6,8 +6,14 @@
  * imperative components like ChartJS that bind instances to DOM nodes.
  */
 
-import { Component, Show, createSignal, createEffect, onCleanup, JSX } from 'solid-js'
+import { Component, Show, createSignal, createEffect, onCleanup, JSX, createContext, useContext, Accessor } from 'solid-js'
 import { Portal } from 'solid-js/web'
+
+/** Context for child components to know if they're in expanded/fullscreen view */
+const ExpandedContext = createContext<Accessor<boolean>>(() => false)
+
+/** Hook for child components to read expanded state */
+export const useExpanded = () => useContext(ExpandedContext)
 
 export interface ExpandableWrapperProps {
   /** Content to render inline (and in expanded view) */
@@ -103,7 +109,9 @@ export const ExpandableWrapper: Component<ExpandableWrapperProps> = (props) => {
       {/* Inline slot — content lives here when not expanded */}
       <div ref={inlineSlotRef}>
         <div ref={contentRef}>
-          {props.children}
+          <ExpandedContext.Provider value={isExpanded}>
+            {props.children}
+          </ExpandedContext.Provider>
         </div>
       </div>
 

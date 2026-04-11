@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.3.4] - 2026-04-11
+
+### Added — Context-Aware Table Pagination (chat vs fullscreen)
+
+#### `useExpanded` context from ExpandableWrapper
+- ExpandableWrapper now provides `isExpanded` signal via SolidJS context
+- TableRenderer adapts pageSize automatically: compact in chat view, full in expanded view
+- Chat view: `Math.min(10, pageSize)` rows — keeps chat compact
+- Fullscreen: full `pageSize` rows — room to browse
+- Optional `chatPageSize` override (default: `min(10, pageSize)`)
+- Zero server changes needed — just send `pageSize: 20` as before
+- `useExpanded()` hook exported for custom components that need the same behavior
+
 ## [4.3.3] - 2026-04-11
 
 ### Added — Table Search Filter
