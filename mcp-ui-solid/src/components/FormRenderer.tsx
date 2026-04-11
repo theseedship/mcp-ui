@@ -5,7 +5,7 @@
  * Sprint 4: Form state persistence
  */
 
-import { Component, createSignal, For, Show, onMount, createEffect } from 'solid-js'
+import { Component, createSignal, For, Show, onMount, createEffect, onCleanup } from 'solid-js'
 import { FormFieldRenderer } from './FormFieldRenderer'
 import type { UIComponent, FormComponentParams, FormFieldParams } from '../types'
 import { useAction } from '../hooks/useAction'
@@ -56,11 +56,43 @@ export const FormRenderer: Component<FormRendererProps> = (props) => {
     })
   }
 
-  // Initialize form data with default values
+  // Auto-submit countdown state (v4.2.0)
+  const [countdown, setCountdown] = createSignal<number | null>(null)
+  let countdownTimer: ReturnType<typeof setInterval> | null = null
+  const [userInteracted, setUserInteracted] = createSignal(false)
+
+  const cancelCountdown = () => {
+    if (countdownTimer) {
+      clearInterval(countdownTimer)
+      countdownTimer = null
+    }
+    setCountdown(null)
+  }
+
+  const handleUserInteraction = () => {
+    if (!userInteracted()) {
+      setUserInteracted(true)
+      cancelCountdown()
+    }
+  }
+
+  onCleanup(() => cancelCountdown())
+
+  /**
+   * Check if all required fields have prefill values
+   */
+  const allRequiredPrefilled = (): boolean => {
+    return params().fields
+      .filter((f) => f.required)
+      .every((f) => f.prefill != null)
+  }
+
+  // Initialize form data with default values, applying prefill (v4.2.0)
   const initializeForm = (clearStorage = false) => {
     const initial: Record<string, any> = {}
     for (const field of params().fields) {
-      initial[field.name] = field.defaultValue ?? getFieldDefault(field.type)
+      // prefill takes priority over defaultValue
+      initial[field.name] = field.prefill ?? field.defaultValue ?? getFieldDefault(field.type)
     }
     setFormData(initial)
     setErrors({})
@@ -91,7 +123,29 @@ export const FormRenderer: Component<FormRendererProps> = (props) => {
     }
   })
 
+  // Auto-submit countdown (v4.2.0)
+  createEffect(() => {
+    const delay = params().autoSubmitDelay
+    if (!delay || !allRequiredPrefilled() || userInteracted()) return
+
+    let remaining = Math.ceil(delay / 1000)
+    setCountdown(remaining)
+
+    countdownTimer = setInterval(() => {
+      remaining--
+      if (remaining <= 0) {
+        cancelCountdown()
+        // Trigger submit programmatically
+        const form = document.querySelector(`#form-${props.component.id}`) as HTMLFormElement | null
+        if (form) form.requestSubmit()
+      } else {
+        setCountdown(remaining)
+      }
+    }, 1000)
+  })
+
   const handleFieldChange = (name: string, value: any) => {
+    handleUserInteraction()
     setFormData((prev) => ({ ...prev, [name]: value }))
     // Clear error on change
     if (errors()[name]) {
@@ -179,7 +233,7 @@ export const FormRenderer: Component<FormRendererProps> = (props) => {
         </h3>
       </Show>
 
-      <form onSubmit={handleSubmit} noValidate>
+      <form id={`form-${props.component.id}`} onSubmit={handleSubmit} noValidate>
         <div class={layoutClass()}>
           <For each={params().fields}>
             {(field) => (
@@ -200,6 +254,22 @@ export const FormRenderer: Component<FormRendererProps> = (props) => {
             <p class="text-sm text-red-600 dark:text-red-400" role="alert">
               {errors()._form}
             </p>
+          </div>
+        </Show>
+
+        {/* Auto-submit countdown (v4.2.0) */}
+        <Show when={countdown() != null}>
+          <div class="mt-4 flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
+            <span class="text-sm text-blue-700 dark:text-blue-300">
+              {params().submitLabel || 'Submit'} in {countdown()}s...
+            </span>
+            <button
+              type="button"
+              onClick={() => { cancelCountdown(); setUserInteracted(true) }}
+              class="text-sm text-blue-600 dark:text-blue-400 underline hover:text-blue-800 dark:hover:text-blue-200"
+            >
+              Cancel
+            </button>
           </div>
         </Show>
 

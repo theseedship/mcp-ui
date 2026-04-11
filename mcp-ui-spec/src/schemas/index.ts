@@ -85,6 +85,9 @@ export const ShowWhenConditionSchema = z.object({
   value: z.any().optional(),
 })
 
+// Prefill source schema (v4.2.0)
+export const PrefillSourceSchema = z.enum(['user', 'detected', 'inferred', 'default'])
+
 // Form field schema
 export const FormFieldSchema = z.object({
   name: z.string().regex(/^[a-zA-Z][a-zA-Z0-9_]*$/),
@@ -95,6 +98,11 @@ export const FormFieldSchema = z.object({
   required: z.boolean().optional(),
   disabled: z.boolean().optional(),
   defaultValue: z.any().optional(),
+  // Prefill — pre-populated value with source tracking (v4.2.0)
+  prefill: z.union([z.string(), z.array(z.string())]).optional(),
+  displayHint: z.string().optional(),
+  source: PrefillSourceSchema.optional(),
+  muted: z.boolean().optional(),
   // Text/textarea specific
   minLength: z.number().int().min(0).optional(),
   maxLength: z.number().int().min(1).optional(),
@@ -155,6 +163,8 @@ export const FormComponentParamsSchema = z.object({
   excludeFromPersistence: z.array(z.string()).optional(),
   persistExpiresIn: z.number().int().positive().optional(),
   layout: z.enum(['vertical', 'horizontal', 'inline']).optional(),
+  // Auto-submit countdown in ms when all required fields are prefilled (v4.2.0)
+  autoSubmitDelay: z.number().int().min(1000).max(30000).optional(),
 })
 
 // Modal size schema (Sprint 3)
@@ -374,6 +384,7 @@ export type FormFieldType = z.infer<typeof FormFieldTypeSchema>
 export type FormField = z.infer<typeof FormFieldSchema>
 export type FormSubmitAction = z.infer<typeof FormSubmitActionSchema>
 export type FormComponentParams = z.infer<typeof FormComponentParamsSchema>
+export type PrefillSource = z.infer<typeof PrefillSourceSchema>
 
 // Conditional field types (Sprint 2)
 export type ShowWhenOperator = z.infer<typeof ShowWhenOperatorSchema>

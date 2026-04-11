@@ -5,7 +5,7 @@
  */
 
 import { Component, Show, For, Switch, Match, Accessor, createSignal, createEffect, onCleanup } from 'solid-js'
-import type { FormFieldParams } from '../types'
+import type { FormFieldParams, PrefillSource } from '../types'
 import { useConditionalField } from '../hooks/useConditionalField'
 
 export interface FormFieldRendererProps {
@@ -20,6 +20,14 @@ export interface FormFieldRendererProps {
   formData?: Accessor<Record<string, any>>
 }
 
+/** Badge config by prefill source */
+const SOURCE_BADGES: Record<PrefillSource, { icon: string; title: string } | null> = {
+  detected: { icon: '\u2705', title: 'Detected from message' },
+  inferred: { icon: '\uD83D\uDD17', title: 'Inferred from context' },
+  user:     { icon: '\u270F\uFE0F', title: 'Previously provided' },
+  default:  null,
+}
+
 export const FormFieldRenderer: Component<FormFieldRendererProps> = (props) => {
   // Conditional visibility based on showWhen
   const { isVisible } = useConditionalField({
@@ -27,9 +35,22 @@ export const FormFieldRenderer: Component<FormFieldRendererProps> = (props) => {
     formData: props.formData || (() => ({})),
   })
 
+  // Muted state — starts muted if field says so, clears on focus/click
+  const [isMuted, setIsMuted] = createSignal(!!props.field.muted)
+
+  const handleFieldFocus = () => {
+    if (isMuted()) setIsMuted(false)
+  }
+
   const status = () => props.field.fieldStatus || 'optional'
   const isUnsupported = () => status() === 'unsupported'
   const isFieldDisabled = () => props.disabled || isUnsupported()
+
+  const sourceBadge = () => {
+    const src = props.field.source
+    if (!src) return null
+    return SOURCE_BADGES[src]
+  }
 
   const baseInputClass = () => `
     w-full px-3 py-2 border rounded-md
@@ -40,6 +61,7 @@ export const FormFieldRenderer: Component<FormFieldRendererProps> = (props) => {
       : 'border-gray-300 dark:border-gray-600'}
     dark:bg-gray-700 dark:text-white
     ${isUnsupported() ? 'opacity-50' : ''}
+    ${isMuted() ? 'bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400' : ''}
   `
 
   const fieldId = () => `field-${props.field.name}`
@@ -47,12 +69,15 @@ export const FormFieldRenderer: Component<FormFieldRendererProps> = (props) => {
 
   return (
     <Show when={isVisible()}>
-    <div class="space-y-1">
+    <div class="space-y-1" onFocusIn={handleFieldFocus} onClick={handleFieldFocus}>
       <Show when={props.field.label && props.field.type !== 'checkbox'}>
         <label
           for={fieldId()}
-          class={`block text-sm font-medium ${isUnsupported() ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300'}`}
+          class={`block text-sm font-medium ${isUnsupported() ? 'text-gray-400 dark:text-gray-500' : isMuted() ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300'}`}
         >
+          <Show when={sourceBadge()}>
+            <span class="mr-1" title={sourceBadge()!.title}>{sourceBadge()!.icon}</span>
+          </Show>
           {props.field.label}
           <Show when={props.field.required || status() === 'required'}>
             <span class="text-red-500 ml-1" aria-hidden="true">*</span>
@@ -322,7 +347,13 @@ export const FormFieldRenderer: Component<FormFieldRendererProps> = (props) => {
         </p>
       </Show>
 
-      <Show when={props.field.helpText && !props.error && !props.field.statusReason}>
+      <Show when={props.field.displayHint && props.field.prefill != null}>
+        <p class={`text-xs italic ${isMuted() ? 'text-gray-400 dark:text-gray-500' : 'text-gray-500 dark:text-gray-400'}`}>
+          {props.field.displayHint}
+        </p>
+      </Show>
+
+      <Show when={props.field.helpText && !props.error && !props.field.statusReason && !props.field.displayHint}>
         <p class="text-xs text-gray-500 dark:text-gray-400">{props.field.helpText}</p>
       </Show>
 

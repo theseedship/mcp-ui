@@ -323,6 +323,9 @@ export interface ShowWhenCondition {
 /**
  * Form field parameters
  */
+/** How a prefilled value was obtained */
+export type PrefillSource = 'user' | 'detected' | 'inferred' | 'default'
+
 export interface FormFieldParams {
   name: string
   type: FormFieldType
@@ -332,6 +335,16 @@ export interface FormFieldParams {
   required?: boolean
   disabled?: boolean
   defaultValue?: any
+
+  // Prefill — pre-populated value with source tracking (v4.2.0)
+  /** Pre-filled value. Field renders with this value instead of empty. */
+  prefill?: string | string[]
+  /** Human-readable display for prefilled value (e.g. "Rhône — déduit de Lyon") */
+  displayHint?: string
+  /** How this value was obtained. Drives visual treatment. */
+  source?: PrefillSource
+  /** If true, field is visually muted (but still editable on click/focus). */
+  muted?: boolean
 
   // Text/textarea specific
   minLength?: number
@@ -428,6 +441,11 @@ export interface FormComponentParams {
    * Custom CSS class (Sprint 7)
    */
   className?: string
+  /**
+   * Auto-submit countdown in ms when all required fields are prefilled (v4.2.0).
+   * Shows a countdown with cancel button. Stops if user interacts.
+   */
+  autoSubmitDelay?: number
 }
 
 /**
