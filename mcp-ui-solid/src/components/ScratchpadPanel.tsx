@@ -525,15 +525,83 @@ const EmbeddedFormSection: Component<{
   onAction?: (action: string, data?: unknown) => void
   onSubmit?: (sectionId: string, values: Record<string, unknown>) => void
 }> = (props) => {
-  const [formData, setFormData] = createSignal<Record<string, any>>({})
   const [dynamicOptions, setDynamicOptions] = createSignal<Record<string, Array<{ label: string; value: string }>>>({})
 
   const config = () => {
     const c = props.content as any
-    return { fields: c?.fields || [], submitLabel: c?.submitLabel || 'Submit' }
+    return {
+      fields: c?.fields || [],
+      submitLabel: c?.submitLabel || 'Submit',
+      autoSubmitDelay: c?.autoSubmitDelay as number | undefined,
+    }
   }
 
-  const updateField = (name: string, value: any) => setFormData(prev => ({ ...prev, [name]: value }))
+  // Initialize form data with prefill values (v4.2.0)
+  const buildInitial = () => {
+    const initial: Record<string, any> = {}
+    for (const field of config().fields) {
+      initial[field.name] = field.prefill ?? field.defaultValue ?? ''
+    }
+    return initial
+  }
+
+  const [formData, setFormData] = createSignal<Record<string, any>>(buildInitial())
+
+  // Re-init when content changes (streaming updates)
+  createEffect(() => {
+    const fields = config().fields
+    if (fields.length > 0) {
+      setFormData((prev) => {
+        const next = { ...prev }
+        for (const field of fields) {
+          // Only apply prefill if the user hasn't changed the field yet
+          if (field.prefill != null && (next[field.name] === undefined || next[field.name] === '')) {
+            next[field.name] = field.prefill
+          }
+        }
+        return next
+      })
+    }
+  })
+
+  // Auto-submit countdown (v4.2.0)
+  const [countdown, setCountdown] = createSignal<number | null>(null)
+  let countdownTimer: ReturnType<typeof setInterval> | null = null
+  const [userInteracted, setUserInteracted] = createSignal(false)
+
+  const cancelCountdown = () => {
+    if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null }
+    setCountdown(null)
+  }
+
+  onCleanup(() => cancelCountdown())
+
+  createEffect(() => {
+    const delay = config().autoSubmitDelay
+    if (!delay || userInteracted()) return
+    const allRequiredPrefilled = config().fields
+      .filter((f: any) => f.required)
+      .every((f: any) => f.prefill != null)
+    if (!allRequiredPrefilled) return
+
+    let remaining = Math.ceil(delay / 1000)
+    setCountdown(remaining)
+    countdownTimer = setInterval(() => {
+      remaining--
+      if (remaining <= 0) {
+        cancelCountdown()
+        const form = document.querySelector(`#scratchpad-form-${props.sectionId}`) as HTMLFormElement | null
+        if (form) form.requestSubmit()
+      } else {
+        setCountdown(remaining)
+      }
+    }, 1000)
+  })
+
+  const updateField = (name: string, value: any) => {
+    if (!userInteracted()) { setUserInteracted(true); cancelCountdown() }
+    setFormData(prev => ({ ...prev, [name]: value }))
+  }
 
   // depends_on reactive (#9)
   createEffect(() => {
@@ -587,7 +655,7 @@ const EmbeddedFormSection: Component<{
   }
 
   return (
-    <form onSubmit={handleSubmit} class="flex flex-col gap-3">
+    <form id={`scratchpad-form-${props.sectionId}`} onSubmit={handleSubmit} class="flex flex-col gap-3">
       <For each={config().fields}>
         {(field) => (
           <FormFieldRenderer
@@ -598,6 +666,20 @@ const EmbeddedFormSection: Component<{
           />
         )}
       </For>
+      <Show when={countdown() != null}>
+        <div class="flex items-center gap-3 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md text-sm">
+          <span class="text-blue-700 dark:text-blue-300">
+            {config().submitLabel} in {countdown()}s...
+          </span>
+          <button
+            type="button"
+            onClick={() => { cancelCountdown(); setUserInteracted(true) }}
+            class="text-blue-600 dark:text-blue-400 underline hover:text-blue-800 dark:hover:text-blue-200"
+          >
+            Cancel
+          </button>
+        </div>
+      </Show>
       <div class="flex justify-end">
         <button type="submit" class="px-4 py-2 text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors">
           {config().submitLabel}
