@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.2.2] - 2026-04-11
+
+### Added — Prefilled Forms with Source Indicators
+
+#### Form field prefill (`prefill`, `source`, `displayHint`, `muted`)
+- **`prefill`** — pre-populated value on form fields (string or string[] for multi-select)
+- **`source`** — how the value was obtained: `detected`, `inferred`, `default`, `user`
+- **`displayHint`** — human-readable caption below the field (e.g. "Rhône — déduit de Lyon")
+- **`muted`** — reduced opacity styling, clears on focus/click for seamless editing
+- Source badges: checkmark for detected, link for inferred, pencil for user-provided
+- Backward-compatible — fields without prefill render exactly as before
+
+#### Auto-submit countdown (`autoSubmitDelay`)
+- When all required fields are prefilled, shows "Submit in Ns..." with cancel button
+- Any user interaction cancels the countdown
+- Server controls via `autoSubmitDelay` (1000–30000ms) on form params
+
+#### EmbeddedFormSection (scratchpad forms)
+- Initializes `formData` with `field.prefill` values (was always `{}`)
+- Re-applies prefill on streaming SSE updates without overwriting user edits
+- Full auto-submit countdown support
+
+### Changed
+- `@seed-ship/mcp-ui-spec` bumped to 3.1.0 (new schema fields)
+- `FormFieldSchema` adds `prefill`, `displayHint`, `source`, `muted`
+- `FormComponentParamsSchema` adds `autoSubmitDelay`
+- `PrefillSourceSchema` and `PrefillSource` type exported
+
 ## [4.0.0] - 2026-04-07
 
 ### Added — Data Verification Layer (anti-hallucination)

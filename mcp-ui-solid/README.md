@@ -5,6 +5,44 @@ SolidJS components + chat toolkit for MCP-generated UI. Part of the [MCP UI ecos
 [![npm version](https://img.shields.io/npm/v/@seed-ship/mcp-ui-solid.svg)](https://www.npmjs.com/package/@seed-ship/mcp-ui-solid)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+## What's New in v4.2
+
+- **Prefilled Forms** — Fields render with pre-populated values + source indicators (detected/inferred/default/user)
+- **Source badges** — Visual cues showing how each value was obtained (checkmark, link, pencil icons)
+- **Muted fields** — High-confidence prefills display with reduced opacity, activate on focus/click
+- **Display hints** — Caption below prefilled fields (e.g. "Rhône — déduit de Lyon")
+- **Auto-submit countdown** — When all required fields are prefilled, optional countdown with cancel
+
+### Prefilled Form Example
+
+```tsx
+// SSE payload — server sends prefill + source on each field
+{
+  fields: [
+    {
+      name: 'departement', type: 'select',
+      options: [{ value: '69', label: 'Rhône' }, ...],
+      prefill: '69',
+      displayHint: 'Rhône — déduit de Lyon',
+      source: 'inferred',
+      muted: true,
+    },
+    {
+      name: 'commune', type: 'text',
+      prefill: 'Lyon',
+      source: 'detected',
+      muted: true,
+    },
+    {
+      name: 'type_bien', type: 'select',
+      options: [{ value: '', label: 'Tous' }, ...],
+      // No prefill — user must choose
+    },
+  ],
+  autoSubmitDelay: 3000, // optional countdown
+}
+```
+
 ## What's New in v4.0.0
 
 - **Data Verification Layer** - Anti-hallucination: `validateAgainstSource()` detects ~90% of numerical hallucinations, zero LLM cost, <1ms
