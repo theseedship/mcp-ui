@@ -686,7 +686,7 @@ function TableRenderer(props: {
                 value={searchQuery()}
                 onInput={(e) => handleSearch(e.currentTarget.value)}
                 placeholder={searchPlaceholder()}
-                class="w-full pl-8 pr-8 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 outline-none"
+                class="w-full max-w-xs min-w-[200px] pl-8 pr-8 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 outline-none"
               />
               <Show when={searchQuery()}>
                 <button
@@ -722,13 +722,13 @@ function TableRenderer(props: {
               class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 border-separate border-spacing-0"
               aria-labelledby={tableParams.title ? `${tableId}-title` : undefined}
             >
-              <thead class="bg-gray-50 dark:bg-gray-900/50 sticky top-0 z-10">
+              <thead class="bg-gray-50 dark:bg-gray-900 sticky top-0 z-10">
                 <tr>
                   <For each={tableParams.columns}>
                     {(column: any) => (
                       <th
                         scope="col"
-                        class="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700 first:pl-6 last:pr-6 bg-gray-50 dark:bg-gray-900/50 cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors"
+                        class="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700 first:pl-6 last:pr-6 bg-gray-50 dark:bg-gray-900 cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                         style={column.width ? { width: column.width } : {}}
                         on:click={() => handleSort(column.key)}
                         title={`Sort by ${column.label}`}
