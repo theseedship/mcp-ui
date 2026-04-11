@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.3.5] - 2026-04-11
+
+### Fixed — Sticky Table Header on Scroll
+- Table scroll container now has bounded `max-height` (400px chat, 70vh fullscreen) when rows > 8
+- Combined with existing `sticky top-0` thead, header stays visible while scrolling
+- Works in both chat view and fullscreen modal
+
 ## [4.3.4] - 2026-04-11
 
 ### Added — Context-Aware Table Pagination (chat vs fullscreen)

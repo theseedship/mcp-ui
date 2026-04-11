@@ -554,7 +554,7 @@ function TableRenderer(props: {
   const exportable = tableParams.exportable
   const exportFormats = typeof exportable === 'object' && exportable?.formats
     ? exportable.formats
-    : ['csv', 'tsv', 'json']
+    : ['csv', 'json']
   const exportFilename = (typeof exportable === 'object' && exportable?.filename) || `table-${Math.random().toString(36).slice(2, 9)}`
 
   // Export dropdown state
@@ -638,9 +638,9 @@ function TableRenderer(props: {
   }
 
   return (
-    <ExpandableWrapper title={tableParams.title || 'Table'} copyData={getTableText()} copyLabel="Copy table (TSV)">
+    <ExpandableWrapper title={tableParams.title || 'Table'} copyData={getTableCSV()} copyLabel="Copy table (CSV)">
       <div class="relative w-full h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden group">
-        <Show when={exportable} fallback={<CopyButton getText={getTableText} title="Copy table data" position="top-right" />}>
+        <Show when={exportable} fallback={<CopyButton getText={getTableCSV} title="Copy table (CSV)" position="top-right" />}>
           <div class="absolute right-10 top-2 z-10">
             <button
               onClick={() => setShowExportMenu(!showExportMenu())}
@@ -707,7 +707,13 @@ function TableRenderer(props: {
           <div
             ref={scrollContainerRef}
             class="overflow-x-auto"
-            style={isVirtualizing() ? { 'max-height': '500px', 'overflow-y': 'auto' } : {}}
+            style={
+              isVirtualizing()
+                ? { 'max-height': '500px', 'overflow-y': 'auto' }
+                : clientVisibleRows().length > 8
+                  ? { 'max-height': isExpanded() ? '70vh' : '400px', 'overflow-y': 'auto' }
+                  : {}
+            }
             role="region"
             aria-label={tableParams.title || 'Data table'}
             tabindex="0"
