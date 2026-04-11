@@ -5,13 +5,15 @@ SolidJS components + chat toolkit for MCP-generated UI. Part of the [MCP UI ecos
 [![npm version](https://img.shields.io/npm/v/@seed-ship/mcp-ui-solid.svg)](https://www.npmjs.com/package/@seed-ship/mcp-ui-solid)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## What's New in v4.2
+## What's New in v4.3
 
 - **Prefilled Forms** — Fields render with pre-populated values + source indicators (detected/inferred/default/user)
-- **Source badges** — Visual cues showing how each value was obtained (checkmark, link, pencil icons)
-- **Muted fields** — High-confidence prefills display with reduced opacity, activate on focus/click
-- **Display hints** — Caption below prefilled fields (e.g. "Rhône — déduit de Lyon")
-- **Auto-submit countdown** — When all required fields are prefilled, optional countdown with cancel
+- **`prefillMode: "resolve"`** — Autocomplete fields accept display names ("Paris"), resolve to codes ("75056") client-side
+- **Smart tag display** — Select/autocomplete show labels not codes for prefilled values
+- **Prefill summary** — "N champs pré-remplis sur M" shown when fields are prefilled
+- **Auto-submit toast** — Compact summary with countdown when ALL fields are prefilled
+- **`valueFormat` validation** — Regex-based format validation on form values (e.g. `"^\\d{5}$"` for INSEE codes)
+- **Autocomplete valueField guarantee** — Always submits resolved code, never display text
 
 ### Prefilled Form Example
 
@@ -28,8 +30,11 @@ SolidJS components + chat toolkit for MCP-generated UI. Part of the [MCP UI ecos
       muted: true,
     },
     {
-      name: 'commune', type: 'text',
-      prefill: 'Lyon',
+      name: 'commune', type: 'autocomplete',
+      apiUrl: 'https://geo.api.gouv.fr/communes',
+      searchParam: 'nom', labelField: 'nom', valueField: 'code',
+      prefill: ['Lyon'],
+      prefillMode: 'resolve', // MCP-UI resolves "Lyon" → code "69123"
       source: 'detected',
       muted: true,
     },
@@ -39,7 +44,7 @@ SolidJS components + chat toolkit for MCP-generated UI. Part of the [MCP UI ecos
       // No prefill — user must choose
     },
   ],
-  autoSubmitDelay: 3000, // optional countdown
+  autoSubmitDelay: 3000, // optional countdown + toast when all prefilled
 }
 ```
 

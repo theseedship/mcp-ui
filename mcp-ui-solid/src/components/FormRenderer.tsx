@@ -234,6 +234,18 @@ export const FormRenderer: Component<FormRendererProps> = (props) => {
       </Show>
 
       <form id={`form-${props.component.id}`} onSubmit={handleSubmit} noValidate>
+        {/* Proposal 3: prefill summary */}
+        <Show when={params().fields.some((f) => f.prefill != null)}>
+          {(() => {
+            const prefilled = params().fields.filter((f) => f.prefill != null).length
+            const total = params().fields.length
+            return (
+              <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                {prefilled} champ{prefilled > 1 ? 's' : ''} pré-rempli{prefilled > 1 ? 's' : ''} sur {total}
+              </p>
+            )
+          })()}
+        </Show>
         <div class={layoutClass()}>
           <For each={params().fields}>
             {(field) => (

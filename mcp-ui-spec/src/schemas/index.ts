@@ -103,6 +103,11 @@ export const FormFieldSchema = z.object({
   displayHint: z.string().optional(),
   source: PrefillSourceSchema.optional(),
   muted: z.boolean().optional(),
+  // Prefill mode for autocomplete fields (v4.3.0)
+  prefillMode: z.enum(['exact', 'resolve']).optional(),
+  // Value format validation (v4.3.0)
+  valueFormat: z.string().optional(),
+  valueFormatHint: z.string().optional(),
   // Text/textarea specific
   minLength: z.number().int().min(0).optional(),
   maxLength: z.number().int().min(1).optional(),

@@ -500,6 +500,7 @@ const AutocompleteField: Component<{
   const [suggestions, setSuggestions] = createSignal<Array<{ label: string; value: string }>>([])
   const [isOpen, setIsOpen] = createSignal(false)
   const [selectedLabels, setSelectedLabels] = createSignal<Map<string, string>>(new Map())
+  const [resolving, setResolving] = createSignal(false)
   let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
   const isMultiple = () => props.field.multiple === true
@@ -535,6 +536,72 @@ const AutocompleteField: Component<{
     }
   }
 
+  // Proposal 1: prefillMode "resolve" — call apiUrl to resolve display name → code
+  const resolvePrefill = async (prefillValues: string[]) => {
+    if (!props.field.apiUrl || !props.field.searchParam) return
+    setResolving(true)
+    const labelField = props.field.labelField || 'label'
+    const valueField = props.field.valueField || 'value'
+
+    try {
+      const resolvedValues: string[] = []
+      for (const pv of prefillValues) {
+        const params = new URLSearchParams({ [props.field.searchParam]: pv, limit: '1' })
+        if (props.field.extraParams) {
+          for (const [k, v] of Object.entries(props.field.extraParams)) params.set(k, v)
+        }
+        const res = await fetch(`${props.field.apiUrl}?${params}`)
+        if (!res.ok) { resolvedValues.push(pv); continue }
+        const data = await res.json()
+        const items = Array.isArray(data) ? data : data.results || data.features || []
+        if (items.length > 0) {
+          const code = String(items[0][valueField] || pv)
+          const label = items[0][labelField] || pv
+          resolvedValues.push(code)
+          setSelectedLabels((prev) => new Map(prev).set(code, label))
+        } else {
+          resolvedValues.push(pv)
+          setSelectedLabels((prev) => new Map(prev).set(pv, pv))
+        }
+      }
+      if (isMultiple()) {
+        props.onChange(resolvedValues)
+      } else {
+        props.onChange(resolvedValues[0] || '')
+        const label = selectedLabels().get(resolvedValues[0])
+        if (label) setQuery(label)
+      }
+    } catch {
+      // Fallback: use raw prefill values
+    } finally {
+      setResolving(false)
+    }
+  }
+
+  // On mount: handle prefill
+  createEffect(() => {
+    const prefill = props.field.prefill
+    if (!prefill) return
+    const values = Array.isArray(prefill) ? prefill : [prefill]
+    if (values.length === 0) return
+
+    if (props.field.prefillMode === 'resolve') {
+      // Proposal 1: resolve display names to codes via API
+      resolvePrefill(values)
+    } else {
+      // Proposal 2 + 6: exact mode — prefill is a code, show displayHint or label as tag
+      for (const v of values) {
+        if (!selectedLabels().has(v)) {
+          setSelectedLabels((prev) => new Map(prev).set(v, props.field.displayHint || v))
+        }
+      }
+      if (!isMultiple() && values[0]) {
+        const label = props.field.displayHint || values[0]
+        setQuery(label)
+      }
+    }
+  })
+
   const handleInput = (value: string) => {
     setQuery(value)
     // Only clear the stored value if user is actively changing the text
@@ -567,12 +634,24 @@ const AutocompleteField: Component<{
       setSuggestions([])
       setIsOpen(false)
     } else {
+      // Proposal 6: always store valueField (item.value), display labelField
       props.onChange(item.value)
       setSelectedLabels((prev) => new Map(prev).set(item.value, item.label))
       setQuery(item.label)
       setIsOpen(false)
       setSuggestions([])
     }
+  }
+
+  // Proposal 6: on blur without selection, auto-resolve typed text to first API result
+  const handleBlur = () => {
+    setTimeout(() => {
+      setIsOpen(false)
+      // If user typed but didn't select, and field has valueField, resolve first match
+      if (!isMultiple() && query() && !props.value && props.field.valueField && suggestions().length > 0) {
+        selectSuggestion(suggestions()[0])
+      }
+    }, 200)
   }
 
   const removeChip = (val: string) => {
@@ -586,6 +665,14 @@ const AutocompleteField: Component<{
 
   return (
     <div class="relative">
+      {/* Resolving indicator */}
+      <Show when={resolving()}>
+        <div class="flex items-center gap-1 mb-1 text-xs text-gray-400">
+          <span class="animate-spin h-3 w-3 border border-gray-400 border-t-transparent rounded-full" />
+          Resolving...
+        </div>
+      </Show>
+
       {/* Multi chips */}
       <Show when={isMultiple() && selectedValues().length > 0}>
         <div class="flex flex-wrap gap-1 mb-1">
@@ -612,11 +699,11 @@ const AutocompleteField: Component<{
         value={query()}
         onInput={(e) => handleInput(e.currentTarget.value)}
         onFocus={() => { if (suggestions().length) setIsOpen(true) }}
-        onBlur={() => setTimeout(() => setIsOpen(false), 200)}
+        onBlur={handleBlur}
         placeholder={isMultiple() && selectedValues().length
           ? 'Add more...'
           : props.field.placeholder}
-        disabled={props.disabled}
+        disabled={props.disabled || resolving()}
         class={props.baseClass}
         autocomplete="off"
       />

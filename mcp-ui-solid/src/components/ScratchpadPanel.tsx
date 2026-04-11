@@ -654,8 +654,42 @@ const EmbeddedFormSection: Component<{
     }
   }
 
+  // Proposal 3: prefill confidence summary
+  const prefillSummary = () => {
+    const fields = config().fields
+    const total = fields.length
+    const prefilled = fields.filter((f: any) => f.prefill != null).length
+    return { total, prefilled }
+  }
+
+  // Proposal 4: auto-submit toast mode — compact view when ALL fields prefilled
+  const [expanded, setExpanded] = createSignal(false)
+  const allFieldsPrefilled = () => {
+    const fields = config().fields
+    return fields.length > 0 && fields.every((f: any) => f.prefill != null)
+  }
+  const showToast = () => allFieldsPrefilled() && !userInteracted() && !expanded() && countdown() != null
+
   return (
+    <Show when={!showToast()} fallback={
+      <div class="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-sm">
+        <span class="flex-1 text-blue-800 dark:text-blue-200 font-medium">
+          {config().fields.map((f: any) => f.displayHint || f.prefill).join(', ')}
+        </span>
+        <span class="text-blue-600 dark:text-blue-300">{countdown()}s...</span>
+        <button type="button" onClick={() => { setExpanded(true); cancelCountdown(); setUserInteracted(true) }}
+          class="text-blue-600 dark:text-blue-400 underline text-xs">Modifier</button>
+        <button type="button" onClick={() => { cancelCountdown(); setUserInteracted(true) }}
+          class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">&times;</button>
+      </div>
+    }>
     <form id={`scratchpad-form-${props.sectionId}`} onSubmit={handleSubmit} class="flex flex-col gap-3">
+      {/* Proposal 3: prefill summary */}
+      <Show when={prefillSummary().prefilled > 0}>
+        <p class="text-xs text-gray-500 dark:text-gray-400">
+          {prefillSummary().prefilled} champ{prefillSummary().prefilled > 1 ? 's' : ''} pré-rempli{prefillSummary().prefilled > 1 ? 's' : ''} sur {prefillSummary().total}
+        </p>
+      </Show>
       <For each={config().fields}>
         {(field) => (
           <FormFieldRenderer
@@ -686,6 +720,7 @@ const EmbeddedFormSection: Component<{
         </button>
       </div>
     </form>
+    </Show>
   )
 }
 

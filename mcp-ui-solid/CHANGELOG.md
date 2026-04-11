@@ -5,6 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.3.0] - 2026-04-11
+
+### Added — Prefill Enhancements (Phase B)
+
+#### `prefillMode: "resolve"` for autocomplete fields (Proposal 1)
+- Autocomplete fields can receive display names (e.g. "Paris") instead of codes
+- MCP-UI calls `apiUrl` to resolve to `valueField` (e.g. code "75056") client-side
+- Reduces server-side complexity — no async value resolution needed before emitting forms
+- Fallback: raw prefill value used if API call fails
+
+#### Smart tag display (Proposal 2)
+- Select/multi-select fields show `label` not `value` for prefilled codes
+- Autocomplete shows `displayHint` or resolved label as chip text instead of raw code
+
+#### Prefill confidence summary (Proposal 3)
+- Shows "N champ(s) pré-rempli(s) sur M" when at least one field is prefilled
+- Displayed in both FormRenderer and EmbeddedFormSection (scratchpad forms)
+
+#### Auto-submit toast mode (Proposal 4)
+- When ALL fields are prefilled + `autoSubmitDelay` set, shows compact toast instead of full form
+- Toast shows prefilled values summary with countdown, "Modifier" to expand, × to cancel
+- Any interaction cancels countdown and expands full form
+
+#### `valueFormat` validation (Proposal 5)
+- Optional regex pattern on form fields — validates submitted value format
+- `valueFormatHint` for human-readable error message on failure
+- Runs after type-specific validation, supports arrays (multi-select)
+
+#### Autocomplete always submits `valueField` (Proposal 6)
+- On blur without selection, auto-resolves typed text to first API result
+- Ensures form never submits display names when `valueField` is configured
+- Fixes silent data corruption when users type instead of selecting
+
+### Changed
+- `@seed-ship/mcp-ui-spec` bumped to 3.2.0 (`prefillMode`, `valueFormat`, `valueFormatHint`)
+
 ## [4.2.2] - 2026-04-11
 
 ### Added — Prefilled Forms with Source Indicators

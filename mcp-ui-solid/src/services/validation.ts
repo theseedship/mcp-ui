@@ -939,6 +939,16 @@ export function validateFieldValue(
       break
   }
 
+  // valueFormat validation (v4.3.0) — runs after type-specific checks
+  if (field.valueFormat && value !== undefined && value !== null && value !== '') {
+    const vals = Array.isArray(value) ? value : [String(value)]
+    for (const v of vals) {
+      if (!new RegExp(field.valueFormat).test(v)) {
+        return { valid: false, error: field.valueFormatHint || `Invalid format (expected: ${field.valueFormat})` }
+      }
+    }
+  }
+
   return { valid: true }
 }
 

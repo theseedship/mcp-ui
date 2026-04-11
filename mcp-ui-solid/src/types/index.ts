@@ -345,6 +345,14 @@ export interface FormFieldParams {
   source?: PrefillSource
   /** If true, field is visually muted (but still editable on click/focus). */
   muted?: boolean
+  /** How to handle prefill for autocomplete fields.
+   *  - "exact" (default): prefill is the final value (code), use as-is
+   *  - "resolve": prefill is a display name, call apiUrl to resolve to valueField */
+  prefillMode?: 'exact' | 'resolve'
+  /** Regex pattern the submitted value MUST match. Prevents submit if invalid. */
+  valueFormat?: string
+  /** Human-readable hint shown when valueFormat validation fails. */
+  valueFormatHint?: string
 
   // Text/textarea specific
   minLength?: number
