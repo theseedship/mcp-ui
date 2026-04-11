@@ -36,6 +36,8 @@ export interface ScratchpadPanelProps {
   debug?: boolean
   /** Show mini debug overlay */
   debugOverlay?: boolean
+  /** Show collapsible debug trace panel under forms */
+  debugTrace?: boolean
   closable?: boolean
   autoCloseDelay?: number
   collapsible?: boolean
@@ -243,6 +245,7 @@ export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
                   onAction={handleAction}
                   onSectionEdit={props.onSectionEdit}
                   onSubmit={props.onSubmit}
+                  debugTrace={props.debugTrace}
                 />
               )}
             </For>
@@ -373,6 +376,7 @@ const SectionRenderer: Component<{
   onAction?: (action: string, data?: unknown) => void
   onSectionEdit?: (sectionId: string, content: unknown) => void
   onSubmit?: (sectionId: string, values: Record<string, unknown>) => void
+  debugTrace?: boolean
 }> = (props) => {
   return (
     <div class="px-4 py-3 animate-[slideDown_0.2s_ease-out]">
@@ -383,7 +387,7 @@ const SectionRenderer: Component<{
         <Match when={props.section.type === 'message'}><p class="text-sm text-gray-700 dark:text-gray-300">{String(props.section.content)}</p></Match>
         <Match when={props.section.type === 'action'}><ActionSection content={parseContent(props.section.content)} onAction={props.onAction} /></Match>
         <Match when={props.section.type === 'steps'}><EnrichedStepsSection content={parseContent(props.section.content)} onAction={props.onAction} onFilterChange={props.onFilterChange} /></Match>
-        <Match when={props.section.type === 'form'}><EmbeddedFormSection content={parseContent(props.section.content)} sectionId={props.section.id} onAction={props.onAction} onSubmit={props.onSubmit} /></Match>
+        <Match when={props.section.type === 'form'}><EmbeddedFormSection content={parseContent(props.section.content)} sectionId={props.section.id} onAction={props.onAction} onSubmit={props.onSubmit} debugTrace={props.debugTrace} /></Match>
         <Match when={props.section.type === 'understanding'}><UnderstandingSection content={parseContent(props.section.content)} /></Match>
         <Match when={props.section.type === 'feedback'}><FeedbackSection content={parseContent(props.section.content)} onAction={props.onAction} /></Match>
         <Match when={props.section.type === 'prompt'}><PromptSection content={parseContent(props.section.content)} onAction={props.onAction} /></Match>
@@ -524,6 +528,7 @@ const EmbeddedFormSection: Component<{
   sectionId: string
   onAction?: (action: string, data?: unknown) => void
   onSubmit?: (sectionId: string, values: Record<string, unknown>) => void
+  debugTrace?: boolean
 }> = (props) => {
   const [dynamicOptions, setDynamicOptions] = createSignal<Record<string, Array<{ label: string; value: string }>>>({})
 
@@ -631,6 +636,9 @@ const EmbeddedFormSection: Component<{
     return dynOpts ? { ...field, options: dynOpts } as FormFieldParams : field as FormFieldParams
   }
 
+  // Debug trace: track submitted values
+  const [submittedValues, setSubmittedValues] = createSignal<Record<string, any> | null>(null)
+
   const handleSubmit = (e: Event) => {
     e.preventDefault()
 
@@ -643,6 +651,8 @@ const EmbeddedFormSection: Component<{
         })
         .filter(([, v]) => v !== undefined && v !== '' && !(Array.isArray(v) && v.length === 0))
     )
+
+    setSubmittedValues(values)
 
     // DX1 Etape 7: form submit log
     console.info(`%c[MCP-UI] Form submitted%c section=${props.sectionId} fields=${Object.keys(values).join(',')}`, 'color: #8b5cf6; font-weight: bold', 'color: inherit')
@@ -671,6 +681,7 @@ const EmbeddedFormSection: Component<{
   const showToast = () => allFieldsPrefilled() && !userInteracted() && !expanded() && countdown() != null
 
   return (
+    <>
     <Show when={!showToast()} fallback={
       <div class="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-sm">
         <span class="flex-1 text-blue-800 dark:text-blue-200 font-medium">
@@ -721,6 +732,133 @@ const EmbeddedFormSection: Component<{
       </div>
     </form>
     </Show>
+
+    {/* Debug trace panel */}
+    <Show when={props.debugTrace}>
+      <FormDebugTrace
+        fields={config().fields}
+        formData={formData()}
+        submittedValues={submittedValues()}
+        autoSubmitDelay={config().autoSubmitDelay}
+        userInteracted={userInteracted()}
+        rawContent={props.content}
+      />
+    </Show>
+    </>
+  )
+}
+
+// ─── Form Debug Trace Panel ─────────────────────────────────
+
+const FormDebugTrace: Component<{
+  fields: any[]
+  formData: Record<string, any>
+  submittedValues: Record<string, any> | null
+  autoSubmitDelay?: number
+  userInteracted: boolean
+  rawContent: unknown
+}> = (props) => {
+  const [open, setOpen] = createSignal(false)
+  const [showRaw, setShowRaw] = createSignal(false)
+
+  const prefilledCount = () => props.fields.filter((f: any) => f.prefill != null).length
+  const requiredFields = () => props.fields.filter((f: any) => f.required)
+  const missingRequired = () => requiredFields().filter((f: any) => f.prefill == null)
+
+  const autoSubmitReason = () => {
+    if (!props.autoSubmitDelay) return 'no autoSubmitDelay configured'
+    if (missingRequired().length > 0) return `${missingRequired().length} required field(s) without prefill`
+    if (props.userInteracted) return 'user interacted — cancelled'
+    return 'all conditions met'
+  }
+
+  // Server-side _debug data
+  const serverDebug = () => (props.rawContent as any)?._debug
+
+  return (
+    <div class="mt-2 border border-gray-200 dark:border-gray-700 rounded-md text-xs font-mono">
+      <button
+        type="button"
+        onClick={() => setOpen(!open())}
+        class="w-full px-3 py-1.5 text-left text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-1"
+      >
+        <span>{open() ? '\u25BE' : '\u25B8'}</span>
+        Debug trace ({prefilledCount()}/{props.fields.length} prefilled)
+      </button>
+      <Show when={open()}>
+        <div class="px-3 pb-3 space-y-2 text-gray-600 dark:text-gray-400 border-t border-gray-200 dark:border-gray-700 pt-2">
+          <div>Fields: {props.fields.length} total, {prefilledCount()} prefilled</div>
+
+          <For each={props.fields}>
+            {(field: any) => (
+              <div class="pl-2 border-l-2 border-gray-200 dark:border-gray-600 space-y-0.5">
+                <div class="text-gray-800 dark:text-gray-200 font-medium">{field.name}:</div>
+                <Show when={field.prefill != null}>
+                  <div>  prefill: {JSON.stringify(field.prefill)}</div>
+                </Show>
+                <Show when={!field.prefill}>
+                  <div class="text-amber-500">  prefill: (none)</div>
+                </Show>
+                <Show when={field.source}><div>  source: {field.source}</div></Show>
+                <Show when={field.displayHint}><div>  displayHint: "{field.displayHint}"</div></Show>
+                <Show when={field.muted}><div>  muted: true</div></Show>
+                <Show when={field.prefillMode}><div>  prefillMode: {field.prefillMode}</div></Show>
+                <Show when={field.valueFormat}><div>  valueFormat: /{field.valueFormat}/</div></Show>
+                <Show when={props.submittedValues}>
+                  {(() => {
+                    const v = props.submittedValues![field.name]
+                    const hasValue = v !== undefined && v !== '' && !(Array.isArray(v) && v.length === 0)
+                    return (
+                      <div class={hasValue ? 'text-green-600 dark:text-green-400' : 'text-gray-400'}>
+                        {'\u2192'} submitted: {hasValue ? `${JSON.stringify(v)} \u2713` : '(empty)'}
+                      </div>
+                    )
+                  })()}
+                </Show>
+              </div>
+            )}
+          </For>
+
+          <div class="pt-1 border-t border-gray-200 dark:border-gray-600">
+            autoSubmit: {props.autoSubmitDelay ? 'true' : 'false'}
+            {props.autoSubmitDelay ? ` (${props.autoSubmitDelay}ms)` : ''}
+            <div>  reason: {autoSubmitReason()}</div>
+          </div>
+
+          <Show when={serverDebug()}>
+            <div class="pt-1 border-t border-gray-200 dark:border-gray-600">
+              <div class="font-medium text-gray-800 dark:text-gray-200">Server _debug:</div>
+              <Show when={serverDebug()?.resolvers}>
+                <For each={serverDebug().resolvers}>
+                  {(r: any) => (
+                    <div class="pl-2">
+                      {r.field}: {r.resolver} "{r.input}" {'\u2192'} "{r.output}" ({r.ms}ms)
+                    </div>
+                  )}
+                </For>
+              </Show>
+              <Show when={serverDebug()?.routing}>
+                <div class="pl-2">routing: {serverDebug().routing.topic} via {serverDebug().routing.method} ({serverDebug().routing.ms}ms)</div>
+              </Show>
+              <Show when={serverDebug()?.missingFields}>
+                <div class="pl-2 text-amber-500">missing: {serverDebug().missingFields.join(', ')}</div>
+              </Show>
+            </div>
+          </Show>
+
+          <div class="pt-1 border-t border-gray-200 dark:border-gray-600">
+            <button type="button" onClick={() => setShowRaw(!showRaw())} class="text-blue-500 hover:text-blue-700 underline">
+              {showRaw() ? 'Hide' : 'Show'} raw SSE payload
+            </button>
+            <Show when={showRaw()}>
+              <pre class="mt-1 p-2 bg-gray-50 dark:bg-gray-900 rounded max-h-48 overflow-auto text-[10px]">
+                {JSON.stringify(props.rawContent, null, 2)}
+              </pre>
+            </Show>
+          </div>
+        </div>
+      </Show>
+    </div>
   )
 }
 

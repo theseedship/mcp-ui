@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.3.1] - 2026-04-11
+
+### Added — Debug Trace Mode for Forms & PPR
+
+#### `debugTrace` prop on ScratchpadPanel
+- Collapsible debug panel below each form section
+- Per-field trace: prefill, source, displayHint, muted, prefillMode, valueFormat
+- Submitted values display with success/empty indicators
+- Auto-submit decision trace with reason (missing fields, user interaction, etc.)
+- Server `_debug` data display (resolvers, routing, missing fields) when present
+- Raw SSE payload viewer (collapsible JSON)
+- Zero impact when disabled — no extra rendering or state
+
 ## [4.3.0] - 2026-04-11
 
 ### Added — Prefill Enhancements (Phase B)
