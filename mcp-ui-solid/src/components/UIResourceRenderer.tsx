@@ -345,6 +345,7 @@ function TableRenderer(props: {
       setSortDir('asc')
     }
     setClientPage(0)
+    setProgressivePages(1)
   }
 
   const sortedRows = createMemo(() => {
@@ -374,22 +375,36 @@ function TableRenderer(props: {
     return sortDir() === 'asc' ? '\u2191' : '\u2193'
   }
 
-  // ─── Client-side pagination (v4.0.4) ─────────────────────
+  // ─── Client-side pagination (v4.0.4, progressive mode v4.3.2) ─────
   const clientPageSize = () => tableParams.pageSize ?? 25
   const hasServerPagination = () => !!tableParams.pagination
+  const isProgressiveMode = () => !!tableParams.showAllLabel
   const needsClientPagination = () =>
     !hasServerPagination() && clientPageSize() > 0 && sortedRows().length > clientPageSize()
   const [clientPage, setClientPage] = createSignal(tableParams.initialPage ?? 0)
+  // Progressive mode: track how many pages to show (append)
+  const [progressivePages, setProgressivePages] = createSignal(1)
   const clientTotalPages = () => needsClientPagination() ? Math.ceil(sortedRows().length / clientPageSize()) : 1
   const clientVisibleRows = createMemo(() => {
     if (!needsClientPagination()) return sortedRows()
+    if (isProgressiveMode()) {
+      // Progressive: show first N * pageSize rows
+      return sortedRows().slice(0, progressivePages() * clientPageSize())
+    }
     const start = clientPage() * clientPageSize()
     return sortedRows().slice(start, start + clientPageSize())
   })
-  const clientRangeStart = () => needsClientPagination() ? clientPage() * clientPageSize() + 1 : 1
+  const clientRangeStart = () => needsClientPagination()
+    ? (isProgressiveMode() ? 1 : clientPage() * clientPageSize() + 1)
+    : 1
   const clientRangeEnd = () => needsClientPagination()
-    ? Math.min((clientPage() + 1) * clientPageSize(), sortedRows().length)
+    ? (isProgressiveMode()
+      ? Math.min(progressivePages() * clientPageSize(), sortedRows().length)
+      : Math.min((clientPage() + 1) * clientPageSize(), sortedRows().length))
     : sortedRows().length
+  const progressiveHasMore = () => isProgressiveMode() && needsClientPagination() && progressivePages() < clientTotalPages()
+  const progressiveRemaining = () => sortedRows().length - progressivePages() * clientPageSize()
+  const showMoreLabel = () => tableParams.showAllLabel || 'Show more'
 
   // ─── Virtualization ──────────────────────────────────────
   const [virtualizer, setVirtualizer] = createSignal<any>(null)
@@ -685,8 +700,8 @@ function TableRenderer(props: {
             </div>
           </Show>
 
-          {/* Client-side auto-pagination (v4.0.4) */}
-          <Show when={needsClientPagination()}>
+          {/* Client-side paged pagination (v4.0.4) */}
+          <Show when={needsClientPagination() && !isProgressiveMode()}>
             <div class="mt-3 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
               <span>
                 Showing {clientRangeStart()}&ndash;{clientRangeEnd()} of {allRows().length.toLocaleString('fr-FR')}
@@ -708,6 +723,23 @@ function TableRenderer(props: {
                   Next &#x25B6;
                 </button>
               </div>
+            </div>
+          </Show>
+
+          {/* Client-side progressive pagination (v4.3.2) */}
+          <Show when={needsClientPagination() && isProgressiveMode()}>
+            <div class="mt-3 flex flex-col items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+              <span>
+                {clientRangeStart()}&ndash;{clientRangeEnd()} of {allRows().length.toLocaleString('fr-FR')}
+              </span>
+              <Show when={progressiveHasMore()}>
+                <button
+                  class="px-4 py-1.5 rounded-md bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors"
+                  onClick={() => setProgressivePages(p => p + 1)}
+                >
+                  {showMoreLabel()} ({Math.min(progressiveRemaining(), clientPageSize())} suivant{Math.min(progressiveRemaining(), clientPageSize()) > 1 ? 'es' : 'e'})
+                </button>
+              </Show>
             </div>
           </Show>
         </div>

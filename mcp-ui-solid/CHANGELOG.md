@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.3.2] - 2026-04-11
+
+### Added — Progressive Table Pagination
+
+#### `showAllLabel` prop enables progressive "show more" mode
+- When `showAllLabel` is set on table params, pagination switches from paged (Prev/Next) to progressive (append)
+- Shows first `pageSize` rows, then "Afficher plus (N suivantes)" button
+- Each click appends the next batch — no page navigation
+- Button disappears when all rows are visible
+- Sort resets progressive state to first batch
+- Backward-compatible: without `showAllLabel`, existing paged pagination unchanged
+- Server just needs `{ pageSize: 25, showAllLabel: 'Afficher plus' }` when rows > 25
+
 ## [4.3.1] - 2026-04-11
 
 ### Added — Debug Trace Mode for Forms & PPR
