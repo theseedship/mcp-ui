@@ -375,35 +375,69 @@ function TableRenderer(props: {
     return sortDir() === 'asc' ? '\u2191' : '\u2193'
   }
 
+  // ─── Client-side search filter (v4.3.3) ─────────────────────
+  const [searchQuery, setSearchQuery] = createSignal('')
+  const [debouncedQuery, setDebouncedQuery] = createSignal('')
+  let searchTimer: ReturnType<typeof setTimeout> | null = null
+
+  const isSearchable = () => tableParams.searchable === true || (tableParams.searchable !== false && allRows().length > 10)
+  const searchPlaceholder = () => tableParams.searchPlaceholder || 'Rechercher dans le tableau...'
+
+  const handleSearch = (value: string) => {
+    setSearchQuery(value)
+    if (searchTimer) clearTimeout(searchTimer)
+    searchTimer = setTimeout(() => {
+      setDebouncedQuery(value)
+      setClientPage(0)
+      setProgressivePages(1)
+    }, 200)
+  }
+
+  /** Normalize string for accent-insensitive matching */
+  const normalize = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+
+  const filteredRows = createMemo(() => {
+    const q = normalize(debouncedQuery())
+    if (!q) return sortedRows()
+    const cols = columns()
+    return sortedRows().filter((row: any) =>
+      cols.some((col: any) => {
+        const val = row[col.key]
+        if (val == null) return false
+        return normalize(String(val)).includes(q)
+      })
+    )
+  })
+
   // ─── Client-side pagination (v4.0.4, progressive mode v4.3.2) ─────
   const clientPageSize = () => tableParams.pageSize ?? 25
   const hasServerPagination = () => !!tableParams.pagination
   const isProgressiveMode = () => !!tableParams.showAllLabel
   const needsClientPagination = () =>
-    !hasServerPagination() && clientPageSize() > 0 && sortedRows().length > clientPageSize()
+    !hasServerPagination() && clientPageSize() > 0 && filteredRows().length > clientPageSize()
   const [clientPage, setClientPage] = createSignal(tableParams.initialPage ?? 0)
   // Progressive mode: track how many pages to show (append)
   const [progressivePages, setProgressivePages] = createSignal(1)
-  const clientTotalPages = () => needsClientPagination() ? Math.ceil(sortedRows().length / clientPageSize()) : 1
+  const clientTotalPages = () => needsClientPagination() ? Math.ceil(filteredRows().length / clientPageSize()) : 1
   const clientVisibleRows = createMemo(() => {
-    if (!needsClientPagination()) return sortedRows()
+    if (!needsClientPagination()) return filteredRows()
     if (isProgressiveMode()) {
       // Progressive: show first N * pageSize rows
-      return sortedRows().slice(0, progressivePages() * clientPageSize())
+      return filteredRows().slice(0, progressivePages() * clientPageSize())
     }
     const start = clientPage() * clientPageSize()
-    return sortedRows().slice(start, start + clientPageSize())
+    return filteredRows().slice(start, start + clientPageSize())
   })
   const clientRangeStart = () => needsClientPagination()
     ? (isProgressiveMode() ? 1 : clientPage() * clientPageSize() + 1)
     : 1
   const clientRangeEnd = () => needsClientPagination()
     ? (isProgressiveMode()
-      ? Math.min(progressivePages() * clientPageSize(), sortedRows().length)
-      : Math.min((clientPage() + 1) * clientPageSize(), sortedRows().length))
-    : sortedRows().length
+      ? Math.min(progressivePages() * clientPageSize(), filteredRows().length)
+      : Math.min((clientPage() + 1) * clientPageSize(), filteredRows().length))
+    : filteredRows().length
   const progressiveHasMore = () => isProgressiveMode() && needsClientPagination() && progressivePages() < clientTotalPages()
-  const progressiveRemaining = () => sortedRows().length - progressivePages() * clientPageSize()
+  const progressiveRemaining = () => filteredRows().length - progressivePages() * clientPageSize()
   const showMoreLabel = () => tableParams.showAllLabel || 'Show more'
 
   // ─── Virtualization ──────────────────────────────────────
@@ -640,6 +674,33 @@ function TableRenderer(props: {
             </h3>
           </Show>
 
+          {/* Search input (v4.3.3) */}
+          <Show when={isSearchable()}>
+            <div class="relative mb-3">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-sm">{'\uD83D\uDD0D'}</span>
+              <input
+                type="text"
+                value={searchQuery()}
+                onInput={(e) => handleSearch(e.currentTarget.value)}
+                placeholder={searchPlaceholder()}
+                class="w-full pl-8 pr-8 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 outline-none"
+              />
+              <Show when={searchQuery()}>
+                <button
+                  type="button"
+                  onClick={() => { handleSearch(''); setSearchQuery(''); setDebouncedQuery('') }}
+                  class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-sm"
+                  aria-label="Clear search"
+                >&times;</button>
+              </Show>
+            </div>
+            <Show when={debouncedQuery() && filteredRows().length !== sortedRows().length}>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                {filteredRows().length} result{filteredRows().length !== 1 ? 's' : ''} on {sortedRows().length}
+              </p>
+            </Show>
+          </Show>
+
           <div
             ref={scrollContainerRef}
             class="overflow-x-auto"
@@ -704,7 +765,7 @@ function TableRenderer(props: {
           <Show when={needsClientPagination() && !isProgressiveMode()}>
             <div class="mt-3 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
               <span>
-                Showing {clientRangeStart()}&ndash;{clientRangeEnd()} of {allRows().length.toLocaleString('fr-FR')}
+                Showing {clientRangeStart()}&ndash;{clientRangeEnd()} of {filteredRows().length.toLocaleString('fr-FR')}
               </span>
               <div class="flex items-center gap-1">
                 <button
@@ -730,7 +791,7 @@ function TableRenderer(props: {
           <Show when={needsClientPagination() && isProgressiveMode()}>
             <div class="mt-3 flex flex-col items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
               <span>
-                {clientRangeStart()}&ndash;{clientRangeEnd()} of {allRows().length.toLocaleString('fr-FR')}
+                {clientRangeStart()}&ndash;{clientRangeEnd()} of {filteredRows().length.toLocaleString('fr-FR')}
               </span>
               <Show when={progressiveHasMore()}>
                 <button

@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.3.3] - 2026-04-11
+
+### Added — Table Search Filter
+
+#### `searchable` prop on table params
+- Text input above the table for real-time client-side filtering
+- Searches across ALL columns, case-insensitive and accent-insensitive (NFD normalization)
+- 200ms debounce to avoid filtering on every keystroke
+- Clear button (×) to reset search
+- Result count shown when filtering ("N results on M")
+- Pagination applies AFTER filtering — filter narrows the dataset, then paginates
+- Auto-enabled when `rows.length > 10` (unless `searchable: false`)
+- Custom placeholder via `searchPlaceholder` prop
+- Sort resets search pagination to first page/batch
+
 ## [4.3.2] - 2026-04-11
 
 ### Added — Progressive Table Pagination
