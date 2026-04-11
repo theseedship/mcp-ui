@@ -345,7 +345,6 @@ function TableRenderer(props: {
       setSortDir('asc')
     }
     setClientPage(0)
-    setProgressivePages(1)
   }
 
   const sortedRows = createMemo(() => {
@@ -389,7 +388,6 @@ function TableRenderer(props: {
     searchTimer = setTimeout(() => {
       setDebouncedQuery(value)
       setClientPage(0)
-      setProgressivePages(1)
     }, 200)
   }
 
@@ -409,39 +407,47 @@ function TableRenderer(props: {
     )
   })
 
-  // ─── Client-side pagination (v4.0.4, progressive v4.3.2, context-aware v4.3.4) ─────
+  // ─── Client-side pagination (v4.0.4, context-aware v4.3.4, selector v4.3.7) ─────
   const isExpanded = useExpanded()
-  const fullPageSize = () => tableParams.pageSize ?? 25
-  const chatPageSize = () => tableParams.chatPageSize ?? Math.min(10, fullPageSize())
-  const clientPageSize = () => isExpanded() ? fullPageSize() : chatPageSize()
+  const defaultPageSize = () => tableParams.pageSize ?? 25
+  const chatDefault = () => tableParams.chatPageSize ?? Math.min(10, defaultPageSize())
+  const [userPageSize, setUserPageSize] = createSignal<number | null>(null) // null = use default
+  const clientPageSize = () => {
+    const ups = userPageSize()
+    if (ups !== null) return ups // user chose a size
+    return isExpanded() ? defaultPageSize() : chatDefault()
+  }
+  const showAll = () => userPageSize() === 0
   const hasServerPagination = () => !!tableParams.pagination
-  const isProgressiveMode = () => !!tableParams.showAllLabel
   const needsClientPagination = () =>
-    !hasServerPagination() && clientPageSize() > 0 && filteredRows().length > clientPageSize()
+    !hasServerPagination() && !showAll() && clientPageSize() > 0 && filteredRows().length > clientPageSize()
   const [clientPage, setClientPage] = createSignal(tableParams.initialPage ?? 0)
-  // Progressive mode: track how many pages to show (append)
-  const [progressivePages, setProgressivePages] = createSignal(1)
   const clientTotalPages = () => needsClientPagination() ? Math.ceil(filteredRows().length / clientPageSize()) : 1
   const clientVisibleRows = createMemo(() => {
-    if (!needsClientPagination()) return filteredRows()
-    if (isProgressiveMode()) {
-      // Progressive: show first N * pageSize rows
-      return filteredRows().slice(0, progressivePages() * clientPageSize())
-    }
+    if (showAll() || !needsClientPagination()) return filteredRows()
     const start = clientPage() * clientPageSize()
     return filteredRows().slice(start, start + clientPageSize())
   })
-  const clientRangeStart = () => needsClientPagination()
-    ? (isProgressiveMode() ? 1 : clientPage() * clientPageSize() + 1)
-    : 1
+  const clientRangeStart = () => needsClientPagination() ? clientPage() * clientPageSize() + 1 : 1
   const clientRangeEnd = () => needsClientPagination()
-    ? (isProgressiveMode()
-      ? Math.min(progressivePages() * clientPageSize(), filteredRows().length)
-      : Math.min((clientPage() + 1) * clientPageSize(), filteredRows().length))
+    ? Math.min((clientPage() + 1) * clientPageSize(), filteredRows().length)
     : filteredRows().length
-  const progressiveHasMore = () => isProgressiveMode() && needsClientPagination() && progressivePages() < clientTotalPages()
-  const progressiveRemaining = () => filteredRows().length - progressivePages() * clientPageSize()
-  const showMoreLabel = () => tableParams.showAllLabel || 'Show more'
+
+  // Page size options for selector (fullscreen)
+  const pageSizeOptions = () => {
+    const total = filteredRows().length
+    const opts: Array<{ value: number; label: string }> = []
+    for (const n of [10, 30, 60, 100]) {
+      if (n < total) opts.push({ value: n, label: String(n) })
+    }
+    opts.push({ value: 0, label: 'All' })
+    return opts
+  }
+
+  const handlePageSizeChange = (val: number) => {
+    setUserPageSize(val === 0 ? 0 : val)
+    setClientPage(0)
+  }
 
   // ─── Virtualization ──────────────────────────────────────
   const [virtualizer, setVirtualizer] = createSignal<any>(null)
@@ -711,8 +717,10 @@ function TableRenderer(props: {
               isVirtualizing()
                 ? { 'max-height': '500px', 'overflow-y': 'auto' }
                 : clientVisibleRows().length > 8
-                  ? { 'max-height': isExpanded() ? '70vh' : '400px', 'overflow-y': 'auto' }
-                  : {}
+                  ? { 'max-height': isExpanded() ? 'calc(100vh - 180px)' : '400px', 'overflow-y': 'auto' }
+                  : isExpanded()
+                    ? { 'max-height': 'calc(100vh - 180px)', 'overflow-y': 'auto' }
+                    : {}
             }
             role="region"
             aria-label={tableParams.title || 'Data table'}
@@ -722,13 +730,13 @@ function TableRenderer(props: {
               class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 border-separate border-spacing-0"
               aria-labelledby={tableParams.title ? `${tableId}-title` : undefined}
             >
-              <thead class="bg-gray-50 dark:bg-gray-900 sticky top-0 z-10">
+              <thead class="bg-gray-100 dark:bg-gray-900 sticky top-0 z-10">
                 <tr>
                   <For each={tableParams.columns}>
                     {(column: any) => (
                       <th
                         scope="col"
-                        class="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700 first:pl-6 last:pr-6 bg-gray-50 dark:bg-gray-900 cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                        class="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700 first:pl-6 last:pr-6 bg-gray-100 dark:bg-gray-900 cursor-pointer select-none hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
                         style={column.width ? { width: column.width } : {}}
                         on:click={() => handleSort(column.key)}
                         title={`Sort by ${column.label}`}
@@ -770,46 +778,42 @@ function TableRenderer(props: {
             </div>
           </Show>
 
-          {/* Client-side paged pagination (v4.0.4) */}
-          <Show when={needsClientPagination() && !isProgressiveMode()}>
+          {/* Client-side pagination (v4.3.7) */}
+          <Show when={needsClientPagination()}>
             <div class="mt-3 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
               <span>
-                Showing {clientRangeStart()}&ndash;{clientRangeEnd()} of {filteredRows().length.toLocaleString('fr-FR')}
+                {clientRangeStart()}&ndash;{clientRangeEnd()} / {filteredRows().length.toLocaleString('fr-FR')}
               </span>
-              <div class="flex items-center gap-1">
+              <div class="flex items-center gap-2">
                 <button
                   class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   disabled={clientPage() === 0}
                   onClick={() => setClientPage(p => p - 1)}
                 >
-                  &#x25C0; Prev
+                  &#x25C0;
                 </button>
-                <span class="px-2">Page {clientPage() + 1} / {clientTotalPages()}</span>
+                <span>{clientPage() + 1} / {clientTotalPages()}</span>
                 <button
                   class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   disabled={clientPage() >= clientTotalPages() - 1}
                   onClick={() => setClientPage(p => p + 1)}
                 >
-                  Next &#x25B6;
+                  &#x25B6;
                 </button>
+                {/* Page size selector — fullscreen only */}
+                <Show when={isExpanded() && filteredRows().length > 10}>
+                  <select
+                    class="ml-2 px-1 py-0.5 text-xs border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                    value={clientPageSize()}
+                    onChange={(e) => handlePageSizeChange(Number(e.currentTarget.value))}
+                  >
+                    <For each={pageSizeOptions()}>
+                      {(opt) => <option value={opt.value}>{opt.label}</option>}
+                    </For>
+                  </select>
+                  <span class="text-gray-400">/ page</span>
+                </Show>
               </div>
-            </div>
-          </Show>
-
-          {/* Client-side progressive pagination (v4.3.2) */}
-          <Show when={needsClientPagination() && isProgressiveMode()}>
-            <div class="mt-3 flex flex-col items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-              <span>
-                {clientRangeStart()}&ndash;{clientRangeEnd()} of {filteredRows().length.toLocaleString('fr-FR')}
-              </span>
-              <Show when={progressiveHasMore()}>
-                <button
-                  class="px-4 py-1.5 rounded-md bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors"
-                  onClick={() => setProgressivePages(p => p + 1)}
-                >
-                  {showMoreLabel()} ({Math.min(progressiveRemaining(), clientPageSize())} suivant{Math.min(progressiveRemaining(), clientPageSize()) > 1 ? 'es' : 'e'})
-                </button>
-              </Show>
             </div>
           </Show>
         </div>
