@@ -241,6 +241,25 @@ function ChartRenderer(props: {
 /**
  * Smart cell value renderer that handles markdown links and other formats
  */
+/**
+ * Wrap matches of `query` in <mark> tags within an HTML string.
+ * Case-insensitive. Skips content inside HTML tag attributes to avoid corruption.
+ * v4.3.8
+ */
+export function highlightQuery(html: string, query: string): string {
+  const q = query.trim()
+  if (!q) return html
+  // Escape regex metacharacters
+  const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const regex = new RegExp(`(${escaped})`, 'gi')
+  // Process text segments only (skip inside tags)
+  return html.replace(/(<[^>]+>)|([^<]+)/g, (_m, tag, text) => {
+    if (tag) return tag
+    if (!text) return ''
+    return text.replace(regex, '<mark class="bg-yellow-200 dark:bg-[#222F49] text-inherit rounded px-0.5">$1</mark>')
+  })
+}
+
 export function renderCellValue(value: any): string {
   // Handle null/undefined
   if (value === null || value === undefined) {
@@ -592,7 +611,7 @@ function TableRenderer(props: {
             <For each={tableParams.columns}>
               {(column: any) => (
                 <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-200 whitespace-normal break-words leading-relaxed first:pl-6 last:pr-6">
-                  <div innerHTML={renderCellValue(row[column.key])} />
+                  <div innerHTML={highlightQuery(renderCellValue(row[column.key]), debouncedQuery())} />
                 </td>
               )}
             </For>
@@ -631,7 +650,7 @@ function TableRenderer(props: {
                 <For each={tableParams.columns}>
                   {(column: any) => (
                     <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-200 whitespace-normal break-words leading-relaxed first:pl-6 last:pr-6">
-                      <div innerHTML={renderCellValue(row[column.key])} />
+                      <div innerHTML={highlightQuery(renderCellValue(row[column.key]), debouncedQuery())} />
                     </td>
                   )}
                 </For>
@@ -645,7 +664,7 @@ function TableRenderer(props: {
 
   return (
     <ExpandableWrapper title={tableParams.title || 'Table'} copyData={getTableCSV()} copyLabel="Copy table (CSV)">
-      <div class="relative w-full h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden group">
+      <div class={`relative w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden group ${isExpanded() ? '' : 'h-full'}`}>
         <Show when={exportable} fallback={<CopyButton getText={getTableCSV} title="Copy table (CSV)" position="top-right" />}>
           <div class="absolute right-10 top-2 z-10">
             <button
@@ -716,11 +735,9 @@ function TableRenderer(props: {
             style={
               isVirtualizing()
                 ? { 'max-height': '500px', 'overflow-y': 'auto' }
-                : clientVisibleRows().length > 8
-                  ? { 'max-height': isExpanded() ? 'calc(100vh - 180px)' : '400px', 'overflow-y': 'auto' }
-                  : isExpanded()
-                    ? { 'max-height': 'calc(100vh - 180px)', 'overflow-y': 'auto' }
-                    : {}
+                : !isExpanded() && clientVisibleRows().length > 8
+                  ? { 'max-height': '400px', 'overflow-y': 'auto' }
+                  : {}
             }
             role="region"
             aria-label={tableParams.title || 'Data table'}
