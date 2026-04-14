@@ -336,37 +336,39 @@ describe('clarificationToPromptConfig', () => {
     expect(opts[0].metadata).toEqual({ confidence: 0.9, source: 'llm' })
   })
 
-  it('migrates legacy file_id into metadata.file_id', () => {
-    const event: ClarificationEvent = {
+  it('migrates legacy runtime file_id into metadata.file_id', () => {
+    // Legacy payloads from older servers may still carry top-level file_id.
+    // The helper accepts these at runtime even though the type no longer lists file_id.
+    const event = {
       question: 'Which file?',
       options: [
         { value: 'a', label: 'File A', file_id: 42 },
       ],
-    }
+    } as unknown as ClarificationEvent
     const config = clarificationToPromptConfig(event)
     const opts = (config.config as any).options
     expect(opts[0].metadata).toEqual({ file_id: 42 })
   })
 
-  it('merges file_id alongside existing metadata', () => {
-    const event: ClarificationEvent = {
+  it('merges legacy file_id alongside existing metadata', () => {
+    const event = {
       question: 'Pick one',
       options: [
         { value: 'a', label: 'A', file_id: 7, metadata: { confidence: 0.8 } },
       ],
-    }
+    } as unknown as ClarificationEvent
     const config = clarificationToPromptConfig(event)
     const opts = (config.config as any).options
     expect(opts[0].metadata).toEqual({ confidence: 0.8, file_id: 7 })
   })
 
   it('gives precedence to explicit metadata.file_id over legacy field', () => {
-    const event: ClarificationEvent = {
+    const event = {
       question: 'Pick',
       options: [
         { value: 'a', label: 'A', file_id: 1, metadata: { file_id: 99 } },
       ],
-    }
+    } as unknown as ClarificationEvent
     const config = clarificationToPromptConfig(event)
     const opts = (config.config as any).options
     expect((opts[0].metadata as any).file_id).toBe(99)

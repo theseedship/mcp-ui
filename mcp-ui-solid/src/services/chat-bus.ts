@@ -234,8 +234,9 @@ export function mergeScratchpadSections(
  * Convert a ClarificationEvent into a ChatPromptConfig.
  * Universal bridge for apps receiving clarification events via SSE.
  *
- * Legacy `file_id` (deprecated) is transparently moved into `metadata.file_id`
- * so consumers don't need to handle both shapes.
+ * Legacy runtime `file_id` (removed from the type in v5.0.0) is still
+ * transparently migrated into `metadata.file_id` when present, so payloads
+ * from older servers continue to work without upgrade pressure.
  *
  * @experimental
  * @since v4.3.9
@@ -253,8 +254,10 @@ export function clarificationToPromptConfig(
     config: {
       options: event.options.map((opt) => {
         const merged: Record<string, unknown> = { ...(opt.metadata ?? {}) }
-        if (opt.file_id !== undefined && merged.file_id === undefined) {
-          merged.file_id = opt.file_id
+        // Runtime fallback for legacy payloads that still carry file_id at the top level.
+        const legacyFileId = (opt as { file_id?: number }).file_id
+        if (legacyFileId !== undefined && merged.file_id === undefined) {
+          merged.file_id = legacyFileId
         }
         return {
           value: opt.value,

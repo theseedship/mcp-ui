@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.0.0] - 2026-04-14
+
+### Major release — synchronized with `@seed-ship/mcp-ui-solid` 5.0.0
+
+No CLI breaking changes. The major bump aligns the three monorepo packages on
+a single version line so consumers can pin a single major.
+
+### Changed
+- Version bump 3.0.0 → 5.0.0 (synchronized with `@seed-ship/mcp-ui-solid` v5.0.0 and `@seed-ship/mcp-ui-spec` v5.0.0).
+
+## [3.0.0] - 2026-04-06
+
+### Major release — synchronized with `@seed-ship/mcp-ui-solid` 3.0.0
+- Version bump to align with the 3.x ecosystem milestone. CLI commands (`validate`, `generate-types`, `test-examples`, `diff`) unchanged.
+- Dependency bump on `@seed-ship/mcp-ui-spec` to the corresponding v3.x line.
+
+## [2.0.0] - 2026-03-31
+
+### Major release — synchronized with `mcp-ui-solid` v2.0.0
+- `mcp-ui validate` now covers the full v2.0 component registry (19 types).
+- `mcp-ui diff` understands per-component schema drift and classifies breaking vs. additive.
+- Dependency bump on `@seed-ship/mcp-ui-spec` to the corresponding v2.x line.
+
 ## [1.1.0] - 2025-11-25
 
 ### Documentation

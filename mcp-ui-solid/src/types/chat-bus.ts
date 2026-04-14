@@ -471,8 +471,6 @@ export interface ClarificationEvent {
   options: Array<{
     value: string
     label: string
-    /** @deprecated Use metadata.file_id instead. Will be removed in v5.0.0. */
-    file_id?: number
     /**
      * Free-form metadata (confidence, source, tags, ...).
      * Opaque to mcp-ui — host apps pass it through as-is.

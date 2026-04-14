@@ -5,6 +5,59 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.0.0] - 2026-04-14
+
+### Major release — synchronized with `@seed-ship/mcp-ui-solid` 5.0.0
+
+No schema breaking changes in this package. The major bump aligns the three
+monorepo packages on a single version line so consumers can pin a single major.
+
+### Changed
+- Version bump 3.2.0 → 5.0.0 (synchronized with `@seed-ship/mcp-ui-solid` v5.0.0 and `@seed-ship/mcp-ui-cli` v5.0.0).
+
+## [3.2.0] - 2026-04-11
+
+### Added — Prefill Enhancements (Phase B)
+- `FormFieldSchema.prefillMode` — `'exact' | 'resolve'` for autocomplete client-side resolution.
+- `FormFieldSchema.valueFormat` — optional regex pattern for strict value format validation.
+- `FormFieldSchema.valueFormatHint` — human-readable error message for `valueFormat` failures.
+
+## [3.1.0] - 2026-04-11
+
+### Added — Prefilled Forms (Phase A)
+- `PrefillSourceSchema` enum (`user | detected | inferred | default`).
+- `FormFieldSchema.prefill` (string | string[]) — pre-populated value.
+- `FormFieldSchema.displayHint` — human-readable caption below the field.
+- `FormFieldSchema.source` — tracks how the value was obtained, drives source badges.
+- `FormFieldSchema.muted` — compact styling hint for high-confidence prefills.
+- `FormComponentParamsSchema.autoSubmitDelay` — countdown in ms (1000–30000).
+
+## [3.0.0] - 2026-04-06
+
+### Major release — synchronized with `@seed-ship/mcp-ui-solid` 3.0.0
+
+All three packages bumped to 3.0.0 to mark the "complete HITL chat toolkit"
+milestone. Spec additions over the 2.x series:
+- Form field types: `range`, `tags`, `toggle`, `fieldset` alongside existing 14 types.
+- `fieldStatus` (`required | optional | unsupported | unknown`) + `statusReason`.
+- `showWhen` conditional visibility with 13 operators.
+- `dependsOn` reactive field options.
+- `preview` live-refresh config on form components.
+- Multi-select (`multiple: true`) on `select` fields.
+- Autocomplete schema (`apiUrl`, `searchParam`, `labelField`, `valueField`, `extraParams`, `minChars`, `debounceMs`).
+
+## [2.2.0] - 2026-04-06
+
+### Added
+- `fieldStatus` and `statusReason` on `FormFieldSchema` — per-field API capability indicator aligned with `mcp-ui-solid` v2.12.0.
+
+## [2.0.0] - 2026-03-31
+
+### Major release — synchronized with `mcp-ui-solid` v2.0.0
+- Expanded `ComponentTypeSchema` to cover 19 component types (added `code`, `map`, `form`, `modal`, `action-group`, `image-gallery`, `video` among others).
+- Per-component schema definitions aligned with the `@seed-ship/mcp-ui-cli` registry validator.
+- Scatter/bubble/time-series chart validation — labels optional for point-based charts.
+
 ## [1.2.0] - 2025-11-25
 
 ### Changed - Phase 5.0 Quick Wins

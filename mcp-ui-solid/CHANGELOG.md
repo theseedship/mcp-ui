@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.0.0] - 2026-04-14
+
+### Major release — synchronized with `@seed-ship/mcp-ui-spec` 5.0.0 and `@seed-ship/mcp-ui-cli` 5.0.0
+
+### Breaking
+- **`ClarificationEvent.options[].file_id` removed from the TypeScript type** (deprecated in v4.3.9, removed in v5.0.0 as announced). The `clarificationToPromptConfig()` helper still migrates runtime `file_id` into `metadata.file_id` transparently, so host apps receiving payloads from older servers continue to work without upgrade pressure. New code should emit `metadata: { file_id }` directly.
+- **`ChatPromptConfig.type = 'select'` and `SelectPromptConfig`** — already removed in 4.3.9 (the variant was declared in 4.0 but `ChatPrompt.tsx` never rendered it). Listed here for the v5 breaking recap.
+
+### Changed
+- Version bump 4.3.9 → 5.0.0 for the synchronized monorepo major release.
+- Root `README.md` + monorepo `CHANGELOG.md` consolidated with the full 4.x → 5.0.0 history.
+
+### Documented
+- v5.1.0 scope: `createScratchpadStore()` factory (multi-instance scratchpad), re-entrant `showChatPrompt` (auto-reject / FIFO queue), `ChatPrompt` AbortSignal wiring, `optionRenderer?` slot on `ChoicePromptConfig`.
+
 ## [4.3.9] - 2026-04-14
 
 ### Added — Sprint 52 multi-agent primitives

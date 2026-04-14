@@ -5,6 +5,21 @@ SolidJS components + chat toolkit for MCP-generated UI. Part of the [MCP UI ecos
 [![npm version](https://img.shields.io/npm/v/@seed-ship/mcp-ui-solid.svg)](https://www.npmjs.com/package/@seed-ship/mcp-ui-solid)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+## What's New in v5.0.0
+
+Synchronized major release — `@seed-ship/mcp-ui-solid`, `@seed-ship/mcp-ui-spec`, and `@seed-ship/mcp-ui-cli` all move to 5.0.0.
+
+**Sprint 52 multi-agent primitives** (new)
+- `ChoicePromptConfig.options[].metadata?` — opaque metadata preserved through the `showChatPrompt` roundtrip (confidence, source tags, etc.).
+- `clarificationToPromptConfig()` — universal `ClarificationEvent → ChatPromptConfig` bridge. Legacy runtime `file_id` auto-migrated into `metadata.file_id`.
+- `createMockChatBus()` — new `src/testing/` entry point with FIFO prompt responses and spy hooks. Test agent flows without rendering any UI.
+
+**Breaking**
+- `ClarificationEvent.options[].file_id` removed from the TypeScript type (was deprecated in v4.3.9). Runtime fallback still works via `clarificationToPromptConfig()`.
+- `ChatPromptConfig.type = 'select'` / `SelectPromptConfig` removed (dead code — never had a rendering branch).
+
+Everything rolled up from the 4.x series is documented in the previous section below.
+
 ## What's New in v4.3
 
 - **Prefilled Forms** — Fields render with pre-populated values + source indicators (detected/inferred/default/user)

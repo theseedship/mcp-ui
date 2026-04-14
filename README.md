@@ -7,19 +7,38 @@ A collection of TypeScript packages for building generative, streaming user inte
 [![npm version](https://img.shields.io/npm/v/@seed-ship/mcp-ui-solid.svg)](https://www.npmjs.com/package/@seed-ship/mcp-ui-solid)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## What's New in v4.0.0
+## What's New in v5.0.0
 
-- **Data Verification Layer** - Anti-hallucination: `validateAgainstSource()` detects ~90% of numerical hallucinations, <1ms, $0.00
-- **VerifiedText component** - Inline badges (verified/hallucinated) with highlight, strip, annotate modes
-- **DataPreviewSection** - Paginated data table with CSV/JSON export, source attribution
-- **GeoJSON maps** - Polygon/line/point rendering, choropleth coloring, feature popups, multi-layer
-- **PMTiles** - Vector tiles for large datasets (>5000 features) via optional `protomaps-leaflet`
-- **Time-series charts** - `timeAxis` config for date-based x-axis
-- **18 scratchpad section types** - Added verified_text, data_preview, map, chart
-- **Chat Bus** (`@experimental`) - Bidirectional event/command bus (18 events, 11 commands)
-- **ChatPrompt** (`@experimental`) - Structured interactions (choice, confirm, form, multi-select, autocomplete)
+Synchronized major release — all three packages bumped in lockstep.
 
-See [CHANGELOG.md](./CHANGELOG.md) for full details.
+**Sprint 52 multi-agent primitives** (new)
+- `ChoicePromptConfig.options[].metadata?` — free-form metadata (confidence, source, tags) preserved through the `showChatPrompt` roundtrip.
+- `ClarificationEvent.options[].metadata?` + `type?` — extension points for host routing. Legacy `file_id` **removed** (runtime-migrated by `clarificationToPromptConfig`).
+- `clarificationToPromptConfig()` — universal `ClarificationEvent → ChatPromptConfig` bridge exported from the root package.
+- `createMockChatBus()` — new `mcp-ui-solid/src/testing/` entry point with FIFO prompt responses and spy hooks for testing agent flows without rendering any UI.
+- Documented known limitations (`showChatPrompt` non-reentrant, scratchpad store singleton, `correlationId` host-propagated) — fixes planned for v5.1.0.
+
+**Prefilled Forms & PPR** (rolled up from 4.2.x / 4.3.x)
+- `prefill` / `displayHint` / `source` / `muted` / `autoSubmitDelay` on form fields with visual source badges.
+- `prefillMode: 'resolve'` — autocomplete fields accept display names, resolved to codes client-side.
+- `valueFormat` regex validator + autocomplete `valueField` guarantee.
+- Debug trace panel for HITL forms (`debugTrace` on `ScratchpadPanel`).
+
+**Table UX polish** (rolled up from 4.3.x)
+- Context-aware pagination (compact in chat, full `pageSize` in fullscreen via `useExpanded()` context).
+- Page size selector in fullscreen (10 / 30 / 60 / 100 / All).
+- Client-side search filter with accent-insensitive matching, 200ms debounce, and match highlighting (`bg-yellow-200` / `bg-[#222F49]`).
+- Sticky header, smart scrollbar (400px chat, calc viewport fullscreen), default export = CSV.
+
+**Data Verification Layer** (4.0.0)
+- `validateAgainstSource()` numerical hallucination detector, `<1ms`, `$0.00`.
+- `VerifiedText`, `DataPreviewSection`, `useDataValidator` hook.
+
+**Breaking changes**
+- `ClarificationEvent.options[].file_id` removed from the TypeScript type (still runtime-migrated by `clarificationToPromptConfig`).
+- `ChatPromptConfig.type = 'select'` / `SelectPromptConfig` removed (dead code, never had a rendering branch).
+
+See [CHANGELOG.md](./CHANGELOG.md) for the full history including every 4.x release rolled up into v5.0.0.
 
 ---
 
@@ -29,9 +48,9 @@ This monorepo contains three packages published under `@seed-ship/`:
 
 | Package | Version | Description |
 |---------|---------|-------------|
-| [`@seed-ship/mcp-ui-solid`](./mcp-ui-solid) | 4.0.0 | SolidJS components for rendering MCP-generated UI |
-| [`@seed-ship/mcp-ui-spec`](./mcp-ui-spec) | 2.0.0 | JSON schemas and Zod validators |
-| [`@seed-ship/mcp-ui-cli`](./mcp-ui-cli) | 2.0.0 | CLI for validation and type generation |
+| [`@seed-ship/mcp-ui-solid`](./mcp-ui-solid) | 5.0.0 | SolidJS components for rendering MCP-generated UI |
+| [`@seed-ship/mcp-ui-spec`](./mcp-ui-spec) | 5.0.0 | JSON schemas and Zod validators |
+| [`@seed-ship/mcp-ui-cli`](./mcp-ui-cli) | 5.0.0 | CLI for validation and type generation |
 
 ### @seed-ship/mcp-ui-solid
 
@@ -350,7 +369,12 @@ See [mcp-ui-solid README](./mcp-ui-solid/README.md#ssr-compatibility) for detail
 - [x] **Phase 5**: Advanced components (forms, modals, maps, galleries, video, code)
 - [x] **Phase 6**: Chat Bus + ChatPrompt (agent interactions toolkit)
 - [x] **Phase 7**: Data Verification Layer + GeoJSON maps + time-series
-- [ ] **Phase 8**: Framework adapters (React, Vue, Svelte)
+- [x] **Phase 8**: AITL agent toolkit (agent cards, split steppers, handoffs, briefing diffs)
+- [x] **Phase 9**: Prefilled forms + Progressive Parameter Resolution (source badges, `prefillMode: 'resolve'`, `valueFormat`, auto-submit toast)
+- [x] **Phase 10**: Table UX polish (context-aware pagination, search filter, sticky header, match highlighting)
+- [x] **Phase 11** (v5.0.0): Sprint 52 multi-agent primitives (`clarificationToPromptConfig`, `createMockChatBus`, metadata extension points)
+- [ ] **Phase 12**: Multi-instance scratchpad factory + re-entrant `showChatPrompt` + AbortSignal wiring (v5.1.0)
+- [ ] **Phase 13**: Framework adapters (React, Vue, Svelte)
 
 ## Links
 

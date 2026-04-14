@@ -5,6 +5,237 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+> This file is the **monorepo-wide** changelog. Per-package changelogs live in
+> `mcp-ui-solid/CHANGELOG.md`, `mcp-ui-spec/CHANGELOG.md`, and
+> `mcp-ui-cli/CHANGELOG.md`. Major releases bump all three packages in lockstep.
+
+## [5.0.0] - 2026-04-14
+
+### Major release — Sprint 52 multi-agent primitives + docs consolidation
+
+All three packages bumped to 5.0.0:
+- `@seed-ship/mcp-ui-solid` 4.3.9 → 5.0.0
+- `@seed-ship/mcp-ui-spec` 3.2.0 → 5.0.0
+- `@seed-ship/mcp-ui-cli` 3.0.0 → 5.0.0
+
+### Breaking
+- **`ClarificationEvent.options[].file_id` removed from the type** (deprecated in v4.3.9, removed in v5.0.0 as announced). The `clarificationToPromptConfig()` helper still migrates legacy runtime `file_id` into `metadata.file_id` transparently, so host apps receiving payloads from older servers continue to work. New code should emit `metadata: { file_id }` directly.
+- **`ChatPromptConfig.type = 'select'` and `SelectPromptConfig`** — already removed in 4.3.9 (the variant was declared in 4.0 but `ChatPrompt.tsx` never rendered it). Documented here for the v5 recap.
+
+### Added — Sprint 52 primitives (solid)
+- **`ChoicePromptConfig.options[].metadata?`** — free-form metadata (confidence, source, tags...) preserved through `showChatPrompt → ChatPromptResponse` roundtrip. Opaque to the default renderer.
+- **`ClarificationEvent.options[].metadata?`** + **`ClarificationEvent.type?`** — extension points for host routing (e.g. `'intent_disambiguate'`).
+- **`clarificationToPromptConfig()`** — universal `ClarificationEvent → ChatPromptConfig` bridge exported from the root package. Migrates legacy `file_id` runtime-side.
+- **`createMockChatBus()`** — new `src/testing/` sub-module with FIFO `ChatPromptResponse` queue and spy hook. Useful for testing agent flows without rendering any UI.
+
+### Added — Table UX polish (solid, late 4.3.x series, rolled into v5)
+- **Context-aware pagination** — `TableRenderer` reads `useExpanded()` from `ExpandableWrapper` to show compact rows in chat view and full `pageSize` in fullscreen.
+- **Page size selector** — dropdown `10 / 30 / 60 / 100 / All` in fullscreen pagination bar.
+- **Search input** — client-side filter above the table, case + accent insensitive, 200ms debounced, auto-enabled when `rows.length > 10` (or explicit `searchable: true`). New `searchPlaceholder`.
+- **Search term highlighting** — matches wrapped in `<mark>` across all visible cells (`bg-yellow-200` / `dark:bg-[#222F49]`). New exported `highlightQuery()` helper.
+- **Sticky header** — `thead` stays visible while scrolling; scroll container bounded at 400px in chat and adapts to viewport in fullscreen.
+- **Default export = CSV** — TSV removed from default export menu (still available on explicit `formats: ['tsv']`).
+
+### Added — Form prefill layer (solid, entire 4.2.x + 4.3.0 series, rolled into v5)
+- **`prefill` / `source` / `displayHint` / `muted`** on `FormFieldParams` — fields render with pre-populated values and source badges (`detected` / `inferred` / `default` / `user`). Muted fields clear on focus/click.
+- **`autoSubmitDelay`** on `FormComponentParams` — countdown with cancel button when all required fields are prefilled. Any interaction cancels. Toast mode shows a compact summary when *all* fields are prefilled.
+- **`prefillMode: 'resolve'`** — autocomplete fields accept display names; `mcp-ui-solid` calls the field's own `apiUrl` client-side to resolve into `valueField`. Zero server work.
+- **Smart tag display** — select/autocomplete show `label` (or `displayHint`) instead of raw codes for prefilled values.
+- **Prefill summary** — "N champs pré-remplis sur M" rendered above the form.
+- **`valueFormat` + `valueFormatHint`** — regex validator on form fields for strict format enforcement (INSEE codes, SIRET, ISO dates, etc.).
+- **Autocomplete `valueField` guarantee** — on blur without selection, the field auto-resolves typed text to the first API result, ensuring submissions never contain display text.
+- **Debug trace mode** — `debugTrace` prop on `ScratchpadPanel` shows a collapsible panel under each form with per-field `prefill`/`source`/`prefillMode` state, submitted values, auto-submit decision reasoning, optional server `_debug` data, and raw SSE payload viewer.
+- **spec schema additions** — `prefill`, `displayHint`, `source`, `muted`, `prefillMode`, `valueFormat`, `valueFormatHint`, `autoSubmitDelay`, `PrefillSourceSchema`.
+
+### Documented — known limitations (solid)
+- **`ChatPromptResponse.dismissed`** — full semantics in JSDoc: X icon / Cancel → `true`, explicit click/submit → `undefined`, AbortSignal → Promise rejection (host responsibility).
+- **Scratchpad store is a singleton** — two `ScratchpadPanel` instances share state. Factory `createScratchpadStore()` planned for v5.1.0.
+- **`showChatPrompt` is not re-entrant** — calling it while another prompt is active leaks the previous Promise. Host apps must queue/dismiss manually. Auto-reject planned for v5.1.0.
+- **AbortSignal is not listened to** — `ChatPrompt` does not currently react to abort signals. Fix planned for v5.1.0.
+- **`correlationId` is host-propagated** — mcp-ui does not auto-forward the ID across the bus; SSE parsers must thread it into subsequent event emissions.
+
+### Documentation catch-up
+- **Root `README.md`** — refreshed "What's New in v5.0.0" with the full 4.x → 5.0.0 highlight reel. Version table updated to 5.0.0 across all three packages.
+- **Root `CHANGELOG.md`** — backfilled the entire 3.0.x tail + complete 4.0.0 → 4.3.9 history (previously stopped at 3.0.0).
+- **`mcp-ui-spec/CHANGELOG.md`** — backfilled 2.x → 5.0.0 (previously stopped at 1.2.0).
+- **`mcp-ui-cli/CHANGELOG.md`** — backfilled 2.x → 5.0.0 (previously stopped at 1.1.0).
+
+### Tests
+- `@seed-ship/mcp-ui-solid`: **433 passing** (+10 vs v4.3.9). New coverage for `clarificationToPromptConfig` (6 tests) and `createMockChatBus` (4 tests).
+
+---
+
+## 4.x series — mcp-ui-solid only
+
+Versions 4.0.0 → 4.3.9 were published as `mcp-ui-solid` patch/minor releases. `mcp-ui-spec` and `mcp-ui-cli` did not track the 4.x line — they stayed on 3.x (spec reached 3.2.0, cli reached 3.0.0) until the synchronised v5.0.0 bump above.
+
+## [4.3.9] - 2026-04-14 (`mcp-ui-solid`)
+
+### Added — Sprint 52 multi-agent primitives (G1-G11)
+
+Agnostic extension points landed ahead of the breaking v5 bump:
+- `ChoicePromptConfig.options[].metadata?` (G1)
+- `ClarificationEvent.options[].metadata?` + `type?` (G3). `file_id` **deprecated** in JSDoc (removed in v5.0.0).
+- `clarificationToPromptConfig()` helper (G11) — universal `ClarificationEvent → ChatPromptConfig` bridge.
+- `createMockChatBus()` test helper (G6) — new `src/testing/` entry point.
+- `ChatPromptResponse.dismissed` JSDoc clarified (G5).
+- Known limitations documented: scratchpad singleton (G8), `showChatPrompt` non-reentrant (G9), `correlationId` host-propagated (G10).
+- README recipe for bridging external clarification events (G2).
+
+### Removed — dead code
+- `ChatPromptConfig.type = 'select'` and `SelectPromptConfig` (G7) — never had a rendering branch in `ChatPrompt.tsx`.
+
+## [4.3.8] - 2026-04-11 (`mcp-ui-solid`)
+
+### Added
+- **Search term highlighting** — matched query terms wrapped in `<mark>` across all visible cells. `bg-yellow-200` light / `bg-[#222F49]` dark. New `highlightQuery()` helper skips HTML tag content.
+
+### Fixed
+- **Fullscreen phantom scrollbar** — removed `h-full` on table wrapper in expanded mode. The wrapper now shrinks to content so short tables don't leave empty space or show an unnecessary scrollbar.
+
+## [4.3.7] - 2026-04-11 (`mcp-ui-solid`)
+
+### Changed
+- **Prev/Next pagination is now the default** — replaced the progressive "show more" mode with unified Prev/Next navigation.
+- **Page size selector in fullscreen** — dropdown `10 / 30 / 60 / 100 / All`.
+- **Fullscreen table fills the viewport** via `calc(100vh - 180px)`.
+- **Header contrast** — thead background from `bg-gray-50` to `bg-gray-100` for better chat-view visibility.
+
+## [4.3.6] - 2026-04-11 (`mcp-ui-solid`)
+
+### Fixed
+- **Opaque sticky header** — `bg-gray-900/50` (translucent) → `bg-gray-900` (opaque) so the header remains readable over chat bubbles.
+- **Compact search input** — `max-w-xs min-w-[200px]` instead of `w-full`.
+
+## [4.3.5] - 2026-04-11 (`mcp-ui-solid`)
+
+### Fixed — Sticky Table Header on Scroll
+- Table scroll container now has bounded `max-height` (400px chat, 70vh fullscreen) when rows > 8. Combined with the existing `sticky top-0` thead, header stays visible while scrolling in both chat and fullscreen.
+
+## [4.3.4] - 2026-04-11 (`mcp-ui-solid`)
+
+### Added — Context-Aware Table Pagination (chat vs fullscreen)
+- `ExpandableWrapper` provides `isExpanded` signal via SolidJS context.
+- `TableRenderer` adapts `pageSize` automatically: compact in chat, full in fullscreen.
+- Optional `chatPageSize` override. `useExpanded()` hook exported.
+
+## [4.3.3] - 2026-04-11 (`mcp-ui-solid`)
+
+### Added — Table Search Filter (`searchable`)
+- Client-side search input above the table (real-time, case + accent insensitive, 200ms debounced). Auto-enabled when `rows.length > 10`. Custom `searchPlaceholder`. Pagination applies **after** filtering.
+
+## [4.3.2] - 2026-04-11 (`mcp-ui-solid`)
+
+### Added — Progressive Table Pagination (`showAllLabel`) — later superseded by v4.3.7 Prev/Next
+- "Show more" button that appends the next page worth of rows instead of replacing. Disappears once all rows are visible.
+
+## [4.3.1] - 2026-04-11 (`mcp-ui-solid`)
+
+### Added — Debug Trace Mode for Forms & PPR
+- `debugTrace` prop on `ScratchpadPanel` adds a collapsible panel under each form with per-field prefill state, submitted values, auto-submit decision reasoning, optional server `_debug` data, and raw SSE payload viewer.
+
+## [4.3.0] - 2026-04-11 (`mcp-ui-solid` + `mcp-ui-spec` 3.2.0)
+
+### Added — Prefill Enhancements (Phase B)
+- **`prefillMode: "resolve"`** on autocomplete fields — server sends display names, mcp-ui resolves to codes via `apiUrl` client-side (zero server work).
+- **Smart tag display** — select/autocomplete show labels not codes.
+- **Prefill confidence summary** — "N champs pré-remplis sur M" above the form.
+- **Auto-submit toast** — compact summary when all fields are prefilled.
+- **`valueFormat` regex validation** with `valueFormatHint`.
+- **Autocomplete always submits `valueField`** — on blur without selection, auto-resolves typed text.
+
+## [4.2.2] - 2026-04-11 (`mcp-ui-solid`)
+
+### Fixed
+- Ensure `dist` contains prefill support (v4.2.1 dist was stale in the publish pipeline).
+
+### Added
+- README section and CHANGELOG entry for the prefilled forms feature.
+
+## [4.2.1] - 2026-04-11 (`mcp-ui-solid`)
+
+### Fixed
+- **`EmbeddedFormSection` (scratchpad forms)** now initializes `formData` with `field.prefill` values (was always `{}`). Re-applies prefill on streaming SSE updates without overwriting user edits. Full `autoSubmitDelay` support in scratchpad forms.
+
+## [4.2.0] - 2026-04-11 (`mcp-ui-solid` + `mcp-ui-spec` 3.1.0)
+
+### Added — Prefilled Forms with Source Indicators (Phase A)
+- `prefill`, `displayHint`, `source`, `muted` on `FormFieldParams`.
+- `PrefillSource` type (`detected | inferred | default | user`) with visual badges.
+- `autoSubmitDelay` on `FormComponentParams` — countdown with cancel button when all required fields are prefilled.
+- Spec: `PrefillSourceSchema`, schema additions, all optional / backward-compatible.
+
+## [4.1.0] - 2026-04-10 (`mcp-ui-solid`)
+
+### Added — AITL Agent Toolkit (P1-P5)
+- Agent section types: `agent_card`, `split_stepper`, `agent_handoff`, `briefing_diff`.
+- Components: `AgentCard`, `AgentStatusBadge`, `SplitStepper`, `AgentHandoff`, `BriefingDiff`.
+- `StreamingUIRenderer` + scratchpad integration for agent-in-the-loop flows.
+
+## [4.0.6] - 2026-04-08 (`mcp-ui-solid`)
+
+### Fixed
+- **TableRenderer sort click** — use `on:click` instead of `onClick` to avoid SolidJS event-delegation edge case on sort header.
+
+## [4.0.5] - 2026-04-08 (`mcp-ui-solid`)
+
+### Fixed
+- **Sortable columns** — header click sort with asc/desc/off cycle, pagination fix.
+
+## [4.0.4] - 2026-04-07 (`mcp-ui-solid`)
+
+### Added
+- **Client-side auto-pagination** for tables (`pageSize`, `initialPage`, Prev/Next navigation).
+
+## [4.0.3] - 2026-04-07 (`mcp-ui-solid`)
+
+### Added
+- **Sortable columns in `DataPreviewSection`** — click header to cycle sort direction.
+
+## [4.0.0] - 2026-04-07 (`mcp-ui-solid`)
+
+### Added — Data Verification Layer (anti-hallucination)
+- **`validateAgainstSource()`** — pure regex-based numerical hallucination detector, <1ms, $0.00. Configurable tolerance, ignore patterns for years/postal codes.
+- **`useDataValidator()`** — reactive SolidJS hook wrapping the validator in a `createMemo`.
+- **`VerifiedText` component** — inline verification badges with `highlight` / `strip` / `annotate` modes and confidence bar.
+- **`DataPreviewSection` component** — paginated source data table with CSV/JSON export, column types, French locale formatting, source attribution.
+
+### Added — GeoJSON Map Rendering
+- **MapRenderer** — GeoJSON polygons/lines/points, choropleth coloring, feature popups, multi-layer support.
+- **PMTiles** — optional vector tile support via `protomaps-leaflet` peer dep.
+- New types: `MapGeoJSONStyle`, `MapPopupConfig`, `MapLayer`, `MapPMTilesConfig`.
+
+### Added — Time-series Chart Support
+- **`timeAxis` config** on `ChartComponentParams` — date-based x-axis with configurable parser/unit/tooltip format, min/max bounds.
+- Dataset `data` now accepts `Array<{x, y}>` for scatter/time-series.
+
+### Added — 18 Scratchpad Section Types
+- New: `verified_text`, `data_preview`, `map`, `chart` (was 14).
+- `ChartComponentParams.data.datasets[]` now has `fill` and `tension`.
+- `protomaps-leaflet` added as optional peer dependency.
+
+### Technical
+- 423 tests (was 417), all passing.
+- Zero new runtime dependencies.
+- Full backward compatibility with v3.x APIs.
+
+## [3.0.5] - 2026-04-06 (`mcp-ui-solid`)
+
+### Fixed
+- **Autocomplete `valueField` bug** — `handleInput` was clearing the stored value on every keystroke. Now only clears when the user text differs from the selected label.
+
+## [3.0.4] - 2026-04-06 (`mcp-ui-solid`)
+
+### Fixed
+- **npm README** — updated package-level README.md for npm display.
+
+## [3.0.3] - 2026-04-05 (`mcp-ui-solid`)
+
+### Added — ARCH1: Direct scratchpad store
+- `dispatchScratchpad()` — singleton reactive store, eliminates the ChatBus relay chain race condition.
+- `useScratchpadState()` — hook for components to read scratchpad state reactively.
+- DX1 lifecycle console messages (create/update/close).
+
 ## [3.0.0] - 2026-04-06
 
 ### Major Release — Complete HITL Chat Toolkit
