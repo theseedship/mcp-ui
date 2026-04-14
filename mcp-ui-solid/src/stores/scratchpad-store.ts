@@ -6,6 +6,13 @@
  *
  * Parser calls dispatchScratchpad() → store updates → ScratchpadPanel reads reactively.
  * Zero bus, zero relay, zero race condition.
+ *
+ * **Known limitation (v4.3.9):** This store is a module-level singleton, not
+ * a context-scoped factory. Two `ScratchpadPanel` instances in the same app
+ * will share the same state. Multi-panel scenarios (e.g. chat + admin dashboard
+ * both showing scratchpads simultaneously) are unsupported. Host apps that need
+ * isolated scratchpads should not reuse this store — wait for v4.4.0 which
+ * will expose `createScratchpadStore()` factory for per-panel instances.
  */
 
 import { createStore, produce } from 'solid-js/store'

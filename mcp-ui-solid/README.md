@@ -347,6 +347,65 @@ function ChatInterface() {
 
 See [Chat Bus documentation](https://github.com/theseedship/mcp-ui#chat-bus--agent-interactions-experimental) for the full event/command reference.
 
+### Bridging external clarification events (v4.3.9)
+
+When your MCP server emits a clarification event via SSE (e.g. a `_pause`
+frame asking the user to disambiguate intent), convert it to a `ChatPrompt`
+using the universal `clarificationToPromptConfig` helper — no app-specific
+glue required:
+
+```tsx
+import { clarificationToPromptConfig } from '@seed-ship/mcp-ui-solid'
+
+// In your SSE parser, when you decode a clarification frame:
+bus.events.emit('onClarificationNeeded', {
+  streamKey: 'main',
+  clarification: {
+    question: 'Which space do you mean?',
+    options: [
+      { value: 'sp-1', label: 'Immobilier', metadata: { confidence: 0.9 } },
+      { value: 'sp-2', label: 'Santé',      metadata: { confidence: 0.6 } },
+    ],
+    type: 'intent_disambiguate', // opaque tag for host routing
+  },
+})
+
+// Wire the event to a prompt:
+bus.events.on('onClarificationNeeded', async ({ clarification }) => {
+  const response = await bus.commands.exec(
+    'showChatPrompt',
+    clarificationToPromptConfig(clarification)
+  )
+  // POST response.value to your /api/agent-resume endpoint, etc.
+})
+```
+
+Legacy `option.file_id` is automatically migrated into `metadata.file_id`.
+Arbitrary `metadata` (confidence scores, source tags, ...) flows through
+unchanged and can be rendered by a custom `ChoiceBody` wrapper.
+
+### ChatPromptResponse — dismissed / aborted / answered (v4.3.9)
+
+Every `ChatPrompt` resolves to one of three outcomes:
+
+| Outcome | How | `response.dismissed` | Promise |
+|---------|-----|----------------------|---------|
+| Explicit answer | Click a choice / submit a form | `undefined` | resolves |
+| Dismissed | Click the X icon, click Cancel (confirm type) | `true` | resolves |
+| Aborted | Host app rejects the Promise via `AbortSignal` | *(never resolves)* | rejects |
+
+> **v4.3.9 limitation:** `ChatPrompt` does not listen to `AbortSignal` yet.
+> Host apps are responsible for wiring `signal.addEventListener('abort', ...)`
+> to `Promise.reject`. A built-in helper lands in v4.4.0.
+
+### correlationId — host-propagated (v4.3.9)
+
+`ChatEventBase.correlationId` is opaque to mcp-ui. When an agent calls
+`sendPrompt('...')` the returned string is a correlation ID — the host app's
+SSE parser must forward this value into every subsequent event emission
+(`onToken`, `onStreamEnd`, etc.) so agents can match responses back to their
+original prompts. mcp-ui does not auto-propagate it across the bus.
+
 ## ScratchpadPanel — HITL/AITL Shared Workspace (`@experimental`)
 
 A shared workspace where agent and human collaborate in real-time. 18 section types:
@@ -438,7 +497,11 @@ import {
   ChatBusProvider, useChatBus,
   dispatchScratchpad, useScratchpadState,
   createChatBus, createEventEmitter, createCommandHandler,
+  clarificationToPromptConfig,  // v4.3.9 — universal ClarificationEvent → ChatPromptConfig bridge
 } from '@seed-ship/mcp-ui-solid'
+
+// Testing utilities (v4.3.9)
+import { createMockChatBus } from '@seed-ship/mcp-ui-solid'
 
 // Validation + Security
 import {

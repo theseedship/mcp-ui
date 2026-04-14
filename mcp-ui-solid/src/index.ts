@@ -245,6 +245,13 @@ export {
   validateAgainstSource,
 } from './services'
 
+// Clarification → Prompt helper (v4.3.9)
+export { clarificationToPromptConfig } from './services/chat-bus'
+
+// Testing utilities (v4.3.9)
+export { createMockChatBus } from './testing'
+export type { MockChatBusOptions } from './testing'
+
 // Chat Bus Types (v2.4.0 — @experimental)
 export type {
   ChatEventBase,
@@ -259,7 +266,6 @@ export type {
   ChoicePromptConfig,
   ConfirmPromptConfig,
   FormPromptConfig,
-  SelectPromptConfig,
   SuggestionItem,
   AgentContext,
   BriefingEvent,

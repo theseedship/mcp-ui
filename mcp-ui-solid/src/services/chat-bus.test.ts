@@ -3,8 +3,8 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { createEventEmitter, createCommandHandler, createChatBus } from './chat-bus'
-import type { ChatEvents, ChatCommands } from '../types/chat-bus'
+import { createEventEmitter, createCommandHandler, createChatBus, clarificationToPromptConfig } from './chat-bus'
+import type { ChatEvents, ChatCommands, ClarificationEvent } from '../types/chat-bus'
 
 describe('createEventEmitter', () => {
   it('emits events to subscribed listeners', () => {
@@ -302,5 +302,83 @@ describe('createChatBus', () => {
     })
 
     expect(receivedCorrelations).toEqual(['corr-123'])
+  })
+})
+
+describe('clarificationToPromptConfig', () => {
+  it('converts a basic ClarificationEvent to a choice prompt', () => {
+    const event: ClarificationEvent = {
+      question: 'Which file?',
+      options: [
+        { value: 'a', label: 'File A' },
+        { value: 'b', label: 'File B' },
+      ],
+    }
+    const config = clarificationToPromptConfig(event)
+    expect(config.type).toBe('choice')
+    expect(config.title).toBe('Which file?')
+    expect('options' in config.config).toBe(true)
+    const opts = (config.config as any).options
+    expect(opts).toHaveLength(2)
+    expect(opts[0]).toEqual({ value: 'a', label: 'File A' })
+    expect((config.config as any).layout).toBe('vertical')
+  })
+
+  it('preserves custom metadata transparently', () => {
+    const event: ClarificationEvent = {
+      question: 'Pick one',
+      options: [
+        { value: 'x', label: 'X', metadata: { confidence: 0.9, source: 'llm' } },
+      ],
+    }
+    const config = clarificationToPromptConfig(event)
+    const opts = (config.config as any).options
+    expect(opts[0].metadata).toEqual({ confidence: 0.9, source: 'llm' })
+  })
+
+  it('migrates legacy file_id into metadata.file_id', () => {
+    const event: ClarificationEvent = {
+      question: 'Which file?',
+      options: [
+        { value: 'a', label: 'File A', file_id: 42 },
+      ],
+    }
+    const config = clarificationToPromptConfig(event)
+    const opts = (config.config as any).options
+    expect(opts[0].metadata).toEqual({ file_id: 42 })
+  })
+
+  it('merges file_id alongside existing metadata', () => {
+    const event: ClarificationEvent = {
+      question: 'Pick one',
+      options: [
+        { value: 'a', label: 'A', file_id: 7, metadata: { confidence: 0.8 } },
+      ],
+    }
+    const config = clarificationToPromptConfig(event)
+    const opts = (config.config as any).options
+    expect(opts[0].metadata).toEqual({ confidence: 0.8, file_id: 7 })
+  })
+
+  it('gives precedence to explicit metadata.file_id over legacy field', () => {
+    const event: ClarificationEvent = {
+      question: 'Pick',
+      options: [
+        { value: 'a', label: 'A', file_id: 1, metadata: { file_id: 99 } },
+      ],
+    }
+    const config = clarificationToPromptConfig(event)
+    const opts = (config.config as any).options
+    expect((opts[0].metadata as any).file_id).toBe(99)
+  })
+
+  it('omits metadata entirely when nothing to carry', () => {
+    const event: ClarificationEvent = {
+      question: 'Pick',
+      options: [{ value: 'a', label: 'A' }],
+    }
+    const config = clarificationToPromptConfig(event)
+    const opts = (config.config as any).options
+    expect(opts[0]).not.toHaveProperty('metadata')
   })
 })

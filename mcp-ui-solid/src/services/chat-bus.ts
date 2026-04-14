@@ -13,6 +13,8 @@ import type {
   ChatBus,
   EventSubscribeOptions,
   ScratchpadSection,
+  ClarificationEvent,
+  ChatPromptConfig,
 } from '../types/chat-bus'
 
 // ─── Event Emitter ───────────────────────────────────────────
@@ -223,5 +225,45 @@ export function mergeScratchpadSections(
     case 'replace':
     default:
       return incoming
+  }
+}
+
+// ─── Clarification → Prompt Helper (v4.3.9) ──────────────────
+
+/**
+ * Convert a ClarificationEvent into a ChatPromptConfig.
+ * Universal bridge for apps receiving clarification events via SSE.
+ *
+ * Legacy `file_id` (deprecated) is transparently moved into `metadata.file_id`
+ * so consumers don't need to handle both shapes.
+ *
+ * @experimental
+ * @since v4.3.9
+ * @example
+ * bus.events.on('onClarificationNeeded', ({ clarification }) => {
+ *   bus.commands.exec('showChatPrompt', clarificationToPromptConfig(clarification))
+ * })
+ */
+export function clarificationToPromptConfig(
+  event: ClarificationEvent
+): ChatPromptConfig {
+  return {
+    type: 'choice',
+    title: event.question,
+    config: {
+      options: event.options.map((opt) => {
+        const merged: Record<string, unknown> = { ...(opt.metadata ?? {}) }
+        if (opt.file_id !== undefined && merged.file_id === undefined) {
+          merged.file_id = opt.file_id
+        }
+        return {
+          value: opt.value,
+          label: opt.label,
+          // Only include metadata if non-empty (keeps payloads clean)
+          ...(Object.keys(merged).length > 0 ? { metadata: merged } : {}),
+        }
+      }),
+      layout: 'vertical',
+    },
   }
 }

@@ -94,7 +94,19 @@ export interface ChatCommands {
   appendPrompt: (text: string) => void
 
   // --- Structured interactions ---
-  /** Show a ChatPrompt (choice, confirm, form) above the input (C4) */
+  /**
+   * Show a ChatPrompt (choice, confirm, form) above the input (C4).
+   *
+   * **Known limitation (v4.3.9):** Not re-entrant. If called while another
+   * prompt is already active, the previous prompt's Promise will never resolve
+   * (memory leak). Host apps must queue prompts or dismiss the previous one
+   * manually before showing a new one. Fix planned for v4.4.0 (auto-reject
+   * previous prompt or FIFO queue).
+   *
+   * **AbortSignal limitation (v4.3.9):** The `signal` argument is currently
+   * unused — `ChatPrompt` does not listen to aborts. Host apps must wire
+   * abort → Promise rejection themselves. Fix planned for v4.4.0.
+   */
   showChatPrompt: (config: ChatPromptConfig, signal?: AbortSignal) => Promise<ChatPromptResponse>
   /** Dismiss the active ChatPrompt */
   dismissChatPrompt: () => void
@@ -180,12 +192,20 @@ export interface ChatCommandHandler {
  * Configuration for a ChatPrompt interaction.
  */
 export interface ChatPromptConfig {
-  /** Prompt type */
-  type: 'choice' | 'confirm' | 'form' | 'select'
+  /**
+   * Prompt type:
+   * - 'choice' → large visual buttons with icon + description (horizontal/vertical/grid layout)
+   * - 'confirm' → yes/no dialog with danger variant
+   * - 'form' → full form with 18 field types (text, select, autocomplete, conditional, ...)
+   *
+   * NOTE: 'select' was declared in v4.0 but never implemented — removed in v4.3.9.
+   * Use 'form' with a single `{type: 'select'}` field, or 'choice' for large visual picks.
+   */
+  type: 'choice' | 'confirm' | 'form'
   /** Title / question displayed */
   title: string
   /** Type-specific configuration */
-  config: ChoicePromptConfig | ConfirmPromptConfig | FormPromptConfig | SelectPromptConfig
+  config: ChoicePromptConfig | ConfirmPromptConfig | FormPromptConfig
 }
 
 export interface ChoicePromptConfig {
@@ -194,6 +214,13 @@ export interface ChoicePromptConfig {
     label: string
     icon?: string
     description?: string
+    /**
+     * Free-form metadata (confidence, source, tags, ...).
+     * Opaque to default renderer — use a custom ChoiceBody wrapper to display it.
+     * Preserved through showChatPrompt → ChatPromptResponse roundtrip.
+     * @since v4.3.9
+     */
+    metadata?: Record<string, unknown>
   }>
   layout?: 'horizontal' | 'vertical' | 'grid'
 }
@@ -258,12 +285,6 @@ export interface FormPromptConfig {
   }
 }
 
-export interface SelectPromptConfig {
-  options: Array<{ value: string; label: string; group?: string }>
-  placeholder?: string
-  searchable?: boolean
-}
-
 /**
  * @experimental
  * Structured response from a ChatPrompt.
@@ -274,7 +295,17 @@ export interface ChatPromptResponse {
   value: string | Record<string, unknown>
   /** Human-readable label (for display in chat as user message) */
   label: string
-  /** Whether the user dismissed without answering */
+  /**
+   * True when user closed the prompt without explicit answer.
+   * - X icon click (any type) → dismissed: true
+   * - Cancel button in 'confirm' → dismissed: true
+   * - Choice button click → dismissed: undefined (explicit answer)
+   * - Form submit → dismissed: undefined (explicit answer)
+   * - AbortSignal triggered → Promise rejection (NOT a response).
+   *   NOTE: Host app is currently responsible for wiring AbortSignal to
+   *   Promise.reject. mcp-ui's ChatPrompt component does NOT listen to
+   *   the signal yet (v4.3.9 known limitation, fix planned in v4.4.0).
+   */
   dismissed?: boolean
 }
 
@@ -434,13 +465,29 @@ export interface ToolCallEvent {
 }
 
 export interface ClarificationEvent {
+  /** The question to ask the user */
   question: string
+  /** Available options (aligns with ChoicePromptConfig.options shape) */
   options: Array<{
     value: string
     label: string
+    /** @deprecated Use metadata.file_id instead. Will be removed in v5.0.0. */
     file_id?: number
+    /**
+     * Free-form metadata (confidence, source, tags, ...).
+     * Opaque to mcp-ui — host apps pass it through as-is.
+     * @since v4.3.9
+     */
+    metadata?: Record<string, unknown>
   }>
+  /** Original user message that triggered the clarification */
   original_message?: string
+  /**
+   * Free-form type tag for host routing (e.g. 'intent_disambiguate', 'file_select').
+   * Opaque to mcp-ui — hosts use it to decide how to render/route the clarification.
+   * @since v4.3.9
+   */
+  type?: string
 }
 
 // ─── Data Validation (v3.1.0 — anti-hallucination) ──────────

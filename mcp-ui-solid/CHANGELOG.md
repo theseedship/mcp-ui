@@ -5,6 +5,65 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.3.9] - 2026-04-14
+
+### Added — Sprint 52 multi-agent primitives
+
+#### Type additions (all non-breaking)
+- **`ChoicePromptConfig.options[].metadata?: Record<string, unknown>`** (G1) — free-form metadata on prompt choices (confidence, source, tags...). Opaque to the default renderer, preserved through `showChatPrompt → ChatPromptResponse` roundtrip. Use a custom ChoiceBody wrapper to display it.
+- **`ClarificationEvent.options[].metadata?: Record<string, unknown>`** (G3) — same extension point on clarification events. Legacy `file_id?: number` deprecated in JSDoc (removal in v5.0.0).
+- **`ClarificationEvent.type?: string`** (G3) — free-form type tag for host routing (e.g. `'intent_disambiguate'`, `'file_select'`).
+
+#### New helper: `clarificationToPromptConfig()` (G11)
+- Universal bridge converting `ClarificationEvent` → `ChatPromptConfig` for any MCP-UI consumer
+- Transparent `file_id` legacy migration into `metadata.file_id`
+- Explicit `metadata.file_id` takes precedence over legacy field
+- Agnostic — zero Deposium-specific concepts
+- Exported from `@seed-ship/mcp-ui-solid`
+
+#### New testing entry point: `createMockChatBus()` (G6)
+- New sub-module `src/testing/` with `createMockChatBus({ promptResponses, onShowChatPrompt })`
+- Pre-programs `showChatPrompt` responses in FIFO order for flow tests
+- Spy hook on `onShowChatPrompt` for assertions
+- Throws helpful error when the queue is exhausted
+
+### Removed — dead code (G7)
+- **BREAKING (theoretical, never implemented)**: `ChatPromptConfig.type = 'select'` removed from the union type. `SelectPromptConfig` interface removed + export dropped from `src/index.ts`. The `'select'` variant was declared in v4.0 but `ChatPrompt.tsx` never had a rendering branch — it was dead code. Use `'form'` with a single `select` field, or `'choice'` for visual picks.
+
+### Documented — known limitations (G5, G8, G9, G10)
+- **`ChatPromptResponse.dismissed`** (G5) — full semantics in JSDoc: X icon/Cancel → `true`, explicit click/submit → `undefined`, AbortSignal → Promise rejection (host responsibility until v4.4.0).
+- **Scratchpad store is a singleton** (G8) — two `ScratchpadPanel` instances share state. Documented as known limitation. Factory `createScratchpadStore()` planned for v4.4.0.
+- **`showChatPrompt` is not re-entrant** (G9) — calling it while another prompt is active leaks the previous Promise. Documented in JSDoc. Host apps must queue/dismiss manually. Auto-reject planned for v4.4.0.
+- **`correlationId` is host-propagated** (G10) — README recipe. mcp-ui does not auto-forward the ID; host SSE parsers must thread it into subsequent event emissions.
+
+### Documented — integration recipes (G2)
+- **Bridging external clarification events** — new README section showing the `onClarificationNeeded → clarificationToPromptConfig → showChatPrompt` flow, with metadata preservation and opaque type tags.
+
+### Documentation catch-up
+- Backfilled `CHANGELOG.md` entries for 4.3.6, 4.3.7, 4.3.8 (previously missing).
+
+## [4.3.8] - 2026-04-11
+
+### Added
+- **Search term highlighting** — matched query terms are wrapped in `<mark>` tags across all visible cells. `bg-yellow-200` in light mode, `bg-[#222F49]` in dark mode. New `highlightQuery` helper skips HTML tag content to preserve markup.
+
+### Fixed
+- **Fullscreen phantom scrollbar** — removed `h-full` from the table wrapper in expanded mode so it shrinks to content. No more empty space or unnecessary scrollbar when rows don't fill the viewport.
+
+## [4.3.7] - 2026-04-11
+
+### Changed
+- **Prev/Next pagination is now the default** — replaced the progressive "show more" mode with unified Prev/Next navigation for consistency between chat and fullscreen views.
+- **Page size selector in fullscreen** — dropdown with 10 / 30 / 60 / 100 / All options.
+- **Fullscreen table fills the viewport** via `calc(100vh - 180px)`.
+- **Header contrast** — thead background bumped from `bg-gray-50` to `bg-gray-100` for better visibility in chat view.
+
+## [4.3.6] - 2026-04-11
+
+### Fixed
+- **Opaque sticky header** — changed from `bg-gray-900/50` (translucent) to `bg-gray-900` (opaque) so the header remains readable over chat bubbles behind it.
+- **Compact search input** — `max-w-xs min-w-[200px]` instead of `w-full` so the filter field doesn't span the entire table width.
+
 ## [4.3.5] - 2026-04-11
 
 ### Fixed — Sticky Table Header on Scroll
