@@ -6,6 +6,7 @@
  * See CHANGELOG for breaking changes on experimental types.
  */
 
+import type { JSX } from 'solid-js'
 import type { UIComponent, UILayout } from './index'
 
 // ─── Event Base ──────────────────────────────────────────────
@@ -97,15 +98,44 @@ export interface ChatCommands {
   /**
    * Show a ChatPrompt (choice, confirm, form) above the input (C4).
    *
-   * **Known limitation (v4.3.9):** Not re-entrant. If called while another
-   * prompt is already active, the previous prompt's Promise will never resolve
-   * (memory leak). Host apps must queue prompts or dismiss the previous one
-   * manually before showing a new one. Fix planned for v4.4.0 (auto-reject
-   * previous prompt or FIFO queue).
+   * **No default handler in v5.0.0 / v5.1.0.** `showChatPrompt` is a command
+   * *name*, not a default implementation — mcp-ui ships `ChatPrompt` (the
+   * presentation component) and the bus (event/command plumbing), but the
+   * handler that threads a Promise resolver through the SolidJS lifecycle is
+   * the consumer's responsibility. Every host app calls
+   * `bus.commands.handle('showChatPrompt', (config, signal?) => { ... })`.
    *
-   * **AbortSignal limitation (v4.3.9):** The `signal` argument is currently
-   * unused — `ChatPrompt` does not listen to aborts. Host apps must wire
-   * abort → Promise rejection themselves. Fix planned for v4.4.0.
+   * ### Implementer contract
+   *
+   * A conforming handler MUST:
+   *
+   * 1. Return a `Promise<ChatPromptResponse>`.
+   * 2. Resolve the Promise from the `ChatPrompt` component's `onSubmit`
+   *    (explicit answer) or from `onDismiss` (dismissed flag true).
+   * 3. If a `signal` is provided:
+   *    - If `signal.aborted` is already `true`, reject with
+   *      `new DOMException('Prompt aborted', 'AbortError')` synchronously
+   *      (or via `Promise.reject`) and do NOT show the UI.
+   *    - Otherwise, register `signal.addEventListener('abort', () =>
+   *      reject(new DOMException('Prompt aborted', 'AbortError')))` and
+   *      clean up the listener on resolve/dismiss.
+   * 4. Enforce re-entrance policy — if a previous prompt is still active
+   *    when a new one arrives, the recommended behavior is auto-reject the
+   *    previous Promise with a custom error (e.g. `PromptReplacedError`).
+   *    Alternatives: FIFO queue, or throw synchronously.
+   *
+   * The `DOMException('AbortError')` shape is the Web Platform convention
+   * (matches `fetch()`, `Response.body.cancel()`, `WritableStream.abort()`).
+   * Consumers branching on the error can do
+   * `catch (err) { if (err.name === 'AbortError') return; throw err }`.
+   *
+   * ### Planned primitive (v5.2.0)
+   *
+   * A `createChatPromptController(setActivePrompt)` helper will centralise
+   * the resolver lifecycle + abort + re-entrance logic once, so consumers
+   * can write `bus.commands.handle('showChatPrompt', ctrl.handle)` instead
+   * of threading a `let chatPromptResolver` closure by hand. Design doc:
+   * `docs/2026/r&d/mcpui-v5.1.0-consensus.md`.
    */
   showChatPrompt: (config: ChatPromptConfig, signal?: AbortSignal) => Promise<ChatPromptResponse>
   /** Dismiss the active ChatPrompt */
@@ -208,21 +238,95 @@ export interface ChatPromptConfig {
   config: ChoicePromptConfig | ConfirmPromptConfig | FormPromptConfig
 }
 
-export interface ChoicePromptConfig {
-  options: Array<{
-    value: string
-    label: string
-    icon?: string
-    description?: string
-    /**
-     * Free-form metadata (confidence, source, tags, ...).
-     * Opaque to default renderer — use a custom ChoiceBody wrapper to display it.
-     * Preserved through showChatPrompt → ChatPromptResponse roundtrip.
-     * @since v4.3.9
-     */
-    metadata?: Record<string, unknown>
-  }>
+/**
+ * A single choice option. The generic `TMeta` parameter flows through the
+ * whole `ChoicePromptConfig<TMeta>` shape so consumers can strongly-type
+ * their metadata in `optionRenderer` without casting.
+ *
+ * @since v4.3.9 (metadata), v5.1.0 (generic TMeta + optionRenderer typing)
+ */
+export interface ChoiceOption<TMeta = Record<string, unknown>> {
+  value: string
+  label: string
+  icon?: string
+  description?: string
+  /**
+   * Free-form metadata (confidence, source, tags, ...).
+   * Opaque to the default renderer — use `optionRenderer` to display it.
+   * Preserved through `showChatPrompt → ChatPromptResponse` roundtrip.
+   * @since v4.3.9
+   */
+  metadata?: TMeta
+}
+
+export interface ChoicePromptConfig<TMeta = Record<string, unknown>> {
+  options: Array<ChoiceOption<TMeta>>
   layout?: 'horizontal' | 'vertical' | 'grid'
+  /**
+   * Optional render prop for custom option bodies (badges, confidence
+   * indicators, rich layouts). Replaces the default `label + icon +
+   * description` body. mcp-ui still wraps the returned JSX in a `<button>`
+   * with the `onClick` handler, keyboard support, and focus styles — only
+   * the *content* of the button is yours.
+   *
+   * @param option The full `ChoiceOption` including strongly-typed `metadata`.
+   * @param index  Zero-based position in the `options` array.
+   *
+   * @example
+   * ```tsx
+   * interface ConfBadgeMeta { confidence: number; source: string }
+   *
+   * bus.commands.exec('showChatPrompt', {
+   *   type: 'choice',
+   *   title: 'Pick an intent',
+   *   config: {
+   *     layout: 'vertical',
+   *     options: [
+   *       { value: 'a', label: 'Immobilier', metadata: { confidence: 0.9, source: 'llm' } },
+   *       { value: 'b', label: 'Santé',      metadata: { confidence: 0.4, source: 'llm' } },
+   *     ],
+   *     optionRenderer: (opt: ChoiceOption<ConfBadgeMeta>) => (
+   *       <div>
+   *         {opt.label}
+   *         <span class="ml-2 text-xs">
+   *           ({Math.round((opt.metadata?.confidence ?? 0) * 100)}%)
+   *         </span>
+   *       </div>
+   *     ),
+   *   },
+   * } as ChatPromptConfig)
+   * ```
+   *
+   * ### ⚠️ Accessibility
+   * Do NOT return `<button>`, `<a href>`, or other interactive elements from
+   * `optionRenderer`. mcp-ui already wraps the content in a `<button>`, and
+   * nested interactive elements break screen-reader semantics, keyboard
+   * focus order, and click-through behaviour.
+   *
+   * ### ⚠️ Stale closures
+   * `optionRenderer` is called once per option per render. If you capture
+   * SolidJS signals inside the closure, wrap the access in a thunk so the
+   * framework tracks the dependency correctly. Don't destructure signal
+   * values into locals outside reactive scopes.
+   *
+   * @since v5.1.0
+   */
+  optionRenderer?: (option: ChoiceOption<TMeta>, index: number) => JSX.Element
+  /**
+   * Custom Tailwind classes appended to each option button (after mcp-ui's
+   * defaults). Escape hatch for colour/border/radius tweaks that don't
+   * warrant a full `optionRenderer`.
+   *
+   * @since v5.1.0
+   */
+  buttonClass?: string
+  /**
+   * Custom Tailwind classes appended to the options container (the
+   * flex/grid wrapper that lays out the buttons).
+   *
+   * @since v5.1.0
+   */
+  containerClass?: string
 }
 
 export interface ConfirmPromptConfig {

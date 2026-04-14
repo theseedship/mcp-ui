@@ -73,6 +73,128 @@ describe('ChatPrompt', () => {
       const body = container.querySelector('.flex-col')
       expect(body).not.toBeNull()
     })
+
+    // ─── v5.1.0 — D4 optionRenderer + escape hatches ──
+
+    describe('optionRenderer (v5.1.0)', () => {
+      interface ConfBadgeMeta {
+        confidence: number
+        source: string
+      }
+
+      const withMetadataConfig: ChatPromptConfig = {
+        type: 'choice',
+        title: 'Pick an intent',
+        config: {
+          options: [
+            { value: 'a', label: 'Immobilier', metadata: { confidence: 0.9, source: 'llm' } },
+            { value: 'b', label: 'Santé',      metadata: { confidence: 0.4, source: 'regex' } },
+          ],
+        },
+      }
+
+      it('default rendering is unchanged when optionRenderer is absent', () => {
+        const { getByText, container } = render(() => (
+          <ChatPrompt config={withMetadataConfig} onSubmit={() => {}} />
+        ))
+
+        // Labels still visible via the default ChoiceBody body
+        expect(getByText('Immobilier')).toBeDefined()
+        expect(getByText('Santé')).toBeDefined()
+        // No confidence text leaks from the metadata when there's no renderer
+        expect(container.textContent).not.toContain('90%')
+      })
+
+      it('custom renderer receives option + index and mcp-ui wires the button', () => {
+        const seen: Array<{ value: string; index: number }> = []
+        const config: ChatPromptConfig = {
+          type: 'choice',
+          title: 'Pick',
+          config: {
+            options: [
+              { value: 'x', label: 'X', metadata: { confidence: 0.8 } as ConfBadgeMeta },
+              { value: 'y', label: 'Y', metadata: { confidence: 0.2 } as ConfBadgeMeta },
+            ],
+            optionRenderer: (option, index) => {
+              seen.push({ value: option.value, index })
+              const meta = option.metadata as ConfBadgeMeta | undefined
+              return (
+                <div data-testid={`custom-${option.value}`}>
+                  {option.label} — {Math.round((meta?.confidence ?? 0) * 100)}%
+                </div>
+              )
+            },
+          },
+        }
+
+        const onSubmit = vi.fn()
+        const { getByTestId } = render(() => <ChatPrompt config={config} onSubmit={onSubmit} />)
+
+        // Renderer called once per option, in order
+        expect(seen).toEqual([
+          { value: 'x', index: 0 },
+          { value: 'y', index: 1 },
+        ])
+
+        // Custom body rendered
+        const customX = getByTestId('custom-x')
+        expect(customX.textContent).toContain('X — 80%')
+
+        // The wrapping <button> is still mcp-ui's — clicking it fires onSubmit with the option value
+        fireEvent.click(customX)
+        expect(onSubmit).toHaveBeenCalledWith({ type: 'choice', value: 'x', label: 'X' })
+      })
+
+      it('buttonClass is appended to option buttons without dropping the defaults', () => {
+        const config: ChatPromptConfig = {
+          type: 'choice',
+          title: 'Pick',
+          config: {
+            options: [{ value: 'a', label: 'A' }],
+            buttonClass: 'custom-button-marker',
+          },
+        }
+
+        const { container } = render(() => <ChatPrompt config={config} onSubmit={() => {}} />)
+        const button = container.querySelector('button.custom-button-marker') as HTMLButtonElement | null
+        expect(button).not.toBeNull()
+        // Default class still there (sanity check on a rounded-lg)
+        expect(button!.className).toContain('rounded-lg')
+      })
+
+      it('containerClass is appended to the options wrapper', () => {
+        const config: ChatPromptConfig = {
+          type: 'choice',
+          title: 'Pick',
+          config: {
+            layout: 'vertical',
+            options: [{ value: 'a', label: 'A' }],
+            containerClass: 'custom-container-marker',
+          },
+        }
+
+        const { container } = render(() => <ChatPrompt config={config} onSubmit={() => {}} />)
+        const wrapper = container.querySelector('.custom-container-marker')
+        expect(wrapper).not.toBeNull()
+        // Default layout class still there
+        expect((wrapper as HTMLElement).className).toContain('flex-col')
+      })
+
+      it('option buttons have type="button" to prevent form submission when nested in a <form>', () => {
+        const config: ChatPromptConfig = {
+          type: 'choice',
+          title: 'Pick',
+          config: {
+            options: [{ value: 'a', label: 'A-unique-label' }],
+            buttonClass: 'test-option-btn',
+          },
+        }
+        const { container } = render(() => <ChatPrompt config={config} onSubmit={() => {}} />)
+        const optionButton = container.querySelector('button.test-option-btn') as HTMLButtonElement | null
+        expect(optionButton).not.toBeNull()
+        expect(optionButton!.getAttribute('type')).toBe('button')
+      })
+    })
   })
 
   // ─── Confirm ─────────────────────────────────────────

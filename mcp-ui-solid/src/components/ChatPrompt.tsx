@@ -4,8 +4,43 @@
  *
  * @experimental — This component may change without major bump until v2.5.0.
  *
- * Renders above the chat input. User responds → Promise resolves → prompt disappears.
- * Supports AbortSignal for cleanup on navigation (C4).
+ * Renders above the chat input. User responds → consumer calls `onSubmit` →
+ * prompt disappears.
+ *
+ * ## AbortSignal — known limitation (v5.1.0)
+ *
+ * **`ChatPrompt` itself does NOT listen to any `AbortSignal`.** It is a pure
+ * presentation component: render a config, call `onSubmit` on user answer,
+ * call `onDismiss` on X/Cancel. Lifecycle (including abort handling) is the
+ * consumer's responsibility.
+ *
+ * `ChatCommands.showChatPrompt(config, signal?)` declares a `signal?` argument
+ * in its type, but in v5.0.0/v5.1.0 mcp-ui ships **no default handler** for
+ * this command — every consumer wires its own `bus.commands.handle('showChatPrompt', ...)`.
+ * Each consumer's handler is responsible for:
+ *
+ * 1. Storing a `{ resolve, reject }` pair when the command fires.
+ * 2. Calling `resolve(response)` from `onSubmit` / `resolve(dismissed)` from `onDismiss`.
+ * 3. If a `signal` is provided: `signal.addEventListener('abort', () =>
+ *    reject(new DOMException('Prompt aborted', 'AbortError')))` and cleaning
+ *    up the listener on resolve/dismiss.
+ *
+ * The `DOMException('AbortError')` shape is the Web Platform convention
+ * (matches `fetch()`, `Response.body.cancel()`, `WritableStream.abort()`).
+ * Consumers can branch on `err.name === 'AbortError'` without importing any
+ * mcp-ui type.
+ *
+ * A `createChatPromptController()` primitive centralising this wiring
+ * (resolver lifecycle + re-entrance + abort) is planned for v5.2.0 — see
+ * `docs/2026/r&d/mcpui-v5.1.0-consensus.md` for the design discussion.
+ *
+ * ## Re-entrance — known limitation (v5.1.0)
+ *
+ * Also handled by the consumer. If a new `showChatPrompt` arrives while a
+ * previous one is active, the consumer's handler must decide whether to
+ * auto-reject the previous Promise, queue, or throw. mcp-ui does not
+ * currently enforce any policy. See the same design doc for the v5.2.0
+ * direction (auto-reject with `PromptReplacedError`).
  */
 
 import { Component, Show, For, createSignal, createEffect, onCleanup, Switch, Match } from 'solid-js'
@@ -122,27 +157,47 @@ const ChoiceBody: Component<{
   onSelect: (value: string, label: string) => void
 }> = (props) => {
   const layoutClass = () => {
-    switch (props.config.layout) {
-      case 'vertical': return 'flex flex-col gap-2'
-      case 'grid': return 'grid grid-cols-2 gap-2'
-      default: return 'flex flex-wrap gap-2'
-    }
+    const base = (() => {
+      switch (props.config.layout) {
+        case 'vertical': return 'flex flex-col gap-2'
+        case 'grid': return 'grid grid-cols-2 gap-2'
+        default: return 'flex flex-wrap gap-2'
+      }
+    })()
+    const extra = props.config.containerClass
+    return extra ? `${base} ${extra}` : base
+  }
+
+  const buttonClass = () => {
+    const base = 'px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-blue-50 hover:border-blue-300 dark:hover:bg-blue-900/30 dark:hover:border-blue-600 transition-colors text-left'
+    const extra = props.config.buttonClass
+    return extra ? `${base} ${extra}` : base
   }
 
   return (
     <div class={layoutClass()}>
       <For each={props.config.options}>
-        {(option) => (
+        {(option, i) => (
           <button
+            type="button"
             onClick={() => props.onSelect(option.value, option.label)}
-            class="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-blue-50 hover:border-blue-300 dark:hover:bg-blue-900/30 dark:hover:border-blue-600 transition-colors text-left"
+            class={buttonClass()}
           >
-            <Show when={option.icon}>
-              <span class="mr-2">{option.icon}</span>
-            </Show>
-            {option.label}
-            <Show when={option.description}>
-              <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-normal">{option.description}</span>
+            <Show
+              when={props.config.optionRenderer}
+              fallback={
+                <>
+                  <Show when={option.icon}>
+                    <span class="mr-2">{option.icon}</span>
+                  </Show>
+                  {option.label}
+                  <Show when={option.description}>
+                    <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-normal">{option.description}</span>
+                  </Show>
+                </>
+              }
+            >
+              {props.config.optionRenderer!(option, i())}
             </Show>
           </button>
         )}

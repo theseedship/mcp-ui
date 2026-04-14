@@ -264,6 +264,7 @@ export type {
   ChatPromptConfig,
   ChatPromptResponse,
   ChoicePromptConfig,
+  ChoiceOption,
   ConfirmPromptConfig,
   FormPromptConfig,
   SuggestionItem,

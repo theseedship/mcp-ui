@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > `mcp-ui-solid/CHANGELOG.md`, `mcp-ui-spec/CHANGELOG.md`, and
 > `mcp-ui-cli/CHANGELOG.md`. Major releases bump all three packages in lockstep.
 
+## [5.1.0] - 2026-04-14 (`mcp-ui-solid` only)
+
+### Added — D4 custom choice rendering
+- `ChoicePromptConfig.optionRenderer?: (option, index) => JSX.Element` — render prop for custom option bodies. mcp-ui still wraps the returned JSX in a `<button>` with the `onClick` handler.
+- `ChoicePromptConfig.buttonClass?` + `ChoicePromptConfig.containerClass?` — Tailwind escape hatches appended to the button and container classes.
+- Generic `ChoicePromptConfig<TMeta = Record<string, unknown>>` — `ChoiceOption<TMeta>` flows through so `optionRenderer` closures get strongly-typed `option.metadata` without casting.
+- `ChoiceOption<TMeta>` type exported from the root package.
+- Option buttons now have `type="button"` — prevents accidental form submission when nested.
+
+### Documented — D3 AbortSignal + re-entrance contract
+- `ChatPrompt.tsx` header JSDoc rewritten: explicitly states that `ChatPrompt` is a pure presentation component with no internal `AbortSignal` listening. Lifecycle is the consumer's responsibility.
+- `ChatCommands.showChatPrompt` JSDoc rewritten: full implementer contract (no default handler, Promise wiring, `DOMException('AbortError')` on abort, re-entrance auto-reject policy).
+- README `ChatPromptResponse` section rewritten with a complete reference wiring example covering re-entrance + `AbortSignal` + the Web Platform `DOMException('AbortError')` convention.
+
+### Tests
+- **438 passing** (+5 vs v5.0.0). New coverage in `ChatPrompt.test.tsx`.
+
+### Non-breaking
+- All additions are optional — existing consumers keep working identically.
+
+### Deferred to v5.2.0
+- `createScratchpadStore()` multi-instance factory (D1).
+- `createChatPromptController()` primitive centralising resolver lifecycle + re-entrance + abort (D2 + D3 code, not just docs).
+- `correlationId` natively threaded through `ChatPromptConfig → ChatPromptResponse`.
+- Optional `progress_update` SSE event type.
+
+See [`docs/2026/r&d/mcpui-v5.1.0-consensus.md`](https://github.com/theseedship/mcp-ui/blob/main/docs/) for the full design discussion and v5.1.0/v5.2.0 sequencing arbitration (3-voice consensus tour : `solid`, `mcpui`, `mcps`).
+
 ## [5.0.0] - 2026-04-14
 
 ### Major release — Sprint 52 multi-agent primitives + docs consolidation

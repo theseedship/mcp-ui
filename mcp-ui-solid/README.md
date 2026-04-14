@@ -5,6 +5,14 @@ SolidJS components + chat toolkit for MCP-generated UI. Part of the [MCP UI ecos
 [![npm version](https://img.shields.io/npm/v/@seed-ship/mcp-ui-solid.svg)](https://www.npmjs.com/package/@seed-ship/mcp-ui-solid)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+## What's New in v5.1.0 (`mcp-ui-solid` only)
+
+- **`optionRenderer` render prop** on `ChoicePromptConfig` — take full control of option bodies (confidence badges, rich layouts). mcp-ui still wraps the returned JSX in its own `<button>` with `onClick` + focus handling. See `optionRenderer (v5.1.0)` tests in `ChatPrompt.test.tsx` for usage.
+- **Generic `ChoicePromptConfig<TMeta>`** — `ChoiceOption<TMeta>` flows through so your renderer closures get strongly-typed `option.metadata` without casting. Default `TMeta = Record<string, unknown>` keeps the non-generic shape valid for existing callers.
+- **`buttonClass?` + `containerClass?`** escape hatches on `ChoicePromptConfig` — Tailwind class extensions that append to mcp-ui's defaults for light cosmetic tweaks without writing a full renderer.
+- **`type="button"` on option buttons** — prevents accidental form submission when a `ChatPrompt` is nested inside an HTML `<form>`.
+- **`ChatPrompt` + `showChatPrompt` JSDoc rewritten** — explicitly states the consumer contract : no default handler, Promise wiring is host-side, `AbortSignal` rejects with `DOMException('AbortError')` per Web Platform convention, re-entrance policy is host-enforced. Full reference wiring example in the README below. A `createChatPromptController()` primitive landing in v5.2.0 will bundle all of this.
+
 ## What's New in v5.0.0
 
 Synchronized major release — `@seed-ship/mcp-ui-solid`, `@seed-ship/mcp-ui-spec`, and `@seed-ship/mcp-ui-cli` all move to 5.0.0.
@@ -399,19 +407,114 @@ Legacy `option.file_id` is automatically migrated into `metadata.file_id`.
 Arbitrary `metadata` (confidence scores, source tags, ...) flows through
 unchanged and can be rendered by a custom `ChoiceBody` wrapper.
 
-### ChatPromptResponse — dismissed / aborted / answered (v4.3.9)
+### ChatPromptResponse — dismissed / aborted / answered
 
-Every `ChatPrompt` resolves to one of three outcomes:
+Every `ChatPrompt` exchange ends in one of three outcomes:
 
 | Outcome | How | `response.dismissed` | Promise |
 |---------|-----|----------------------|---------|
 | Explicit answer | Click a choice / submit a form | `undefined` | resolves |
 | Dismissed | Click the X icon, click Cancel (confirm type) | `true` | resolves |
-| Aborted | Host app rejects the Promise via `AbortSignal` | *(never resolves)* | rejects |
+| Aborted | Host app rejects the Promise via `AbortSignal` | *(n/a — never resolves)* | rejects with `DOMException('AbortError')` |
 
-> **v4.3.9 limitation:** `ChatPrompt` does not listen to `AbortSignal` yet.
-> Host apps are responsible for wiring `signal.addEventListener('abort', ...)`
-> to `Promise.reject`. A built-in helper lands in v4.4.0.
+> **v5.1.0 note** — `showChatPrompt` has **no default handler** in mcp-ui.
+> The command name is declared on the bus, but every consumer wires its own
+> handler. The handler is responsible for threading the Promise resolver
+> through the SolidJS lifecycle AND for honouring the optional `AbortSignal`.
+> A `createChatPromptController()` primitive that bundles all of this will
+> land in v5.2.0 — see the v5.1.0 design doc.
+
+#### Wiring a handler yourself (v5.1.0)
+
+Until the v5.2.0 controller ships, here is the reference pattern every
+consumer should implement. It honours re-entrance (auto-reject the previous
+prompt) and `AbortSignal` (rejects with a Web-Platform `DOMException`):
+
+```tsx
+import { createSignal } from 'solid-js'
+import { useChatBus } from '@seed-ship/mcp-ui-solid'
+import type { ChatPromptConfig, ChatPromptResponse } from '@seed-ship/mcp-ui-solid'
+
+function HitlHost() {
+  const bus = useChatBus()
+  const [activePrompt, setActivePrompt] = createSignal<ChatPromptConfig | null>(null)
+
+  // Mutable resolver + optional abort cleanup — one prompt at a time
+  let active: {
+    resolve: (response: ChatPromptResponse) => void
+    reject: (err: unknown) => void
+    cleanupAbort?: () => void
+  } | null = null
+
+  bus.commands.handle('showChatPrompt', (config, signal) => {
+    // Re-entrance: auto-reject any previous in-flight prompt
+    if (active) {
+      const stale = active
+      active = null
+      stale.reject(new Error('PromptReplaced'))
+      stale.cleanupAbort?.()
+    }
+
+    // Already-aborted signal → reject synchronously, never render
+    if (signal?.aborted) {
+      return Promise.reject(new DOMException('Prompt aborted', 'AbortError'))
+    }
+
+    return new Promise<ChatPromptResponse>((resolve, reject) => {
+      const onAbort = () => {
+        setActivePrompt(null)
+        active = null
+        reject(new DOMException('Prompt aborted', 'AbortError'))
+      }
+      signal?.addEventListener('abort', onAbort, { once: true })
+
+      active = {
+        resolve,
+        reject,
+        cleanupAbort: () => signal?.removeEventListener('abort', onAbort),
+      }
+      setActivePrompt(config)
+    })
+  })
+
+  const handleSubmit = (response: ChatPromptResponse) => {
+    const a = active
+    active = null
+    setActivePrompt(null)
+    a?.cleanupAbort?.()
+    a?.resolve(response)
+  }
+
+  const handleDismiss = () => {
+    const a = active
+    active = null
+    setActivePrompt(null)
+    a?.cleanupAbort?.()
+    a?.resolve({ type: 'choice', value: '', label: '', dismissed: true })
+  }
+
+  return (
+    <Show when={activePrompt()}>
+      <ChatPrompt config={activePrompt()!} onSubmit={handleSubmit} onDismiss={handleDismiss} />
+    </Show>
+  )
+}
+```
+
+Consumer-side the error is standard and branch-able without any mcp-ui import:
+
+```ts
+try {
+  const response = await bus.commands.exec('showChatPrompt', config, ctrl.signal)
+  // ...
+} catch (err) {
+  if (err instanceof Error && err.name === 'AbortError') return  // navigation killed it
+  throw err
+}
+```
+
+Once `createChatPromptController()` ships in v5.2.0 this boilerplate
+collapses to `bus.commands.handle('showChatPrompt', ctrl.handle)`.
 
 ### correlationId — host-propagated (v4.3.9)
 

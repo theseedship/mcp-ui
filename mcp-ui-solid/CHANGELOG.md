@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.1.0] - 2026-04-14
+
+### Added — D4 custom choice rendering
+
+- **`ChoicePromptConfig.optionRenderer?: (option, index) => JSX.Element`** — render prop for custom option bodies (confidence badges, rich metadata layouts, etc.). mcp-ui still wraps the returned JSX in the `<button>` with the `onClick` handler, keyboard support, and focus styles — only the *content* is yours.
+- **`ChoicePromptConfig.buttonClass?: string`** — escape hatch appended to each option button's Tailwind classes for colour/border tweaks without a full `optionRenderer`.
+- **`ChoicePromptConfig.containerClass?: string`** — escape hatch appended to the options wrapper's layout class.
+- **Generic `ChoicePromptConfig<TMeta = Record<string, unknown>>`** — type parameter flows to `ChoiceOption<TMeta>` so consumers get strongly-typed `option.metadata` in their `optionRenderer` closure without casting. Default backward-compatible.
+- **`ChoiceOption<TMeta>` type exported from the root package** — reusable shape for consumers building their own renderers or helpers.
+- **Option buttons now have `type="button"`** — prevents accidental form submission when a `ChatPrompt` is nested inside an HTML `<form>`.
+
+### Documented — D3 AbortSignal + re-entrance contract
+
+- **`ChatPrompt.tsx` header JSDoc rewritten** — the v4.x doc claimed "Supports AbortSignal for cleanup on navigation" but the component never listened to any signal. v5.1.0 doc explicitly states that `ChatPrompt` is a pure presentation component and lifecycle (including abort) is the consumer's responsibility.
+- **`ChatCommands.showChatPrompt` JSDoc rewritten** — documents the full implementer contract: no default handler, Promise wiring on `onSubmit`/`onDismiss`, `DOMException('AbortError')` rejection on `signal.aborted`, re-entrance auto-reject policy. Points at v5.2.0 `createChatPromptController()` as the future primitive.
+- **README section `ChatPromptResponse — dismissed / aborted / answered`** — rewritten with a full reference wiring example covering re-entrance, `AbortSignal`, and the `DOMException('AbortError')` Web Platform convention. Consumer-side error branching example (`err.name === 'AbortError'`).
+
+### Tests
+- **438 passing** (+5 vs v5.0.0). New coverage in `ChatPrompt.test.tsx` for: default rendering unchanged when `optionRenderer` absent, custom renderer receives `option + index` + metadata, custom renderer button still wires `onClick`, `buttonClass` appended without dropping defaults, `containerClass` appended to wrapper, option buttons have `type="button"`.
+
+### Non-breaking
+- All additions are optional — existing consumers using `ChoicePromptConfig` as a plain interface with no generic parameter or new fields keep working identically.
+
+### Deferred to v5.2.0 (unchanged)
+- `createScratchpadStore()` factory for multi-instance scratchpad panels (D1).
+- `createChatPromptController()` primitive centralising resolver lifecycle + re-entrance + abort (D2 + D3 code).
+- `correlationId` natively threaded through `ChatPromptConfig` → `ChatPromptResponse`.
+- Optional `progress_update` SSE event type for long-running agent pipelines.
+
+See `/home/nico/code_source/tss/deposium_fullstack/docs/2026/r&d/mcpui-v5.1.0-consensus.md` for the full design discussion and the v5.1.0/v5.2.0 sequencing arbitration.
+
 ## [5.0.0] - 2026-04-14
 
 ### Major release — synchronized with `@seed-ship/mcp-ui-spec` 5.0.0 and `@seed-ship/mcp-ui-cli` 5.0.0
