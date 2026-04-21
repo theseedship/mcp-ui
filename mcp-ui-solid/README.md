@@ -5,13 +5,21 @@ SolidJS components + chat toolkit for MCP-generated UI. Part of the [MCP UI ecos
 [![npm version](https://img.shields.io/npm/v/@seed-ship/mcp-ui-solid.svg)](https://www.npmjs.com/package/@seed-ship/mcp-ui-solid)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+## What's New in v5.2.0 (`mcp-ui-solid` only)
+
+- **`createChatPromptController()`** primitive — closes the v5.1.0 boilerplate. Owns resolver closure + `AbortSignal` wiring + re-entrance. Consumers write `bus.commands.handle('showChatPrompt', ctrl.handle)` + `<Show when={ctrl.activePrompt()}>{cfg => <ChatPrompt ... />}</Show>`. `PromptReplacedError` exported for `instanceof` checks.
+- **`createScratchpadStore()`** factory + `ScratchpadStoreProvider` + `ScratchpadStoreContext` — isolated scratchpad state per subtree. `useScratchpadState()` now context-aware with module-singleton fallback (zero-breaking for v4.x).
+- **`<FeedbackInline>`** — per-message thumbs up/down, non-blocking. Complements `ChatPrompt` (modal) and `ScratchpadPanel` feedback section (panel-side).
+- **`onElicitation` event + `elicitationToPromptConfig()` helper** — MCP `elicitation/create` (spec 2025-06-18) mapped to `ChatPromptConfig`. Smart mapping : single boolean → confirm, single enum ≤4 → choice, everything else → form with per-property field inference.
+- **29 new tests** (438 → 467). Scope doc : `docs/2026/r&d/mcpui-v5.2.0-scope.md` in the Deposium project.
+
 ## What's New in v5.1.0 (`mcp-ui-solid` only)
 
 - **`optionRenderer` render prop** on `ChoicePromptConfig` — take full control of option bodies (confidence badges, rich layouts). mcp-ui still wraps the returned JSX in its own `<button>` with `onClick` + focus handling. See `optionRenderer (v5.1.0)` tests in `ChatPrompt.test.tsx` for usage.
 - **Generic `ChoicePromptConfig<TMeta>`** — `ChoiceOption<TMeta>` flows through so your renderer closures get strongly-typed `option.metadata` without casting. Default `TMeta = Record<string, unknown>` keeps the non-generic shape valid for existing callers.
 - **`buttonClass?` + `containerClass?`** escape hatches on `ChoicePromptConfig` — Tailwind class extensions that append to mcp-ui's defaults for light cosmetic tweaks without writing a full renderer.
 - **`type="button"` on option buttons** — prevents accidental form submission when a `ChatPrompt` is nested inside an HTML `<form>`.
-- **`ChatPrompt` + `showChatPrompt` JSDoc rewritten** — explicitly states the consumer contract : no default handler, Promise wiring is host-side, `AbortSignal` rejects with `DOMException('AbortError')` per Web Platform convention, re-entrance policy is host-enforced. Full reference wiring example in the README below. A `createChatPromptController()` primitive landing in v5.2.0 will bundle all of this.
+- **`ChatPrompt` + `showChatPrompt` JSDoc rewritten** — explicitly states the consumer contract : no default handler, Promise wiring is host-side, `AbortSignal` rejects with `DOMException('AbortError')` per Web Platform convention, re-entrance policy is host-enforced. Now available as a one-call primitive via `createChatPromptController()` in v5.2.0.
 
 ## What's New in v5.0.0
 
@@ -417,18 +425,60 @@ Every `ChatPrompt` exchange ends in one of three outcomes:
 | Dismissed | Click the X icon, click Cancel (confirm type) | `true` | resolves |
 | Aborted | Host app rejects the Promise via `AbortSignal` | *(n/a — never resolves)* | rejects with `DOMException('AbortError')` |
 
-> **v5.1.0 note** — `showChatPrompt` has **no default handler** in mcp-ui.
-> The command name is declared on the bus, but every consumer wires its own
-> handler. The handler is responsible for threading the Promise resolver
-> through the SolidJS lifecycle AND for honouring the optional `AbortSignal`.
-> A `createChatPromptController()` primitive that bundles all of this will
-> land in v5.2.0 — see the v5.1.0 design doc.
+> **v5.2.0** — use `createChatPromptController()` (below). The manual pattern
+> documented after it is kept for context and for consumers who prefer full
+> control over the resolver lifecycle.
 
-#### Wiring a handler yourself (v5.1.0)
+#### Recommended — `createChatPromptController()` (v5.2.0)
 
-Until the v5.2.0 controller ships, here is the reference pattern every
-consumer should implement. It honours re-entrance (auto-reject the previous
-prompt) and `AbortSignal` (rejects with a Web-Platform `DOMException`):
+```tsx
+import { Show } from 'solid-js'
+import {
+  ChatPrompt,
+  useChatBus,
+  createChatPromptController,
+  PromptReplacedError,
+} from '@seed-ship/mcp-ui-solid'
+
+function HitlHost() {
+  const bus = useChatBus()
+  const ctrl = createChatPromptController()
+  bus.commands.handle('showChatPrompt', ctrl.handle)
+
+  return (
+    <Show when={ctrl.activePrompt()}>
+      {(cfg) => (
+        <ChatPrompt
+          config={cfg()}
+          onSubmit={ctrl.resolveActive}
+          onDismiss={ctrl.dismissActive}
+        />
+      )}
+    </Show>
+  )
+}
+```
+
+Caller-side, re-entrance and abort are standard :
+
+```ts
+try {
+  const response = await bus.commands.exec('showChatPrompt', config, ac.signal)
+  // ...
+} catch (err) {
+  if (err instanceof PromptReplacedError) return           // superseded by a newer prompt
+  if (err instanceof Error && err.name === 'AbortError') return  // navigation killed it
+  throw err
+}
+```
+
+`ctrl.abort(reason?)` is also available for programmatic cancellation
+(modal close, route change, ...).
+
+#### Manual wiring (v5.1.0 reference pattern)
+
+Equivalent to the controller above — useful if you want full control over
+the resolver closure, or if you're maintaining a v5.1.0 codebase :
 
 ```tsx
 import { createSignal } from 'solid-js'
@@ -513,8 +563,9 @@ try {
 }
 ```
 
-Once `createChatPromptController()` ships in v5.2.0 this boilerplate
-collapses to `bus.commands.handle('showChatPrompt', ctrl.handle)`.
+v5.2.0 collapses this to a single `createChatPromptController()` call — see
+above. Prefer the controller unless you have a reason to manage the
+lifecycle yourself.
 
 ### correlationId — host-propagated (v4.3.9)
 

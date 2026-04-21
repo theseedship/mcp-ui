@@ -3,8 +3,8 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { createEventEmitter, createCommandHandler, createChatBus, clarificationToPromptConfig } from './chat-bus'
-import type { ChatEvents, ChatCommands, ClarificationEvent } from '../types/chat-bus'
+import { createEventEmitter, createCommandHandler, createChatBus, clarificationToPromptConfig, elicitationToPromptConfig } from './chat-bus'
+import type { ChatEvents, ChatCommands, ClarificationEvent, ElicitationEvent } from '../types/chat-bus'
 
 describe('createEventEmitter', () => {
   it('emits events to subscribed listeners', () => {
@@ -382,5 +382,157 @@ describe('clarificationToPromptConfig', () => {
     const config = clarificationToPromptConfig(event)
     const opts = (config.config as any).options
     expect(opts[0]).not.toHaveProperty('metadata')
+  })
+})
+
+describe('elicitationToPromptConfig — v5.2.0', () => {
+  it('single boolean property maps to confirm prompt', () => {
+    const event: ElicitationEvent = {
+      message: 'Proceed with the deployment?',
+      requestedSchema: {
+        type: 'object',
+        properties: { confirmed: { type: 'boolean', description: 'Ship it?' } },
+        required: ['confirmed'],
+      },
+    }
+    const config = elicitationToPromptConfig(event)
+    expect(config.type).toBe('confirm')
+    expect(config.title).toBe('Proceed with the deployment?')
+    expect((config.config as any).message).toBe('Ship it?')
+  })
+
+  it('single enum string property (≤4 values) maps to choice prompt', () => {
+    const event: ElicitationEvent = {
+      message: 'Select severity',
+      requestedSchema: {
+        type: 'object',
+        properties: {
+          level: {
+            type: 'string',
+            enum: ['low', 'medium', 'high'],
+            enumNames: ['Low', 'Medium', 'High'],
+          },
+        },
+      },
+    }
+    const config = elicitationToPromptConfig(event)
+    expect(config.type).toBe('choice')
+    const opts = (config.config as any).options
+    expect(opts).toEqual([
+      { value: 'low', label: 'Low' },
+      { value: 'medium', label: 'Medium' },
+      { value: 'high', label: 'High' },
+    ])
+  })
+
+  it('enum with >4 values maps to form with select field (not choice)', () => {
+    const event: ElicitationEvent = {
+      message: 'Pick a country',
+      requestedSchema: {
+        type: 'object',
+        properties: {
+          country: {
+            type: 'string',
+            enum: ['FR', 'DE', 'IT', 'ES', 'PT'],
+          },
+        },
+      },
+    }
+    const config = elicitationToPromptConfig(event)
+    expect(config.type).toBe('form')
+    const fields = (config.config as any).fields
+    expect(fields[0].type).toBe('select')
+    expect(fields[0].options).toHaveLength(5)
+  })
+
+  it('multi-property object maps to form with one field per property', () => {
+    const event: ElicitationEvent = {
+      message: 'Fill in contact info',
+      requestedSchema: {
+        type: 'object',
+        properties: {
+          name: { type: 'string', title: 'Full name' },
+          age: { type: 'integer' },
+          newsletter: { type: 'boolean', description: 'Opt-in' },
+        },
+        required: ['name'],
+      },
+    }
+    const config = elicitationToPromptConfig(event)
+    expect(config.type).toBe('form')
+    const fields = (config.config as any).fields
+    expect(fields).toHaveLength(3)
+    expect(fields.map((f: any) => f.name)).toEqual(['name', 'age', 'newsletter'])
+    expect(fields[0]).toMatchObject({ type: 'text', label: 'Full name', required: true })
+    expect(fields[1]).toMatchObject({ type: 'number', required: false })
+    expect(fields[2]).toMatchObject({ type: 'checkbox', helpText: 'Opt-in' })
+  })
+
+  it('string format email maps to email field', () => {
+    const event: ElicitationEvent = {
+      message: 'Contact',
+      requestedSchema: {
+        type: 'object',
+        properties: {
+          email: { type: 'string', format: 'email' },
+          reply: { type: 'string' }, // force form (not single-property shortcut)
+        },
+      },
+    }
+    const config = elicitationToPromptConfig(event)
+    const fields = (config.config as any).fields
+    expect(fields[0]).toMatchObject({ name: 'email', type: 'email' })
+  })
+
+  it('string format date / date-time maps to date field', () => {
+    const event: ElicitationEvent = {
+      message: 'Schedule',
+      requestedSchema: {
+        type: 'object',
+        properties: {
+          start: { type: 'string', format: 'date' },
+          end: { type: 'string', format: 'date-time' },
+        },
+      },
+    }
+    const config = elicitationToPromptConfig(event)
+    const fields = (config.config as any).fields
+    expect(fields[0].type).toBe('date')
+    expect(fields[1].type).toBe('date')
+  })
+
+  it('default value maps to placeholder', () => {
+    const event: ElicitationEvent = {
+      message: 'Settings',
+      requestedSchema: {
+        type: 'object',
+        properties: {
+          retries: { type: 'integer', default: 3 },
+          timeout: { type: 'integer' }, // second property to force form
+        },
+      },
+    }
+    const config = elicitationToPromptConfig(event)
+    const fields = (config.config as any).fields
+    expect(fields[0]).toMatchObject({ placeholder: '3' })
+  })
+
+  it('unknown schema type falls through to text with console.warn', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const event = {
+      message: 'Edge case',
+      requestedSchema: {
+        type: 'object',
+        properties: {
+          weird: { type: 'array' }, // not a primitive
+          other: { type: 'string' },
+        },
+      },
+    } as unknown as ElicitationEvent
+    const config = elicitationToPromptConfig(event)
+    const fields = (config.config as any).fields
+    expect(fields[0].type).toBe('text')
+    expect(warnSpy).toHaveBeenCalled()
+    warnSpy.mockRestore()
   })
 })

@@ -9,6 +9,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > `mcp-ui-solid/CHANGELOG.md`, `mcp-ui-spec/CHANGELOG.md`, and
 > `mcp-ui-cli/CHANGELOG.md`. Major releases bump all three packages in lockstep.
 
+## [5.2.0] - 2026-04-22 (`mcp-ui-solid` only)
+
+### Added — D1 multi-instance scratchpad store
+- `createScratchpadStore()` factory — returns an isolated `ScratchpadStoreHandle` (`dispatch`, `state`, `pinned`, `close`). Use when two or more scratchpads need to coexist (chat + admin dashboard, agent-on-agent orchestration UIs, ...).
+- `ScratchpadStoreProvider` + `ScratchpadStoreContext` — scope a store to a SolidJS subtree. Accepts an optional `store` prop; creates one internally otherwise.
+- `useScratchpadState()` is now context-aware — reads the provider's store when mounted inside one, falls back to the module singleton otherwise. **Zero-breaking** : single-instance consumers (the v4.x path) keep working unchanged.
+
+### Added — D2 ChatPrompt controller primitive
+- `createChatPromptController()` — centralises `showChatPrompt` lifecycle in one primitive. Owns the resolver closure, `AbortSignal` wiring, and re-entrance policy. Consumers go from ~20 LOC of manual wiring to `bus.commands.handle('showChatPrompt', ctrl.handle)` + `<Show when={ctrl.activePrompt()}>{cfg => <ChatPrompt ... />}</Show>`.
+- `PromptReplacedError` — thrown when a new `showChatPrompt` arrives before the previous one resolves. Exported from the root package for `instanceof` checks.
+- `AbortSignal` honoured : already-aborted signals reject synchronously with `DOMException('Prompt aborted', 'AbortError')` without showing UI. In-flight aborts reject + clear `activePrompt`.
+- `ctrl.abort(reason?)` — programmatic cancellation (e.g. on route change).
+
+### Added — D5 per-message inline feedback
+- **`<FeedbackInline>`** component — per-message thumbs up/down, non-blocking, many can coexist. Complements `ChatPrompt` (modal one-at-a-time) and `ScratchpadPanel` feedback section (structured, panel-side). Optimistic UI, best-effort persistence via consumer-owned `onSubmit(rating, context)`.
+- Exports `FeedbackInlineProps`, `FeedbackInlineContext` types.
+
+### Added — D6 MCP elicitation handling
+- `ChatEvents.onElicitation` — new event for MCP `elicitation/create` requests (spec 2025-06-18). Symmetric to `onClarificationNeeded`.
+- `ElicitationEvent`, `ElicitationRequestedSchema`, `ElicitationPropertySchema` types.
+- `elicitationToPromptConfig(event)` helper — converts an MCP elicitation payload to a `ChatPromptConfig`. Smart mapping : single boolean → confirm, single enum ≤4 → choice, everything else → form with per-property field-type inference (`string/email/date` → `text/email/date`, `number/integer` → `number`, `boolean` → `checkbox`, `enum` → `select`).
+
+### Tests
+- **467 passing** (+29 vs v5.1.0). New files : `stores/scratchpad-store.test.tsx` (7), `services/chat-prompt-controller.test.ts` (7), `components/FeedbackInline.test.tsx` (7). Plus 8 new tests in `services/chat-bus.test.ts` for `elicitationToPromptConfig`.
+
+### Non-breaking
+- All additions are optional. `scratchpad-store.ts` refactored to extract a factory but the module singleton remains as default — `dispatchScratchpad` / `useScratchpadState` keep working exactly as before.
+
+### Scope doc
+- See `docs/2026/r&d/mcpui-v5.2.0-scope.md` in the Deposium project for the full design rationale, test plan, and migration path.
+
+### Deferred to v5.3.0 or later
+- `<ElicitationForm>` schema-driven form renderer — wait for real Claude Desktop payloads to avoid over-engineering.
+- `createChatPromptController` FIFO queue mode.
+- `useServerCapabilities()` hook — needs a second consumer + Phase B protocol align.
+- OAuth client-side docs recipe.
+
 ## [5.1.0] - 2026-04-14 (`mcp-ui-solid` only)
 
 ### Added — D4 custom choice rendering

@@ -14,7 +14,10 @@ import type {
   EventSubscribeOptions,
   ScratchpadSection,
   ClarificationEvent,
+  ElicitationEvent,
+  ElicitationPropertySchema,
   ChatPromptConfig,
+  FormPromptConfig,
 } from '../types/chat-bus'
 
 // ─── Event Emitter ───────────────────────────────────────────
@@ -245,6 +248,118 @@ export function mergeScratchpadSections(
  *   bus.commands.exec('showChatPrompt', clarificationToPromptConfig(clarification))
  * })
  */
+// ─── Elicitation → Prompt Helper (v5.2.0) ───────────────────
+
+/**
+ * Convert an MCP `elicitation/create` payload into a `ChatPromptConfig`.
+ *
+ * Mapping rules :
+ * - Single `boolean` property → `type: 'confirm'`
+ * - Single property with `enum` of ≤4 values → `type: 'choice'` (one option per enum value)
+ * - Anything else → `type: 'form'` with one field per schema property
+ *
+ * JSON Schema primitive types map to mcp-ui form field types :
+ *
+ * | JSON Schema | mcp-ui FormFieldType |
+ * |---|---|
+ * | `type: 'string'` | `'text'` |
+ * | `type: 'string', format: 'email'` | `'email'` |
+ * | `type: 'string', format: 'date'` or `'date-time'` | `'date'` |
+ * | `type: 'string', enum: [...]` | `'select'` |
+ * | `type: 'number' \| 'integer'` | `'number'` |
+ * | `type: 'boolean'` | `'checkbox'` |
+ *
+ * Unknown shapes fall through to plain text with a `helpText` warning.
+ *
+ * @experimental
+ * @since v5.2.0
+ *
+ * @example
+ * bus.events.on('onElicitation', ({ elicitation }) => {
+ *   bus.commands.exec('showChatPrompt', elicitationToPromptConfig(elicitation))
+ * })
+ */
+export function elicitationToPromptConfig(event: ElicitationEvent): ChatPromptConfig {
+  const propEntries = Object.entries(event.requestedSchema.properties)
+
+  // Shortcut 1 : single boolean → confirm
+  if (propEntries.length === 1 && propEntries[0][1].type === 'boolean') {
+    return {
+      type: 'confirm',
+      title: event.message,
+      config: {
+        message: propEntries[0][1].description,
+      },
+    }
+  }
+
+  // Shortcut 2 : single enum property with ≤4 values → choice
+  if (propEntries.length === 1) {
+    const [, schema] = propEntries[0]
+    if (schema.enum && schema.enum.length > 0 && schema.enum.length <= 4) {
+      return {
+        type: 'choice',
+        title: event.message,
+        config: {
+          options: schema.enum.map((val, idx) => ({
+            value: String(val),
+            label: schema.enumNames?.[idx] ?? String(val),
+          })),
+          layout: 'vertical',
+        },
+      }
+    }
+  }
+
+  // Default : full form
+  const required = new Set(event.requestedSchema.required ?? [])
+  const fields: FormPromptConfig['fields'] = propEntries.map(([name, schema]) => ({
+    name,
+    label: schema.title ?? name,
+    ...schemaToFieldType(schema),
+    required: required.has(name),
+    helpText: schema.description,
+    ...(schema.default !== undefined ? { placeholder: String(schema.default) } : {}),
+  }))
+
+  return {
+    type: 'form',
+    title: event.message,
+    config: { fields },
+  }
+}
+
+function schemaToFieldType(
+  schema: ElicitationPropertySchema
+):
+  | { type: FormPromptConfig['fields'][number]['type']; options?: Array<{ label: string; value: string }> }
+  | { type: FormPromptConfig['fields'][number]['type']; helpText?: string } {
+  // Enum → select
+  if (schema.enum && schema.enum.length > 0) {
+    return {
+      type: 'select',
+      options: schema.enum.map((val, idx) => ({
+        label: schema.enumNames?.[idx] ?? String(val),
+        value: String(val),
+      })),
+    }
+  }
+
+  if (schema.type === 'boolean') return { type: 'checkbox' }
+  if (schema.type === 'number' || schema.type === 'integer') return { type: 'number' }
+  if (schema.type === 'string') {
+    if (schema.format === 'email') return { type: 'email' }
+    if (schema.format === 'date' || schema.format === 'date-time') return { type: 'date' }
+    return { type: 'text' }
+  }
+
+  // Unknown primitive — fall back to text with a warning
+  console.warn(
+    `[MCP-UI] elicitationToPromptConfig: unsupported schema type "${(schema as { type?: string }).type}", falling back to text.`
+  )
+  return { type: 'text' }
+}
+
 export function clarificationToPromptConfig(
   event: ClarificationEvent
 ): ChatPromptConfig {

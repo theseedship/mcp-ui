@@ -37,12 +37,21 @@ export { ResizeHandle } from './components/ResizeHandle'
 export { EditableUIResourceRenderer } from './components/EditableUIResourceRenderer'
 export { ExpandableWrapper, useExpanded } from './components/ExpandableWrapper'
 export { ComponentToolbar } from './components/ComponentToolbar'
+export { FeedbackInline } from './components/FeedbackInline'
+export type { FeedbackInlineProps, FeedbackInlineContext } from './components/FeedbackInline'
 
 // Chat Bus (v2.4.0 — @experimental)
 export { ChatBusProvider, useChatBus } from './hooks/useChatBus'
 export { ChatPrompt } from './components/ChatPrompt'
 export { ScratchpadPanel } from './components/ScratchpadPanel'
-export { dispatchScratchpad, useScratchpadState } from './stores/scratchpad-store'
+export {
+  dispatchScratchpad,
+  useScratchpadState,
+  createScratchpadStore,
+  ScratchpadStoreContext,
+  ScratchpadStoreProvider,
+} from './stores/scratchpad-store'
+export type { ScratchpadStoreHandle } from './stores/scratchpad-store'
 
 // Data Verification Components (v3.1.0)
 export { VerifiedText } from './components/VerifiedText'
@@ -248,6 +257,16 @@ export {
 // Clarification → Prompt helper (v4.3.9)
 export { clarificationToPromptConfig } from './services/chat-bus'
 
+// Elicitation → Prompt helper (v5.2.0)
+export { elicitationToPromptConfig } from './services/chat-bus'
+
+// Chat prompt controller (v5.2.0)
+export {
+  createChatPromptController,
+  PromptReplacedError,
+} from './services/chat-prompt-controller'
+export type { ChatPromptController } from './services/chat-prompt-controller'
+
 // Testing utilities (v4.3.9)
 export { createMockChatBus } from './testing'
 export type { MockChatBusOptions } from './testing'
@@ -279,6 +298,9 @@ export type {
   Citation,
   ToolCallEvent,
   ClarificationEvent,
+  ElicitationEvent,
+  ElicitationRequestedSchema,
+  ElicitationPropertySchema,
   // Data Validation types (v3.1.0)
   DataValidation,
   LLMNumber,

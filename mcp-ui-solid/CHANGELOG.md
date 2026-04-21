@@ -5,6 +5,60 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.2.0] - 2026-04-22
+
+### Added — D1 multi-instance scratchpad store
+
+- **`createScratchpadStore()`** factory — returns an isolated `ScratchpadStoreHandle` (`dispatch`, `state`, `pinned`, `close`). Closes the v4.x known limitation that two `ScratchpadPanel` instances shared state.
+- **`ScratchpadStoreProvider`** + **`ScratchpadStoreContext`** — scope a store to a SolidJS subtree. Accepts an optional `store` prop; creates one internally otherwise.
+- **`useScratchpadState()` is now context-aware** — reads the provider's store when mounted inside one, falls back to the module singleton otherwise. Zero-breaking for v4.x single-instance consumers.
+- Type export : `ScratchpadStoreHandle`.
+
+### Added — D2 ChatPrompt controller primitive
+
+- **`createChatPromptController()`** — one primitive owning resolver closure + `AbortSignal` wiring + re-entrance policy. Consumers go from ~20 LOC of hand-threaded resolver to `bus.commands.handle('showChatPrompt', ctrl.handle)` + `<Show when={ctrl.activePrompt()}>{cfg => <ChatPrompt ... />}</Show>`.
+- **`PromptReplacedError`** — exported error class thrown when a new `showChatPrompt` arrives before the previous resolves. Use `instanceof` or `err.name === 'PromptReplacedError'`.
+- **`AbortSignal` honoured** — already-aborted signals reject synchronously with `DOMException('Prompt aborted', 'AbortError')` without showing UI. In-flight aborts reject + clear `activePrompt`.
+- **`ctrl.abort(reason?)`** — programmatic cancellation (route change, modal close, ...).
+- Type export : `ChatPromptController`.
+
+### Added — D5 per-message inline feedback
+
+- **`<FeedbackInline>`** — per-message thumbs up/down, non-blocking, many can coexist. Complements `ChatPrompt` (modal one-at-a-time) and `ScratchpadPanel` feedback section (structured, panel-side). Optimistic UI, best-effort persistence via consumer-owned `onSubmit(rating, context)`.
+- Type exports : `FeedbackInlineProps`, `FeedbackInlineContext`.
+
+### Added — D6 MCP elicitation handling
+
+- **`ChatEvents.onElicitation`** — new event for MCP `elicitation/create` requests (spec 2025-06-18). Symmetric to `onClarificationNeeded`.
+- **Types** : `ElicitationEvent`, `ElicitationRequestedSchema`, `ElicitationPropertySchema`.
+- **`elicitationToPromptConfig(event)`** — converts an MCP elicitation payload to a `ChatPromptConfig`. Smart mapping :
+  - Single `boolean` property → `type: 'confirm'`
+  - Single property with `enum` of ≤4 values → `type: 'choice'`
+  - Anything else → `type: 'form'` with per-property field-type inference
+  - Inferences : `string` → `text`, `string/format:email` → `email`, `string/format:date|date-time` → `date`, `number|integer` → `number`, `boolean` → `checkbox`, any `enum` → `select`.
+
+### Tests
+
+- **467 passing** (+29 vs v5.1.0).
+- New files : `stores/scratchpad-store.test.tsx` (7), `services/chat-prompt-controller.test.ts` (7), `components/FeedbackInline.test.tsx` (7).
+- Extended `services/chat-bus.test.ts` with 8 new elicitation tests.
+
+### Non-breaking
+
+- All additions are optional.
+- `scratchpad-store.ts` refactored to extract a factory; module singleton remains as default so `dispatchScratchpad` / `useScratchpadState` keep working identically.
+
+### Design rationale
+
+Full scope doc lives in the Deposium project : `docs/2026/r&d/mcpui-v5.2.0-scope.md`. It regroups v5.1.0 consensus carry-forward (D1, D2) with two new items arising from the MCP SDK audit 2026-04-14 (D5 feedback inline, D6 elicitation helper).
+
+### Deferred
+
+- `<ElicitationForm>` schema-driven form renderer — waiting for real Claude Desktop payloads.
+- `createChatPromptController` FIFO queue mode — YAGNI until a concrete need.
+- `useServerCapabilities()` hook — needs a second consumer + Phase B protocol align on `capabilities.extensions`.
+- OAuth client-side docs — add as a doc patch when Deposium moves to OAuth Resource Server.
+
 ## [5.1.0] - 2026-04-14
 
 ### Added — D4 custom choice rendering

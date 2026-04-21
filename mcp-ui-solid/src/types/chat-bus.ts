@@ -53,6 +53,7 @@ export interface ChatEvents {
   // --- Interactions ---
   onChatPromptResponse: (event: ChatEventBase & { response: ChatPromptResponse }) => void
   onClarificationNeeded: (event: ChatEventBase & { clarification: ClarificationEvent }) => void
+  onElicitation: (event: ChatEventBase & { elicitation: ElicitationEvent }) => void
 
   // --- Agentic (handled by app, not MCP-UI) ---
   onAgentSwitch: (event: ChatEventBase & { agent: AgentContext }) => void
@@ -566,6 +567,45 @@ export interface ToolCallEvent {
   params?: Record<string, unknown>
   results?: unknown
   duration_ms?: number
+}
+
+/**
+ * MCP `elicitation/create` request payload — server asks the client to
+ * collect input from the user according to a JSON Schema.
+ *
+ * Derived from MCP spec 2025-06-18. See
+ * `elicitationToPromptConfig()` in `services/chat-bus.ts` for the
+ * helper that converts this to a `ChatPromptConfig`.
+ *
+ * @experimental
+ * @since v5.2.0
+ */
+export interface ElicitationEvent {
+  /** Question / instruction to present to the user. */
+  message: string
+  /** JSON Schema describing the expected response shape. Object with primitive properties only. */
+  requestedSchema: ElicitationRequestedSchema
+}
+
+export interface ElicitationRequestedSchema {
+  type: 'object'
+  properties: Record<string, ElicitationPropertySchema>
+  required?: string[]
+}
+
+export interface ElicitationPropertySchema {
+  type: 'string' | 'number' | 'integer' | 'boolean'
+  title?: string
+  description?: string
+  /** Enum of allowed values (strings or numbers). */
+  enum?: Array<string | number>
+  /** Parallel array with display labels for each enum entry. */
+  enumNames?: string[]
+  default?: unknown
+  minimum?: number
+  maximum?: number
+  /** String format hint — date, date-time, email, uri. */
+  format?: 'date' | 'date-time' | 'email' | 'uri'
 }
 
 export interface ClarificationEvent {
