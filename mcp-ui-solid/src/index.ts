@@ -43,6 +43,7 @@ export type { FeedbackInlineProps, FeedbackInlineContext } from './components/Fe
 // Chat Bus (v2.4.0 — @experimental)
 export { ChatBusProvider, useChatBus } from './hooks/useChatBus'
 export { ChatPrompt } from './components/ChatPrompt'
+export { ElicitationForm } from './components/ElicitationForm'
 export { ScratchpadPanel } from './components/ScratchpadPanel'
 export {
   dispatchScratchpad,
@@ -52,6 +53,20 @@ export {
   ScratchpadStoreProvider,
 } from './stores/scratchpad-store'
 export type { ScratchpadStoreHandle } from './stores/scratchpad-store'
+
+// Server Capabilities (v5.3.0)
+export {
+  setServerCapabilities,
+  useServerCapabilities,
+  createServerCapabilitiesStore,
+  ServerCapabilitiesContext,
+  ServerCapabilitiesProvider,
+} from './stores/server-capabilities-store'
+export type {
+  ServerCapabilities,
+  ServerInitializeInfo,
+  ServerCapabilitiesStoreHandle,
+} from './stores/server-capabilities-store'
 
 // Data Verification Components (v3.1.0)
 export { VerifiedText } from './components/VerifiedText'
@@ -80,6 +95,7 @@ export type { EditableUIResourceRendererProps } from './components/EditableUIRes
 export type { ExpandableWrapperProps } from './components/ExpandableWrapper'
 export type { ComponentToolbarProps, ToolbarAction, ToolbarIcon } from './components/ComponentToolbar'
 export type { ChatPromptProps } from './components/ChatPrompt'
+export type { ElicitationFormProps } from './components/ElicitationForm'
 export type { ScratchpadPanelProps } from './components/ScratchpadPanel'
 export type { VerifiedTextProps } from './components/VerifiedText'
 export type { DataPreviewSectionProps } from './components/DataPreviewSection'

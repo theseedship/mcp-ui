@@ -5,6 +5,49 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.3.0] - 2026-04-22
+
+### Added — A. `<ElicitationForm>` schema-driven renderer
+
+- **`<ElicitationForm event onAccept onCancel? onDecline? dismissLabel?>`** — thin wrapper over `<ChatPrompt>` + `elicitationToPromptConfig()` that accepts a spec-shaped `ElicitationEvent` (MCP 2025-06-18) and exposes a spec-shaped `onAccept(content)` callback whose payload is ready to send back as the `accept` outcome of an `elicitation/create` reply.
+- Inverse mapping owned here : single boolean → `{ propName: true }`, single enum → `{ propName: enumValue }` (numeric coerced when schema is `integer`/`number`), multi-property form → values map passed through unchanged.
+- Forward mapping (spec → ChatPromptConfig) reuses the existing `elicitationToPromptConfig` helper from v5.2.0 — same rules, same tests, no duplication.
+- `dismissLabel="Decline"` + `onDecline` lets you surface an explicit decline action distinct from passive cancel.
+- Type export : `ElicitationFormProps`.
+
+### Added — B. `useServerCapabilities()` hook + store
+
+- **`createServerCapabilitiesStore()`** factory + module singleton + **`<ServerCapabilitiesProvider>`** for multi-instance scoping (mirrors the v5.2.0 `scratchpad-store` pattern).
+- **`setServerCapabilities(info)`** — push the parsed MCP `initialize` response into the singleton from your transport adapter.
+- **`useServerCapabilities()`** — reactive accessor returning `{ info, capabilities, serverInfo, protocolVersion, hasCapability }`. Components can gate rendering on advertised capabilities (e.g. `<Show when={hasCapability('tools')}>`).
+- Type exports : `ServerCapabilities`, `ServerInitializeInfo`, `ServerCapabilitiesStoreHandle`.
+- Note : `elicitation` is a **client** capability per MCP spec 2025-06-18 — this store tracks **server** capabilities only. Gate `<ElicitationForm>` on your own client-side state, not on this store.
+
+### Added — C. Recipe : pseudo-elicit → spec adapter
+
+- New doc `docs/recipes/elicitation-pseudo-spec-adapter.md` — drop-in TypeScript adapter for consumer apps talking to MCP servers that ship a legacy "pseudo-elicit" payload inline with `tools/call` results (e.g. deposium_MCPs as of 2026-04). Adapter lives in the consumer app — mcp-ui stays vendor-agnostic by design.
+
+### Added — D. Recipe : `<FeedbackInline>` wiring
+
+- New doc `docs/recipes/feedback-inline-wiring.md` — concrete pattern for wiring `<FeedbackInline>.onSubmit` to a feedback HTTP endpoint, with the Deposium `POST /api/feedback` shape as a worked example. Mapping `'positive' | 'negative'` to the endpoint is direct.
+
+### Tests
+
+- New file : `components/ElicitationForm.test.tsx` (7 tests) — covers boolean/enum/numeric/multi-property accept paths, X-dismiss, confirm-cancel button, and `onDecline` precedence.
+- New file : `stores/server-capabilities-store.test.tsx` (10 tests) — factory isolation, derived accessors, singleton fallback, provider scoping, reactive update propagation.
+
+### Non-breaking
+
+- All additions are optional and additive. v5.2.0 consumers upgrade with zero code changes.
+
+### Aligned with deposium_MCPs
+
+- v5.3.0 closes the items in mcp-ui's court per the `mcp-ui ↔ deposium_MCPs alignment 2026-04-22` doc :
+  - Plan B B.3.5 unblock acknowledged (HTTP transport now bidirectional via SDK `StreamableHTTPServerTransport`).
+  - Pseudo-elicit confirmed as stable legacy ; consumer-side adapter pattern now documented.
+  - Feedback endpoint `POST /api/feedback` wire shape documented.
+  - `<ElicitationForm>` and `useServerCapabilities()` deferred items shipped.
+
 ## [5.2.0] - 2026-04-22
 
 ### Added — D1 multi-instance scratchpad store

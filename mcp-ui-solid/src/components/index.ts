@@ -88,5 +88,9 @@ export type { DataPreviewSectionProps } from './DataPreviewSection'
 export { RenderContext, RenderProvider, useRenderContext } from './RenderContext'
 export type { RenderContextValue, RenderComponentFn } from './RenderContext'
 
+// MCP elicitation (v5.3.0)
+export { ElicitationForm } from './ElicitationForm'
+export type { ElicitationFormProps } from './ElicitationForm'
+
 // Default exports for lazy loading compatibility
 export { UIResourceRenderer as default } from './UIResourceRenderer'
