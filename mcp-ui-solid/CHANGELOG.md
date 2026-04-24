@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.3.1] - 2026-04-25
+
+### Security
+
+- Bump `dompurify` from `^3.3.3` → `^3.4.1` to resolve 4 open Dependabot advisories : SAFE_FOR_TEMPLATES bypass in RETURN_DOM mode, FORBID_TAGS bypass via function-form ADD_TAGS, prototype-pollution → XSS via CUSTOM_ELEMENT_HANDLING fallback, and ADD_TAGS short-circuit FORBID_TAGS bypass. All fixed in 3.4.0.
+- No API surface change. 484/484 tests pass.
+
 ## [5.3.0] - 2026-04-22
 
 ### Added — A. `<ElicitationForm>` schema-driven renderer

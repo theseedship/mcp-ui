@@ -1,6 +1,6 @@
 {
   "name": "@seed-ship/mcp-ui-solid",
-  "version": "5.3.0",
+  "version": "5.3.1",
   "description": "SolidJS components for rendering MCP-generated UI resources",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -155,7 +155,7 @@
   },
   "dependencies": {
     "@types/dompurify": "^3.0.5",
-    "dompurify": "^3.3.3",
+    "dompurify": "^3.4.1",
     "marked": "^16.3.0",
     "zod": "^3.22.4"
   },
