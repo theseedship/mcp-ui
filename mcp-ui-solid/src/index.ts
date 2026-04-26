@@ -89,6 +89,13 @@ export type {
   GenerativeUIErrorBoundaryProps,
 } from './components'
 
+// Validation error mode (v5.4.0)
+export type { ValidationErrorMode } from './components/UIResourceRenderer'
+
+// Runtime debug mode + perf marks (v5.4.0)
+export { setDebugMode, isDebugEnabled } from './utils/logger'
+export { markRenderStart, markRenderEnd, PERF_PREFIX } from './utils/perf'
+
 export type { DraggableGridItemProps } from './components/DraggableGridItem'
 export type { ResizeHandleProps as ResizeHandleComponentProps } from './components/ResizeHandle'
 export type { EditableUIResourceRendererProps } from './components/EditableUIResourceRenderer'

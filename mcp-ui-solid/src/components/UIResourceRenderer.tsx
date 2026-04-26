@@ -4,11 +4,28 @@
  */
 
 import DOMPurify from 'dompurify'
-import { Component, createSignal, Show, For, createMemo, createEffect } from 'solid-js'
+import { Component, createSignal, Show, For, createMemo, createEffect, onMount } from 'solid-js'
 import { isServer } from 'solid-js/web'
 import type { UIComponent, UILayout, RendererError, TableVirtualizeOptions } from '../types'
 import { validateComponent, DEFAULT_RESOURCE_LIMITS, getIframeSandbox } from '../services/validation'
 import { GenerativeUIErrorBoundary } from './GenerativeUIErrorBoundary'
+import { markRenderStart, markRenderEnd } from '../utils/perf'
+
+/**
+ * How `<UIResourceRenderer>` reacts when `validateComponent()` rejects a
+ * component (v5.4.0).
+ *
+ * - `'block'`  : full-slot red error card (default — backward compatible)
+ * - `'inline-warn'` : compact yellow chip in the slot, tooltip carries the
+ *                    error message — keeps the surrounding layout clean
+ *                    (e.g. inside a chat message)
+ * - `'silent'` : render nothing in the slot; `onError` still fires so the
+ *                consumer can log/alert
+ *
+ * Runtime errors caught by `<GenerativeUIErrorBoundary>` are NOT affected by
+ * this prop — they always show the boundary's fallback UI.
+ */
+export type ValidationErrorMode = 'block' | 'inline-warn' | 'silent'
 import { GridRenderer } from './GridRenderer'
 import { FooterRenderer } from './FooterRenderer'
 import { CarouselRenderer } from './CarouselRenderer'
@@ -93,6 +110,15 @@ export interface UIResourceRendererProps {
    * Custom CSS class
    */
   class?: string
+
+  /**
+   * How to react when a component fails `validateComponent()` (v5.4.0).
+   * Defaults to `'block'` (replaces the slot with a red error card —
+   * the pre-v5.4.0 behavior).
+   *
+   * @see ValidationErrorMode
+   */
+  errorMode?: ValidationErrorMode
 }
 
 /**
@@ -1102,7 +1128,13 @@ function LinkRenderer(props: { component: UIComponent }) {
 function ComponentRenderer(props: {
   component: UIComponent
   onError?: (error: RendererError) => void
+  errorMode?: ValidationErrorMode
 }) {
+  // Performance marks — visible in Chrome DevTools "Performance" panel under
+  // user timings. Always-on, SSR-safe (see utils/perf.ts).
+  markRenderStart(props.component.id)
+  onMount(() => markRenderEnd(props.component.id))
+
   // Validate component before rendering
   const validation = validateComponent(props.component)
   if (!validation.valid) {
@@ -1113,11 +1145,47 @@ function ComponentRenderer(props: {
       details: validation.errors,
     })
 
+    const mode: ValidationErrorMode = props.errorMode ?? 'block'
+    const firstError = validation.errors?.[0]?.message || 'Unknown validation error'
+
+    if (mode === 'silent') {
+      return null
+    }
+
+    if (mode === 'inline-warn') {
+      return (
+        <div
+          class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 text-xs text-yellow-800 dark:text-yellow-200"
+          role="alert"
+          aria-label="Component validation warning"
+          title={firstError}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="w-3.5 h-3.5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+          <span>Invalid {props.component.type}</span>
+        </div>
+      )
+    }
+
+    // mode === 'block' (default, pre-v5.4.0 behavior)
     return (
       <div class="w-full h-full bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
         <p class="text-sm font-medium text-red-900 dark:text-red-100">Validation Error</p>
         <p class="text-xs text-red-700 dark:text-red-300 mt-1">
-          {validation.errors?.[0]?.message || 'Unknown validation error'}
+          {firstError}
         </p>
       </div>
     )
@@ -1450,7 +1518,7 @@ export const UIResourceRenderer: Component<UIResourceRendererProps> = (props) =>
 
   // Wrapper function for RenderContext (breaks circular dependency)
   const renderComponent = (component: UIComponent, onError?: (error: RendererError) => void) => (
-    <ComponentRenderer component={component} onError={onError} />
+    <ComponentRenderer component={component} onError={onError} errorMode={props.errorMode} />
   )
 
   return (
@@ -1460,7 +1528,7 @@ export const UIResourceRenderer: Component<UIResourceRendererProps> = (props) =>
           <For each={layoutData.components}>
             {(component) => (
               <div style={getGridStyleString(component)}>
-                <ComponentRenderer component={component} onError={props.onError} />
+                <ComponentRenderer component={component} onError={props.onError} errorMode={props.errorMode} />
               </div>
             )}
           </For>

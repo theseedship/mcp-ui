@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.4.0] - 2026-04-26
+
+Combo non-breaking d'observabilité + UX, motivé par l'audit deposium_MCPs `MCP-UI-AUDIT-2026-04-26.md` (items B.2 + B.3 + B.4).
+
+### Added — B.2 Runtime debug mode
+
+- **`setDebugMode(enabled: boolean | null)`** + **`isDebugEnabled()`** exportés depuis l'index. Permet d'activer le verbose logging sans recompilation, utile pour debugger une session prod (Docker dev avec `NODE_ENV=production` notamment).
+- 4 sources d'activation (OR logique) : `NODE_ENV !== 'production'` (existant), `process.env.MCP_UI_DEBUG === 'true'`, `globalThis.__MCP_UI_DEBUG__ === true`, ou `setDebugMode(true)`.
+- `setDebugMode(null)` réinitialise à la détection env-based.
+- `error()` log toujours, indépendamment du mode (inchangé).
+
+### Added — B.4 Performance markers
+
+- Nouveaux helpers **`markRenderStart(id)`** + **`markRenderEnd(id)`** + constante **`PERF_PREFIX`** (`'mcp-ui:component:'`) exportés depuis l'index.
+- Câblés automatiquement dans `<UIResourceRenderer>` + `<StreamingUIRenderer>` autour de chaque `ComponentRenderer`. Émettent :
+  - `mcp-ui:component:<id>:render-start`
+  - `mcp-ui:component:<id>:render-end`
+  - `mcp-ui:component:<id>:render` (un `performance.measure` entre les deux)
+- Visibles automatiquement dans Chrome DevTools "Performance" panel sous user timings, sans config consumer.
+- SSR-safe (`performance` est gardé) ; coût négligeable (<μs par mark).
+
+### Added — B.3 `errorMode` prop sur les renderers
+
+- Nouveau type **`ValidationErrorMode = 'block' | 'inline-warn' | 'silent'`** + nouvelle prop **`errorMode?: ValidationErrorMode`** sur `<UIResourceRenderer>` et `<StreamingUIRenderer>`.
+- `'block'` (default, **backward-compatible**) : carte rouge "Validation Error" pleine slot — comportement pré-v5.4.0.
+- `'inline-warn'` : chip jaune compact dans le slot, message d'erreur dans le tooltip + `aria-label`. Évite de polluer une conversation chat avec un gros bloc rouge.
+- `'silent'` : aucun rendu visible (le slot reste vide). `onError` est appelé dans les 3 modes.
+- Ne s'applique qu'au path **validation** (`validateComponent` failure). Les runtime errors capturées par `<GenerativeUIErrorBoundary>` continuent d'utiliser le fallback existant.
+
+### Tests
+
+- 3 nouveaux fichiers de tests : `src/utils/logger.test.ts` (10 tests), `src/utils/perf.test.ts` (5 tests), `src/components/UIResourceRenderer.errorMode.test.tsx` (6 tests).
+- Suite totale : **505/505 tests pass** (vs. 484 sur v5.3.1).
+
+### Non-breaking
+
+- Aucun changement d'API existante. Les apps qui ne passent pas `errorMode` voient exactement le comportement v5.3.1.
+
 ## [5.3.1] - 2026-04-25
 
 ### Security

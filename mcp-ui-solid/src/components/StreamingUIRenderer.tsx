@@ -26,12 +26,20 @@ import { useStreamingUI, type UseStreamingUIOptions } from '../hooks/useStreamin
 import type { UIComponent, RendererError } from '../types'
 import { validateComponent } from '../services/validation'
 import { GenerativeUIErrorBoundary } from './GenerativeUIErrorBoundary'
+import { markRenderStart, markRenderEnd } from '../utils/perf'
+import type { ValidationErrorMode } from './UIResourceRenderer'
 
 export interface StreamingUIRendererProps extends UseStreamingUIOptions {
   class?: string
   showProgress?: boolean
   showMetadata?: boolean
   onRenderError?: (error: RendererError) => void
+  /**
+   * How to react when a streamed component fails `validateComponent()`
+   * (v5.4.0). Defaults to `'block'` (full red error card — pre-v5.4.0
+   * behavior). See `ValidationErrorMode` in `UIResourceRenderer`.
+   */
+  errorMode?: ValidationErrorMode
 }
 
 /**
@@ -41,7 +49,12 @@ export interface StreamingUIRendererProps extends UseStreamingUIOptions {
 function StreamingComponentRenderer(props: {
   component: UIComponent
   onError?: (error: RendererError) => void
+  errorMode?: ValidationErrorMode
 }) {
+  // Performance marks (v5.4.0) — see utils/perf.ts
+  markRenderStart(props.component.id)
+  onMount(() => markRenderEnd(props.component.id))
+
   // Validate component before rendering
   const validation = validateComponent(props.component)
   if (!validation.valid) {
@@ -52,11 +65,46 @@ function StreamingComponentRenderer(props: {
       details: validation.errors,
     })
 
+    const mode: ValidationErrorMode = props.errorMode ?? 'block'
+    const firstError = validation.errors?.[0]?.message || 'Unknown validation error'
+
+    if (mode === 'silent') {
+      return null
+    }
+
+    if (mode === 'inline-warn') {
+      return (
+        <div
+          class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 text-xs text-yellow-800 dark:text-yellow-200"
+          role="alert"
+          aria-label="Component validation warning"
+          title={firstError}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="w-3.5 h-3.5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+          <span>Invalid {props.component.type}</span>
+        </div>
+      )
+    }
+
     return (
       <div class="w-full bg-error-subtle border border-border-error rounded-lg p-4">
         <p class="text-sm font-medium text-error-primary">Validation Error</p>
         <p class="text-xs text-text-secondary mt-1">
-          {validation.errors?.[0]?.message || 'Unknown validation error'}
+          {firstError}
         </p>
       </div>
     )
@@ -214,7 +262,11 @@ export function StreamingUIRenderer(props: StreamingUIRendererProps) {
                 `}
                 style={`grid-column-start: ${component.position.colStart}; grid-column-end: ${component.position.colStart + component.position.colSpan}`}
               >
-                <StreamingComponentRenderer component={component} onError={props.onRenderError} />
+                <StreamingComponentRenderer
+                  component={component}
+                  onError={props.onRenderError}
+                  errorMode={props.errorMode}
+                />
               </div>
             )
           }}
