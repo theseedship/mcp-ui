@@ -8,6 +8,21 @@
  * - Security constraints (domain whitelist, XSS prevention)
  */
 
+import type { ZodIssue, ZodSchema } from 'zod'
+import {
+  MetricComponentParamsSchema,
+  TextComponentParamsSchema,
+  IframeComponentParamsSchema,
+  ImageComponentParamsSchema,
+  LinkComponentParamsSchema,
+  CarouselComponentParamsSchema,
+  ArtifactComponentParamsSchema,
+  ActionParamsSchema,
+  VideoComponentParamsSchema,
+  ImageGalleryParamsSchema,
+  ActionGroupParamsSchema,
+  CodeComponentParamsSchema,
+} from '@seed-ship/mcp-ui-spec'
 import type {
   UIComponent,
   UILayout,
@@ -30,6 +45,60 @@ const KNOWN_COMPONENT_TYPES: Set<string> = new Set<ComponentType>([
   'action', 'footer', 'carousel', 'artifact', 'form', 'modal',
   'action-group', 'image-gallery', 'video', 'code', 'map',
 ])
+
+/**
+ * Spec-driven validation dispatch table (B.1 — v5.5.0).
+ *
+ * For each ComponentType where we delegate shape validation to a Zod schema
+ * from `@seed-ship/mcp-ui-spec`, this table maps:
+ *   - the schema to safeParse against
+ *   - the legacy error code to emit when shape parsing fails (preserves the
+ *     pre-v5.5.0 `errors[].code` API contract — see MCP-UI-AUDIT-2026-04-26.md
+ *     §I.3.a + §J.1)
+ *
+ * Types deliberately omitted (kept on the imperative path):
+ *   - `chart`, `table` — have rich imperative validators with their own
+ *     codes (MISSING_DATA, DATA_LENGTH_MISMATCH, RESOURCE_LIMIT_EXCEEDED, …)
+ *   - `form`           — spec FormFieldSchema has strict regex on field
+ *     names that could reject LLM-generated payloads. Conservative.
+ *   - `map`            — spec center is `tuple([number, number])`; production
+ *     payloads use `{lat, lng}` objects. Avoid backward-compat regression.
+ *   - `modal`          — all params are optional; nothing to enforce.
+ *   - `grid`, `footer`, `composite` — pass-through, validated elsewhere.
+ */
+const SPEC_VALIDATORS: Partial<Record<ComponentType, { schema: ZodSchema; legacyCode: string }>> = {
+  metric: { schema: MetricComponentParamsSchema, legacyCode: 'INVALID_METRIC' },
+  text: { schema: TextComponentParamsSchema, legacyCode: 'INVALID_TEXT' },
+  iframe: { schema: IframeComponentParamsSchema, legacyCode: 'INVALID_IFRAME' },
+  image: { schema: ImageComponentParamsSchema, legacyCode: 'INVALID_IMAGE' },
+  link: { schema: LinkComponentParamsSchema, legacyCode: 'INVALID_LINK' },
+  action: { schema: ActionParamsSchema, legacyCode: 'INVALID_ACTION' },
+  video: { schema: VideoComponentParamsSchema, legacyCode: 'INVALID_VIDEO' },
+  carousel: { schema: CarouselComponentParamsSchema, legacyCode: 'EMPTY_CAROUSEL' },
+  'image-gallery': { schema: ImageGalleryParamsSchema, legacyCode: 'EMPTY_GALLERY' },
+  'action-group': { schema: ActionGroupParamsSchema, legacyCode: 'EMPTY_ACTION_GROUP' },
+  code: { schema: CodeComponentParamsSchema, legacyCode: 'INVALID_CODE' },
+  artifact: { schema: ArtifactComponentParamsSchema, legacyCode: 'INVALID_ARTIFACT' },
+}
+
+/**
+ * Map a Zod issue list to the legacy `ValidationError[]` shape.
+ *
+ * Preserves the pre-v5.5.0 contract: `path` always begins with `params`,
+ * `code` is the per-type legacy code (so consumers that filtered by
+ * `errors[].code === 'EMPTY_CAROUSEL'` keep working), `message` is Zod's
+ * native human-readable message.
+ */
+function mapZodIssuesToErrors(
+  issues: readonly ZodIssue[],
+  legacyCode: string
+): NonNullable<ValidationResult['errors']> {
+  return issues.map((issue) => ({
+    path: issue.path.length > 0 ? `params.${issue.path.join('.')}` : 'params',
+    message: issue.message,
+    code: legacyCode,
+  }))
+}
 
 /**
  * Default resource limits (configurable via env)
@@ -600,201 +669,86 @@ export function validateComponent(
     errors.push(...(sizeResult.errors || []))
   }
 
-  // Type-specific validation
-  switch (component.type) {
-    case 'chart': {
-      const chartResult = validateChartComponent(component.params as ChartComponentParams, limits)
-      if (!chartResult.valid) {
-        errors.push(...(chartResult.errors || []))
-      }
-      break
+  // Type-specific validation (B.1 — v5.5.0).
+  //
+  // 12 types delegate shape validation to Zod schemas in `mcp-ui-spec` via
+  // SPEC_VALIDATORS. The 5 remaining types stay imperative because they
+  // need cross-field consistency, resource limits, or backward-compat logic
+  // that pure Zod can't express without `.refine()` (see SPEC_VALIDATORS docstring).
+  const specValidator = SPEC_VALIDATORS[component.type]
+  if (specValidator) {
+    const result = specValidator.schema.safeParse(component.params)
+    if (!result.success) {
+      errors.push(...mapZodIssuesToErrors(result.error.issues, specValidator.legacyCode))
     }
-
-    case 'table': {
-      const tableResult = validateTableComponent(component.params as TableComponentParams, limits)
-      if (!tableResult.valid) {
-        errors.push(...(tableResult.errors || []))
-      }
-      break
-    }
-
-    case 'metric': {
-      // Basic validation for metrics
-      const metricParams = component.params as any
-      if (!metricParams.title || !metricParams.value) {
-        errors.push({
-          path: 'params',
-          message: 'Metric must have title and value',
-          code: 'INVALID_METRIC',
-        })
-      }
-      break
-    }
-
-    case 'text': {
-      // Basic validation for text
-      const textParams = component.params as any
-      if (!textParams.content) {
-        errors.push({
-          path: 'params',
-          message: 'Text component must have content',
-          code: 'INVALID_TEXT',
-        })
-      }
-      break
-    }
-
-    case 'iframe': {
-      // Basic validation for iframe
-      const iframeParams = component.params as any
-      if (!iframeParams.url) {
-        errors.push({
-          path: 'params',
-          message: 'Iframe component must have url',
-          code: 'INVALID_IFRAME',
-        })
-      } else {
-        // Validate iframe domain against whitelist
-        const iframeResult = validateIframeDomain(iframeParams.url, {
+    // Iframe + video: chain the domain whitelist post-check ONLY when the
+    // shape parse succeeded (i.e. url is present and a string). Skipping the
+    // domain check when shape failed avoids cascading errors on the same field.
+    if (result.success && (component.type === 'iframe' || component.type === 'video')) {
+      const url = (component.params as { url?: string })?.url
+      if (typeof url === 'string') {
+        const domainResult = validateIframeDomain(url, {
           policy: options?.iframePolicy,
           customDomains: options?.customIframeDomains,
         })
-        if (!iframeResult.valid) {
-          errors.push(...(iframeResult.errors || []))
+        if (!domainResult.valid) {
+          errors.push(...(domainResult.errors || []))
         }
       }
-      break
     }
-
-    case 'image': {
-      // Basic validation for image
-      const imageParams = component.params as any
-      if (!imageParams.url) {
-        errors.push({
-          path: 'params',
-          message: 'Image component must have url',
-          code: 'INVALID_IMAGE',
-        })
-      }
-      break
-    }
-
-    case 'link': {
-      // Basic validation for link
-      const linkParams = component.params as any
-      if (!linkParams.url) {
-        errors.push({
-          path: 'params',
-          message: 'Link component must have url',
-          code: 'INVALID_LINK',
-        })
-      }
-      break
-    }
-
-    case 'action': {
-      // Basic validation for action
-      const actionParams = component.params as any
-      if (!actionParams.label) {
-        errors.push({
-          path: 'params',
-          message: 'Action component must have label',
-          code: 'INVALID_ACTION',
-        })
-      }
-      break
-    }
-
-    case 'video': {
-      const videoParams = component.params as any
-      if (!videoParams.url) {
-        errors.push({ path: 'params', message: 'Video component must have url', code: 'INVALID_VIDEO' })
-      } else {
-        // Reuse iframe domain validation for video URLs
-        const videoResult = validateIframeDomain(videoParams.url, {
-          policy: options?.iframePolicy,
-          customDomains: options?.customIframeDomains,
-        })
-        if (!videoResult.valid) {
-          errors.push(...(videoResult.errors || []))
+  } else {
+    // Imperative path for chart/table/form/map/modal/grid/footer/composite.
+    switch (component.type) {
+      case 'chart': {
+        const chartResult = validateChartComponent(component.params as ChartComponentParams, limits)
+        if (!chartResult.valid) {
+          errors.push(...(chartResult.errors || []))
         }
+        break
       }
-      break
-    }
 
-    case 'carousel': {
-      const carouselParams = component.params as any
-      if (!Array.isArray(carouselParams.items) || carouselParams.items.length === 0) {
-        errors.push({ path: 'params.items', message: 'Carousel must have non-empty items array', code: 'EMPTY_CAROUSEL' })
+      case 'table': {
+        const tableResult = validateTableComponent(component.params as TableComponentParams, limits)
+        if (!tableResult.valid) {
+          errors.push(...(tableResult.errors || []))
+        }
+        break
       }
-      break
-    }
 
-    case 'image-gallery': {
-      const galleryParams = component.params as any
-      if (!Array.isArray(galleryParams.images) || galleryParams.images.length === 0) {
-        errors.push({ path: 'params.images', message: 'Gallery must have non-empty images array', code: 'EMPTY_GALLERY' })
+      case 'form': {
+        const formParams = component.params as { fields?: unknown[] }
+        if (!Array.isArray(formParams.fields) || formParams.fields.length === 0) {
+          errors.push({ path: 'params.fields', message: 'Form must have non-empty fields array', code: 'EMPTY_FORM' })
+        }
+        break
       }
-      break
-    }
 
-    case 'form': {
-      const formParams = component.params as any
-      if (!Array.isArray(formParams.fields) || formParams.fields.length === 0) {
-        errors.push({ path: 'params.fields', message: 'Form must have non-empty fields array', code: 'EMPTY_FORM' })
+      case 'map': {
+        // Map can auto-detect center from markers, so center is not strictly required.
+        // Spec MapComponentParamsSchema would be too strict (tuple-only center) — kept imperative.
+        const mapParams = component.params as { center?: unknown; markers?: unknown[] }
+        if (!mapParams.center && (!Array.isArray(mapParams.markers) || mapParams.markers.length === 0)) {
+          errors.push({ path: 'params', message: 'Map must have center or markers', code: 'INVALID_MAP' })
+        }
+        break
       }
-      break
-    }
 
-    case 'action-group': {
-      const agParams = component.params as any
-      if (!Array.isArray(agParams.actions) || agParams.actions.length === 0) {
-        errors.push({ path: 'params.actions', message: 'Action group must have non-empty actions array', code: 'EMPTY_ACTION_GROUP' })
-      }
-      break
-    }
+      case 'modal':
+        // Modal is valid with minimal params (title optional, content can be children).
+        break
 
-    case 'code': {
-      const codeParams = component.params as any
-      if (!codeParams.code) {
-        errors.push({ path: 'params.code', message: 'Code component must have code content', code: 'INVALID_CODE' })
-      }
-      break
+      default:
+        // Known types without specific validation pass through — renderer handles errors.
+        // Truly unknown types (e.g. typos in streamed JSON) are rejected.
+        if (!KNOWN_COMPONENT_TYPES.has(component.type)) {
+          errors.push({
+            path: 'type',
+            message: `Unknown component type: ${component.type}`,
+            code: 'UNKNOWN_COMPONENT_TYPE',
+          })
+        }
+        break
     }
-
-    case 'map': {
-      // Map can auto-detect center from markers, so center is not strictly required
-      const mapParams = component.params as any
-      if (!mapParams.center && (!Array.isArray(mapParams.markers) || mapParams.markers.length === 0)) {
-        errors.push({ path: 'params', message: 'Map must have center or markers', code: 'INVALID_MAP' })
-      }
-      break
-    }
-
-    case 'modal': {
-      // Modal is valid with minimal params (title optional, content can be children)
-      break
-    }
-
-    case 'artifact': {
-      const artifactParams = component.params as any
-      if (!artifactParams.content) {
-        errors.push({ path: 'params.content', message: 'Artifact must have content', code: 'INVALID_ARTIFACT' })
-      }
-      break
-    }
-
-    default:
-      // Known types without specific validation pass through — renderer handles errors
-      // Truly unknown types (e.g. typos in streamed JSON) are rejected
-      if (!KNOWN_COMPONENT_TYPES.has(component.type)) {
-        errors.push({
-          path: 'type',
-          message: `Unknown component type: ${component.type}`,
-          code: 'UNKNOWN_COMPONENT_TYPE',
-        })
-      }
-      break
   }
 
   return {

@@ -5,6 +5,72 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.5.0] - 2026-04-27
+
+B.1 PR2 — `services/validation.ts` migration vers Zod schemas spec-driven (cf. audit deposium `MCP-UI-AUDIT-2026-04-26.md` §I + greenlight §J). **Non-breaking, aucune migration consumer requise.**
+
+### Changed — validation refactor (B.1 PR2)
+
+- Nouvelle dépendance : **`@seed-ship/mcp-ui-spec` ^5.0.1** (workspace).
+- `validateComponent()` consomme désormais les Zod schemas exportés depuis `mcp-ui-spec` pour **12 ComponentTypes sur 17** : `metric`, `text`, `iframe`, `image`, `link`, `action`, `video`, `carousel`, `image-gallery`, `action-group`, `code`, `artifact`.
+- Mapper interne **`mapZodIssuesToErrors(issues, legacyCode)`** : convertit `ZodIssue[]` → `ValidationError[]` en préservant le `code` legacy par type (`INVALID_METRIC`, `EMPTY_CAROUSEL`, etc.). **L'API publique `validateComponent()` retourne exactement la même shape `{valid, errors: [{path, message, code}]}` qu'avant** — voir audit §J.1 (deposium a confirmé que `errors[].code` n'est lu nulle part en logique métier).
+- Path Zod normalisé : `params.<joined>` (ex. `params.title`, `params.data.datasets`) — cohérent avec les chemins legacy.
+- 5 ComponentTypes restent **délibérément sur le path impératif** :
+  - `chart` + `table` — leurs validateurs (`validateChartComponent`, `validateTableComponent`) font cross-field consistency + resource limits + codes riches (`MISSING_DATA`, `DATA_LENGTH_MISMATCH`, `DUPLICATE_COLUMN_KEY`...) que Zod ne peut pas exprimer aussi proprement.
+  - `form` — `FormComponentParamsSchema` du spec a une regex stricte sur les noms de fields qui pourrait rejeter des payloads LLM valides. Conservatisme.
+  - `map` — spec exige `center: tuple([number, number])` mais la prod accepte `{lat, lng}` objects. Backward-compat.
+  - `modal` — tous params optionnels, rien à valider.
+
+### Fixed — Artifact validation drift (side-effect)
+
+- **Pré-v5.5.0 bug** : `validation.ts` exigeait `params.content` (code `INVALID_ARTIFACT`) mais `<ArtifactRenderer>` consomme `url + filename + mimeType`. Tout artifact rendu valide échouait la validation, et tout artifact "validé" ne pouvait pas être rendu.
+- **Fix** : la migration vers `ArtifactComponentParamsSchema` aligne automatiquement la validation sur ce que le renderer attend (`url + filename + mimeType` requis, `size` ≥ 0, `description` optionnel).
+- Code legacy `INVALID_ARTIFACT` préservé pour les consumers qui filtrent dessus.
+
+### Preserved — Resource limits + iframe whitelist (sécurité)
+
+Explicitement **gardés impératifs**, hors scope de la migration Zod :
+- `validatePayloadSize` (max 50KB par défaut)
+- `validateChartComponent` data points limits (max 1000 par défaut)
+- `validateTableComponent` row limits (max 100 par défaut)
+- `validateIframeDomain` + `DEFAULT_IFRAME_DOMAINS` whitelist (~45 domaines)
+- `getIframeSandbox` tiered sandbox flags
+
+Ces couches sont chaînées **après** le spec parse (cf. `iframe` + `video` → spec parse réussi → domain whitelist).
+
+### Build pipeline (mcp-ui-spec @ 5.0.1+)
+
+Bonus : remplacement du `scripts/generate-dts.js` hand-rolled (qui ne déclarait que 9 schemas sur ~30) par `tsc -p tsconfig.build.json --emitDeclarationOnly`. Les 30+ schemas sont maintenant tous correctement déclarés dans `dist/schemas.d.ts` automatiquement. Élimine une dette de maintenance.
+
+### Tests
+
+- `services/validation.test.ts` (49 tests) — **inchangé**, passe tel quel → preuve que l'API externe est préservée.
+- `services/validation.spec-migration.test.ts` — **+18 nouveaux tests** ciblant explicitement v5.5.0 :
+  - Mapper preserve legacy `code` per type (12 types vérifiés)
+  - ZodIssue path → `params.<joined>` translation
+  - Artifact bug fix (url+filename+mimeType requis, plus content)
+  - Iframe + video chain : spec parse réussi → domain check, parse failed → SKIP domain check (no cascade)
+  - Imperative passthrough types préservent leurs codes riches (`MISSING_DATA`, `EMPTY_COLUMNS`, `EMPTY_FORM`, etc.)
+  - Invariants : `UNKNOWN_COMPONENT_TYPE`, `MISSING_PARAMS`, `INVALID_GRID_COL_START` toujours émis
+
+Suite totale solid : **523/523 tests pass** (vs 505 sur v5.4.0).
+
+### Cross-stack — bénéfice deposium
+
+Avec spec@5.0.1 + solid@5.5.0, deposium peut maintenant factoriser sa validation cross-stack :
+```ts
+import { ChartComponentParamsSchema } from '@seed-ship/mcp-ui-spec'
+// Côté MCPs (backend) : valider extracted_charts à la source
+// Côté Solid (frontend) : héritage automatique via mcp-ui-solid
+```
+
+### Non-breaking guarantee
+
+- API `validateComponent()` shape **identique** : `{ valid: boolean, errors?: Array<{path, message, code}> }`.
+- Tous les codes legacy préservés via le mapper (51 codes existants).
+- Resource limits + iframe whitelist + sandbox flags **inchangés**.
+- Seul changement de comportement observable : `artifact` accepte maintenant les payloads que le renderer rend réellement (bug fix).
+
 ## [5.4.0] - 2026-04-26
 
 Combo non-breaking d'observabilité + UX, motivé par l'audit deposium_MCPs `MCP-UI-AUDIT-2026-04-26.md` (items B.2 + B.3 + B.4).
