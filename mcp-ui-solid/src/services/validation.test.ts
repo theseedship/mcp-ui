@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest'
-import { validateComponent, validateChartComponent, getIframeSandbox } from './validation'
+import { validateComponent, validateChartComponent, getIframeSandbox, validateIframeDomain } from './validation'
 import type { UIComponent, ComponentType } from '../types'
 
 /** Helper to create a minimal valid UIComponent for testing */
@@ -22,13 +22,14 @@ function makeComponent(type: ComponentType, params: Record<string, any> = {}): U
 /** Types that have explicit validation cases in validateComponent */
 const VALIDATED_TYPES: ComponentType[] = [
   'chart', 'table', 'metric', 'text', 'iframe', 'image', 'link', 'action',
+  'artifact',
 ]
 
 /** Types that hit the default case (no specific validation) */
 const PASSTHROUGH_TYPES: ComponentType[] = [
   'code', 'map', 'form', 'modal', 'action-group',
   'image-gallery', 'video', 'grid', 'carousel',
-  'artifact', 'footer',
+  'footer',
 ]
 
 describe('validateComponent', () => {
@@ -47,7 +48,7 @@ describe('validateComponent', () => {
   describe('validated types still work', () => {
     it('validates a valid chart component', () => {
       const component = makeComponent('chart', {
-        chartType: 'bar',
+        type: 'bar',
         data: { labels: ['A'], datasets: [{ data: [1] }] },
       })
       const result = validateComponent(component)
@@ -325,5 +326,54 @@ describe('getIframeSandbox — tiered sandbox', () => {
       customTrustedDomains: ['my-internal-tool.corp.com'],
     })
     expect(sandbox).toContain('allow-same-origin')
+  })
+})
+
+describe('validateIframeDomain — security regression (v5.5.1)', () => {
+  // Pre-v5.5.1 bug: the predicate was
+  //   `domain === allowed || domain.endsWith(`.${allowed}`) || allowed === 'localhost'`
+  // The third clause `allowed === 'localhost'` was checking the WHITELIST
+  // ENTRY (not the domain) — once 'localhost' appeared in DEFAULT_IFRAME_DOMAINS,
+  // every URL was accepted. These tests lock the fixed behavior in place.
+
+  it('REJECTS a non-whitelisted external domain (this used to silently pass)', () => {
+    const result = validateIframeDomain('https://evil.example.com/x')
+    expect(result.valid).toBe(false)
+    expect(result.errors?.[0]?.code).toBe('DOMAIN_NOT_WHITELISTED')
+  })
+
+  it('REJECTS a typo-squat that is NOT a subdomain of any whitelisted entry', () => {
+    // youtube-evil.com is not youtube.com nor a subdomain of it
+    const result = validateIframeDomain('https://youtube-evil.com/embed/x')
+    expect(result.valid).toBe(false)
+    expect(result.errors?.[0]?.code).toBe('DOMAIN_NOT_WHITELISTED')
+  })
+
+  it('still accepts a whitelisted domain (quickchart.io)', () => {
+    expect(validateIframeDomain('https://quickchart.io/chart?c={}').valid).toBe(true)
+  })
+
+  it('still accepts subdomains of whitelisted entries (player.vimeo.com)', () => {
+    expect(validateIframeDomain('https://player.vimeo.com/video/123').valid).toBe(true)
+  })
+
+  it('still accepts localhost (dev convenience)', () => {
+    expect(validateIframeDomain('http://localhost:3000/x').valid).toBe(true)
+  })
+
+  it('still accepts 127.0.0.1 (loopback equivalent of localhost)', () => {
+    expect(validateIframeDomain('http://127.0.0.1:8080/x').valid).toBe(true)
+  })
+
+  it('respects allow-all policy bypass', () => {
+    expect(validateIframeDomain('https://anything.com', { policy: 'allow-all' }).valid).toBe(true)
+  })
+
+  it('extend policy adds custom domains', () => {
+    const result = validateIframeDomain('https://my-internal-tool.corp.com/x', {
+      policy: 'extend',
+      customDomains: ['my-internal-tool.corp.com'],
+    })
+    expect(result.valid).toBe(true)
   })
 })

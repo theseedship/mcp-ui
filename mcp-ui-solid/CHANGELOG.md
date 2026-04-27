@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.5.1] - 2026-04-27
+
+### Security — Iframe whitelist bug fix
+
+- **`validateIframeDomain` predicate bug** : `services/validation.ts:572` checked `allowed === 'localhost'` (the whitelist entry being literally the string `'localhost'`) instead of `domain === 'localhost'` (the URL's hostname being localhost). Once `'localhost'` was added to `DEFAULT_IFRAME_DOMAINS` (Sprint 0+, present since the beginning), the whitelist became **fully inoperative** — every external URL passed the check. Affected all iframe + video components rendered through `<UIResourceRenderer>` / `<StreamingUIRenderer>`.
+- **Fix** : loopback (`localhost` and `127.0.0.x`) is detected on the URL's hostname only ; the literal `'localhost'` whitelist entry is skipped from the iteration. Whitelisted domains + their subdomains continue to pass as before.
+- **Impact** : pre-v5.5.1, an LLM-generated iframe with `https://evil.example.com/x` would render. Post-v5.5.1, it's rejected with `DOMAIN_NOT_WHITELISTED` (the existing code, behavior now actually fires).
+- **Backward compat** : Apps using `<iframe url="https://..." />` with **legitimately whitelisted** URLs are unaffected. Apps relying on the bug to display arbitrary iframes will now see them rejected — workaround is `iframePolicy: 'extend'` + `customIframeDomains: [...]` or `iframePolicy: 'allow-all'` (latter for trusted contexts only).
+
+### Tests
+
+- `services/validation.test.ts` : new `describe('validateIframeDomain — security regression (v5.5.1)')` block — 8 tests locking in the correct behavior (rejects external + typo-squat domains, accepts whitelist + subdomains + localhost + 127.0.0.x, respects `allow-all` and `extend` policies).
+- 2 test cosmetics: `chartType` typo → `type` at `validation.test.ts:50`, `artifact` moved from `PASSTHROUGH_TYPES` to `VALIDATED_TYPES` (it has its own case since v5.5.0).
+- Total solid suite : **530/530 tests pass** (vs 523 on v5.5.0, +7 net).
+
 ## [5.5.0] - 2026-04-27
 
 B.1 PR2 — `services/validation.ts` migration vers Zod schemas spec-driven (cf. audit deposium `MCP-UI-AUDIT-2026-04-26.md` §I + greenlight §J). **Non-breaking, aucune migration consumer requise.**

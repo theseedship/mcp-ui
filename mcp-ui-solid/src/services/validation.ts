@@ -568,9 +568,17 @@ export function validateIframeDomain(
       effectiveWhitelist = [...DEFAULT_IFRAME_DOMAINS, ...options.customDomains]
     }
 
-    const isAllowed = effectiveWhitelist.some(
-      (allowed) => domain === allowed || domain.endsWith(`.${allowed}`) || allowed === 'localhost'
-    )
+    // SECURITY (v5.5.1) — pre-fix bug: predicate was `allowed === 'localhost'`
+    // which trivially returned true for every URL once the whitelist contained
+    // 'localhost' (an entry from DEFAULT_IFRAME_DOMAINS), making the entire
+    // domain whitelist inoperative. Fixed: only the URL's actual hostname
+    // being 'localhost' (or a 127.0.0.x loopback) bypasses the whitelist.
+    const isLoopback = domain === 'localhost' || /^127(\.\d{1,3}){3}$/.test(domain)
+    const isAllowed =
+      isLoopback ||
+      effectiveWhitelist.some(
+        (allowed) => allowed !== 'localhost' && (domain === allowed || domain.endsWith(`.${allowed}`))
+      )
 
     if (!isAllowed) {
       return {
