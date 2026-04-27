@@ -12,6 +12,7 @@ import { useAction } from '../hooks/useAction'
 import { validateFormData } from '../services/validation'
 import { evaluateCondition } from '../hooks/useConditionalField'
 import { useFormPersistence } from '../hooks/useFormPersistence'
+import { useTelemetry } from '../context/MCPUITelemetryContext'
 
 export interface FormRendererProps {
   component: UIComponent
@@ -42,6 +43,7 @@ export const FormRenderer: Component<FormRendererProps> = (props) => {
   const [errors, setErrors] = createSignal<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = createSignal(false)
   const { execute } = useAction()
+  const telemetry = useTelemetry()
 
   // Form persistence (Sprint 4)
   let clearPersisted: (() => void) | undefined
@@ -208,6 +210,18 @@ export const FormRenderer: Component<FormRendererProps> = (props) => {
     // Clear persisted data on successful submit
     if (clearPersisted) {
       clearPersisted()
+    }
+
+    // Telemetry: action:dispatched on successful submit (B.5 — v5.6.0).
+    // Privacy: only the action name (toolName or 'submit'), NO form values.
+    if (telemetry) {
+      telemetry.dispatch({
+        type: 'action:dispatched',
+        id: props.component.id,
+        componentType: 'form',
+        actionName: params().submitAction?.toolName ?? 'submit',
+        ts: Date.now(),
+      })
     }
 
     props.onSubmit?.(visibleFormData)

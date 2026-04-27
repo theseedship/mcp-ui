@@ -21,12 +21,13 @@
  * ```
  */
 
-import { Show, For, createSignal, onMount } from 'solid-js'
+import { Show, For, createSignal, onMount, onCleanup } from 'solid-js'
 import { useStreamingUI, type UseStreamingUIOptions } from '../hooks/useStreamingUI'
 import type { UIComponent, RendererError } from '../types'
 import { validateComponent } from '../services/validation'
 import { GenerativeUIErrorBoundary } from './GenerativeUIErrorBoundary'
-import { markRenderStart, markRenderEnd } from '../utils/perf'
+import { markRenderStart, markRenderEnd, PERF_PREFIX } from '../utils/perf'
+import { useTelemetry } from '../context/MCPUITelemetryContext'
 import type { ValidationErrorMode } from './UIResourceRenderer'
 
 export interface StreamingUIRendererProps extends UseStreamingUIOptions {
@@ -53,7 +54,47 @@ function StreamingComponentRenderer(props: {
 }) {
   // Performance marks (v5.4.0) — see utils/perf.ts
   markRenderStart(props.component.id)
-  onMount(() => markRenderEnd(props.component.id))
+
+  // Telemetry sink (B.5 — v5.6.0). Same wiring as ComponentRenderer in
+  // UIResourceRenderer.tsx — null when no Provider, no-op everywhere then.
+  const telemetry = useTelemetry()
+
+  onMount(() => {
+    markRenderEnd(props.component.id)
+    if (telemetry) {
+      const ts = Date.now()
+      telemetry.dispatch({
+        type: 'component:mounted',
+        id: props.component.id,
+        componentType: props.component.type,
+        ts,
+      })
+      if (typeof performance !== 'undefined' && typeof performance.getEntriesByName === 'function') {
+        const entries = performance.getEntriesByName(`${PERF_PREFIX}${props.component.id}:render`, 'measure')
+        const last = entries[entries.length - 1]
+        if (last) {
+          telemetry.dispatch({
+            type: 'component:rendered',
+            id: props.component.id,
+            componentType: props.component.type,
+            durationMs: last.duration,
+            ts,
+          })
+        }
+      }
+    }
+  })
+
+  onCleanup(() => {
+    if (telemetry) {
+      telemetry.dispatch({
+        type: 'component:unmounted',
+        id: props.component.id,
+        componentType: props.component.type,
+        ts: Date.now(),
+      })
+    }
+  })
 
   // Validate component before rendering
   const validation = validateComponent(props.component)
@@ -64,6 +105,17 @@ function StreamingComponentRenderer(props: {
       componentId: props.component.id,
       details: validation.errors,
     })
+
+    if (telemetry) {
+      telemetry.dispatch({
+        type: 'validation:failed',
+        id: props.component.id,
+        componentType: props.component.type,
+        errorCount: validation.errors?.length ?? 0,
+        firstErrorCode: validation.errors?.[0]?.code ?? null,
+        ts: Date.now(),
+      })
+    }
 
     const mode: ValidationErrorMode = props.errorMode ?? 'block'
     const firstError = validation.errors?.[0]?.message || 'Unknown validation error'

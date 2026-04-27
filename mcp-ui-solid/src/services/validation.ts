@@ -22,6 +22,9 @@ import {
   ImageGalleryParamsSchema,
   ActionGroupParamsSchema,
   CodeComponentParamsSchema,
+  // v5.6.0 — added after spec@5.0.2 relaxations (deposium audit §M)
+  MapComponentParamsSchema,
+  FormComponentParamsSchema,
 } from '@seed-ship/mcp-ui-spec'
 import type {
   UIComponent,
@@ -47,7 +50,7 @@ const KNOWN_COMPONENT_TYPES: Set<string> = new Set<ComponentType>([
 ])
 
 /**
- * Spec-driven validation dispatch table (B.1 — v5.5.0).
+ * Spec-driven validation dispatch table (B.1 — v5.5.0, expanded in v5.6.0).
  *
  * For each ComponentType where we delegate shape validation to a Zod schema
  * from `@seed-ship/mcp-ui-spec`, this table maps:
@@ -56,13 +59,13 @@ const KNOWN_COMPONENT_TYPES: Set<string> = new Set<ComponentType>([
  *     pre-v5.5.0 `errors[].code` API contract — see MCP-UI-AUDIT-2026-04-26.md
  *     §I.3.a + §J.1)
  *
+ * **v5.6.0** : `map` and `form` joined the dispatch after spec@5.0.2 relaxed
+ * their schemas (LatLngPoint union for map.center, regex relax for
+ * field.name) per deposium audit §L answers. Closed B.1 to **14/17 types**.
+ *
  * Types deliberately omitted (kept on the imperative path):
  *   - `chart`, `table` — have rich imperative validators with their own
  *     codes (MISSING_DATA, DATA_LENGTH_MISMATCH, RESOURCE_LIMIT_EXCEEDED, …)
- *   - `form`           — spec FormFieldSchema has strict regex on field
- *     names that could reject LLM-generated payloads. Conservative.
- *   - `map`            — spec center is `tuple([number, number])`; production
- *     payloads use `{lat, lng}` objects. Avoid backward-compat regression.
  *   - `modal`          — all params are optional; nothing to enforce.
  *   - `grid`, `footer`, `composite` — pass-through, validated elsewhere.
  */
@@ -79,6 +82,9 @@ const SPEC_VALIDATORS: Partial<Record<ComponentType, { schema: ZodSchema; legacy
   'action-group': { schema: ActionGroupParamsSchema, legacyCode: 'EMPTY_ACTION_GROUP' },
   code: { schema: CodeComponentParamsSchema, legacyCode: 'INVALID_CODE' },
   artifact: { schema: ArtifactComponentParamsSchema, legacyCode: 'INVALID_ARTIFACT' },
+  // v5.6.0 additions
+  form: { schema: FormComponentParamsSchema, legacyCode: 'EMPTY_FORM' },
+  map: { schema: MapComponentParamsSchema, legacyCode: 'INVALID_MAP' },
 }
 
 /**
@@ -677,35 +683,49 @@ export function validateComponent(
     errors.push(...(sizeResult.errors || []))
   }
 
-  // Type-specific validation (B.1 — v5.5.0).
+  // Type-specific validation (B.1 — v5.5.0, expanded v5.6.0).
   //
-  // 12 types delegate shape validation to Zod schemas in `mcp-ui-spec` via
-  // SPEC_VALIDATORS. The 5 remaining types stay imperative because they
-  // need cross-field consistency, resource limits, or backward-compat logic
-  // that pure Zod can't express without `.refine()` (see SPEC_VALIDATORS docstring).
+  // 14 types delegate shape validation to Zod schemas in `mcp-ui-spec` via
+  // SPEC_VALIDATORS. The 3 remaining types stay imperative because they
+  // need cross-field consistency, resource limits, or have nothing to validate
+  // (see SPEC_VALIDATORS docstring).
   const specValidator = SPEC_VALIDATORS[component.type]
   if (specValidator) {
     const result = specValidator.schema.safeParse(component.params)
     if (!result.success) {
       errors.push(...mapZodIssuesToErrors(result.error.issues, specValidator.legacyCode))
     }
-    // Iframe + video: chain the domain whitelist post-check ONLY when the
-    // shape parse succeeded (i.e. url is present and a string). Skipping the
-    // domain check when shape failed avoids cascading errors on the same field.
-    if (result.success && (component.type === 'iframe' || component.type === 'video')) {
-      const url = (component.params as { url?: string })?.url
-      if (typeof url === 'string') {
-        const domainResult = validateIframeDomain(url, {
-          policy: options?.iframePolicy,
-          customDomains: options?.customIframeDomains,
-        })
-        if (!domainResult.valid) {
-          errors.push(...(domainResult.errors || []))
+    // Post-spec chained checks. Skipped when the shape parse failed to avoid
+    // cascading errors on already-broken payloads.
+    if (result.success) {
+      // Iframe + video: domain whitelist
+      if (component.type === 'iframe' || component.type === 'video') {
+        const url = (component.params as { url?: string })?.url
+        if (typeof url === 'string') {
+          const domainResult = validateIframeDomain(url, {
+            policy: options?.iframePolicy,
+            customDomains: options?.customIframeDomains,
+          })
+          if (!domainResult.valid) {
+            errors.push(...(domainResult.errors || []))
+          }
+        }
+      }
+      // Map (v5.6.0): center OR markers required. Spec has both .optional()
+      // since auto-center from markers is supported, but we need ONE of them.
+      if (component.type === 'map') {
+        const mapParams = component.params as { center?: unknown; markers?: unknown[] }
+        if (!mapParams.center && (!Array.isArray(mapParams.markers) || mapParams.markers.length === 0)) {
+          errors.push({
+            path: 'params',
+            message: 'Map must have center or markers',
+            code: 'INVALID_MAP',
+          })
         }
       }
     }
   } else {
-    // Imperative path for chart/table/form/map/modal/grid/footer/composite.
+    // Imperative path for chart/table/modal/grid/footer/composite.
     switch (component.type) {
       case 'chart': {
         const chartResult = validateChartComponent(component.params as ChartComponentParams, limits)
@@ -719,24 +739,6 @@ export function validateComponent(
         const tableResult = validateTableComponent(component.params as TableComponentParams, limits)
         if (!tableResult.valid) {
           errors.push(...(tableResult.errors || []))
-        }
-        break
-      }
-
-      case 'form': {
-        const formParams = component.params as { fields?: unknown[] }
-        if (!Array.isArray(formParams.fields) || formParams.fields.length === 0) {
-          errors.push({ path: 'params.fields', message: 'Form must have non-empty fields array', code: 'EMPTY_FORM' })
-        }
-        break
-      }
-
-      case 'map': {
-        // Map can auto-detect center from markers, so center is not strictly required.
-        // Spec MapComponentParamsSchema would be too strict (tuple-only center) — kept imperative.
-        const mapParams = component.params as { center?: unknown; markers?: unknown[] }
-        if (!mapParams.center && (!Array.isArray(mapParams.markers) || mapParams.markers.length === 0)) {
-          errors.push({ path: 'params', message: 'Map must have center or markers', code: 'INVALID_MAP' })
         }
         break
       }

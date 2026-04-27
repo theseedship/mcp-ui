@@ -96,6 +96,21 @@ export type { ValidationErrorMode } from './components/UIResourceRenderer'
 export { setDebugMode, isDebugEnabled } from './utils/logger'
 export { markRenderStart, markRenderEnd, PERF_PREFIX } from './utils/perf'
 
+// Telemetry sink (B.5 — v5.6.0)
+export {
+  MCPUITelemetryProvider,
+  MCPUITelemetryContext,
+  useTelemetry,
+} from './context/MCPUITelemetryContext'
+export type { MCPUITelemetryProviderProps } from './context/MCPUITelemetryContext'
+export { createTelemetryDispatcher } from './services/telemetry'
+export type {
+  TelemetryEvent,
+  TelemetrySink,
+  TelemetryOptions,
+  TelemetryDispatcher,
+} from './services/telemetry'
+
 export type { DraggableGridItemProps } from './components/DraggableGridItem'
 export type { ResizeHandleProps as ResizeHandleComponentProps } from './components/ResizeHandle'
 export type { EditableUIResourceRendererProps } from './components/EditableUIResourceRenderer'

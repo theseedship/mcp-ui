@@ -13,7 +13,8 @@
 import { Component, ErrorBoundary, createSignal, Show, onMount } from 'solid-js'
 import { isServer } from 'solid-js/web'
 import { createLogger } from '../utils/logger'
-import type { RendererError } from '../types'
+import type { RendererError, ComponentType } from '../types'
+import { useTelemetry } from '../context/MCPUITelemetryContext'
 
 const logger = createLogger('generative-ui')
 
@@ -112,6 +113,8 @@ function DefaultErrorFallback(props: {
 export const GenerativeUIErrorBoundary: Component<GenerativeUIErrorBoundaryProps> = (props) => {
   const [retryKey, setRetryKey] = createSignal(0)
   const [renderStartTime, setRenderStartTime] = createSignal(0)
+  // Telemetry sink (B.5 — v5.6.0). Null when no Provider is mounted.
+  const telemetry = useTelemetry()
 
   // SSR-safe: Initialize performance timing on client only
   onMount(() => {
@@ -158,6 +161,19 @@ export const GenerativeUIErrorBoundary: Component<GenerativeUIErrorBoundaryProps
       componentId: props.componentId,
       details: errorContext,
     })
+
+    // Dispatch render:error to telemetry sink (B.5 — v5.6.0). Only the
+    // message (capped semantically by the consumer if desired) — NO stack
+    // trace, NO component payload, per privacy hard rule (§M.6.2).
+    if (telemetry) {
+      telemetry.dispatch({
+        type: 'render:error',
+        id: props.componentId,
+        componentType: props.componentType as ComponentType,
+        errorMessage: error.message,
+        ts: Date.now(),
+      })
+    }
 
     // In production, send to monitoring service
     if (import.meta.env.PROD) {

@@ -5,6 +5,53 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.6.0] - 2026-04-27
+
+Closes B.1 migration (14/17 ComponentTypes spec-driven) AND ships B.5 — UI
+telemetry sink, both per deposium audit `MCP-UI-AUDIT-2026-04-26.md` §M.
+
+### Added — B.5 UI telemetry sink
+
+- **`<MCPUITelemetryProvider sink options>`** + **`useTelemetry()`** hook + **`MCPUITelemetryContext`**. Provider is **OPTIONAL** — when absent, all dispatch sites no-op (zero behavior change for apps that don't opt in).
+- **`createTelemetryDispatcher(sink, options)`** exposed for advanced usage / SSR contexts / testing without a Provider.
+- **`TelemetryEvent`** discriminated union (6 event types) :
+  - `component:mounted` (id + componentType + ts)
+  - `component:rendered` (+ durationMs, read from existing v5.4.0 perf marks — no double measurement)
+  - `component:unmounted`
+  - `validation:failed` (+ errorCount + firstErrorCode — **NO** payload data, **NO** error messages)
+  - `render:error` (+ errorMessage from `<GenerativeUIErrorBoundary>` — **NO** stack trace, **NO** payload)
+  - `action:dispatched` (+ actionName from `<ActionRenderer>` clicks and `<FormRenderer>` submits — **NO** form values)
+- **`TelemetryOptions`** : `sampleRate` (default 1.0), `bufferMs` (default 100), `bufferMax` (default 50), `sampleByType` (per-event-type override — e.g. `{ 'render:error': 1.0 }` to keep all errors while sampling mounted/rendered at 0.1).
+- **Sink contract** : receives a **batch** (`TelemetryEvent[]`) — even with `bufferMs: 0` (single-element array). **FAIL-OPEN** : sink throws or rejects silently, never crashes the renderer.
+- **Privacy hard rule** : no event carries the component params / data brut, only meta + types + counts + timing. Safe to log centrally.
+- New file `src/services/telemetry.ts` (dispatcher) + `src/context/MCPUITelemetryContext.tsx` (Provider).
+
+### Changed — B.1 final migration (map + form to Zod)
+
+- **Dep bump** : `@seed-ship/mcp-ui-spec` `^5.0.1` → `^5.0.2` (relaxed map.center to LatLngPoint union + form field.name regex per deposium audit §L answers).
+- `validation.ts` : **`map` and `form` joined `SPEC_VALIDATORS`** dispatch. Closed B.1 to **14/17 ComponentTypes** Zod-driven. The remaining 3 (`chart`, `table`, `modal`) stay imperative as documented (rich validators / nothing to validate).
+- `map` post-spec chained check preserved : "center OR markers" rule stays imperative because Zod can't express it without `.refine()` overhead.
+- Legacy codes preserved via mapper : `EMPTY_FORM`, `INVALID_MAP` still emitted on failure.
+
+### Tests
+
+- `src/services/telemetry.test.ts` — **+10 tests** for dispatcher (batch delivery, buffering, bufferMax force-flush, manual flush idempotency, fail-open on throw + on rejected promise, sampling 0/1/per-type override).
+- `src/context/MCPUITelemetryContext.test.tsx` — **+5 integration tests** (no Provider = no events, mounted dispatch, validation:failed shape with privacy assertion on key set, fail-open on render, sampleRate=0 drops everything).
+- Existing 530/530 tests untouched, all still pass.
+- Total solid suite : **545/545 tests pass** (vs 530 on v5.5.1, +15 net).
+
+### Non-breaking
+
+- All v5.5.x APIs unchanged.
+- Apps without `<MCPUITelemetryProvider>` see **zero behavior change**.
+- Only newly-added shapes (`{lat,lng}` for map, `kebab-case` / dot-paths for form field names) accepted that were previously rejected — no shape that worked before is rejected now.
+
+### What deposium can now do
+
+1. Wrap their app : `<MCPUITelemetryProvider sink={batchedSinkToBackend}>`.
+2. Implement the consumer-side `/admin/ui-telemetry` endpoint (~3-4h per §M.6.4).
+3. Aggregate in their dashboard : P50/P95 render durations per ComponentType, top validation:failed codes, action dispatch counts.
+
 ## [5.5.1] - 2026-04-27
 
 ### Security — Iframe whitelist bug fix

@@ -4,12 +4,13 @@
  */
 
 import DOMPurify from 'dompurify'
-import { Component, createSignal, Show, For, createMemo, createEffect, onMount } from 'solid-js'
+import { Component, createSignal, Show, For, createMemo, createEffect, onMount, onCleanup } from 'solid-js'
 import { isServer } from 'solid-js/web'
 import type { UIComponent, UILayout, RendererError, TableVirtualizeOptions } from '../types'
 import { validateComponent, DEFAULT_RESOURCE_LIMITS, getIframeSandbox } from '../services/validation'
 import { GenerativeUIErrorBoundary } from './GenerativeUIErrorBoundary'
-import { markRenderStart, markRenderEnd } from '../utils/perf'
+import { markRenderStart, markRenderEnd, PERF_PREFIX } from '../utils/perf'
+import { useTelemetry } from '../context/MCPUITelemetryContext'
 
 /**
  * How `<UIResourceRenderer>` reacts when `validateComponent()` rejects a
@@ -1133,7 +1134,51 @@ function ComponentRenderer(props: {
   // Performance marks — visible in Chrome DevTools "Performance" panel under
   // user timings. Always-on, SSR-safe (see utils/perf.ts).
   markRenderStart(props.component.id)
-  onMount(() => markRenderEnd(props.component.id))
+
+  // Telemetry sink (B.5 — v5.6.0). null when no MCPUITelemetryProvider is
+  // mounted above; null-checked at every dispatch site so apps that don't
+  // opt in see zero behavior change.
+  const telemetry = useTelemetry()
+
+  onMount(() => {
+    markRenderEnd(props.component.id)
+    if (telemetry) {
+      const ts = Date.now()
+      telemetry.dispatch({
+        type: 'component:mounted',
+        id: props.component.id,
+        componentType: props.component.type,
+        ts,
+      })
+      // Read the perf measure we just emitted to surface durationMs without
+      // double-measuring. The measure may be missing if `performance` is
+      // unavailable (SSR) — skip rendered event in that case.
+      if (typeof performance !== 'undefined' && typeof performance.getEntriesByName === 'function') {
+        const entries = performance.getEntriesByName(`${PERF_PREFIX}${props.component.id}:render`, 'measure')
+        const last = entries[entries.length - 1]
+        if (last) {
+          telemetry.dispatch({
+            type: 'component:rendered',
+            id: props.component.id,
+            componentType: props.component.type,
+            durationMs: last.duration,
+            ts,
+          })
+        }
+      }
+    }
+  })
+
+  onCleanup(() => {
+    if (telemetry) {
+      telemetry.dispatch({
+        type: 'component:unmounted',
+        id: props.component.id,
+        componentType: props.component.type,
+        ts: Date.now(),
+      })
+    }
+  })
 
   // Validate component before rendering
   const validation = validateComponent(props.component)
@@ -1144,6 +1189,19 @@ function ComponentRenderer(props: {
       componentId: props.component.id,
       details: validation.errors,
     })
+
+    // Privacy: only counts + first error code, NO error messages or paths
+    // (which could leak payload data — §M.6.2 hard rule).
+    if (telemetry) {
+      telemetry.dispatch({
+        type: 'validation:failed',
+        id: props.component.id,
+        componentType: props.component.type,
+        errorCount: validation.errors?.length ?? 0,
+        firstErrorCode: validation.errors?.[0]?.code ?? null,
+        ts: Date.now(),
+      })
+    }
 
     const mode: ValidationErrorMode = props.errorMode ?? 'block'
     const firstError = validation.errors?.[0]?.message || 'Unknown validation error'
@@ -1264,9 +1322,27 @@ function ComponentRenderer(props: {
 function ActionRenderer(props: { component: UIComponent }) {
   const params = props.component.params as any
   const { execute, isExecuting } = useAction()
+  const telemetry = useTelemetry()
+
+  // Telemetry: action:dispatched on click (B.5 — v5.6.0). Fires for every
+  // click attempt (tool-call or link), regardless of execute success.
+  // Privacy: actionName is `toolName` (tool-call) or the action kind
+  // (link/submit) — NO `params.params` payload, NO URL.
+  function dispatchTelemetry() {
+    if (!telemetry) return
+    const actionName: string = params.toolName ?? params.action ?? 'unknown'
+    telemetry.dispatch({
+      type: 'action:dispatched',
+      id: props.component.id,
+      componentType: 'action',
+      actionName,
+      ts: Date.now(),
+    })
+  }
 
   // Handle click to execute tool via Context (falls back to CustomEvent if no provider)
   const handleClick = async (e: MouseEvent) => {
+    dispatchTelemetry()
     if (params.action === 'tool-call' && params.toolName) {
       e.preventDefault()
       await execute(params.toolName, params.params || {})
