@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.0.2] - 2026-04-27
+
+### Changed — schema relaxations driven by deposium audit answers (§L)
+
+After deposium MCPs ran exhaustive grep on production payloads (§M.2 + §M.3 of `MCP-UI-AUDIT-2026-04-26.md`), 2 schemas relaxed to match real-world usage and unblock the final 2 ComponentTypes (`map` + `form`) in the B.1 migration (`mcp-ui-solid@5.6.0`).
+
+- **`MapComponentParamsSchema.center`** + **`MapMarkerSchema.position`** : now accept either a `[lat, lng]` tuple OR a `{lat, lng}` object — mirrors Leaflet's own polymorphic `LatLngLiteral ∪ LatLngTuple` API. New exported types `LatLngObject`, `LatLngTuple`, `LatLngPoint` and schema `LatLngPointSchema`.
+- **`FormFieldSchema.name`** regex relaxed from `^[a-zA-Z][a-zA-Z0-9_]*$` to `^[a-zA-Z][\w.-]*$` — also allows `-` (kebab-case for URL params, opendata IDs) and `.` (dot-paths for nested forms). Still requires a leading letter so the value remains a valid CSS selector / JS access key. Deposium's 19 production field names (all snake_case) remain conform.
+
+### Tests
+
+- `src/schemas-relax-v5.0.2.test.ts` — **+14 tests** locking in the new accept/reject behavior (tuple + object centers, kebab + dot field names, still-rejected leading-digit / spaces / accents).
+- Total spec suite: **48/48 tests pass** (was 34).
+
+### Non-breaking
+
+- All previously-valid map and form params remain valid. Only newly-accepted shapes added.
+
 ## [5.0.1] - 2026-04-27
 
 ### Added — 9 primitive component params schemas (B.1 PR1)

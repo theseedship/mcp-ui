@@ -89,8 +89,13 @@ export const ShowWhenConditionSchema = z.object({
 export const PrefillSourceSchema = z.enum(['user', 'detected', 'inferred', 'default'])
 
 // Form field schema
+//
+// NAME REGEX (relaxed in v5.0.2 per audit MCP-UI-AUDIT-2026-04-26.md §L.2)
+// — allows `_`, `.`, `-` after the first letter (kebab-case for URL params,
+// dot-paths for nested forms). Still requires a leading letter to keep the
+// value usable as a CSS selector / JS access key.
 export const FormFieldSchema = z.object({
-  name: z.string().regex(/^[a-zA-Z][a-zA-Z0-9_]*$/),
+  name: z.string().regex(/^[a-zA-Z][\w.-]*$/),
   type: FormFieldTypeSchema,
   label: z.string().optional(),
   placeholder: z.string().optional(),
@@ -280,16 +285,29 @@ export const CodeComponentParamsSchema = z.object({
   theme: z.enum(['light', 'dark']).optional(),
 })
 
-// Map marker schema (Sprint 6)
+// Lat/Lng point — Leaflet-compatible polymorphic shape (v5.0.2)
+//
+// Leaflet's own LatLng API accepts either a `[lat, lng]` tuple OR a
+// `{ lat, lng }` object literal natively. Mirroring that here lets MCP
+// servers emit either shape without forcing normalization (per audit
+// MCP-UI-AUDIT-2026-04-26.md §L.1).
+export const LatLngObjectSchema = z.object({
+  lat: z.number(),
+  lng: z.number(),
+})
+export const LatLngTupleSchema = z.tuple([z.number(), z.number()])
+export const LatLngPointSchema = z.union([LatLngTupleSchema, LatLngObjectSchema])
+
+// Map marker schema (Sprint 6, position relaxed to LatLngPoint in v5.0.2)
 export const MapMarkerSchema = z.object({
-  position: z.tuple([z.number(), z.number()]),
+  position: LatLngPointSchema,
   tooltip: z.string().optional(),
   popup: z.string().optional(),
 })
 
-// Map component params schema (Sprint 6)
+// Map component params schema (Sprint 6, center relaxed to LatLngPoint in v5.0.2)
 export const MapComponentParamsSchema = z.object({
-  center: z.tuple([z.number(), z.number()]).optional(),
+  center: LatLngPointSchema.optional(),
   zoom: z.number().optional(),
   markers: z.array(MapMarkerSchema).optional(),
   height: z.string().optional(),
@@ -599,7 +617,10 @@ export type VideoComponentParams = z.infer<typeof VideoComponentParamsSchema>
 // Code types (Sprint 6)
 export type CodeComponentParams = z.infer<typeof CodeComponentParamsSchema>
 
-// Map types (Sprint 6)
+// Map types (Sprint 6 + v5.0.2 LatLngPoint relaxation)
+export type LatLngObject = z.infer<typeof LatLngObjectSchema>
+export type LatLngTuple = z.infer<typeof LatLngTupleSchema>
+export type LatLngPoint = z.infer<typeof LatLngPointSchema>
 export type MapMarker = z.infer<typeof MapMarkerSchema>
 export type MapComponentParams = z.infer<typeof MapComponentParamsSchema>
 
