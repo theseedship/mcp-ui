@@ -300,6 +300,187 @@ export const MapComponentParamsSchema = z.object({
   attribution: z.string().optional(),
 })
 
+// =============================================================================
+// Primitive component params schemas (v5.0.1)
+//
+// These mirror the runtime types declared in `@seed-ship/mcp-ui-solid/types`
+// and the imperative checks in `mcp-ui-solid/src/services/validation.ts`.
+// They prepare B.1 — `validation.ts` migration to spec-driven Zod parsing
+// without losing the existing imperative resource-limits / iframe-domain
+// whitelist layers (see MCP-UI-AUDIT-2026-04-26.md §I).
+//
+// URL-bearing fields use `z.string().min(1)` (not `.url()`) on purpose —
+// validation.ts currently just truthy-checks them, and `.url()` would
+// reject relative paths and `localhost`-style dev URLs.
+// =============================================================================
+
+// Chart component (v5.0.1)
+export const ChartTypeSchema = z.enum([
+  'bar',
+  'line',
+  'pie',
+  'doughnut',
+  'radar',
+  'scatter',
+  'bubble',
+  'polarArea',
+])
+
+export const ChartDatasetSchema = z.object({
+  label: z.string(),
+  // Either an array of numbers or an array of {x, y} points (Chart.js shapes)
+  data: z.union([
+    z.array(z.number()),
+    z.array(
+      z.object({
+        x: z.union([z.string(), z.number()]),
+        y: z.number(),
+      })
+    ),
+  ]),
+  backgroundColor: z.union([z.string(), z.array(z.string())]).optional(),
+  borderColor: z.union([z.string(), z.array(z.string())]).optional(),
+  borderWidth: z.number().optional(),
+  fill: z.union([z.boolean(), z.string()]).optional(),
+  tension: z.number().optional(),
+})
+
+export const ChartTimeAxisSchema = z.object({
+  parser: z.string().optional(),
+  unit: z.enum(['day', 'week', 'month', 'quarter', 'year']).optional(),
+  tooltipFormat: z.string().optional(),
+  min: z.string().optional(),
+  max: z.string().optional(),
+})
+
+export const ChartComponentParamsSchema = z.object({
+  type: ChartTypeSchema,
+  title: z.string().optional(),
+  data: z.object({
+    labels: z.array(z.string()),
+    datasets: z.array(ChartDatasetSchema),
+  }),
+  options: z
+    .object({
+      responsive: z.boolean().optional(),
+      maintainAspectRatio: z.boolean().optional(),
+      tension: z.number().optional(),
+      // `scales` and `plugins` are Chart.js opaque config objects — kept loose
+      scales: z.unknown().optional(),
+      plugins: z.unknown().optional(),
+    })
+    .optional(),
+  renderer: z.enum(['native', 'iframe', 'auto']).optional(),
+  exportable: z.boolean().optional(),
+  timeAxis: ChartTimeAxisSchema.optional(),
+  height: z.string().optional(),
+  className: z.string().optional(),
+})
+
+// Table component (v5.0.1)
+export const TableColumnSchema = z.object({
+  key: z.string().min(1),
+  label: z.string(),
+  sortable: z.boolean().optional(),
+  width: z.string().optional(),
+})
+
+export const TablePaginationSchema = z.object({
+  currentPage: z.number().int().min(1),
+  pageSize: z.number().int().min(1),
+  totalRows: z.number().int().min(0),
+})
+
+export const TableVirtualizeOptionsSchema = z.object({
+  enabled: z.boolean().optional(),
+  rowHeight: z.number().int().min(1).optional(),
+  overscan: z.number().int().min(0).optional(),
+  threshold: z.number().int().min(1).optional(),
+})
+
+export const TableExportableSchema = z.union([
+  z.boolean(),
+  z.object({
+    formats: z.array(z.enum(['csv', 'tsv', 'json'])).optional(),
+    filename: z.string().optional(),
+  }),
+])
+
+export const TableComponentParamsSchema = z.object({
+  title: z.string().optional(),
+  columns: z.array(TableColumnSchema).min(1),
+  rows: z.array(z.record(z.unknown())),
+  pagination: TablePaginationSchema.optional(),
+  virtualize: z.union([z.boolean(), TableVirtualizeOptionsSchema]).optional(),
+  exportable: TableExportableSchema.optional(),
+  className: z.string().optional(),
+})
+
+// Metric component (v5.0.1)
+export const MetricTrendSchema = z.object({
+  value: z.number(),
+  direction: z.enum(['up', 'down', 'neutral']),
+})
+
+export const MetricComponentParamsSchema = z.object({
+  title: z.string().min(1),
+  value: z.union([z.string(), z.number()]),
+  unit: z.string().optional(),
+  trend: MetricTrendSchema.optional(),
+  subtitle: z.string().optional(),
+  icon: z.string().optional(),
+  className: z.string().optional(),
+})
+
+// Text component (v5.0.1)
+export const TextComponentParamsSchema = z.object({
+  content: z.string().min(1),
+  markdown: z.boolean().optional(),
+  className: z.string().optional(),
+})
+
+// Iframe component (v5.0.1) — domain whitelist stays in mcp-ui-solid (security)
+export const IframeComponentParamsSchema = z.object({
+  url: z.string().min(1),
+  title: z.string().optional(),
+  height: z.string().optional(),
+  className: z.string().optional(),
+})
+
+// Image component (v5.0.1)
+export const ImageComponentParamsSchema = z.object({
+  url: z.string().min(1),
+  alt: z.string().optional(),
+  caption: z.string().optional(),
+  className: z.string().optional(),
+})
+
+// Link component (v5.0.1)
+export const LinkComponentParamsSchema = z.object({
+  url: z.string().min(1),
+  label: z.string().optional(),
+  description: z.string().optional(),
+  className: z.string().optional(),
+})
+
+// Carousel component (v5.0.1)
+// `items` are UIComponent values that are validated recursively by the
+// renderer — kept opaque here to avoid a circular schema reference.
+export const CarouselComponentParamsSchema = z.object({
+  items: z.array(z.unknown()).min(1),
+  height: z.string().optional(),
+  className: z.string().optional(),
+})
+
+// Artifact component (v5.0.1)
+export const ArtifactComponentParamsSchema = z.object({
+  url: z.string().min(1),
+  filename: z.string().min(1),
+  mimeType: z.string().min(1),
+  size: z.number().int().min(0).optional(),
+  description: z.string().optional(),
+})
+
 // Sandbox flags
 export const SandboxFlagSchema = z.enum([
   'allow-scripts',
@@ -421,3 +602,22 @@ export type CodeComponentParams = z.infer<typeof CodeComponentParamsSchema>
 // Map types (Sprint 6)
 export type MapMarker = z.infer<typeof MapMarkerSchema>
 export type MapComponentParams = z.infer<typeof MapComponentParamsSchema>
+
+// Primitive component params types (v5.0.1)
+export type ChartType = z.infer<typeof ChartTypeSchema>
+export type ChartDataset = z.infer<typeof ChartDatasetSchema>
+export type ChartTimeAxis = z.infer<typeof ChartTimeAxisSchema>
+export type ChartComponentParams = z.infer<typeof ChartComponentParamsSchema>
+export type TableColumn = z.infer<typeof TableColumnSchema>
+export type TablePagination = z.infer<typeof TablePaginationSchema>
+export type TableVirtualizeOptions = z.infer<typeof TableVirtualizeOptionsSchema>
+export type TableExportable = z.infer<typeof TableExportableSchema>
+export type TableComponentParams = z.infer<typeof TableComponentParamsSchema>
+export type MetricTrend = z.infer<typeof MetricTrendSchema>
+export type MetricComponentParams = z.infer<typeof MetricComponentParamsSchema>
+export type TextComponentParams = z.infer<typeof TextComponentParamsSchema>
+export type IframeComponentParams = z.infer<typeof IframeComponentParamsSchema>
+export type ImageComponentParams = z.infer<typeof ImageComponentParamsSchema>
+export type LinkComponentParams = z.infer<typeof LinkComponentParamsSchema>
+export type CarouselComponentParams = z.infer<typeof CarouselComponentParamsSchema>
+export type ArtifactComponentParams = z.infer<typeof ArtifactComponentParamsSchema>

@@ -5,6 +5,52 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.0.1] - 2026-04-27
+
+### Added — 9 primitive component params schemas (B.1 PR1)
+
+Prépare le refactor de `mcp-ui-solid/src/services/validation.ts` (B.1 — voir
+`MCP-UI-AUDIT-2026-04-26.md` §I) en exposant des Zod schemas pour les 9
+ComponentTypes qui n'en avaient pas encore. Les 8 existants
+(`action`, `action-group`, `video`, `image-gallery`, `form`, `modal`,
+`code`, `map`) sont inchangés.
+
+- **`ChartComponentParamsSchema`** + `ChartTypeSchema` (8 chart types) +
+  `ChartDatasetSchema` (datasets number[] OU {x,y}[]) + `ChartTimeAxisSchema`.
+- **`TableComponentParamsSchema`** + `TableColumnSchema` + `TablePaginationSchema`
+  + `TableVirtualizeOptionsSchema` + `TableExportableSchema` (boolean OU `{formats, filename}`).
+- **`MetricComponentParamsSchema`** + `MetricTrendSchema` (`up | down | neutral`).
+  `title` + `value` requis (matche le check impératif actuel).
+- **`TextComponentParamsSchema`** — `content` requis.
+- **`IframeComponentParamsSchema`** — `url` requis. **Le whitelist domain
+  reste impératif** côté `mcp-ui-solid` (`validateIframeDomain`).
+- **`ImageComponentParamsSchema`** — `url` requis.
+- **`LinkComponentParamsSchema`** — `url` requis.
+- **`CarouselComponentParamsSchema`** — `items` non-vide, items kept opaque
+  (validés récursivement par le renderer pour éviter une référence circulaire).
+- **`ArtifactComponentParamsSchema`** — `url` + `filename` + `mimeType` requis,
+  `size` >= 0 si présent.
+
+### Choix de design
+
+- URL fields utilisent `z.string().min(1)` (pas `.url()`) pour matcher le
+  comportement actuel de `validation.ts` (juste truthy check). `.url()`
+  rejetterait les paths relatifs et `localhost:3000`. Le whitelist sécurité
+  reste séparé.
+- Tous les types inférés exportés via `z.infer<>` (pour cross-stack consumption
+  par deposium notamment — cf. `MCP-UI-AUDIT-2026-04-26.md` §J.2).
+
+### Tests
+
+- `src/schemas-params-v5.0.1.test.ts` — **30 nouveaux tests** (parse OK +
+  parse fail sur path attendu pour chaque schema). Suite totale : 34/34 verts.
+
+### Non-breaking
+
+- Aucun schema existant modifié. PR2 (mcp-ui-solid `5.5.0`) consommera ces
+  schemas + ajoutera un mapper `ZodIssue → ValidationError` pour préserver la
+  shape externe de `validateComponent()` — non-breaking pour les consumers.
+
 ## [5.0.0] - 2026-04-14
 
 ### Major release — synchronized with `@seed-ship/mcp-ui-solid` 5.0.0
