@@ -17,13 +17,14 @@ jobs:
         with:
           fetch-depth: 0  # Fetch all history for changelog
 
+      # IMPORTANT: pnpm before setup-node@v5 (auto package-manager-cache).
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v5
+
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
           node-version: '22'
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v5
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
