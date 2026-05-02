@@ -92,6 +92,11 @@ export type {
 // Validation error mode (v5.4.0)
 export type { ValidationErrorMode } from './components/UIResourceRenderer'
 
+// Citation chips in table cells (v5.7.0 — brief: BRIEF-citations-in-table-cells.md)
+export { renderCellValue } from './components/UIResourceRenderer'
+export type { CitationCtx } from './components/UIResourceRenderer'
+export type { CitationEntry } from './types'
+
 // Runtime debug mode + perf marks (v5.4.0)
 export { setDebugMode, isDebugEnabled } from './utils/logger'
 export { markRenderStart, markRenderEnd, PERF_PREFIX } from './utils/perf'

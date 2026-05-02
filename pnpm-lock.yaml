@@ -79,7 +79,7 @@ importers:
         specifier: ^1.28.0
         version: 1.32.0
       '@seed-ship/mcp-ui-spec':
-        specifier: workspace:^
+        specifier: workspace:^5.0.3
         version: link:../mcp-ui-spec
       '@types/dompurify':
         specifier: ^3.0.5

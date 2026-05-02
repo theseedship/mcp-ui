@@ -287,7 +287,98 @@ export function highlightQuery(html: string, query: string): string {
   })
 }
 
-export function renderCellValue(value: any): string {
+/**
+ * Citation context — opt-in input to `renderCellValue` (v5.7.0).
+ *
+ * When passed, `[N]`, `Citation [N]`, `[CITATION N]` and `[📄 CITATION N]`
+ * markers in the cell text are normalized then replaced with chip HTML.
+ * Chips carry `data-citation-page`, `data-citation-doc`, and
+ * `data-citation-verified` attributes (already in the DOMPurify whitelist
+ * since v5.6.0) so a host's `target.closest('[data-citation-page]')`
+ * delegated click handler routes the click to the source-doc panel.
+ *
+ * See `mcp-ui-solid/docs/briefs/BRIEF-citations-in-table-cells.md`.
+ */
+export interface CitationCtx {
+  /**
+   * `Record<id, mapping>` keyed by the citation marker number (string-keyed
+   * because JSON serialization always produces strings; the runtime call
+   * sites accept either number or string ids and normalize internally).
+   */
+  map: Record<string | number, { page: number | string; file?: string; file_id?: number | string }>
+  /**
+   * Optional override returning sanitized chip HTML for one marker. Wins
+   * over the default `defaultCitationChip` shape. Function inputs are
+   * intentionally `any`-loose so consumers can swap shapes (e.g. web
+   * citations vs doc citations) without subtyping the entry shape here.
+   */
+  render?: (
+    id: number,
+    mapping: { page: number | string; file?: string; file_id?: number | string } | undefined
+  ) => string
+}
+
+/**
+ * Default chip HTML emitted by `transformCellCitations` when no
+ * `citationRender` override is supplied. Neutral Tailwind classes — hosts
+ * can override visual styling via the `.citation-ref` CSS class without
+ * passing a render override.
+ */
+function defaultCitationChip(
+  pageNum: number | string,
+  fileName: string,
+  verified = true
+): string {
+  const safeDocName = encodeURIComponent(fileName || '')
+  const label = fileName ? `${fileName} - ${pageNum}` : `${pageNum}`
+  if (!verified) {
+    return `<span class="citation-ref inline-flex items-center gap-0.5 align-middle opacity-60"><span class="text-gray-500 line-through">[${label}]</span></span>`
+  }
+  return [
+    '<span class="citation-ref inline-flex items-center gap-0.5 align-middle">',
+    `<span class="text-gray-500">[${label}]</span>`,
+    '<button class="inline-flex items-center ml-0.5 px-1 py-0.5 text-xs bg-gray-800 hover:bg-gray-700 border border-gray-600 hover:border-teal-500 rounded cursor-pointer transition-colors align-middle"',
+    ` data-citation-page="${pageNum}"`,
+    ` data-citation-doc="${safeDocName}"`,
+    ' data-citation-verified="true"',
+    ` title="View source - ${label}">`,
+    '<svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
+    '</button>',
+    '</span>',
+  ].join('')
+}
+
+/**
+ * Normalize bare `[N]`, `Citation [N]`, `[CITATION N]` markers to canonical
+ * `[📄 CITATION N]` then replace each canonical marker with chip HTML.
+ *
+ * Negative lookbehind `(?<![p.])` skips `[p.5]` (page form). Negative
+ * lookahead `(?!\()` skips `[text](url)` markdown links.
+ */
+function transformCellCitations(text: string, ctx: CitationCtx): string {
+  // 1. normalize bare [N] / Citation [N] / [CITATION N] → [📄 CITATION N]
+  let out = text.replace(/(?<![p.])\[(\d{1,2})\](?!\()/g, '[📄 CITATION $1]')
+  out = out.replace(/\bCitations?\s*\[(\d+)\]/gi, '[📄 CITATION $1]')
+  out = out.replace(/\[CITATION\s+(\d+)\]/gi, '[📄 CITATION $1]')
+
+  // 2. replace each canonical marker with chip HTML
+  return out.replace(
+    /[【[]\s*📄\s*CITATION\s*(\d+)\s*[】\]]/gi,
+    (_m, idStr) => {
+      const id = parseInt(idStr, 10)
+      const mapping = ctx.map[id] ?? ctx.map[String(id)]
+      if (ctx.render) return ctx.render(id, mapping)
+      if (mapping) return defaultCitationChip(mapping.page, mapping.file ?? '', true)
+      // Unresolved id: when the map is non-empty (consumer claims to know
+      // the citations), drop silently — it's likely an LLM hallucination.
+      // When the map is empty (consumer didn't supply one), preserve a
+      // human-visible placeholder so the marker isn't lost.
+      return Object.keys(ctx.map).length > 0 ? '' : `[réf. ${id}]`
+    }
+  )
+}
+
+export function renderCellValue(value: any, citationCtx?: CitationCtx): string {
   // Handle null/undefined
   if (value === null || value === undefined) {
     return '-'
@@ -331,7 +422,9 @@ export function renderCellValue(value: any): string {
     return '-'
   }
 
-  // Detect and convert markdown links: [text](url)
+  // Detect and convert markdown links: [text](url) — runs FIRST because
+  // the citation transform's negative lookahead `(?!\()` would also skip
+  // these, but handling them here keeps the existing return path.
   const markdownLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/g
   if (markdownLinkRegex.test(strValue)) {
     // Replace all markdown links with HTML links
@@ -342,8 +435,36 @@ export function renderCellValue(value: any): string {
     return DOMPurify.sanitize(htmlValue, { ADD_ATTR: ['target', 'rel'] })
   }
 
+  // v5.7.0 — citation transform (opt-in). Replaces `[N]` style markers
+  // with chip HTML carrying `data-citation-*` attrs. Runs BEFORE the
+  // hasHtml / hasMarkdown branches so the resulting string flows through
+  // them naturally (chips are inline HTML; surviving markdown like
+  // **bold** is preserved by marked.parse since marked passes inline HTML
+  // through unchanged).
+  if (citationCtx) {
+    strValue = transformCellCitations(strValue, citationCtx)
+  }
+
+  // Markdown markers WITHOUT square brackets — `[` and `]` were excluded
+  // because chip labels (`[Doc - 5]`) and unresolved-marker fallbacks
+  // (`[réf. 12]`) would otherwise force a marked.parse for cells that
+  // have no actual markdown. The hasMarkdown check ALSO runs before
+  // hasHtml so that mixed cells (`**bold** [1]` → `**bold** <chip>`)
+  // get marked first; marked preserves the inline chip HTML, then
+  // DOMPurify keeps the citation attrs via the extended whitelist.
+  const hasMarkdown = /[*_`#]/.test(strValue)
+  if (hasMarkdown) {
+    const parsed = marked.parse(strValue, { async: false }) as string
+    return DOMPurify.sanitize(parsed, {
+      ALLOWED_TAGS: ['a', 'strong', 'em', 'b', 'i', 'code', 'span', 'br', 'button', 'svg', 'path', 'p', 'ul', 'ol', 'li', 'pre', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
+      ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'data-citation-page', 'data-citation-source', 'data-citation-doc', 'data-citation-verified', 'title', 'fill', 'stroke', 'viewBox', 'stroke-linecap', 'stroke-linejoin', 'stroke-width', 'd'],
+      ADD_ATTR: ['target', 'rel'],
+    })
+  }
+
   // Detect raw HTML in cell values (e.g. <a href="..." data-citation-page="5">text</a>)
   // This handles cases where cell data comes from innerHTML extraction
+  // OR where the citation transform above injected chip HTML.
   const hasHtml = /<[a-z][\s\S]*>/i.test(strValue)
   if (hasHtml) {
     return DOMPurify.sanitize(strValue, {
@@ -351,14 +472,6 @@ export function renderCellValue(value: any): string {
       ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'data-citation-page', 'data-citation-source', 'data-citation-doc', 'data-citation-verified', 'title', 'fill', 'stroke', 'viewBox', 'stroke-linecap', 'stroke-linejoin', 'stroke-width', 'd'],
       ADD_ATTR: ['target', 'rel'],
     })
-  }
-
-  // Check if value contains markdown formatting (bold, italic, code, etc.)
-  const hasMarkdown = /[*_`[\]#]/.test(strValue)
-  if (hasMarkdown) {
-    // Parse with marked and sanitize
-    const parsed = marked.parse(strValue, { async: false }) as string
-    return DOMPurify.sanitize(parsed, { ADD_ATTR: ['target', 'rel'] })
   }
 
   // Plain text — sanitize to prevent XSS via innerHTML
@@ -375,6 +488,14 @@ function TableRenderer(props: {
 }) {
   const tableParams = props.component.params as any
   let scrollContainerRef: HTMLDivElement | undefined
+
+  // v5.7.0 — opt-in citation chip rendering inside cells. When `citationMap`
+  // is present in params, build a CitationCtx once and thread it through
+  // every `renderCellValue` call below. Absent → undefined → cells render
+  // as before (regression-safe).
+  const citationCtx: CitationCtx | undefined = tableParams.citationMap
+    ? { map: tableParams.citationMap, render: tableParams.citationRender }
+    : undefined
 
   // ─── Client-side sorting (v4.0.5) ────────────────────────
   const allRows = () => tableParams.rows || []
@@ -638,7 +759,7 @@ function TableRenderer(props: {
             <For each={tableParams.columns}>
               {(column: any) => (
                 <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-200 whitespace-normal break-words leading-relaxed first:pl-6 last:pr-6">
-                  <div innerHTML={highlightQuery(renderCellValue(row[column.key]), debouncedQuery())} />
+                  <div innerHTML={highlightQuery(renderCellValue(row[column.key], citationCtx), debouncedQuery())} />
                 </td>
               )}
             </For>
@@ -677,7 +798,7 @@ function TableRenderer(props: {
                 <For each={tableParams.columns}>
                   {(column: any) => (
                     <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-200 whitespace-normal break-words leading-relaxed first:pl-6 last:pr-6">
-                      <div innerHTML={highlightQuery(renderCellValue(row[column.key]), debouncedQuery())} />
+                      <div innerHTML={highlightQuery(renderCellValue(row[column.key], citationCtx), debouncedQuery())} />
                     </td>
                   )}
                 </For>

@@ -174,8 +174,20 @@ export interface TableVirtualizeOptions {
 }
 
 /**
+ * Citation map entry — source of a `[N]` citation marker rendered inline
+ * inside table cells (v5.7.0). See
+ * `mcp-ui-solid/docs/briefs/BRIEF-citations-in-table-cells.md`.
+ */
+export interface CitationEntry {
+  page: number | string
+  file?: string
+  file_id?: number | string
+}
+
+/**
  * Table component parameters
  * Updated Sprint Ultimate U.3: Added virtualization support
+ * Updated v5.7.0: Optional citationMap + citationRender for chip rendering
  */
 export interface TableComponentParams {
   title?: string
@@ -211,6 +223,24 @@ export interface TableComponentParams {
    * Custom CSS class (Sprint 7)
    */
   className?: string
+  /**
+   * Opt-in citation chip rendering (v5.7.0). Maps marker id (e.g. `1` from
+   * `[1]` or `[📄 CITATION 1]` in cell text) to its source. When set,
+   * `<TableRenderer>` replaces markers in cell strings with clickable
+   * chips carrying `data-citation-page` / `data-citation-doc` /
+   * `data-citation-verified` attributes that a host's delegated click
+   * handler can route. JSON-serializable — safe to send from MCP servers.
+   */
+  citationMap?: Record<string | number, CitationEntry>
+  /**
+   * Optional override for the chip HTML (v5.7.0). When supplied, wins over
+   * the default chip shape. NOT JSON-serializable — must be wired by the
+   * consumer at render time, not from a server payload.
+   */
+  citationRender?: (
+    id: number,
+    mapping: CitationEntry | undefined
+  ) => string
 }
 
 /**

@@ -5,6 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.7.0] - 2026-05-02
+
+### Added — citation chips inside table cells (opt-in)
+
+Implements `mcp-ui-solid/docs/briefs/BRIEF-citations-in-table-cells.md`. Lifts the chip-rendering responsibility out of consumer apps (deposium had a server-side bridge in `deposium_MCPs` commit `7df433ae` that this obsoletes) so any host stops mirroring chip HTML byte-for-byte.
+
+- **`TableComponentParams.citationMap`** (optional, JSON-serializable) — `Record<string|number, { page, file?, file_id? }>`. When present, `<TableRenderer>` walks each cell string and replaces LLM `[N]` / `Citation [N]` / `[CITATION N]` / `[📄 CITATION N]` markers with chip HTML carrying `data-citation-page` + `data-citation-doc` + `data-citation-verified` attrs. Hosts can route clicks via `target.closest('[data-citation-page]')` delegation — same path as inline-markdown chips.
+- **`TableComponentParams.citationRender`** (optional, function — NOT JSON-serializable, consumer-wired) — override returning sanitized chip HTML for one marker. Wins over the default chip shape.
+- **`renderCellValue(value, citationCtx?)`** — new optional 2nd arg. Standalone use (outside `<TableRenderer>`) supported : same opt-in behavior, same DOMPurify whitelist guarantees.
+- **`CitationCtx`** + **`CitationEntry`** types exported from the package root.
+- **`defaultCitationChip()`** uses neutral Tailwind classes (`bg-gray-800 text-gray-500 border-gray-600 hover:border-teal-500`) layered with the `.citation-ref` CSS class — hosts already styling `.citation-ref` for their inline chips get visual consistency for free, no per-table override needed.
+
+Markdown composition : cells like `**MSP** [1]` produce `<strong>MSP</strong>` AND a chip in the same cell. The hasMarkdown / hasHtml branches in `renderCellValue` were re-ordered + DOMPurify whitelists extended so chip HTML survives both paths.
+
+Resolution rules :
+- Resolved id (in map) → default chip shape `[file - page]` + button with citation attrs.
+- Unresolved id with **non-empty** map → marker dropped silently (likely LLM hallucination, mirrors typical host behavior).
+- Unresolved id with **empty** map → human-visible `[réf. N]` placeholder.
+- `[p.5]` page form → preserved (negative lookbehind).
+- `[text](url)` markdown link → preserved (existing branch runs first).
+
+CSV export of cells with citations : raw markers (`[1]`) flow through unchanged. The chip HTML is only injected at render time; the CSV path uses the original `row[key]` value, which is the right choice for re-importable exports.
+
+### Changed
+
+- Dep bump : `@seed-ship/mcp-ui-spec` `^5.0.2` → `^5.0.3` (adds `CitationEntrySchema` + `TableComponentParamsSchema.citationMap` for cross-stack type safety).
+
+### Tests
+
+- `src/components/TableRenderer.citation.test.tsx` — **+15 tests** covering : no-ctx regression, single + multi chip emission, unresolved id (non-empty + empty map paths), `citationRender` override, `[p.5]` skip, markdown-link skip, mixed `**bold** [1]` compose, canonical marker shortcut, DOMPurify attr survival, button element check, plus 3 integration tests on a real `<UIResourceRenderer>` mount (no map → plain text, with map → chips in DOM, render override → custom chips).
+- Existing 545/545 tests untouched, all still pass.
+- Total solid suite : **560/560 tests pass** (vs 545 on v5.6.0, +15 net).
+
+### Migration
+
+- 100% backward compatible. `citationMap` not set → cells render exactly as before.
+- Hosts opt in by adding `citationMap: gaResult.citation_map` to their table params.
+- deposium_MCPs can now revert commit `7df433ae` (server-side `renderCitationChipHTML` + `replaceCitationsInCellHTML` helpers) and emit raw `[📄 CITATION N]` markers in cells with `params.citationMap` set — chip rendering happens client-side.
+
 ## [5.6.0] - 2026-04-27
 
 Closes B.1 migration (14/17 ComponentTypes spec-driven) AND ships B.5 — UI
