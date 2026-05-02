@@ -34,6 +34,7 @@ export const ComponentTypeSchema = z.enum([
   'video',          // Sprint 5: Video embed (YouTube, Vimeo, direct)
   'code',           // Sprint 6: Syntax highlighted code block
   'map',            // Sprint 6: Interactive map (Leaflet)
+  'graph',          // v5.0.4: node-link graph (peer @antv/g6)
 ])
 
 // Form field option schema (for select, radio)
@@ -316,6 +317,96 @@ export const MapComponentParamsSchema = z.object({
   scrollWheelZoom: z.boolean().optional(),
   tileLayer: z.string().optional(),
   attribution: z.string().optional(),
+})
+
+// =============================================================================
+// Graph component (v5.0.4) — generic node-link visualization
+//
+// The shape is intentionally domain-neutral: nodes have an id + optional
+// label/weight/style, edges have source+target+optional weight/style. The
+// `weight` field on both is a generic ranking signal — domain semantics
+// (rerank score / co-retrieval count / criticality / token contribution /
+// frequency / etc.) are opaque to the lib and decided by the consumer.
+//
+// Renderer support lives in `@seed-ship/mcp-ui-solid` and lazy-loads
+// `@antv/g6 ^5` as a peer-optional dependency. Apps that don't install
+// the peer see an informative fallback instead of a crash.
+// =============================================================================
+
+export const GraphNodeSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().optional(),
+  type: z.string().optional(),               // G6 node type: 'circle' | 'rect' | 'image' | …
+  size: z.union([z.number(), z.tuple([z.number(), z.number()])]).optional(),
+  /**
+   * Generic ranking / importance signal. Drives default node size when
+   * `size` is omitted, and acts as the sort key for the `concentric`
+   * layout (highest weight at center). Domain semantics opaque to the lib.
+   */
+  weight: z.number().optional(),
+  style: z.record(z.unknown()).optional(),   // passthrough G6 NodeStyle
+  data: z.record(z.unknown()).optional(),    // arbitrary metadata for tooltips / click handlers
+})
+
+export const GraphEdgeSchema = z.object({
+  source: z.string().min(1),                 // must match a node.id
+  target: z.string().min(1),                 // must match a node.id
+  label: z.string().optional(),
+  type: z.string().optional(),               // G6 edge type: 'line' | 'arc' | 'cubic' | 'polyline' | …
+  /**
+   * Generic strength signal. Drives default edge stroke width and acts
+   * as attractive force in `force` layouts. Domain semantics opaque.
+   */
+  weight: z.number().optional(),
+  style: z.record(z.unknown()).optional(),
+  data: z.record(z.unknown()).optional(),
+})
+
+/**
+ * Layout names exposed in the spec. Narrow on purpose — `force` covers
+ * generic networks, `dagre` covers DAGs, `concentric` covers
+ * weight-ordered ring layouts, `mindmap` + `tree` cover hierarchical
+ * fan-outs, `circular` + `grid` cover small-N ordered layouts. Power
+ * users opt into other G6 layouts via the object form
+ * `{ type: 'force', options: { ... } }` — `options` is a passthrough.
+ */
+export const GraphLayoutNameSchema = z.enum([
+  'force',
+  'dagre',
+  'mindmap',
+  'tree',
+  'circular',
+  'grid',
+  'concentric',
+])
+
+export const GraphLayoutSchema = z.union([
+  GraphLayoutNameSchema,
+  z.object({
+    type: GraphLayoutNameSchema,
+    options: z.record(z.unknown()).optional(),
+  }),
+])
+
+export const GraphComponentParamsSchema = z.object({
+  title: z.string().optional(),
+  nodes: z.array(GraphNodeSchema).min(1),
+  edges: z.array(GraphEdgeSchema).optional(),
+  /**
+   * Layout shorthand string OR object form. When omitted, the renderer
+   * picks a sensible default: `'force'` if edges are present, `'circular'`
+   * otherwise.
+   */
+  layout: GraphLayoutSchema.optional(),
+  height: z.string().optional(),             // CSS length, default '400px'
+  width: z.string().optional(),              // CSS length, default '100%'
+  rendererPref: z.enum(['canvas', 'svg']).optional(),  // default 'canvas'
+  fitView: z.boolean().optional(),           // default true
+  enableZoom: z.boolean().optional(),        // default true
+  enableDrag: z.boolean().optional(),        // default true (drag nodes)
+  enableSelect: z.boolean().optional(),      // default true (click-select highlight)
+  tooltip: z.boolean().optional(),           // default true (label + data summary on hover)
+  className: z.string().optional(),
 })
 
 // =============================================================================
@@ -635,6 +726,13 @@ export type LatLngTuple = z.infer<typeof LatLngTupleSchema>
 export type LatLngPoint = z.infer<typeof LatLngPointSchema>
 export type MapMarker = z.infer<typeof MapMarkerSchema>
 export type MapComponentParams = z.infer<typeof MapComponentParamsSchema>
+
+// Graph types (v5.0.4)
+export type GraphNode = z.infer<typeof GraphNodeSchema>
+export type GraphEdge = z.infer<typeof GraphEdgeSchema>
+export type GraphLayoutName = z.infer<typeof GraphLayoutNameSchema>
+export type GraphLayout = z.infer<typeof GraphLayoutSchema>
+export type GraphComponentParams = z.infer<typeof GraphComponentParamsSchema>
 
 // Primitive component params types (v5.0.1)
 export type ChartType = z.infer<typeof ChartTypeSchema>

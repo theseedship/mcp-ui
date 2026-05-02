@@ -5,6 +5,54 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.0.4] - 2026-05-02
+
+### Added — `'graph'` ComponentType + Graph schemas
+
+Generic node-link visualization primitive. Domain-neutral by design — the
+`weight` field on both nodes and edges is a generic ranking signal whose
+semantics (rerank score, frequency, criticality, contribution, etc.) are
+opaque to the lib and decided by the consumer.
+
+- **`'graph'`** added to `ComponentTypeSchema` enum.
+- **`GraphNodeSchema`** : `id` (required), `label`, `type`, `size`,
+  `weight`, `style`, `data` (all optional). `weight` drives default node
+  size when `size` is omitted, and acts as the sort key for the
+  `concentric` layout.
+- **`GraphEdgeSchema`** : `source` + `target` (required, must match node
+  ids), `label`, `type`, `weight`, `style`, `data` (all optional).
+  `weight` drives default stroke width and the attractive force in
+  `force` layouts.
+- **`GraphLayoutNameSchema`** : enum of 7 layouts — `force`, `dagre`,
+  `mindmap`, `tree`, `circular`, `grid`, `concentric`. Power users opt
+  into other G6 layouts via the object form
+  `{ type: 'force', options: { ... } }` — `options` is a passthrough.
+- **`GraphLayoutSchema`** : union of shorthand string OR
+  `{ type, options? }` object.
+- **`GraphComponentParamsSchema`** : `nodes` (required, min 1), `edges`,
+  `layout`, `title`, `height`, `width`, `rendererPref` (`canvas`|`svg`),
+  `fitView`, `enableZoom`, `enableDrag`, `enableSelect`, `tooltip`,
+  `className`. Sensible defaults applied at render time.
+- Inferred types : `GraphNode`, `GraphEdge`, `GraphLayoutName`,
+  `GraphLayout`, `GraphComponentParams`.
+
+Renderer support ships in `@seed-ship/mcp-ui-solid` (lazy-loads
+`@antv/g6 ^5` as peer-optional). Apps without the peer installed see an
+informative fallback instead of a crash.
+
+### Tests
+
+- `src/schemas-graph-v5.0.4.test.ts` — **+26 tests** (node minimal +
+  rich, edge minimal + rich, all 7 layout shorthand names, layout object
+  form with passthrough options, params with weights + concentric
+  ordering, empty-edges acceptance, rejection paths). Total spec :
+  77/77 pass.
+
+### Non-breaking
+
+- All previously valid payloads remain valid. `'graph'` is purely
+  additive.
+
 ## [5.0.3] - 2026-05-02
 
 ### Added — citation chip support in table cells (prep for solid@5.7.0)

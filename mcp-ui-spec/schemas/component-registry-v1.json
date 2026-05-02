@@ -56,8 +56,30 @@
         },
         "type": {
           "type": "string",
-          "enum": ["chart", "table", "metric", "text", "composite"],
-          "description": "Component category"
+          "enum": [
+            "chart",
+            "table",
+            "metric",
+            "text",
+            "composite",
+            "grid",
+            "iframe",
+            "image",
+            "link",
+            "action",
+            "footer",
+            "carousel",
+            "artifact",
+            "form",
+            "modal",
+            "action-group",
+            "image-gallery",
+            "video",
+            "code",
+            "map",
+            "graph"
+          ],
+          "description": "Component category (synced with ComponentTypeSchema in src/schemas/index.ts as of v5.0.4)"
         },
         "name": {
           "type": "string",
