@@ -25,6 +25,8 @@ import {
   // v5.6.0 — added after spec@5.0.2 relaxations (deposium audit §M)
   MapComponentParamsSchema,
   FormComponentParamsSchema,
+  // v6.0.0 — graph primitive (peer @antv/g6 ^5)
+  GraphComponentParamsSchema,
 } from '@seed-ship/mcp-ui-spec'
 import type {
   UIComponent,
@@ -47,6 +49,8 @@ const KNOWN_COMPONENT_TYPES: Set<string> = new Set<ComponentType>([
   'chart', 'table', 'metric', 'text', 'grid', 'iframe', 'image', 'link',
   'action', 'footer', 'carousel', 'artifact', 'form', 'modal',
   'action-group', 'image-gallery', 'video', 'code', 'map',
+  // v6.0.0
+  'graph',
 ])
 
 /**
@@ -85,6 +89,12 @@ const SPEC_VALIDATORS: Partial<Record<ComponentType, { schema: ZodSchema; legacy
   // v5.6.0 additions
   form: { schema: FormComponentParamsSchema, legacyCode: 'EMPTY_FORM' },
   map: { schema: MapComponentParamsSchema, legacyCode: 'INVALID_MAP' },
+  // v6.0.0 — graph primitive (no chained post-check : Zod's
+  // `nodes.min(1)` covers the only structural invariant ; edge
+  // source/target ids reference nodes by convention, not enforced here
+  // because LLM payloads sometimes ship edges to nodes added later.
+  // Unresolved refs are gracefully ignored by G6 v5.)
+  graph: { schema: GraphComponentParamsSchema, legacyCode: 'INVALID_GRAPH' },
 }
 
 /**

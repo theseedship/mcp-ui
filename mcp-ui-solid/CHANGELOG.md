@@ -5,6 +5,104 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.0.0] - 2026-05-02
+
+Major version marker — no API breakage. Bumps to `v6` to signal a
+substantial wave : closure of B.1 (14/17 ComponentTypes spec-driven via
+v5.5.x), shipping of B.5 telemetry sink (v5.6.0), citation chips in
+table cells (v5.7.0), and now the new **`'graph'` ComponentType** below.
+Existing consumers can upgrade `5.x → 6.0.0` with **zero migration
+steps**.
+
+### Added — `'graph'` ComponentType (peer `@antv/g6 ^5`)
+
+Generic node-link visualization primitive. Domain-neutral by design —
+the renderer ships agnostic ; consumers wire meaning via `node.weight` /
+`edge.weight` / `node.data` / `edge.data` and the layout choice.
+
+- **`<GraphRenderer>`** — new component. Lazy-loads `@antv/g6 ^5` only
+  on first mount (mirrors `<ChartJSRenderer>` + `<MapRenderer>`
+  patterns). Apps that don't install the peer see an informative
+  yellow fallback ("install @antv/g6 to render type: graph") instead
+  of a crash.
+- **`isG6Available()`** exported — runtime check for the peer.
+- **7 layout enum** (`force`, `dagre`, `mindmap`, `tree`, `circular`,
+  `grid`, `concentric`) plus passthrough object form
+  `{ type, options }` for the full G6 layout knob set.
+- **Default layout heuristic** when `params.layout` is omitted :
+  `'force'` if edges present, `'circular'` otherwise.
+- **Default behaviors** : drag-canvas + zoom-canvas + drag-element +
+  click-select. Each opt-out via the corresponding `enable*` prop.
+- **Default tooltip** enabled (label + compact JSON of `node.data` on
+  hover) ; opt-out via `tooltip: false`.
+
+### Added — copy + export menu on graph (UX fluidity)
+
+Every graph mounts with a copy + 3-format export menu — same UX
+philosophy as `<TableRenderer>` :
+
+- **Copy (default, top-right CopyButton via `<ExpandableWrapper>`)** —
+  copies the structured `{ nodes, edges }` JSON to clipboard. Most
+  useful for re-emitting / debugging.
+- **Export menu** :
+  - **PNG** — visual snapshot via the underlying canvas/SVG. Click →
+    download.
+  - **Mermaid** — `flowchart LR` (or `TD` for hierarchical layouts)
+    syntax with `weight · label` edge decorations. Markdown / GitHub
+    rendering friendly.
+  - **JSON** — pretty-printed `{ nodes, edges }`, reimportable.
+
+Helpers exported for consumers building their own export menus :
+**`graphToMermaid(params)`** + **`graphToJSON(params)`**.
+
+### Spec dep bump
+
+- `@seed-ship/mcp-ui-spec` `^5.0.3` → `^5.0.4` (adds the Graph schemas
+  and `'graph'` to `ComponentTypeSchema`). All other prior schemas
+  unchanged.
+
+### Validation wiring
+
+- `'graph'` added to `KNOWN_COMPONENT_TYPES` and to `SPEC_VALIDATORS`
+  with legacy code `INVALID_GRAPH`. The spec's
+  `GraphComponentParamsSchema.nodes.min(1)` is the only structural
+  invariant ; edge `source` / `target` ids are not cross-checked
+  against nodes (LLM payloads sometimes ship dangling refs ; G6 v5
+  ignores them gracefully).
+
+### Tests
+
+- `src/components/GraphRenderer.test.tsx` — **+17 tests** (1 skipped
+  intentionally, see test file comment) :
+  - `graphToJSON` shape preservation (3)
+  - `graphToMermaid` syntax for both flowchart directions, label
+    decorations, escape handling, edge cases (9)
+  - `<UIResourceRenderer>` integration : `'graph'` recognized,
+    INVALID_GRAPH on empty nodes, valid full payload, layout object
+    form passthrough (4)
+- `src/components/GraphRenderer.fallback.test.tsx` — **+2 tests** with
+  `vi.mock('@antv/g6')` forcing the peer unimportable to verify the
+  yellow fallback UI + clean mount/unmount cycle.
+- All previous 560/560 untouched. Total : **578 passed / 1 skipped /
+  579 total**.
+
+### Telemetry integration (free)
+
+`<GraphRenderer>` mounts inside the existing `ComponentRenderer` flow,
+so the `MCPUITelemetryProvider` (v5.6.0) automatically receives
+`component:mounted` / `component:rendered` / `component:unmounted`
+events for graphs with `componentType: 'graph'` — no extra wiring
+needed.
+
+### Migration
+
+- 100% backward compatible. No existing API changed.
+- Apps not installing `@antv/g6` see a fallback message on `type:
+  'graph'` payloads ; everything else renders identically.
+- Apps installing `@antv/g6 ^5` get graph rendering immediately.
+- The major bump (5.7.0 → 6.0.0) is a milestone marker, not a
+  semver-breaking signal. No code change required to upgrade.
+
 ## [5.7.0] - 2026-05-02
 
 ### Added — citation chips inside table cells (opt-in)

@@ -28,6 +28,7 @@ export type ComponentType =
   | 'video'         // Sprint 5
   | 'code'          // Sprint 6
   | 'map'           // Sprint 6
+  | 'graph'         // v6.0.0 — node-link viz (peer @antv/g6)
 
 /**
  * Chart types (powered by Quickchart)

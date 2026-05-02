@@ -39,6 +39,7 @@ import { ImageGalleryRenderer } from './ImageGalleryRenderer'
 import { VideoRenderer } from './VideoRenderer'
 import { CodeBlockRenderer } from './CodeBlockRenderer'
 import { MapRenderer } from './MapRenderer'
+import { GraphRenderer } from './GraphRenderer'
 import { ExpandableWrapper, useExpanded } from './ExpandableWrapper'
 import { RenderProvider } from './RenderContext'
 import { useAction } from '../hooks/useAction'
@@ -1431,6 +1432,9 @@ function ComponentRenderer(props: {
       </Show>
       <Show when={props.component.type === 'map'}>
         <MapRenderer component={props.component} />
+      </Show>
+      <Show when={props.component.type === 'graph'}>
+        <GraphRenderer component={props.component} />
       </Show>
     </GenerativeUIErrorBoundary>
   )

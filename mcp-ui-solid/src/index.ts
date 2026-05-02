@@ -97,6 +97,9 @@ export { renderCellValue } from './components/UIResourceRenderer'
 export type { CitationCtx } from './components/UIResourceRenderer'
 export type { CitationEntry } from './types'
 
+// Graph primitive (v6.0.0 — peer @antv/g6 ^5)
+export { GraphRenderer, isG6Available, graphToMermaid, graphToJSON } from './components/GraphRenderer'
+
 // Runtime debug mode + perf marks (v5.4.0)
 export { setDebugMode, isDebugEnabled } from './utils/logger'
 export { markRenderStart, markRenderEnd, PERF_PREFIX } from './utils/perf'
