@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.0.3] - 2026-05-02
+
+### Added — citation chip support in table cells (prep for solid@5.7.0)
+
+- **`CitationEntrySchema`** + **`CitationEntry`** type — describes the source of a `[N]` citation marker (`page`, optional `file`, optional `file_id`). JSON-serializable.
+- **`TableComponentParamsSchema.citationMap`** (optional) — a `Record<string, CitationEntry>` that, when set, lets `<TableRenderer>` (in `mcp-ui-solid@5.7.0+`) replace LLM `[📄 CITATION N]` markers in cell strings with clickable chips. Spec-side: just data; the rendering logic + optional `citationRender` function override stay in `mcp-ui-solid` (functions can't ride JSON).
+
+Driven by `mcp-ui-solid/docs/briefs/BRIEF-citations-in-table-cells.md`. Backward compatible — `citationMap` is opt-in.
+
+### Tests
+
+- 3 new tests in `schemas-relax-v5.0.2.test.ts` (table without citationMap, with valid map, rejects entry missing page). Total: 51/51 pass.
+
 ## [5.0.2] - 2026-04-27
 
 ### Changed — schema relaxations driven by deposium audit answers (§L)

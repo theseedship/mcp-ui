@@ -424,6 +424,16 @@ export const TableExportableSchema = z.union([
   }),
 ])
 
+// Citation entry — source of a `[N]` marker rendered inside table cells (v5.0.3)
+// Used by `<TableRenderer>` when `params.citationMap` is set, to turn LLM
+// `[📄 CITATION N]` markers into clickable chips. See
+// `mcp-ui-solid/docs/briefs/BRIEF-citations-in-table-cells.md` for context.
+export const CitationEntrySchema = z.object({
+  page: z.union([z.number(), z.string()]),
+  file: z.string().optional(),
+  file_id: z.union([z.number(), z.string()]).optional(),
+})
+
 export const TableComponentParamsSchema = z.object({
   title: z.string().optional(),
   columns: z.array(TableColumnSchema).min(1),
@@ -432,6 +442,8 @@ export const TableComponentParamsSchema = z.object({
   virtualize: z.union([z.boolean(), TableVirtualizeOptionsSchema]).optional(),
   exportable: TableExportableSchema.optional(),
   className: z.string().optional(),
+  // v5.0.3 — opt-in citation chip rendering inside cells
+  citationMap: z.record(z.string(), CitationEntrySchema).optional(),
 })
 
 // Metric component (v5.0.1)
@@ -633,6 +645,7 @@ export type TableColumn = z.infer<typeof TableColumnSchema>
 export type TablePagination = z.infer<typeof TablePaginationSchema>
 export type TableVirtualizeOptions = z.infer<typeof TableVirtualizeOptionsSchema>
 export type TableExportable = z.infer<typeof TableExportableSchema>
+export type CitationEntry = z.infer<typeof CitationEntrySchema>
 export type TableComponentParams = z.infer<typeof TableComponentParamsSchema>
 export type MetricTrend = z.infer<typeof MetricTrendSchema>
 export type MetricComponentParams = z.infer<typeof MetricComponentParamsSchema>

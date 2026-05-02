@@ -13,6 +13,7 @@ import {
   MapMarkerSchema,
   LatLngPointSchema,
   FormFieldSchema,
+  TableComponentParamsSchema,
 } from './schemas'
 
 describe('LatLngPoint + MapComponentParamsSchema (v5.0.2 relax)', () => {
@@ -59,6 +60,39 @@ describe('LatLngPoint + MapComponentParamsSchema (v5.0.2 relax)', () => {
     expect(
       MapComponentParamsSchema.safeParse({ markers: [{ position: [48, 2] }] }).success
     ).toBe(true)
+  })
+})
+
+describe('TableComponentParamsSchema.citationMap (v5.0.3)', () => {
+  const baseTable = {
+    columns: [{ key: 'a', label: 'A' }],
+    rows: [],
+  }
+
+  it('accepts a table without citationMap (backward compat)', () => {
+    expect(TableComponentParamsSchema.safeParse(baseTable).success).toBe(true)
+  })
+
+  it('accepts a table with citationMap (string keys, mixed page types)', () => {
+    expect(
+      TableComponentParamsSchema.safeParse({
+        ...baseTable,
+        citationMap: {
+          '1': { page: 5, file: 'A.pdf', file_id: 42 },
+          '2': { page: '12-14', file: 'B.txt' },
+          '3': { page: 1 }, // file optional
+        },
+      }).success
+    ).toBe(true)
+  })
+
+  it('rejects citationMap entry missing page', () => {
+    expect(
+      TableComponentParamsSchema.safeParse({
+        ...baseTable,
+        citationMap: { '1': { file: 'A.pdf' } as any },
+      }).success
+    ).toBe(false)
   })
 })
 
