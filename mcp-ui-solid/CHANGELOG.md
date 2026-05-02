@@ -5,6 +5,117 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.1.0] - 2026-05-03
+
+UX consistency / fluidity release. Three small but visible
+behaviors that were inconsistent across renderers : fullscreen sizing,
+chart export discoverability, table search discoverability.
+
+### Fixed — fullscreen sizing for chart, table, graph
+
+Pre-v6.1.0 bug : when the user clicked the expand button on a chart /
+table / graph and went fullscreen, the visualization stayed at its
+inline default size (`250px` for chart canvas, `400px` for graph,
+`max-height: 400px` for non-virtualized tables, `500px` for
+virtualized) instead of filling the modal. Tables in particular added
+an inner scroll bar at less than half of the available modal height.
+
+Cause : renderers had hard-coded heights and did not subscribe to
+`useExpanded()` from `<ExpandableWrapper>`.
+
+Fix :
+- `<ExpandableWrapper>` modal slot adds `flex flex-col` so aware
+  children can opt into `flex-1 min-h-0` to fill vertically. Unaware
+  children keep working via the existing `overflow-auto` fallback.
+- `<ChartJSRenderer>` (native canvas) : when expanded, outer card
+  becomes `flex-1 min-h-0 flex flex-col`, canvas wrapper drops the
+  fixed pixel height for `height: 100%`. Chart.js
+  `responsive: true` + `maintainAspectRatio: false` (already set)
+  triggers redraw on container resize.
+- `<TableRenderer>` : when expanded, the wrapping card and inner
+  padding container both become flex columns, the scroll container
+  drops its `max-height` and uses `flex-1 min-h-0` to fill — so the
+  internal table body scroll happens inside the visualization, not
+  on the modal.
+- `<GraphRenderer>` : same pattern as chart — outer card flex-fills,
+  G6 canvas container becomes `height: 100%` when expanded. G6
+  resize listener picks up the new size automatically.
+
+Inline mode (not expanded) is **unchanged** — same heights, same
+scroll heuristics as before.
+
+### Changed — table search input default-on
+
+`<TableRenderer>` : the search input was opt-in via `searchable: true`
+or auto-shown only when rows > 10. Now visible by default :
+
+```ts
+// before — search hidden on small tables
+const isSearchable = () =>
+  tableParams.searchable === true ||
+  (tableParams.searchable !== false && allRows().length > 10)
+
+// v6.1.0 — opt-out only
+const isSearchable = () => tableParams.searchable !== false
+```
+
+Backward compat : explicit `searchable: false` still hides the input.
+Tables with `searchable: true` (was already on) unchanged. The change
+only affects tables with no `searchable` prop and ≤ 10 rows — they
+now show search.
+
+### Changed — chart export button default-on + JSON copy added
+
+`<ChartJSRenderer>` : the PNG export button was opt-in via
+`exportable: true`. Now visible by default unless explicitly disabled :
+
+```ts
+// before
+<Show when={params().exportable}>
+
+// v6.1.0
+<Show when={params().exportable !== false}>
+```
+
+Plus a new **copy data (JSON)** button is now wired into the
+`<ExpandableWrapper>` header (visible in the fullscreen modal). Clicks
+copy `{ type, data }` of the chart to the clipboard — useful for
+debugging / re-emitting / sharing in markdown.
+
+Backward compat : explicit `exportable: false` still hides the button.
+Charts with `exportable: true` unchanged. Charts with no prop now show
+the button (was hidden).
+
+### Tests
+
+- `src/components/UIResourceRenderer.fluidity.test.tsx` — **+5 tests**
+  covering : search visible by default on small + large tables, search
+  hidden when explicitly opted out, chart renders without throwing
+  when exportable is undefined or false. Responsive expanded-mode
+  tests left to manual verification (the modal Portal subtree is
+  awkward to assert in jsdom).
+- All previous 578 tests untouched. Total : **583 passed / 1 skipped /
+  584 total**.
+
+### Non-breaking
+
+- All v6.0.0 APIs unchanged.
+- Apps that were relying on the auto-hide of search / export get them
+  shown now — opt out with `searchable: false` / `exportable: false`
+  if undesired.
+
+### What's NOT in this release (future "after" audit)
+
+The user request was scoped to chart + table responsive + the export
+discoverability gaps. A broader cross-renderer audit (map, image-
+gallery, video, code, carousel — for consistent copy/export +
+fullscreen + search behavior) is deferred to a follow-up release.
+Notable known gaps :
+- `<MapRenderer>` is NOT yet wrapped in `<ExpandableWrapper>` (no
+  fullscreen, no copy/export).
+- `<ImageGalleryRenderer>`, `<VideoRenderer>`, `<CarouselRenderer>`
+  have no integrated copy/export menus.
+
 ## [6.0.0] - 2026-05-02
 
 Major version marker — no API breakage. Bumps to `v6` to signal a

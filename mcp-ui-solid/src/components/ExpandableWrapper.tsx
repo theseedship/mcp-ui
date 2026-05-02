@@ -187,8 +187,13 @@ export const ExpandableWrapper: Component<ExpandableWrapperProps> = (props) => {
                 </div>
               </div>
 
-              {/* Modal slot — content is reparented here when expanded */}
-              <div class="flex-1 overflow-auto p-4" ref={modalSlotRef} />
+              {/* Modal slot — content is reparented here when expanded.
+                  v6.1.0 : `flex flex-col` lets aware children opt into
+                  `flex-1 min-h-0` to fill the modal vertically (chart,
+                  table, map, graph). Unaware children keep working
+                  thanks to `overflow-auto` (their natural height
+                  scrolls if it overflows the slot). */}
+              <div class="flex-1 min-h-0 overflow-auto p-4 flex flex-col" ref={modalSlotRef} />
             </div>
           </div>
 

@@ -547,7 +547,13 @@ function TableRenderer(props: {
   const [debouncedQuery, setDebouncedQuery] = createSignal('')
   let searchTimer: ReturnType<typeof setTimeout> | null = null
 
-  const isSearchable = () => tableParams.searchable === true || (tableParams.searchable !== false && allRows().length > 10)
+  // v6.1.0 — search visibility :
+  //   - undefined / true → always shown (new default, was conditional on >10 rows)
+  //   - false            → hidden (explicit opt-out, unchanged)
+  // Rationale: even small tables benefit from search in a chat / dashboard
+  // context where users scan many tables across messages. Backward-compat
+  // for anyone who explicitly disabled.
+  const isSearchable = () => tableParams.searchable !== false
   const searchPlaceholder = () => tableParams.searchPlaceholder || 'Rechercher dans le tableau...'
 
   const handleSearch = (value: string) => {
@@ -813,7 +819,9 @@ function TableRenderer(props: {
 
   return (
     <ExpandableWrapper title={tableParams.title || 'Table'} copyData={getTableCSV()} copyLabel="Copy table (CSV)">
-      <div class={`relative w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden group ${isExpanded() ? '' : 'h-full'}`}>
+      <div class={`relative w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden group ${
+        isExpanded() ? 'flex-1 min-h-0 flex flex-col' : 'h-full'
+      }`}>
         <Show when={exportable} fallback={<CopyButton getText={getTableCSV} title="Copy table (CSV)" position="top-right" />}>
           <div class="absolute right-10 top-2 z-10">
             <button
@@ -841,9 +849,9 @@ function TableRenderer(props: {
             </Show>
           </div>
         </Show>
-        <div class="p-4">
+        <div class={`p-4 ${isExpanded() ? 'flex-1 min-h-0 flex flex-col' : ''}`}>
           <Show when={tableParams.title}>
-            <h3 id={`${tableId}-title`} class="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+            <h3 id={`${tableId}-title`} class="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex-shrink-0">
               {tableParams.title}
               <Show when={isVirtualizing()}>
                 <span class="ml-2 text-xs font-normal text-gray-400">(virtualized: {tableParams.rows?.length} rows)</span>
@@ -880,12 +888,18 @@ function TableRenderer(props: {
 
           <div
             ref={scrollContainerRef}
-            class="overflow-x-auto"
+            class={`overflow-x-auto ${isExpanded() ? 'flex-1 min-h-0' : ''}`}
             style={
-              isVirtualizing()
-                ? { 'max-height': '500px', 'overflow-y': 'auto' }
-                : !isExpanded() && clientVisibleRows().length > 8
-                  ? { 'max-height': '400px', 'overflow-y': 'auto' }
+              // v6.1.0 — when expanded, the scroll container fills the
+              // remaining vertical space (flex-1 + min-h-0 above) and
+              // scrolls internally instead of the modal scrolling. Inline
+              // mode keeps the previous max-height heuristic.
+              isExpanded()
+                ? { 'overflow-y': 'auto' }
+                : isVirtualizing()
+                  ? { 'max-height': '500px', 'overflow-y': 'auto' }
+                  : clientVisibleRows().length > 8
+                    ? { 'max-height': '400px', 'overflow-y': 'auto' }
                   : {}
             }
             role="region"

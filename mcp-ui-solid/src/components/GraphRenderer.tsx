@@ -21,7 +21,7 @@
 import { Component, createSignal, onCleanup, onMount, Show, For } from 'solid-js'
 import type { UIComponent } from '../types'
 import type { GraphComponentParams, GraphLayout, GraphNode, GraphEdge } from '@seed-ship/mcp-ui-spec'
-import { ExpandableWrapper } from './ExpandableWrapper'
+import { ExpandableWrapper, useExpanded } from './ExpandableWrapper'
 
 // Module-scoped lazy import promise — first call triggers the dynamic
 // import, subsequent calls reuse the resolved module.
@@ -139,6 +139,7 @@ function downloadBlob(content: string | Blob, filename: string, mimeType?: strin
 
 export const GraphRenderer: Component<{ component: UIComponent }> = (props) => {
   const params = () => props.component.params as GraphComponentParams
+  const isExpanded = useExpanded()
   const [available, setAvailable] = createSignal<boolean | null>(null)
   const [error, setError] = createSignal<string | undefined>()
   const [exportMenuOpen, setExportMenuOpen] = createSignal(false)
@@ -264,7 +265,9 @@ export const GraphRenderer: Component<{ component: UIComponent }> = (props) => {
         copyData={toJSON(params())}
         copyLabel="Copy graph (JSON)"
       >
-        <div class={`relative w-full ${params().className ?? ''}`}>
+        <div class={`relative w-full ${params().className ?? ''} ${
+          isExpanded() ? 'flex-1 min-h-0 flex flex-col' : ''
+        }`}>
           {/* Export menu — top-right, mirrors TableRenderer's pattern */}
           <div class="absolute right-2 top-2 z-10">
             <button
@@ -301,8 +304,14 @@ export const GraphRenderer: Component<{ component: UIComponent }> = (props) => {
 
           <div
             ref={containerRef}
-            class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden"
-            style={`height: ${params().height ?? '400px'}; width: ${params().width ?? '100%'};`}
+            class={`bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden ${
+              isExpanded() ? 'flex-1 min-h-0' : ''
+            }`}
+            style={
+              isExpanded()
+                ? `height: 100%; width: ${params().width ?? '100%'};`
+                : `height: ${params().height ?? '400px'}; width: ${params().width ?? '100%'};`
+            }
           />
           <Show when={error()}>
             <p class="text-xs text-red-600 dark:text-red-400 mt-1">Render error: {error()}</p>

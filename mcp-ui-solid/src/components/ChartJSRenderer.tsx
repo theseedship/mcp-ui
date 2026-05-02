@@ -10,7 +10,7 @@
 
 import { Component, createEffect, onCleanup, createSignal, Show } from 'solid-js'
 import type { UIComponent, ChartComponentParams } from '../types'
-import { ExpandableWrapper } from './ExpandableWrapper'
+import { ExpandableWrapper, useExpanded } from './ExpandableWrapper'
 
 // Lazy load Chart.js to avoid bundling if not used
 let ChartJS: any = null
@@ -87,6 +87,16 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
   let chartInstance: any
 
   const params = () => props.component.params as ChartComponentParams
+  const isExpanded = useExpanded()
+
+  // v6.1.0 — export visibility :
+  //   - undefined / true  → button shown (new default, was opt-in)
+  //   - false             → button hidden (explicit opt-out, unchanged)
+  const exportEnabled = () => params().exportable !== false
+
+  // v6.1.0 — copy data for the ExpandableWrapper modal-header copy button.
+  // Lazy-stringified each time the button is clicked.
+  const copyDataJSON = () => JSON.stringify({ type: params().type, data: params().data }, null, 2)
 
   // Chart PNG export
   const handleExportPNG = () => {
@@ -176,16 +186,22 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
   })
 
   return (
-    <ExpandableWrapper title={params().title || 'Chart'}>
-      <div class="relative w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden p-4 group">
-        <Show when={params().title || params().exportable}>
-          <div class="flex items-center justify-between mb-3">
+    <ExpandableWrapper
+      title={params().title || 'Chart'}
+      copyData={copyDataJSON()}
+      copyLabel="Copy chart data (JSON)"
+    >
+      <div class={`relative w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden p-4 group ${
+        isExpanded() ? 'flex-1 min-h-0 flex flex-col' : ''
+      }`}>
+        <Show when={params().title || exportEnabled()}>
+          <div class="flex items-center justify-between mb-3 flex-shrink-0">
             <Show when={params().title}>
               <h3 class="text-sm font-semibold text-gray-900 dark:text-white">
                 {params().title}
               </h3>
             </Show>
-            <Show when={params().exportable}>
+            <Show when={exportEnabled()}>
               <button
                 onClick={handleExportPNG}
                 class="opacity-0 group-hover:opacity-60 hover:!opacity-100 px-2 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-all shadow-sm"
@@ -234,8 +250,14 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
         </Show>
 
         <div
-          class="w-full"
-          style={{ height: params().height || '250px', display: error() ? 'none' : 'block' }}
+          class={`w-full ${isExpanded() ? 'flex-1 min-h-0' : ''}`}
+          style={
+            error()
+              ? { display: 'none' }
+              : isExpanded()
+                ? { height: '100%', display: 'block' }
+                : { height: params().height || '250px', display: 'block' }
+          }
         >
           <canvas ref={canvasRef} />
         </div>
