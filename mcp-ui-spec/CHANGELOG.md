@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.0.5] - 2026-05-03
+
+### Added — `TableComponentParamsSchema.maxHeight`
+
+Driven by deposium handoff (axe 1) — the lib hardcodes a
+`max-height: 400px` (500px virtualizing) cap on tables with > 8 rows
+in inline mode, which forces an internal scroll even when the consumer's
+wrapping container has plenty of room.
+
+- New optional field `maxHeight: 'auto' | number | string`.
+  - `'auto'` → no cap, the parent container's overflow handles it.
+  - number → interpreted as `${n}px`.
+  - string → used as-is (CSS length).
+  - undefined → existing behavior unchanged (400/500px caps).
+
+Renderer support ships in `@seed-ship/mcp-ui-solid@6.3.0`.
+Backward compatible — purely additive.
+
 ## [5.0.4] - 2026-05-02
 
 ### Added — `'graph'` ComponentType + Graph schemas

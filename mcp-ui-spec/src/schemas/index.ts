@@ -535,6 +535,13 @@ export const TableComponentParamsSchema = z.object({
   className: z.string().optional(),
   // v5.0.3 — opt-in citation chip rendering inside cells
   citationMap: z.record(z.string(), CitationEntrySchema).optional(),
+  // v5.0.5 — opt-out of the inline-mode max-height cap. The library defaults
+  // a `max-height: 400px` (or 500px when virtualizing) on tables with > 8
+  // rows so they don't blow out a chat-stream layout. Pass `'auto'` to
+  // disable the cap (when the consumer's wrapping container handles
+  // overflow), a number (interpreted as `${n}px`), or any CSS length string
+  // to override the value.
+  maxHeight: z.union([z.literal('auto'), z.number(), z.string()]).optional(),
 })
 
 // Metric component (v5.0.1)
