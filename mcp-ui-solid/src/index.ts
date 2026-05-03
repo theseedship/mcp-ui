@@ -44,6 +44,7 @@ export type { FeedbackInlineProps, FeedbackInlineContext } from './components/Fe
 export { ChatBusProvider, useChatBus } from './hooks/useChatBus'
 export { ChatPrompt } from './components/ChatPrompt'
 export { ElicitationForm } from './components/ElicitationForm'
+export { PortalDropdownMenu } from './components/PortalDropdownMenu'
 export { ScratchpadPanel } from './components/ScratchpadPanel'
 export {
   dispatchScratchpad,
@@ -126,6 +127,7 @@ export type { ExpandableWrapperProps } from './components/ExpandableWrapper'
 export type { ComponentToolbarProps, ToolbarAction, ToolbarIcon } from './components/ComponentToolbar'
 export type { ChatPromptProps } from './components/ChatPrompt'
 export type { ElicitationFormProps } from './components/ElicitationForm'
+export type { PortalDropdownMenuProps } from './components/PortalDropdownMenu'
 export type { ScratchpadPanelProps } from './components/ScratchpadPanel'
 export type { VerifiedTextProps } from './components/VerifiedText'
 export type { DataPreviewSectionProps } from './components/DataPreviewSection'

@@ -41,6 +41,7 @@ import { CodeBlockRenderer } from './CodeBlockRenderer'
 import { MapRenderer } from './MapRenderer'
 import { GraphRenderer } from './GraphRenderer'
 import { ExpandableWrapper, useExpanded } from './ExpandableWrapper'
+import { PortalDropdownMenu } from './PortalDropdownMenu'
 import { RenderProvider } from './RenderContext'
 import { useAction } from '../hooks/useAction'
 import { marked } from 'marked'
@@ -755,6 +756,8 @@ function TableRenderer(props: {
 
   // Export dropdown state
   const [showExportMenu, setShowExportMenu] = createSignal(false)
+  // v6.4.0 — trigger ref consumed by <PortalDropdownMenu> for positioning
+  let exportTriggerRef: HTMLButtonElement | undefined
 
   const handleExport = (format: string) => {
     setShowExportMenu(false)
@@ -841,28 +844,34 @@ function TableRenderer(props: {
         <Show when={exportable} fallback={<CopyButton getText={getTableCSV} title="Copy table (CSV)" position="top-right" />}>
           <div class="absolute right-10 top-2 z-10">
             <button
+              ref={exportTriggerRef}
               onClick={() => setShowExportMenu(!showExportMenu())}
               class="opacity-60 hover:opacity-100 px-2 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-all shadow-sm"
               title="Export table"
               aria-label="Export table"
+              aria-haspopup="menu"
+              aria-expanded={showExportMenu()}
             >
               <svg class="w-3 h-3 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
             </button>
-            <Show when={showExportMenu()}>
-              <div class="absolute right-0 mt-1 w-36 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg py-1 text-sm">
-                <Show when={(exportFormats as string[]).includes('tsv')}>
-                  <button onClick={() => handleExport('tsv')} class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">Copy TSV</button>
-                </Show>
-                <Show when={(exportFormats as string[]).includes('csv')}>
-                  <button onClick={() => handleExport('csv')} class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">Download CSV</button>
-                </Show>
-                <Show when={(exportFormats as string[]).includes('json')}>
-                  <button onClick={() => handleExport('json')} class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">Download JSON</button>
-                </Show>
-              </div>
-            </Show>
+            <PortalDropdownMenu
+              open={showExportMenu()}
+              onClose={() => setShowExportMenu(false)}
+              trigger={exportTriggerRef}
+              width={144}
+            >
+              <Show when={(exportFormats as string[]).includes('tsv')}>
+                <button onClick={() => handleExport('tsv')} class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">Copy TSV</button>
+              </Show>
+              <Show when={(exportFormats as string[]).includes('csv')}>
+                <button onClick={() => handleExport('csv')} class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">Download CSV</button>
+              </Show>
+              <Show when={(exportFormats as string[]).includes('json')}>
+                <button onClick={() => handleExport('json')} class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">Download JSON</button>
+              </Show>
+            </PortalDropdownMenu>
           </div>
         </Show>
         <div class={`p-4 ${isExpanded() ? 'flex-1 min-h-0 flex flex-col' : ''}`}>

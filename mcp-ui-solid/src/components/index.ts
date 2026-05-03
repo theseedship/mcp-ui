@@ -92,5 +92,9 @@ export type { RenderContextValue, RenderComponentFn } from './RenderContext'
 export { ElicitationForm } from './ElicitationForm'
 export type { ElicitationFormProps } from './ElicitationForm'
 
+// v6.4.0 — Portal-mounted dropdown (used by table + graph Export menus)
+export { PortalDropdownMenu } from './PortalDropdownMenu'
+export type { PortalDropdownMenuProps } from './PortalDropdownMenu'
+
 // Default exports for lazy loading compatibility
 export { UIResourceRenderer as default } from './UIResourceRenderer'

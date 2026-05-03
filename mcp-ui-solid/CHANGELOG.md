@@ -5,6 +5,62 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.4.0] - 2026-05-03
+
+Closes axe 3 of `deposium_solid`'s
+`SOLID-MCPUI-IMPROVEMENT-AXES-2026-05-03.md` handoff.
+
+### Changed — Export menus now mount via `<Portal>`
+
+Both Export dropdowns shipped by the renderers — the `TableRenderer`
+(`Copy TSV / Download CSV / Download JSON`) and the `GraphRenderer`
+(`Download PNG / Download Mermaid / Download JSON`) — now render via
+`solid-js/web` `<Portal>` on `document.body` instead of an in-tree
+`position: absolute` sibling.
+
+This fixes two long-standing pain points :
+
+1. **`overflow: hidden` clipping** — when the table or graph lives
+   inside a chat bubble, a card, or any ancestor with `overflow: hidden`,
+   the legacy in-tree menu got clipped at the ancestor's boundary.
+   Mounting on `document.body` escapes the clip stack entirely.
+2. **`z-index` wars** — chat surfaces stack composer / message rails
+   above the message list, and ancestor `z-index` creates a new stacking
+   context that captured the in-tree menu. A portal is a sibling of the
+   document, so a single `z-index: 9999` wins.
+
+Pre-v6.4.0 deposium had to ship a `overflow: visible !important`
+override + 4 `z-index` overrides on its `ChatUIIsland.tsx` to work
+around this. Both can now be removed.
+
+### Added — `<PortalDropdownMenu>` (factored helper)
+
+The portal-mounting + click-outside + Escape + scroll/resize
+re-positioning logic is factored into a generic component for reuse.
+Exported under both `@seed-ship/mcp-ui-solid` root and
+`@seed-ship/mcp-ui-solid/components` :
+
+```tsx
+import { PortalDropdownMenu } from '@seed-ship/mcp-ui-solid'
+
+const [open, setOpen] = createSignal(false)
+let triggerRef: HTMLButtonElement | undefined
+
+<button ref={triggerRef} onClick={() => setOpen(true)}>Menu</button>
+<PortalDropdownMenu open={open()} onClose={() => setOpen(false)} trigger={triggerRef}>
+  <button onClick={...}>Item 1</button>
+  <button onClick={...}>Item 2</button>
+</PortalDropdownMenu>
+```
+
+### Non-breaking
+
+The behavior change is transparent to consumers — the menu still opens
+and closes from the same trigger button, with the same items. Tests :
+7 added in `PortalDropdownMenu.test.tsx` (mount target, position from
+`getBoundingClientRect`, outside click + Escape close, trigger /
+in-menu mousedown ignored).
+
 ## [6.3.1] - 2026-05-03
 
 ### Added — `<UIResourceRenderer toolbarVariant>` forwarding

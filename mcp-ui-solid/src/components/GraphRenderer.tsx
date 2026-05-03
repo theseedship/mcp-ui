@@ -22,6 +22,7 @@ import { Component, createSignal, onCleanup, onMount, Show, For } from 'solid-js
 import type { UIComponent } from '../types'
 import type { GraphComponentParams, GraphLayout, GraphNode, GraphEdge } from '@seed-ship/mcp-ui-spec'
 import { ExpandableWrapper, useExpanded } from './ExpandableWrapper'
+import { PortalDropdownMenu } from './PortalDropdownMenu'
 
 // Module-scoped lazy import promise — first call triggers the dynamic
 // import, subsequent calls reuse the resolved module.
@@ -153,6 +154,8 @@ export const GraphRenderer: Component<GraphRendererProps> = (props) => {
   const [error, setError] = createSignal<string | undefined>()
   const [exportMenuOpen, setExportMenuOpen] = createSignal(false)
   let containerRef: HTMLDivElement | undefined
+  // v6.4.0 — trigger ref consumed by <PortalDropdownMenu> for positioning
+  let exportTriggerRef: HTMLButtonElement | undefined
   // Loosely typed because G6 is a peer-optional — we don't pull its
   // types into the bundle just to type a transient local handle.
   let graphInstance: any | undefined
@@ -281,35 +284,41 @@ export const GraphRenderer: Component<GraphRendererProps> = (props) => {
           {/* Export menu — top-right, mirrors TableRenderer's pattern */}
           <div class="absolute right-2 top-2 z-10">
             <button
+              ref={exportTriggerRef}
               type="button"
               onClick={() => setExportMenuOpen((v) => !v)}
               class="px-2 py-1 text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
               title="Export graph"
               aria-label="Export graph"
+              aria-haspopup="menu"
               aria-expanded={exportMenuOpen()}
             >
               Export ▾
             </button>
-            <Show when={exportMenuOpen()}>
-              <div class="absolute right-0 mt-1 w-44 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded shadow-lg text-xs">
-                <For each={[
-                  { label: 'Download PNG', onClick: handleExportPNG, hint: 'visual snapshot' },
-                  { label: 'Download Mermaid', onClick: handleExportMermaid, hint: 'markdown / GitHub' },
-                  { label: 'Download JSON', onClick: handleExportJSON, hint: 'raw data' },
-                ]}>
-                  {(item) => (
-                    <button
-                      type="button"
-                      onClick={item.onClick}
-                      class="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border-b border-gray-100 dark:border-gray-700 last:border-b-0"
-                    >
-                      <div class="font-medium">{item.label}</div>
-                      <div class="text-[10px] text-gray-500 dark:text-gray-400">{item.hint}</div>
-                    </button>
-                  )}
-                </For>
-              </div>
-            </Show>
+            <PortalDropdownMenu
+              open={exportMenuOpen()}
+              onClose={() => setExportMenuOpen(false)}
+              trigger={exportTriggerRef}
+              width={176}
+              class="text-xs"
+            >
+              <For each={[
+                { label: 'Download PNG', onClick: handleExportPNG, hint: 'visual snapshot' },
+                { label: 'Download Mermaid', onClick: handleExportMermaid, hint: 'markdown / GitHub' },
+                { label: 'Download JSON', onClick: handleExportJSON, hint: 'raw data' },
+              ]}>
+                {(item) => (
+                  <button
+                    type="button"
+                    onClick={item.onClick}
+                    class="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border-b border-gray-100 dark:border-gray-700 last:border-b-0"
+                  >
+                    <div class="font-medium">{item.label}</div>
+                    <div class="text-[10px] text-gray-500 dark:text-gray-400">{item.hint}</div>
+                  </button>
+                )}
+              </For>
+            </PortalDropdownMenu>
           </div>
 
           <div
