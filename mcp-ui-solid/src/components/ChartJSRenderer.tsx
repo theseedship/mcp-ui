@@ -56,6 +56,12 @@ export interface ChartJSRendererProps {
    * Error callback
    */
   onError?: (error: Error) => void
+
+  /**
+   * Forwarded to the underlying `<ExpandableWrapper>` (v6.3.1).
+   * @see ExpandableWrapperProps.toolbarVariant
+   */
+  toolbarVariant?: 'hover' | 'always-visible'
 }
 
 /**
@@ -190,6 +196,7 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
       title={params().title || 'Chart'}
       copyData={copyDataJSON()}
       copyLabel="Copy chart data (JSON)"
+      toolbarVariant={props.toolbarVariant}
     >
       <div class={`relative w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden p-4 group ${
         isExpanded() ? 'flex-1 min-h-0 flex flex-col' : ''

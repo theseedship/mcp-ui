@@ -121,6 +121,19 @@ export interface UIResourceRendererProps {
    * @see ValidationErrorMode
    */
   errorMode?: ValidationErrorMode
+
+  /**
+   * Visibility behavior of the inline expand button shipped by every
+   * renderer wrapped in `<ExpandableWrapper>` (v6.3.1 — closes axe 4 of
+   * the deposium handoff).
+   *   - `'hover'` (default) : button fades in on hover. Backwards-compatible.
+   *   - `'always-visible'` : button visible at rest. Use this on chat
+   *     surfaces / touch surfaces where the hover affordance is hidden.
+   *
+   * Forwarded to all internal renderers : table, chart (Chart.js path),
+   * graph, map, video, carousel, image-gallery, code.
+   */
+  toolbarVariant?: 'hover' | 'always-visible'
 }
 
 /**
@@ -133,6 +146,7 @@ export interface UIResourceRendererProps {
 function ChartRenderer(props: {
   component: UIComponent
   onError?: (error: RendererError) => void
+  toolbarVariant?: 'hover' | 'always-visible'
 }) {
   const [useNative, setUseNative] = createSignal(false)
   const [iframeUrl, setIframeUrl] = createSignal<string>()
@@ -256,6 +270,7 @@ function ChartRenderer(props: {
     >
       <ChartJSRenderer
         component={props.component}
+        toolbarVariant={props.toolbarVariant}
         onError={(err) => props.onError?.({
           type: 'render',
           message: err.message,
@@ -486,6 +501,7 @@ export function renderCellValue(value: any, citationCtx?: CitationCtx): string {
 function TableRenderer(props: {
   component: UIComponent
   onError?: (error: RendererError) => void
+  toolbarVariant?: 'hover' | 'always-visible'
 }) {
   const tableParams = props.component.params as any
   let scrollContainerRef: HTMLDivElement | undefined
@@ -818,7 +834,7 @@ function TableRenderer(props: {
   }
 
   return (
-    <ExpandableWrapper title={tableParams.title || 'Table'} copyData={getTableCSV()} copyLabel="Copy table (CSV)">
+    <ExpandableWrapper title={tableParams.title || 'Table'} copyData={getTableCSV()} copyLabel="Copy table (CSV)" toolbarVariant={props.toolbarVariant}>
       <div class={`relative w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden group ${
         isExpanded() ? 'flex-1 min-h-0 flex flex-col' : 'h-full'
       }`}>
@@ -1275,6 +1291,7 @@ function ComponentRenderer(props: {
   component: UIComponent
   onError?: (error: RendererError) => void
   errorMode?: ValidationErrorMode
+  toolbarVariant?: 'hover' | 'always-visible'
 }) {
   // Performance marks — visible in Chrome DevTools "Performance" panel under
   // user timings. Always-on, SSR-safe (see utils/perf.ts).
@@ -1403,10 +1420,10 @@ function ComponentRenderer(props: {
       allowRetry={true}
     >
       <Show when={props.component.type === 'chart'}>
-        <ChartRenderer component={props.component} onError={props.onError} />
+        <ChartRenderer component={props.component} onError={props.onError} toolbarVariant={props.toolbarVariant} />
       </Show>
       <Show when={props.component.type === 'table'}>
-        <TableRenderer component={props.component} onError={props.onError} />
+        <TableRenderer component={props.component} onError={props.onError} toolbarVariant={props.toolbarVariant} />
       </Show>
       <Show when={props.component.type === 'metric'}>
         <MetricRenderer component={props.component} />
@@ -1430,7 +1447,7 @@ function ComponentRenderer(props: {
         <GridRenderer component={props.component} onError={props.onError} />
       </Show>
       <Show when={props.component.type === 'carousel'}>
-        <CarouselRenderer items={(props.component.params as any)?.items || []} height={(props.component.params as any)?.height} />
+        <CarouselRenderer items={(props.component.params as any)?.items || []} height={(props.component.params as any)?.height} toolbarVariant={props.toolbarVariant} />
       </Show>
       <Show when={props.component.type === 'artifact'}>
         <ArtifactRenderer params={props.component.params as any} />
@@ -1445,19 +1462,19 @@ function ComponentRenderer(props: {
         <ActionGroupRenderer component={props.component} />
       </Show>
       <Show when={props.component.type === 'image-gallery'}>
-        <ImageGalleryRenderer component={props.component} />
+        <ImageGalleryRenderer component={props.component} toolbarVariant={props.toolbarVariant} />
       </Show>
       <Show when={props.component.type === 'video'}>
-        <VideoRenderer component={props.component} />
+        <VideoRenderer component={props.component} toolbarVariant={props.toolbarVariant} />
       </Show>
       <Show when={props.component.type === 'code'}>
-        <CodeBlockRenderer component={props.component} />
+        <CodeBlockRenderer component={props.component} toolbarVariant={props.toolbarVariant} />
       </Show>
       <Show when={props.component.type === 'map'}>
-        <MapRenderer component={props.component} />
+        <MapRenderer component={props.component} toolbarVariant={props.toolbarVariant} />
       </Show>
       <Show when={props.component.type === 'graph'}>
-        <GraphRenderer component={props.component} />
+        <GraphRenderer component={props.component} toolbarVariant={props.toolbarVariant} />
       </Show>
     </GenerativeUIErrorBoundary>
   )
@@ -1742,7 +1759,7 @@ export const UIResourceRenderer: Component<UIResourceRendererProps> = (props) =>
 
   // Wrapper function for RenderContext (breaks circular dependency)
   const renderComponent = (component: UIComponent, onError?: (error: RendererError) => void) => (
-    <ComponentRenderer component={component} onError={onError} errorMode={props.errorMode} />
+    <ComponentRenderer component={component} onError={onError} errorMode={props.errorMode} toolbarVariant={props.toolbarVariant} />
   )
 
   return (
@@ -1752,7 +1769,7 @@ export const UIResourceRenderer: Component<UIResourceRendererProps> = (props) =>
           <For each={layoutData.components}>
             {(component) => (
               <div style={getGridStyleString(component)}>
-                <ComponentRenderer component={component} onError={props.onError} errorMode={props.errorMode} />
+                <ComponentRenderer component={component} onError={props.onError} errorMode={props.errorMode} toolbarVariant={props.toolbarVariant} />
               </div>
             )}
           </For>

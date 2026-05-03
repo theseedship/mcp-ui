@@ -7,6 +7,11 @@ import { ExpandableWrapper, useExpanded } from './ExpandableWrapper'
 export interface CarouselRendererProps {
     items: UIComponent[]
     height?: string
+    /**
+     * Forwarded to the underlying `<ExpandableWrapper>` (v6.3.1).
+     * @see ExpandableWrapperProps.toolbarVariant
+     */
+    toolbarVariant?: 'hover' | 'always-visible'
 }
 
 export const CarouselRenderer: Component<CarouselRendererProps> = (props) => {
@@ -40,6 +45,7 @@ export const CarouselRenderer: Component<CarouselRendererProps> = (props) => {
             title={'Carousel'}
             copyData={JSON.stringify(props.items, null, 2)}
             copyLabel="Copy items (JSON)"
+            toolbarVariant={props.toolbarVariant}
         >
         <div class={`relative group ${isExpanded() ? 'flex-1 min-h-0 flex flex-col' : ''}`}>
             {/* Navigation Buttons */}

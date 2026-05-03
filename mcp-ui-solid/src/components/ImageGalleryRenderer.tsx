@@ -18,6 +18,12 @@ export interface ImageGalleryRendererProps {
    * Direct gallery params (alternative to component)
    */
   params?: ImageGalleryParams
+
+  /**
+   * Forwarded to the underlying `<ExpandableWrapper>` (v6.3.1).
+   * @see ExpandableWrapperProps.toolbarVariant
+   */
+  toolbarVariant?: 'hover' | 'always-visible'
 }
 
 /** Build a newline-separated list of image URLs (with captions when present)
@@ -87,6 +93,7 @@ export const ImageGalleryRenderer: Component<ImageGalleryRendererProps> = (props
       title={params()?.title || 'Gallery'}
       copyData={imagesToTextList(params())}
       copyLabel="Copy image URLs"
+      toolbarVariant={props.toolbarVariant}
     >
     <div class={`w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden ${
       isExpanded() ? 'flex-1 min-h-0 flex flex-col' : ''

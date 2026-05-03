@@ -24,6 +24,12 @@ export interface VideoRendererProps {
    * Error callback
    */
   onError?: (error: Error) => void
+
+  /**
+   * Forwarded to the underlying `<ExpandableWrapper>` (v6.3.1).
+   * @see ExpandableWrapperProps.toolbarVariant
+   */
+  toolbarVariant?: 'hover' | 'always-visible'
 }
 
 /**
@@ -132,6 +138,7 @@ export const VideoRenderer: Component<VideoRendererProps> = (props) => {
       title={params()?.title || 'Video'}
       copyData={params()?.url || ''}
       copyLabel="Copy video URL"
+      toolbarVariant={props.toolbarVariant}
     >
     <div class={`w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden ${
       isExpanded() ? 'flex-1 min-h-0 flex flex-col' : ''

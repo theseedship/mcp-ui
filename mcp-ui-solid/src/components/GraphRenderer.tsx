@@ -137,7 +137,16 @@ function downloadBlob(content: string | Blob, filename: string, mimeType?: strin
   URL.revokeObjectURL(url)
 }
 
-export const GraphRenderer: Component<{ component: UIComponent }> = (props) => {
+export interface GraphRendererProps {
+  component: UIComponent
+  /**
+   * Forwarded to the underlying `<ExpandableWrapper>` (v6.3.1).
+   * @see ExpandableWrapperProps.toolbarVariant
+   */
+  toolbarVariant?: 'hover' | 'always-visible'
+}
+
+export const GraphRenderer: Component<GraphRendererProps> = (props) => {
   const params = () => props.component.params as GraphComponentParams
   const isExpanded = useExpanded()
   const [available, setAvailable] = createSignal<boolean | null>(null)
@@ -264,6 +273,7 @@ export const GraphRenderer: Component<{ component: UIComponent }> = (props) => {
         title={params().title ?? 'Graph'}
         copyData={toJSON(params())}
         copyLabel="Copy graph (JSON)"
+        toolbarVariant={props.toolbarVariant}
       >
         <div class={`relative w-full ${params().className ?? ''} ${
           isExpanded() ? 'flex-1 min-h-0 flex flex-col' : ''

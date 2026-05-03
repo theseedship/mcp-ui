@@ -24,6 +24,12 @@ export interface MapRendererProps {
      * Direct map params
      */
     params?: MapComponentParams
+
+    /**
+     * Forwarded to the underlying `<ExpandableWrapper>` (v6.3.1).
+     * @see ExpandableWrapperProps.toolbarVariant
+     */
+    toolbarVariant?: 'hover' | 'always-visible'
 }
 
 // ─── Helpers ────────────────────────────────────────────────
@@ -430,6 +436,7 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
             title={'Map'}
             copyData={mapToGeoJSON(params())}
             copyLabel="Copy markers as GeoJSON"
+            toolbarVariant={props.toolbarVariant}
         >
             <div class={`w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden ${params()?.className || ''} ${
                 isExpanded() ? 'flex-1 min-h-0 flex flex-col' : ''

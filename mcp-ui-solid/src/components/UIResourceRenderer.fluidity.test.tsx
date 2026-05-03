@@ -99,3 +99,54 @@ describe('Chart (iframe path) — exportable default (v6.1.0)', () => {
     ).not.toThrow()
   })
 })
+
+describe('UIResourceRenderer.toolbarVariant — forwarding to ExpandableWrapper (v6.3.1)', () => {
+  beforeEach(() => {
+    cleanup()
+  })
+
+  function tableComponent(): UIComponent {
+    return {
+      id: 'tbl',
+      type: 'table',
+      position: { colStart: 1, colSpan: 12 },
+      params: {
+        columns: [
+          { key: 'name', label: 'Name' },
+          { key: 'value', label: 'Value' },
+        ],
+        rows: [{ name: 'a', value: 1 }],
+      } as any,
+    }
+  }
+
+  it('default (toolbarVariant undefined) → expand button uses opacity-0 hover-only classes', () => {
+    const { container } = render(() => <UIResourceRenderer content={tableComponent()} />)
+    const btn = container.querySelector('button[aria-label="Expand to fullscreen"]')
+    expect(btn).toBeTruthy()
+    expect(btn!.className).toContain('opacity-0')
+    expect(btn!.className).toContain('group-hover:opacity-70')
+    expect(btn!.className).not.toContain('opacity-60')
+  })
+
+  it('toolbarVariant="always-visible" → expand button uses opacity-60 (no group-hover gate)', () => {
+    const { container } = render(() => (
+      <UIResourceRenderer content={tableComponent()} toolbarVariant="always-visible" />
+    ))
+    const btn = container.querySelector('button[aria-label="Expand to fullscreen"]')
+    expect(btn).toBeTruthy()
+    expect(btn!.className).toContain('opacity-60')
+    expect(btn!.className).not.toContain('opacity-0')
+    expect(btn!.className).not.toContain('group-hover:opacity-70')
+  })
+
+  it('toolbarVariant="hover" (explicit) → matches default behavior', () => {
+    const { container } = render(() => (
+      <UIResourceRenderer content={tableComponent()} toolbarVariant="hover" />
+    ))
+    const btn = container.querySelector('button[aria-label="Expand to fullscreen"]')
+    expect(btn).toBeTruthy()
+    expect(btn!.className).toContain('opacity-0')
+    expect(btn!.className).toContain('group-hover:opacity-70')
+  })
+})

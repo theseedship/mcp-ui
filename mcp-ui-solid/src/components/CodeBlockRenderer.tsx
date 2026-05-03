@@ -35,6 +35,12 @@ export interface CodeBlockRendererProps {
      * Direct code params
      */
     params?: CodeComponentParams
+
+    /**
+     * Forwarded to the underlying `<ExpandableWrapper>` (v6.3.1).
+     * @see ExpandableWrapperProps.toolbarVariant
+     */
+    toolbarVariant?: 'hover' | 'always-visible'
 }
 
 export const CodeBlockRenderer: Component<CodeBlockRendererProps> = (props) => {
@@ -191,7 +197,7 @@ export const CodeBlockRenderer: Component<CodeBlockRendererProps> = (props) => {
     }
 
     return (
-        <ExpandableWrapper title={params()?.filename || params()?.language || 'Code'} copyData={params()?.code} copyLabel="Copy code">
+        <ExpandableWrapper title={params()?.filename || params()?.language || 'Code'} copyData={params()?.code} copyLabel="Copy code" toolbarVariant={props.toolbarVariant}>
         <div class={`w-full bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden text-sm flex flex-col ${isExpanded() ? 'flex-1 min-h-0' : ''}`}>
             {/* Header */}
             <div class="flex items-center justify-between px-4 py-2 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shrink-0">

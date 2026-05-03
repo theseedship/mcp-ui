@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.3.1] - 2026-05-03
+
+### Added — `<UIResourceRenderer toolbarVariant>` forwarding
+
+Forwards the `toolbarVariant?: 'hover' | 'always-visible'` prop introduced
+on `<ExpandableWrapper>` in v6.3.0 down through `<UIResourceRenderer>` to
+every internal renderer that wraps `<ExpandableWrapper>` :
+
+- `TableRenderer` (in `UIResourceRenderer.tsx`)
+- `ChartJSRenderer` (native chart path)
+- `GraphRenderer`
+- `MapRenderer`
+- `VideoRenderer`
+- `CarouselRenderer`
+- `ImageGalleryRenderer`
+- `CodeBlockRenderer`
+
+```tsx
+<UIResourceRenderer content={layout} toolbarVariant="always-visible" />
+```
+
+Pre-v6.3.1, consumers had to wrap `<ExpandableWrapper>` themselves to
+configure variant. Now the surface-level renderer accepts it and
+propagates uniformly. Default behavior (hover-only) unchanged.
+
+### Non-breaking
+
+Additive prop. All v6.3.0 APIs unchanged. 3 tests added in
+`UIResourceRenderer.fluidity.test.tsx` (default + `'always-visible'` +
+explicit `'hover'`).
+
 ## [6.3.0] - 2026-05-03
 
 Two consumer-friendly props driven by `deposium_solid`'s
