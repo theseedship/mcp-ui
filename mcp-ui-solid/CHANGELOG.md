@@ -5,6 +5,59 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.3.0] - 2026-05-03
+
+Two consumer-friendly props driven by `deposium_solid`'s
+`SOLID-MCPUI-IMPROVEMENT-AXES-2026-05-03.md` handoff (axes 1 + 4).
+
+### Added — `TableComponentParams.maxHeight` (axe 1)
+
+Opt-out for the inline-mode max-height cap. The library defaults a
+`max-height: 400px` (or 500px when virtualizing) on tables with > 8
+rows so they don't blow out a chat-stream layout. When the consumer's
+wrapping container handles overflow, that cap is undesirable — it
+forces an internal scroll even with plenty of room.
+
+```ts
+TableComponentParams = {
+  // ...existing
+  maxHeight?: 'auto' | number | string
+  //   'auto' → no cap, parent handles overflow
+  //   number → `${n}px`
+  //   string → CSS length as-is
+  //   undefined → existing 400/500px heuristic
+}
+```
+
+Ignored in expanded (fullscreen) mode — the modal uses
+`flex-1 min-h-0` regardless.
+
+Spec dep bump : `@seed-ship/mcp-ui-spec` `^5.0.4` → `^5.0.5`.
+
+### Added — `<ExpandableWrapper toolbarVariant>` (axe 4)
+
+Visibility behavior of the inline expand button :
+
+- `'hover'` (default — backwards compat) : opacity 0, fades to 0.7 on
+  parent group hover. Pre-v6.3.0 behavior.
+- `'always-visible'` : opacity 0.6 permanent, 1 on hover. Use when the
+  inline button needs to be discoverable without hovering — esp. on
+  touch surfaces and consumer themes where the hover-only pattern
+  hides the affordance.
+
+### Non-breaking
+
+Both additions opt-in. All v6.2.0 APIs unchanged. No tests added —
+backwards-compat path covered by existing 583 tests, manual
+verification confirmed.
+
+### Out of scope (for follow-up)
+
+- **Axe 2 — dark-theme native (CSS vars)** : ~120 lines of overrides
+  côté deposium ; needs design pass + brief. Targeted v7.0.0.
+- **Axe 3 — Portal dropdowns** : 3 dropdowns to migrate (chart, table,
+  graph). Targeted v6.4.0.
+
 ## [6.2.0] - 2026-05-03
 
 Cross-renderer fluidity audit — completes the work started in v6.1.0

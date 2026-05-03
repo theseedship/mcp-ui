@@ -891,16 +891,25 @@ function TableRenderer(props: {
             class={`overflow-x-auto ${isExpanded() ? 'flex-1 min-h-0' : ''}`}
             style={
               // v6.1.0 — when expanded, the scroll container fills the
-              // remaining vertical space (flex-1 + min-h-0 above) and
-              // scrolls internally instead of the modal scrolling. Inline
-              // mode keeps the previous max-height heuristic.
-              isExpanded()
-                ? { 'overflow-y': 'auto' }
-                : isVirtualizing()
-                  ? { 'max-height': '500px', 'overflow-y': 'auto' }
-                  : clientVisibleRows().length > 8
-                    ? { 'max-height': '400px', 'overflow-y': 'auto' }
-                  : {}
+              // remaining vertical space and scrolls internally.
+              // v6.3.0 — `params.maxHeight` opt-out (axe 1 deposium handoff)
+              //   - 'auto' → no cap, parent handles overflow
+              //   - number → `${n}px`, string → CSS as-is
+              //   - undefined → existing 400/500px heuristic
+              (() => {
+                if (isExpanded()) return { 'overflow-y': 'auto' }
+                const mh = tableParams.maxHeight
+                if (mh === 'auto') return {}
+                if (mh !== undefined) {
+                  return {
+                    'max-height': typeof mh === 'number' ? `${mh}px` : mh,
+                    'overflow-y': 'auto',
+                  }
+                }
+                if (isVirtualizing()) return { 'max-height': '500px', 'overflow-y': 'auto' }
+                if (clientVisibleRows().length > 8) return { 'max-height': '400px', 'overflow-y': 'auto' }
+                return {}
+              })()
             }
             role="region"
             aria-label={tableParams.title || 'Data table'}

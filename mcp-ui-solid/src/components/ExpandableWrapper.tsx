@@ -24,6 +24,16 @@ export interface ExpandableWrapperProps {
   copyData?: string
   /** Label for copy button tooltip */
   copyLabel?: string
+  /**
+   * Visibility behavior of the inline expand button (v6.3.0 — axe 4 deposium handoff).
+   *   - `'hover'` (default) : opacity 0, fades to 0.7 on parent group hover.
+   *     Backwards-compatible — pre-v6.3.0 behavior.
+   *   - `'always-visible'` : opacity 0.6 permanent, 1 on hover. Use this when
+   *     the inline button needs to be discoverable without hovering — esp.
+   *     on touch surfaces and consumer themes where the hover-only pattern
+   *     hides the affordance.
+   */
+  toolbarVariant?: 'hover' | 'always-visible'
 }
 
 /**
@@ -115,10 +125,14 @@ export const ExpandableWrapper: Component<ExpandableWrapperProps> = (props) => {
         </div>
       </div>
 
-      {/* Expand button — visible on hover */}
+      {/* Expand button — visibility per `toolbarVariant` (default 'hover') */}
       <button
         onClick={handleOpen}
-        class="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-70 hover:!opacity-100 p-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-all shadow-sm"
+        class={`absolute top-2 right-2 z-10 ${
+          props.toolbarVariant === 'always-visible'
+            ? 'opacity-60 hover:opacity-100'
+            : 'opacity-0 group-hover:opacity-70 hover:!opacity-100'
+        } p-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-all shadow-sm`}
         title="Expand"
         aria-label="Expand to fullscreen"
       >

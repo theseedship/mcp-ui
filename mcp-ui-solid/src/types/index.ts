@@ -242,6 +242,17 @@ export interface TableComponentParams {
     id: number,
     mapping: CitationEntry | undefined
   ) => string
+  /**
+   * Opt-out for the inline-mode max-height cap (v6.3.0).
+   *   - `'auto'` → no cap, parent container handles overflow
+   *   - number  → `${n}px`
+   *   - string  → CSS length as-is
+   *   - undefined → existing behavior (400px when > 8 rows, 500px virtualizing)
+   *
+   * Ignored in expanded (fullscreen) mode — the modal uses
+   * `flex-1 min-h-0` regardless.
+   */
+  maxHeight?: 'auto' | number | string
 }
 
 /**
