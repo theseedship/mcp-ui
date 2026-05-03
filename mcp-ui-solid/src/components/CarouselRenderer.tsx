@@ -2,6 +2,7 @@ import { Component, For, createSignal } from 'solid-js'
 import { isServer } from 'solid-js/web'
 import { useRenderContext } from './RenderContext'
 import type { UIComponent } from '../types'
+import { ExpandableWrapper, useExpanded } from './ExpandableWrapper'
 
 export interface CarouselRendererProps {
     items: UIComponent[]
@@ -12,6 +13,7 @@ export const CarouselRenderer: Component<CarouselRendererProps> = (props) => {
     let scrollContainer: HTMLDivElement | undefined
     const [canScrollLeft, setCanScrollLeft] = createSignal(false)
     const [canScrollRight, setCanScrollRight] = createSignal(true)
+    const isExpanded = useExpanded()
 
     // Use render context to avoid circular dependency
     const { renderComponent } = useRenderContext()
@@ -34,7 +36,12 @@ export const CarouselRenderer: Component<CarouselRendererProps> = (props) => {
     }
 
     return (
-        <div class="relative group">
+        <ExpandableWrapper
+            title={'Carousel'}
+            copyData={JSON.stringify(props.items, null, 2)}
+            copyLabel="Copy items (JSON)"
+        >
+        <div class={`relative group ${isExpanded() ? 'flex-1 min-h-0 flex flex-col' : ''}`}>
             {/* Navigation Buttons */}
             <button
                 onClick={() => scroll('left')}
@@ -74,5 +81,6 @@ export const CarouselRenderer: Component<CarouselRendererProps> = (props) => {
                 </For>
             </div>
         </div>
+        </ExpandableWrapper>
     )
 }

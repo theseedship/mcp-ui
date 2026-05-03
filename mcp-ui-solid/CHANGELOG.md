@@ -5,6 +5,71 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.2.0] - 2026-05-03
+
+Cross-renderer fluidity audit — completes the work started in v6.1.0
+across 5 more renderers. Same UX pattern : `<ExpandableWrapper>` for
+fullscreen, copy data via the modal-header copy button, responsive
+expanded mode, format-specific export when relevant.
+
+### Added — fullscreen + copy/export on 4 more renderers
+
+- **`<MapRenderer>`** : wrapped in `<ExpandableWrapper>`. Copy data
+  exports markers as a **GeoJSON FeatureCollection** (`{ type:
+  'FeatureCollection', features: [...] }`). Both `[lat, lng]` tuple and
+  `{lat, lng}` object marker positions are normalized. When toggled
+  to fullscreen, the Leaflet container is given a tick to reflow then
+  `mapInstance.invalidateSize()` is called so tiles re-render at the
+  new size.
+- **`<VideoRenderer>`** : wrapped, copy = video URL. Aspect ratio
+  preserved inline ; when expanded, the container fills (aspect
+  override) so the video occupies the modal.
+- **`<CarouselRenderer>`** : wrapped, copy = items as JSON. When
+  expanded, the carousel fills the modal vertically (items keep their
+  horizontal scroll-snap layout, more visible at fullscreen size).
+- **`<ImageGalleryRenderer>`** : wrapped, copy = newline-separated
+  URL list (with captions when present, tab-separated). When
+  expanded, the gallery grid fills the modal and gets its own
+  internal scroll instead of the modal scrolling.
+
+### Added — `<CodeBlockRenderer>` search + download
+
+- **Search input** in the header — incremental highlight via the same
+  `highlightQuery` helper `<TableRenderer>` uses. Wraps `<mark>`
+  around matches in the already-syntax-highlighted HTML output (no
+  conflict with hljs spans).
+- **Download button** in the header — saves the code as a file with
+  the right extension picked from `params.language` (covers ts/tsx,
+  js/jsx, py, rb, go, rs, java, kt, swift, php, cs, cpp, c, sql,
+  json, yml, toml, sh, html, css, scss, md, xml, graphql ; falls
+  back to `.txt`). Filename uses `params.filename` when present,
+  else `code-<timestamp>.<ext>`.
+- Responsive expanded mode : the code area drops its `maxHeight` and
+  uses `flex-1 min-h-0` so the syntax-highlighted code fills the
+  modal vertically with internal scroll.
+
+### Tests
+
+- `ImageGalleryRenderer.test.tsx` — 2 existing button-count tests
+  updated to filter by class so they ignore the new
+  `<ExpandableWrapper>` expand button (was counting all buttons).
+- All v6.1.0 tests untouched. Total : 583 passed / 1 skipped / 584.
+
+### Non-breaking
+
+- All v6.1.0 APIs unchanged.
+- All renderers accept the same params as before. Apps that didn't
+  use the expand / copy / search / download features see no
+  behavior change.
+
+### What's NOT in this release
+
+- ImageGallery ZIP-all download (would add JSZip dep — heavy).
+- Map PNG snapshot export (would add leaflet-image plugin — heavy).
+- ImageGallery / Map / Video search (low ROI vs other priorities).
+
+These can come in v6.3.0+ if user demand surfaces.
+
 ## [6.1.0] - 2026-05-03
 
 UX consistency / fluidity release. Three small but visible

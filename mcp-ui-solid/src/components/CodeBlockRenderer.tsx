@@ -7,7 +7,18 @@
 import { Component, createEffect, onCleanup, createSignal, Show, For } from 'solid-js'
 import { isServer } from 'solid-js/web'
 import type { UIComponent, CodeComponentParams } from '../types'
-import { ExpandableWrapper } from './ExpandableWrapper'
+import { ExpandableWrapper, useExpanded } from './ExpandableWrapper'
+import { highlightQuery } from './UIResourceRenderer'
+
+/** Map of `params.language` → file extension for the v6.2.0 download button. */
+const LANGUAGE_EXTENSIONS: Record<string, string> = {
+  typescript: 'ts', tsx: 'tsx', javascript: 'js', jsx: 'jsx',
+  python: 'py', ruby: 'rb', go: 'go', rust: 'rs', java: 'java',
+  kotlin: 'kt', swift: 'swift', php: 'php', csharp: 'cs', cpp: 'cpp',
+  c: 'c', sql: 'sql', json: 'json', yaml: 'yml', toml: 'toml',
+  bash: 'sh', shell: 'sh', html: 'html', css: 'css', scss: 'scss',
+  markdown: 'md', xml: 'xml', graphql: 'graphql',
+}
 
 // Lazy load highlight.js
 let hljs: any = null
@@ -34,6 +45,35 @@ export const CodeBlockRenderer: Component<CodeBlockRendererProps> = (props) => {
     const [wordWrap, setWordWrap] = createSignal(false)
 
     const params = () => props.params || (props.component?.params as CodeComponentParams)
+    const isExpanded = useExpanded()
+    const [searchQuery, setSearchQuery] = createSignal('')
+
+    // v6.2.0 — search highlight: re-wraps `<mark>` around matches in the
+    // already-highlighted (hljs) HTML output. `highlightQuery` is the same
+    // helper TableRenderer uses (only wraps text outside of HTML tags so
+    // syntax span colors stay intact).
+    const displayedHTML = () => {
+      const q = searchQuery().trim()
+      return q ? highlightQuery(highlightedCode(), q) : highlightedCode()
+    }
+
+    const handleDownload = () => {
+      const code = params()?.code
+      if (!code) return
+      const lang = (params()?.language || '').toLowerCase()
+      const ext = LANGUAGE_EXTENSIONS[lang] || 'txt'
+      const stem = (params()?.filename || `code-${Date.now()}`).replace(/\.[^.]+$/, '')
+      const filename = stem.endsWith(`.${ext}`) ? stem : `${stem}.${ext}`
+      const blob = new Blob([code], { type: 'text/plain' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    }
 
     // Load highlight.js on mount
     createEffect(async () => {
@@ -152,13 +192,33 @@ export const CodeBlockRenderer: Component<CodeBlockRendererProps> = (props) => {
 
     return (
         <ExpandableWrapper title={params()?.filename || params()?.language || 'Code'} copyData={params()?.code} copyLabel="Copy code">
-        <div class="w-full bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden text-sm flex flex-col">
+        <div class={`w-full bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden text-sm flex flex-col ${isExpanded() ? 'flex-1 min-h-0' : ''}`}>
             {/* Header */}
             <div class="flex items-center justify-between px-4 py-2 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shrink-0">
                 <div class="font-mono text-xs text-gray-600 dark:text-gray-400">
                     {params()?.filename || params()?.language || 'Code'}
                 </div>
                 <div class="flex items-center gap-2">
+                    {/* Search input (v6.2.0) */}
+                    <input
+                        type="text"
+                        value={searchQuery()}
+                        onInput={(e) => setSearchQuery(e.currentTarget.value)}
+                        placeholder="Search…"
+                        class="px-2 py-0.5 text-xs border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 outline-none w-32"
+                        aria-label="Search in code"
+                    />
+                    {/* Download button (v6.2.0) */}
+                    <button
+                        onClick={handleDownload}
+                        class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 focus:outline-none transition-colors"
+                        aria-label="Download code as file"
+                        title="Download code"
+                    >
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                    </button>
                     {/* Word wrap toggle */}
                     <button
                         onClick={() => setWordWrap(!wordWrap())}
@@ -192,8 +252,8 @@ export const CodeBlockRenderer: Component<CodeBlockRendererProps> = (props) => {
 
             {/* Code Area */}
             <div
-                class="relative overflow-auto flex"
-                style={params()?.maxHeight ? { 'max-height': params()?.maxHeight } : {}}
+                class={`relative overflow-auto flex ${isExpanded() ? 'flex-1 min-h-0' : ''}`}
+                style={!isExpanded() && params()?.maxHeight ? { 'max-height': params()?.maxHeight } : {}}
             >
                 {/* Line Numbers */}
                 <Show when={params()?.showLineNumbers !== false}>
@@ -212,7 +272,7 @@ export const CodeBlockRenderer: Component<CodeBlockRendererProps> = (props) => {
                 >
                     <code
                         class={`hljs ${params()?.language ? `language-${params()?.language}` : ''}`}
-                        innerHTML={highlightedCode()}
+                        innerHTML={displayedHTML()}
                     />
                 </pre>
             </div>

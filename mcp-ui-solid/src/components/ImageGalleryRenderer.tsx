@@ -6,6 +6,7 @@
 import { Component, createSignal, For, Show } from 'solid-js'
 import type { UIComponent, ImageGalleryParams } from '../types'
 import { LightboxOverlay } from './LightboxOverlay'
+import { ExpandableWrapper, useExpanded } from './ExpandableWrapper'
 
 export interface ImageGalleryRendererProps {
   /**
@@ -19,8 +20,18 @@ export interface ImageGalleryRendererProps {
   params?: ImageGalleryParams
 }
 
+/** Build a newline-separated list of image URLs (with captions when present)
+ * for the ExpandableWrapper copy button. v6.2.0. */
+function imagesToTextList(p: ImageGalleryParams | undefined): string {
+  if (!p) return ''
+  return (p.images ?? [])
+    .map((img) => (img.caption ? `${img.url}\t${img.caption}` : img.url))
+    .join('\n')
+}
+
 export const ImageGalleryRenderer: Component<ImageGalleryRendererProps> = (props) => {
   const [selectedIndex, setSelectedIndex] = createSignal<number | null>(null)
+  const isExpanded = useExpanded()
 
   const params = () => props.params || (props.component?.params as ImageGalleryParams)
 
@@ -72,16 +83,23 @@ export const ImageGalleryRenderer: Component<ImageGalleryRendererProps> = (props
   }
 
   return (
-    <div class="w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <ExpandableWrapper
+      title={params()?.title || 'Gallery'}
+      copyData={imagesToTextList(params())}
+      copyLabel="Copy image URLs"
+    >
+    <div class={`w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden ${
+      isExpanded() ? 'flex-1 min-h-0 flex flex-col' : ''
+    }`}>
       {/* Title */}
       <Show when={params()?.title}>
-        <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+        <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
           <h3 class="text-sm font-semibold text-gray-900 dark:text-white">{params()!.title}</h3>
         </div>
       </Show>
 
       {/* Gallery Grid */}
-      <div class={`grid ${columnsClass()} ${gapClass()} p-4`}>
+      <div class={`grid ${columnsClass()} ${gapClass()} p-4 ${isExpanded() ? 'flex-1 min-h-0 overflow-auto' : ''}`}>
         <For each={params()?.images}>
           {(image, index) => (
             <button
@@ -142,5 +160,6 @@ export const ImageGalleryRenderer: Component<ImageGalleryRendererProps> = (props
         onNavigate={setSelectedIndex}
       />
     </div>
+    </ExpandableWrapper>
   )
 }

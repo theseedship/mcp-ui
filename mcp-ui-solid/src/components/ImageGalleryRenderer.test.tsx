@@ -120,10 +120,16 @@ describe('ImageGalleryRenderer', () => {
   })
 
   it('renders buttons for images when lightbox is enabled', () => {
-    render(() => <ImageGalleryRenderer params={defaultParams} />)
+    const { container } = render(() => <ImageGalleryRenderer params={defaultParams} />)
 
-    const buttons = screen.getAllByRole('button')
-    // Should have one button per image (for opening lightbox)
+    // Filter to image-trigger buttons (have aria-label "View image …"). The
+    // ExpandableWrapper expand button (added in v6.2.0) is excluded.
+    // Image-trigger buttons have a tailwind `relative overflow-hidden` group
+    // class. The ExpandableWrapper expand button (added v6.2.0) has a
+    // different `absolute top-2 right-2` class — this filter excludes it.
+    const buttons = Array.from(container.querySelectorAll('button')).filter(
+      (b) => b.className.includes('relative overflow-hidden')
+    )
     expect(buttons.length).toBe(3)
   })
 
@@ -133,10 +139,15 @@ describe('ImageGalleryRenderer', () => {
       lightbox: false,
     }
 
-    render(() => <ImageGalleryRenderer params={paramsNoLightbox} />)
+    const { container } = render(() => <ImageGalleryRenderer params={paramsNoLightbox} />)
 
-    // Should still render buttons (for accessibility) but not open lightbox
-    const buttons = screen.getAllByRole('button')
+    // Same filter as above — ignore the ExpandableWrapper expand button (v6.2.0).
+    // Image-trigger buttons have a tailwind `relative overflow-hidden` group
+    // class. The ExpandableWrapper expand button (added v6.2.0) has a
+    // different `absolute top-2 right-2` class — this filter excludes it.
+    const buttons = Array.from(container.querySelectorAll('button')).filter(
+      (b) => b.className.includes('relative overflow-hidden')
+    )
     expect(buttons.length).toBe(3)
   })
 

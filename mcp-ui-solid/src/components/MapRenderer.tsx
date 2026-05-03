@@ -7,6 +7,7 @@
 import { Component, createEffect, onCleanup, createSignal, Show } from 'solid-js'
 import { isServer } from 'solid-js/web'
 import type { UIComponent, MapComponentParams, MapClusterOptions, MapGeoJSONStyle, MapPopupConfig, MapLayer, MapPMTilesConfig } from '../types'
+import { ExpandableWrapper, useExpanded } from './ExpandableWrapper'
 
 // Lazy load leaflet (it doesn't support SSR well)
 let L: any = null
@@ -165,13 +166,54 @@ function addGeoJSONLayer(
 
 // ─── Component ──────────────────────────────────────────────
 
+/**
+ * Build a GeoJSON FeatureCollection from the map's `markers` (and any
+ * inlined GeoJSON layers, when present). Used by the "Copy data" button
+ * shipped via `<ExpandableWrapper>` (v6.2.0). Best-effort — clusters,
+ * tile layers, and choropleth-only data don't get round-tripped.
+ */
+function mapToGeoJSON(p: MapComponentParams | undefined): string {
+    if (!p) return '{"type":"FeatureCollection","features":[]}'
+    const features: any[] = []
+    for (const marker of p.markers ?? []) {
+        const pos: any = marker.position as any
+        // Accept both [lat, lng] tuple and {lat, lng} object shapes (v5.0.2 spec)
+        const lat = Array.isArray(pos) ? pos[0] : pos?.lat
+        const lng = Array.isArray(pos) ? pos[1] : pos?.lng
+        if (typeof lat !== 'number' || typeof lng !== 'number') continue
+        features.push({
+            type: 'Feature',
+            geometry: { type: 'Point', coordinates: [lng, lat] },
+            properties: {
+                ...(marker.tooltip ? { tooltip: marker.tooltip } : {}),
+                ...(marker.popup ? { popup: marker.popup } : {}),
+            },
+        })
+    }
+    return JSON.stringify({ type: 'FeatureCollection', features }, null, 2)
+}
+
 export const MapRenderer: Component<MapRendererProps> = (props) => {
     let mapContainer: HTMLDivElement | undefined
     let mapInstance: any = null
     const [isLeafletLoaded, setIsLeafletLoaded] = createSignal(false)
     const [error, setError] = createSignal<string | null>(null)
+    const isExpanded = useExpanded()
 
     const params = () => props.params || (props.component?.params as MapComponentParams)
+
+    // v6.2.0 — Leaflet has to be told to re-measure when its container
+    // resizes (e.g. transitioning to fullscreen via ExpandableWrapper).
+    // We give the DOM a tick to settle the new dimensions, then ask
+    // Leaflet to reflow tiles.
+    createEffect(() => {
+        const expanded = isExpanded()
+        if (!mapInstance) return
+        // Read the signal so the effect re-runs on toggle ; the value is
+        // observed for its side effects on layout.
+        void expanded
+        setTimeout(() => mapInstance?.invalidateSize?.(), 100)
+    })
 
     // Initialize Map
     createEffect(async () => {
@@ -384,19 +426,31 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
     })
 
     return (
-        <div class={`w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden ${params()?.className || ''}`}>
-            <Show when={error()}>
-                <div class="p-4 text-red-500 bg-red-50 dark:bg-red-900/20 text-center">
-                    {error()}
-                </div>
-            </Show>
-            <Show when={!error()}>
-                <div
-                    ref={mapContainer}
-                    style={{ height: params()?.height || '400px', width: '100%', "z-index": 0 }}
-                    class="relative z-0"
-                />
-            </Show>
-        </div>
+        <ExpandableWrapper
+            title={'Map'}
+            copyData={mapToGeoJSON(params())}
+            copyLabel="Copy markers as GeoJSON"
+        >
+            <div class={`w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden ${params()?.className || ''} ${
+                isExpanded() ? 'flex-1 min-h-0 flex flex-col' : ''
+            }`}>
+                <Show when={error()}>
+                    <div class="p-4 text-red-500 bg-red-50 dark:bg-red-900/20 text-center">
+                        {error()}
+                    </div>
+                </Show>
+                <Show when={!error()}>
+                    <div
+                        ref={mapContainer}
+                        style={
+                            isExpanded()
+                                ? { height: '100%', width: '100%', 'z-index': 0 }
+                                : { height: params()?.height || '400px', width: '100%', 'z-index': 0 }
+                        }
+                        class={`relative z-0 ${isExpanded() ? 'flex-1 min-h-0' : ''}`}
+                    />
+                </Show>
+            </div>
+        </ExpandableWrapper>
     )
 }

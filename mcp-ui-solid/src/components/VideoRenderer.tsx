@@ -7,6 +7,7 @@
 
 import { Component, createMemo, Show } from 'solid-js'
 import type { UIComponent, VideoComponentParams } from '../types'
+import { ExpandableWrapper, useExpanded } from './ExpandableWrapper'
 
 export interface VideoRendererProps {
   /**
@@ -68,6 +69,7 @@ function parseVideoUrl(url: string): VideoInfo {
 
 export const VideoRenderer: Component<VideoRendererProps> = (props) => {
   const params = () => props.params || (props.component?.params as VideoComponentParams)
+  const isExpanded = useExpanded()
 
   const videoInfo = createMemo(() => parseVideoUrl(params()?.url || ''))
 
@@ -126,7 +128,14 @@ export const VideoRenderer: Component<VideoRendererProps> = (props) => {
   }
 
   return (
-    <div class="w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <ExpandableWrapper
+      title={params()?.title || 'Video'}
+      copyData={params()?.url || ''}
+      copyLabel="Copy video URL"
+    >
+    <div class={`w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden ${
+      isExpanded() ? 'flex-1 min-h-0 flex flex-col' : ''
+    }`}>
       {/* Title */}
       <Show when={params()?.title}>
         <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
@@ -134,8 +143,8 @@ export const VideoRenderer: Component<VideoRendererProps> = (props) => {
         </div>
       </Show>
 
-      {/* Video Container */}
-      <div class={`relative ${aspectClass()} bg-black`}>
+      {/* Video Container — when expanded, fill remaining space (override aspect ratio) */}
+      <div class={`relative bg-black ${isExpanded() ? 'flex-1 min-h-0' : aspectClass()}`}>
         <Show
           when={embedUrl()}
           fallback={
@@ -170,11 +179,12 @@ export const VideoRenderer: Component<VideoRendererProps> = (props) => {
 
       {/* Caption */}
       <Show when={params()?.caption}>
-        <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-700">
+        <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
           <p class="text-sm text-gray-600 dark:text-gray-400">{params()!.caption}</p>
         </div>
       </Show>
     </div>
+    </ExpandableWrapper>
   )
 }
 
