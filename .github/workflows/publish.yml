@@ -53,6 +53,24 @@ jobs:
         run: pnpm typecheck
 
       - name: Publish to npm
-        run: pnpm publish:all --no-git-checks
+        # Iterate explicitly and skip already-published versions. Two tag
+        # pushes in quick succession (e.g. spec patch + solid minor on the
+        # same release wave) used to race : the second workflow would hit
+        # E403 on the first package the other had already published, then
+        # bail out before publishing its own. This loop survives that case.
+        run: |
+          set -e
+          for dir in mcp-ui-spec mcp-ui-solid mcp-ui-cli; do
+            pushd "$dir" > /dev/null
+            name=$(node -p "require('./package.json').name")
+            version=$(node -p "require('./package.json').version")
+            if npm view "$name@$version" version > /dev/null 2>&1; then
+              echo "✓ Skip $name@$version (already on npm)"
+            else
+              echo "→ Publishing $name@$version"
+              pnpm publish --access public --no-git-checks
+            fi
+            popd > /dev/null
+          done
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
