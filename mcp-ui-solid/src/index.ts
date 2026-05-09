@@ -105,6 +105,14 @@ export { GraphRenderer, isG6Available, graphToMermaid, graphToJSON } from './com
 export { setDebugMode, isDebugEnabled } from './utils/logger'
 export { markRenderStart, markRenderEnd, PERF_PREFIX } from './utils/perf'
 
+// Identity stability + opt-in observability (v6.5.0 — closes BRIEF-MCPUI-2026-05-10)
+export { getUiResourceStableKey } from './utils/stable-key'
+export { setDuplicateMountReporter } from './utils/duplicate-mount-registry'
+export type {
+  DuplicateMountInfo,
+  DuplicateMountReporter,
+} from './utils/duplicate-mount-registry'
+
 // Telemetry sink (B.5 — v5.6.0)
 export {
   MCPUITelemetryProvider,

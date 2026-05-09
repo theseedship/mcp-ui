@@ -10,6 +10,14 @@ import type { UIComponent, UILayout, RendererError, TableVirtualizeOptions } fro
 import { validateComponent, DEFAULT_RESOURCE_LIMITS, getIframeSandbox } from '../services/validation'
 import { GenerativeUIErrorBoundary } from './GenerativeUIErrorBoundary'
 import { markRenderStart, markRenderEnd, PERF_PREFIX } from '../utils/perf'
+import { isDebugEnabled } from '../utils/logger'
+import { getUiResourceStableKey } from '../utils/stable-key'
+import {
+  _registerMount,
+  _unregisterMount,
+  getDuplicateMountReporter,
+  type DuplicateMountInfo,
+} from '../utils/duplicate-mount-registry'
 import { useTelemetry } from '../context/MCPUITelemetryContext'
 
 /**
@@ -135,6 +143,27 @@ export interface UIResourceRendererProps {
    * graph, map, video, carousel, image-gallery, code.
    */
   toolbarVariant?: 'hover' | 'always-visible'
+
+  /**
+   * Per-instance hook fired when this renderer mounts a content key that
+   * is already mounted elsewhere in the document (v6.5.0 — closes Demande 2
+   * of `BRIEF-MCPUI-2026-05-10.md`).
+   *
+   * The key comes from `getUiResourceStableKey(content)` — `content.id` if
+   * provided, else a content hash. The reporter fires every time the
+   * concurrent mount count crosses 2+ ; consumers decide what to do
+   * (`console.warn`, telemetry beacon, debug overlay, …). The renderer
+   * never deduplicates visually on its own.
+   */
+  onMountDuplicate?: (info: DuplicateMountInfo) => void
+
+  /**
+   * When `true`, log duplicate mounts to `console.warn` from this instance
+   * even when the global `isDebugEnabled()` flag is off. Use to opt-in to
+   * console noise on a single suspect surface without flipping the global
+   * debug switch (v6.5.0).
+   */
+  debugDuplicateMounts?: boolean
 }
 
 /**
@@ -1766,6 +1795,30 @@ export const UIResourceRenderer: Component<UIResourceRendererProps> = (props) =>
 
   const layoutData = layout()
 
+  // ── Identity + duplicate-mount detection (v6.5.0) ─────────────
+  // `isLayoutContent` distinguishes a real composite/layout payload from
+  // the synthetic single-component wrapping above. Drives whether the
+  // outer wrapper carries `data-mcp-ui-layout-id` or `data-mcp-ui-component-id`.
+  const isLayoutContent =
+    !('type' in props.content) || (props.content as { type?: string }).type === 'composite'
+  const outerKey = createMemo(() => getUiResourceStableKey(props.content))
+
+  onMount(() => {
+    const key = outerKey()
+    const info = _registerMount(key)
+    if (info.count > 1) {
+      props.onMountDuplicate?.(info)
+      getDuplicateMountReporter()?.(info)
+      if (isDebugEnabled() || props.debugDuplicateMounts) {
+        // eslint-disable-next-line no-console
+        console.warn('[mcp-ui] duplicate UIResourceRenderer mount', info)
+      }
+    }
+  })
+  onCleanup(() => {
+    _unregisterMount(outerKey())
+  })
+
   // Wrapper function for RenderContext (breaks circular dependency)
   const renderComponent = (component: UIComponent, onError?: (error: RendererError) => void) => (
     <ComponentRenderer component={component} onError={onError} errorMode={props.errorMode} toolbarVariant={props.toolbarVariant} />
@@ -1773,11 +1826,19 @@ export const UIResourceRenderer: Component<UIResourceRendererProps> = (props) =>
 
   return (
     <RenderProvider renderComponent={renderComponent}>
-      <div class={`w-full ${props.class || ''}`}>
+      <div
+        class={`w-full ${props.class || ''}`}
+        {...(isLayoutContent
+          ? { 'data-mcp-ui-layout-id': outerKey() }
+          : { 'data-mcp-ui-component-id': outerKey() })}
+      >
         <div class="grid gap-4" style={gridContainerStyle()}>
           <For each={layoutData.components}>
             {(component) => (
-              <div style={getGridStyleString(component)}>
+              <div
+                style={getGridStyleString(component)}
+                data-mcp-ui-component-id={getUiResourceStableKey(component)}
+              >
                 <ComponentRenderer component={component} onError={props.onError} errorMode={props.errorMode} toolbarVariant={props.toolbarVariant} />
               </div>
             )}

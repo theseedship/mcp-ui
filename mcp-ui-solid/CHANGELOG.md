@@ -5,6 +5,106 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.5.0] - 2026-05-05
+
+Closes Demande 1 + Demande 2 of `deposium_solid`'s
+`BRIEF-MCPUI-2026-05-10.md` (rescue-duplicate root-cause investigation).
+
+### Added — `getUiResourceStableKey(content)` helper
+
+New public function exported from the package root :
+
+```ts
+import { getUiResourceStableKey } from '@seed-ship/mcp-ui-solid'
+
+getUiResourceStableKey({ id: 'dashboard-q3', components: [...] })
+// → 'dashboard-q3'  (passthrough)
+
+getUiResourceStableKey({ type: 'chart', params: { ... } })
+// → 'a4f3b91'  (FNV-1a 32-bit, 7 chars base36)
+```
+
+If `content.id` is a non-empty string, the helper returns it verbatim.
+Otherwise it derives a deterministic hash from the content with `id` and
+`metadata.generatedAt` stripped — stable across renders for the same
+logical payload, sync, no peer dependency.
+
+This is the canonical implementation of the spec's "bare payload"
+fallback policy (cf. `mcp-ui-spec` README → §Runtime Payload Identity).
+Host apps that pre-process payloads before passing them to a renderer
+(e.g. wrapping a bare chart config into a layout) should reuse this
+helper instead of generating `Date.now()` or counter-based ids — those
+break `<For>` reconciliation and double-mount detection.
+
+### Added — opt-in duplicate-mount observability
+
+`<UIResourceRenderer>` now exposes two ways for consumers to detect
+when the same content key is mounted concurrently more than once :
+
+1. **Per-instance callback** :
+
+   ```tsx
+   <UIResourceRenderer
+     content={layout}
+     onMountDuplicate={({ key, count, firstMountedAt }) => {
+       console.warn('[app] duplicate mount', { key, count })
+     }}
+   />
+   ```
+
+2. **Module-level reporter** (app-wide telemetry) :
+
+   ```ts
+   import { setDuplicateMountReporter } from '@seed-ship/mcp-ui-solid'
+
+   setDuplicateMountReporter(({ key, count }) => {
+     telemetry.warn('mcp-ui.duplicate-mount', { key, count })
+   })
+   ```
+
+The new `debugDuplicateMounts` prop forces a `console.warn` from a
+single instance even when the global `setDebugMode()` flag is off —
+useful when you want to diagnose one suspect surface without flipping
+the global switch.
+
+**The renderer never deduplicates visually on its own.** Hiding a 2nd
+mount would mask parent-framework bugs and could remove legitimate
+co-mounts (drawer + main panel showing the same card). Consumers who
+want dedup implement it on top of the reported events.
+
+### Added — `data-mcp-ui-{layout|component}-id` DOM attributes
+
+Every `<UIResourceRenderer>` wrapper now carries a stable identity
+attribute :
+
+- The outer wrapper carries `data-mcp-ui-layout-id` when `content` is
+  a `UILayout` (composite), or `data-mcp-ui-component-id` when `content`
+  is a single `UIComponent`.
+- Each per-component wrapper inside a layout carries
+  `data-mcp-ui-component-id`.
+
+This enables CSS targeting, debug overlay tooling, and DOM-based
+double-mount detection without a wrapper :
+
+```js
+document.querySelectorAll('[data-mcp-ui-layout-id="dashboard-q3"]').length
+// → 2 (whoops — somewhere in the parent framework, this is mounted twice)
+```
+
+### Internal — no `Date.now()` in identity-bearing code paths
+
+Audit confirmed : every `Date.now()` call inside `mcp-ui-solid` is for
+telemetry timestamps (`ts: Date.now()`), cache TTLs, or download-filename
+fallbacks — none feed into a rendered DOM `id` or a key passed to
+`<For>`. The new `getUiResourceStableKey` helper preserves this
+invariant by hashing content rather than reading the clock.
+
+### Spec companion — `mcp-ui-spec@5.0.6`
+
+Documentation-only patch bump : the spec README now formalizes the
+runtime-payload identity contract (§Runtime Payload Identity) — `id`
+obligation, fallback policy, and pointer to `getUiResourceStableKey`.
+
 ## [6.4.0] - 2026-05-03
 
 Closes axe 3 of `deposium_solid`'s
