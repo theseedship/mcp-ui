@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.0.6] - 2026-05-05
+
+Documentation-only patch — no schema changes. Closes Demande 1.1 + 1.2 of
+deposium's `BRIEF-MCPUI-2026-05-10.md`.
+
+### Documented — Runtime Payload Identity contract
+
+The README now formalizes the identity contract for runtime `UILayout` /
+`UIComponent` payloads (distinct from the registry-side `Component`
+definitions documented previously) :
+
+- **`id` is obligatoire** on every well-formed `UILayout` and `UIComponent`,
+  and MUST be stable across renders for the same logical content. Producers
+  that emit `wrap-${Date.now()}` or `Math.random()` ids are non-conformant.
+- **Bare-payload fallback** : renderers MUST gracefully accept payloads
+  without `id` (e.g. a producer emitting a chart config directly) and
+  MUST derive a stable key from the content — not from a counter or
+  timestamp. The canonical implementation is `getUiResourceStableKey()`,
+  shipped in `@seed-ship/mcp-ui-solid@6.5.0`.
+
+This codifies behavior that was previously implicit, so host apps and
+producers can rely on it without reading renderer source.
+
 ## [5.0.5] - 2026-05-03
 
 ### Added — `TableComponentParamsSchema.maxHeight`

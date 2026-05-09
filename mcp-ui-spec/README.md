@@ -266,6 +266,81 @@ Individual components support semantic versioning:
 }
 ```
 
+## Runtime Payload Identity
+
+> **Note** — this section concerns *runtime* payloads (`UILayout` / `UIComponent`
+> objects emitted by an LLM and passed to a renderer), distinct from the
+> `Component` *registry* definitions documented above. The runtime types live
+> in [`@seed-ship/mcp-ui-solid`](../mcp-ui-solid) but the identity contract
+> below is part of the spec.
+
+### `id` is obligatoire on well-formed payloads
+
+Every `UILayout` and every `UIComponent` emitted by a producer **MUST** carry
+a non-empty string `id`. The id is used by renderers as the `<For>` key, by
+host apps for telemetry correlation, and by debug tooling to detect
+double-mounts of the same content.
+
+```ts
+// ✅ Well-formed
+const layout: UILayout = {
+  id: 'dashboard-2024-Q3',
+  components: [
+    { id: 'metric-revenue', type: 'metric', position: {...}, params: {...} },
+    { id: 'chart-trend',    type: 'chart',  position: {...}, params: {...} },
+  ],
+  grid: { columns: 12, gap: '1rem' },
+}
+```
+
+The id should be **stable across renders for the same logical content** —
+NOT a `Date.now()`-derived counter, NOT a `Math.random()` token, NOT a UUID
+re-generated per render. A producer that cannot provide a stable id should
+either derive one from the content hash or omit the field entirely (see
+fallback policy below).
+
+### Fallback policy for "bare" payloads
+
+Renderers MUST gracefully accept payloads without an `id` (e.g. a producer
+emitting a chart config directly, or a host app pre-shaping a third-party
+JSON response). When `id` is missing or empty, the renderer **MUST** derive
+a stable key from the content itself — typically a hash of the normalized
+payload — and **MUST NOT** generate a timestamp- or counter-based identifier
+that would change on every render.
+
+`@seed-ship/mcp-ui-solid` exports the canonical implementation as
+`getUiResourceStableKey(content): string` :
+
+- If `content.id` is a non-empty string → returned verbatim
+- Otherwise → FNV-1a hash of the content with `id` and `metadata.generatedAt`
+  stripped (the timestamp is excluded so the key is stable across re-emissions
+  of the same logical layout)
+
+Host apps that pre-process payloads before passing them to a renderer (e.g.
+to wrap a bare chart config into a layout) should reuse this helper so the
+keys they produce match what the renderer would compute internally.
+
+```ts
+import { getUiResourceStableKey } from '@seed-ship/mcp-ui-solid'
+
+const key = getUiResourceStableKey(barePayload)
+// → 'dashboard-2024-Q3' (passthrough)  or  'a4f3b91' (FNV-1a, 7 chars base36)
+```
+
+### Why this matters
+
+Without a stable identity contract :
+
+- `<For>` reconciliation re-mounts components on every render, blowing away
+  internal state (chart instances, expanded rows, scroll position).
+- Double-mount detection is impossible — the same logical content gets a
+  new key every render and any registry-based guard sees only "new" entries.
+- Cross-instance telemetry can't correlate events to a specific layout.
+
+These are framework-parent concerns that cannot be papered over by the
+renderer alone — the spec calls them out so producers and host apps wire
+identity correctly upstream.
+
 ## Related Packages
 
 | Package | Description |
