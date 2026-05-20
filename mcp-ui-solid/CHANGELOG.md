@@ -34,13 +34,14 @@ in the streaming path are deleted.
 
 ### Changed — `size-limit` budgets
 
-The "Streaming renderer" `size-limit` budget was raised from 30 KB to 780 KB.
+The "Streaming renderer" `size-limit` budget was raised from 30 KB to 1 MB.
 Post-D3 that entry's reachable graph equals the full renderer set, and
 `size-limit` measures the pre-built `dist/` including lazy `import()` chunks
 (leaflet, `@antv/g6`, chart.js) that are fetched on demand, not at import.
-The figure is a worst-case total, not eager load cost. `size-limit` is
-informational only and does not gate CI. The "Hooks only" and "Full bundle"
-entries are unchanged — their pre-existing overages predate this sprint.
+The figure is a worst-case total, not eager load cost — the budget is
+generous headroom, since `size-limit` here is a regression guardrail and
+does not gate CI. The "Hooks only" and "Full bundle" entries are unchanged —
+their pre-existing overages predate this sprint.
 
 ## [6.5.0] - 2026-05-05
 
