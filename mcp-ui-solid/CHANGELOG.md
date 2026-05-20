@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+Sprint OpenData / macros — cf. `docs/briefs/ROADMAP-opendata-macro-mcpui.md`.
+Accumulating toward v6.6.0.
+
+### Changed — `StreamingUIRenderer` renders with full fidelity (Gap 1 / D3)
+
+`StreamingUIRenderer` previously rendered each streamed component through an
+inline simplified renderer (`StreamingComponentRenderer`) that only showed a
+type label, the title, and — for metrics — the value. A streamed `table` /
+`chart` / `map` did NOT render the real component.
+
+Each streamed `UIComponent` is now delegated to the real
+`<UIResourceRenderer>`. Streaming and static paths use the literal same
+renderer, so they cannot drift. Validation, telemetry, the error boundary
+and `errorMode` all come from `<UIResourceRenderer>` — the duplicated copies
+in the streaming path are deleted.
+
+- New `toolbarVariant` prop on `<StreamingUIRenderer>`, forwarded to streamed
+  components (parity with the static `<UIResourceRenderer toolbarVariant>`).
+- Delegation is a one-way value import — `UIResourceRenderer` never imports
+  `StreamingUIRenderer`, no cycle.
+- Progress bar, skeletons, arrival animation and metadata display unchanged.
+- The streamed component's grid `position` is normalized to full-width
+  before delegation: `StreamingUIRenderer` owns the 12-column layout,
+  `<UIResourceRenderer>` only renders the component.
+
+### Changed — `size-limit` budgets
+
+The "Streaming renderer" `size-limit` budget was raised from 30 KB to 780 KB.
+Post-D3 that entry's reachable graph equals the full renderer set, and
+`size-limit` measures the pre-built `dist/` including lazy `import()` chunks
+(leaflet, `@antv/g6`, chart.js) that are fetched on demand, not at import.
+The figure is a worst-case total, not eager load cost. `size-limit` is
+informational only and does not gate CI. The "Hooks only" and "Full bundle"
+entries are unchanged — their pre-existing overages predate this sprint.
+
 ## [6.5.0] - 2026-05-05
 
 Closes Demande 1 + Demande 2 of `deposium_solid`'s

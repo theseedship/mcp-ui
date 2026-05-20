@@ -1,8 +1,22 @@
 /**
- * StreamingUIRenderer Component - Phase 2
+ * StreamingUIRenderer Component
  *
- * Renders streaming dashboard components with skeleton states and progress indicators.
- * Uses the useStreamingUI hook for SSE connection and state management.
+ * Renders streaming dashboard components with skeleton states and progress
+ * indicators. Uses the `useStreamingUI` hook for SSE connection and state.
+ *
+ * ## Rendering parity (v6.6.0 — closes Gap 1 of ROADMAP-opendata-macro-mcpui)
+ *
+ * Each component received over SSE is delegated to the real
+ * `<UIResourceRenderer>`. Streamed `table` / `chart` / `map` / `action-group`
+ * therefore render with the SAME fidelity as a static layout — no more
+ * simplified "type + title" placeholder. Validation, telemetry, the error
+ * boundary and `errorMode` all come from `<UIResourceRenderer>`, so the two
+ * paths cannot drift.
+ *
+ * Delegation is a one-way value import (`UIResourceRenderer` never imports
+ * this file — no cycle). The streamed component's `position` is normalized
+ * to full-width before delegation : this component owns the 12-column grid,
+ * `<UIResourceRenderer>` only owns the component's own rendering.
  *
  * Features:
  * - Skeleton loading states while components stream
@@ -21,14 +35,10 @@
  * ```
  */
 
-import { Show, For, createSignal, onMount, onCleanup } from 'solid-js'
+import { Show, For, createSignal, onMount } from 'solid-js'
 import { useStreamingUI, type UseStreamingUIOptions } from '../hooks/useStreamingUI'
 import type { UIComponent, RendererError } from '../types'
-import { validateComponent } from '../services/validation'
-import { GenerativeUIErrorBoundary } from './GenerativeUIErrorBoundary'
-import { markRenderStart, markRenderEnd, PERF_PREFIX } from '../utils/perf'
-import { useTelemetry } from '../context/MCPUITelemetryContext'
-import type { ValidationErrorMode } from './UIResourceRenderer'
+import { UIResourceRenderer, type ValidationErrorMode } from './UIResourceRenderer'
 
 export interface StreamingUIRendererProps extends UseStreamingUIOptions {
   class?: string
@@ -38,164 +48,27 @@ export interface StreamingUIRendererProps extends UseStreamingUIOptions {
   /**
    * How to react when a streamed component fails `validateComponent()`
    * (v5.4.0). Defaults to `'block'` (full red error card — pre-v5.4.0
-   * behavior). See `ValidationErrorMode` in `UIResourceRenderer`.
+   * behavior). Forwarded to the delegated `<UIResourceRenderer>`.
    */
   errorMode?: ValidationErrorMode
+  /**
+   * Visibility behavior of the inline expand button on streamed components
+   * wrapped in `<ExpandableWrapper>` (v6.6.0 — parity with the static
+   * `<UIResourceRenderer toolbarVariant>` prop). Forwarded as-is.
+   */
+  toolbarVariant?: 'hover' | 'always-visible'
 }
 
 /**
- * Component Renderer - Inline lightweight version
- * (Full implementation in UIResourceRenderer)
+ * The 12-column placement of a streamed component is owned by this
+ * component's outer grid (the cell `<div>` below). Delegating the component
+ * verbatim to `<UIResourceRenderer>` would re-apply that placement inside a
+ * fresh nested 12-column grid and visually misplace it. We hand
+ * `<UIResourceRenderer>` a full-width copy so it only renders the component,
+ * not a competing layout.
  */
-function StreamingComponentRenderer(props: {
-  component: UIComponent
-  onError?: (error: RendererError) => void
-  errorMode?: ValidationErrorMode
-}) {
-  // Performance marks (v5.4.0) — see utils/perf.ts
-  markRenderStart(props.component.id)
-
-  // Telemetry sink (B.5 — v5.6.0). Same wiring as ComponentRenderer in
-  // UIResourceRenderer.tsx — null when no Provider, no-op everywhere then.
-  const telemetry = useTelemetry()
-
-  onMount(() => {
-    markRenderEnd(props.component.id)
-    if (telemetry) {
-      const ts = Date.now()
-      telemetry.dispatch({
-        type: 'component:mounted',
-        id: props.component.id,
-        componentType: props.component.type,
-        ts,
-      })
-      if (typeof performance !== 'undefined' && typeof performance.getEntriesByName === 'function') {
-        const entries = performance.getEntriesByName(`${PERF_PREFIX}${props.component.id}:render`, 'measure')
-        const last = entries[entries.length - 1]
-        if (last) {
-          telemetry.dispatch({
-            type: 'component:rendered',
-            id: props.component.id,
-            componentType: props.component.type,
-            durationMs: last.duration,
-            ts,
-          })
-        }
-      }
-    }
-  })
-
-  onCleanup(() => {
-    if (telemetry) {
-      telemetry.dispatch({
-        type: 'component:unmounted',
-        id: props.component.id,
-        componentType: props.component.type,
-        ts: Date.now(),
-      })
-    }
-  })
-
-  // Validate component before rendering
-  const validation = validateComponent(props.component)
-  if (!validation.valid) {
-    props.onError?.({
-      type: 'validation',
-      message: 'Component validation failed',
-      componentId: props.component.id,
-      details: validation.errors,
-    })
-
-    if (telemetry) {
-      telemetry.dispatch({
-        type: 'validation:failed',
-        id: props.component.id,
-        componentType: props.component.type,
-        errorCount: validation.errors?.length ?? 0,
-        firstErrorCode: validation.errors?.[0]?.code ?? null,
-        ts: Date.now(),
-      })
-    }
-
-    const mode: ValidationErrorMode = props.errorMode ?? 'block'
-    const firstError = validation.errors?.[0]?.message || 'Unknown validation error'
-
-    if (mode === 'silent') {
-      return null
-    }
-
-    if (mode === 'inline-warn') {
-      return (
-        <div
-          class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 text-xs text-yellow-800 dark:text-yellow-200"
-          role="alert"
-          aria-label="Component validation warning"
-          title={firstError}
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="w-3.5 h-3.5"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-            <line x1="12" y1="9" x2="12" y2="13" />
-            <line x1="12" y1="17" x2="12.01" y2="17" />
-          </svg>
-          <span>Invalid {props.component.type}</span>
-        </div>
-      )
-    }
-
-    return (
-      <div class="w-full bg-error-subtle border border-border-error rounded-lg p-4">
-        <p class="text-sm font-medium text-error-primary">Validation Error</p>
-        <p class="text-xs text-text-secondary mt-1">
-          {firstError}
-        </p>
-      </div>
-    )
-  }
-
-  // Simplified renderer - just show component type and title
-  // Full rendering logic in UIResourceRenderer
-  const params = props.component.params as any
-
-  return (
-    <GenerativeUIErrorBoundary
-      componentId={props.component.id}
-      componentType={props.component.type}
-      onError={props.onError}
-      allowRetry={false}
-    >
-      <div class="w-full bg-surface-secondary border border-border-subtle rounded-lg p-4">
-        <div class="flex items-center gap-2 mb-2">
-          <span class="text-xs font-medium text-text-tertiary uppercase">
-            {props.component.type}
-          </span>
-        </div>
-        <Show when={params?.title}>
-          <h3 class="text-sm font-semibold text-text-primary">{params.title}</h3>
-        </Show>
-        <Show when={props.component.type === 'metric' && params?.value}>
-          <div class="mt-2">
-            <p class="text-2xl font-semibold text-text-primary">{params.value}</p>
-            <Show when={params.unit}>
-              <span class="text-sm text-text-secondary">{params.unit}</span>
-            </Show>
-          </div>
-        </Show>
-        <div class="mt-3 text-xs text-text-tertiary">
-          Component ID: {props.component.id.slice(0, 8)}...
-        </div>
-      </div>
-    </GenerativeUIErrorBoundary>
-  )
+function asFullWidth(component: UIComponent): UIComponent {
+  return { ...component, position: { colStart: 1, colSpan: 12 } }
 }
 
 export function StreamingUIRenderer(props: StreamingUIRendererProps) {
@@ -300,7 +173,7 @@ export function StreamingUIRenderer(props: StreamingUIRendererProps) {
 
       {/* Components Grid */}
       <div class="grid grid-cols-12 gap-4">
-        {/* Render received components */}
+        {/* Render received components — delegated to the real UIResourceRenderer */}
         <For each={components()}>
           {(component) => {
             // Trigger animation on mount (SSR-safe, no 'use' directive needed)
@@ -314,10 +187,11 @@ export function StreamingUIRenderer(props: StreamingUIRendererProps) {
                 `}
                 style={`grid-column-start: ${component.position.colStart}; grid-column-end: ${component.position.colStart + component.position.colSpan}`}
               >
-                <StreamingComponentRenderer
-                  component={component}
-                  onError={props.onRenderError}
+                <UIResourceRenderer
+                  content={asFullWidth(component)}
                   errorMode={props.errorMode}
+                  onError={props.onRenderError}
+                  toolbarVariant={props.toolbarVariant}
                 />
               </div>
             )
