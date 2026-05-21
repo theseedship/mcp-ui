@@ -40,6 +40,21 @@ export { ComponentToolbar } from './components/ComponentToolbar'
 export { FeedbackInline } from './components/FeedbackInline'
 export type { FeedbackInlineProps, FeedbackInlineContext } from './components/FeedbackInline'
 
+// Presentation feedback (v6.6.0 — R3 ; separate axis from FeedbackInline)
+export {
+  PresentationFeedback,
+  DEFAULT_PRESENTATION_FEEDBACK_LABELS,
+} from './components/PresentationFeedback'
+export type {
+  PresentationFeedbackProps,
+  PresentationFeedbackLabels,
+} from './components/PresentationFeedback'
+export type {
+  ConnectorRenderFeedback,
+  ConnectorRenderProblem,
+  ConnectorPreferredLayout,
+} from '@seed-ship/mcp-ui-spec'
+
 // Chat Bus (v2.4.0 — @experimental)
 export { ChatBusProvider, useChatBus } from './hooks/useChatBus'
 export { ChatPrompt } from './components/ChatPrompt'

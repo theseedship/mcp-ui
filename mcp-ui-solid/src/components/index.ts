@@ -10,6 +10,16 @@ export type { UIResourceRendererProps } from './UIResourceRenderer'
 export { StreamingUIRenderer } from './StreamingUIRenderer'
 export type { StreamingUIRendererProps } from './StreamingUIRenderer'
 
+// Presentation feedback (v6.6.0 — R3, distinct from FeedbackInline)
+export {
+  PresentationFeedback,
+  DEFAULT_PRESENTATION_FEEDBACK_LABELS,
+} from './PresentationFeedback'
+export type {
+  PresentationFeedbackProps,
+  PresentationFeedbackLabels,
+} from './PresentationFeedback'
+
 export { GenerativeUIErrorBoundary } from './GenerativeUIErrorBoundary'
 export type { GenerativeUIErrorBoundaryProps } from './GenerativeUIErrorBoundary'
 

@@ -10,6 +10,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Sprint OpenData / macros — cf. `docs/briefs/ROADMAP-opendata-macro-mcpui.md`.
 Accumulating toward v6.6.0.
 
+### Added — `PresentationFeedback` component (R3 / D9 / Phase 4)
+
+A new opt-in feedback widget — **distinct** from `FeedbackInline` :
+
+- `FeedbackInline` — was the *answer* good? (response quality)
+- `PresentationFeedback` — was the answer *shown well*? (layout / readability)
+
+They are separate components, separate exports, separate payloads — the
+two axes never collapse (cf. R3). `PresentationFeedback` collects a
+`verdict` (`readable` / `not_readable`) and, when not readable, problem
+tags + an optional preferred layout + a free-text comment, then emits a
+`ConnectorRenderFeedback` payload via `onSubmit`.
+
+- Stateless : the host persists the feedback and owns any re-render
+  (cf. D1 — adapter pure + host state). The component never mutates the
+  rendered result.
+- Best-effort : a rejected `onSubmit` promise is swallowed, the UI flips.
+- Localizable : all labels ship in English, overridable via the `labels`
+  prop (`DEFAULT_PRESENTATION_FEEDBACK_LABELS` exported).
+- `ConnectorRenderFeedback` / `ConnectorRenderProblem` /
+  `ConnectorPreferredLayout` types are re-exported from the package root
+  for convenience (defined in `@seed-ship/mcp-ui-spec`).
+
 ### Added — `MCPUIStringsProvider` : i18n for the library's chrome (D2 / R4)
 
 MCP-UI hardcoded a handful of its own UI strings (the expand-button
