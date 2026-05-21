@@ -10,6 +10,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Sprint OpenData / macros — cf. `docs/briefs/ROADMAP-opendata-macro-mcpui.md`.
 Accumulating toward v6.6.0.
 
+### Added — opt-in connector adapters (`@seed-ship/mcp-ui-solid/adapters`) (D5 / D6)
+
+New dedicated subpath export — **never** imported by the core renderer
+path, so consumers that don't emit connector results pay nothing for it:
+
+```ts
+import { connectorResultToUILayout } from '@seed-ship/mcp-ui-solid/adapters'
+
+const layout = connectorResultToUILayout(connectorResult)
+```
+
+- `connectorResultToUILayout(result)` — assembles a `ConnectorDynamicResultV1`
+  (`primary` + `supplemental[]` + `actions`) into one `UILayout`. **Pure**
+  (D5) — deterministic, no side effects, safe to re-run after feedback.
+- `connectorActionsToActionGroup(actions)` — wraps connector actions into
+  an `action-group` `UIComponent`.
+- **Unknown `schemaVersion` never throws** (R2) : a usable-but-unversioned
+  envelope still renders, prefixed with a visible warning notice ; a truly
+  unreadable payload becomes an explicit degraded `UILayout` (a `text`
+  notice with id `connector-degraded`). Never a silent disappearance.
+
+**Scope note** : this ships the *connector* adapters. The *macro* adapters
+(`macroRunToScratchpadState`, `macroInterrogationToChatPromptConfig`) are
+deferred — they need a macro-run contract that the roadmap leaves to
+Phase 2.
+
 ### Added — `PresentationFeedback` component (R3 / D9 / Phase 4)
 
 A new opt-in feedback widget — **distinct** from `FeedbackInline` :

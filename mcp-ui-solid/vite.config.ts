@@ -22,6 +22,7 @@ export default defineConfig({
         types: resolve(__dirname, 'src/types/index.ts'),
         validation: resolve(__dirname, 'src/validation.ts'),
         'types-export': resolve(__dirname, 'src/types-export.ts'),
+        adapters: resolve(__dirname, 'src/adapters/index.ts'),
         'plugins/duckdb': resolve(__dirname, 'src/plugins/duckdb.ts'),
       },
       name: 'McpUiSolid',
