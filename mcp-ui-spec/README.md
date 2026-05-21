@@ -341,6 +341,54 @@ These are framework-parent concerns that cannot be papered over by the
 renderer alone — the spec calls them out so producers and host apps wire
 identity correctly upstream.
 
+## Connector Contracts (v5.1.0)
+
+Two cross-repo JSON contracts for connector-driven UI. They live in the
+spec — not in the renderer — because they cross independently-deployed
+boundaries (an MCP server / connector emits them, `mcp-ui-solid` consumes
+them) and must version explicitly.
+
+### `ConnectorDynamicResultV1`
+
+What a connector emits to describe a rich, ready-to-render result:
+
+```typescript
+import { ConnectorDynamicResultV1Schema } from '@seed-ship/mcp-ui-spec'
+
+const result = ConnectorDynamicResultV1Schema.parse(payload)
+```
+
+- `schemaVersion` — **required**, the namespaced literal
+  `'connector-dynamic-result/v1'` (exported as `CONNECTOR_DYNAMIC_RESULT_V1`).
+  A consumer that does not recognize the version must degrade gracefully,
+  never throw on the render path.
+- `primary` / `supplemental` — `UIComponent` / `UILayout` payloads,
+  validated by the renderer (the spec validates the envelope).
+- `queryHash` — optional in the payload, **required once presentation
+  feedback is persisted** against the result. Recommended derivation:
+  `hash(connectorId + toolName + normalizedIntent)`, not the raw query.
+- `actions` (reuses the `action-group` action shape), `followups`,
+  `renderHints` (`preferredLayout` / `domain` / `confidence`).
+
+Reference payloads live in [`examples/connector/`](./examples/connector/) —
+real-estate, DPE, pollution, clinical-trials, and an empty/error state.
+
+The renderer-side assembler is `connectorResultToUILayout()` from
+`@seed-ship/mcp-ui-solid/adapters`.
+
+### `ConnectorRenderFeedback`
+
+What `<PresentationFeedback>` (in `mcp-ui-solid`) emits when a user rates
+how a result was *presented* — a separate axis from response-quality
+feedback:
+
+- `verdict` — `'readable' | 'not_readable'`, the overall judgement.
+- `problems[]` — the 7 precise problem tags (`too_raw`, `wrong_columns`, …)
+  refining a `not_readable` verdict.
+- `preferredLayout`, `missingFields`, `wrongUnit`, `comment`, … — optional
+  refinements. The host persists this and may re-run its adapter with the
+  corrected layout.
+
 ## Related Packages
 
 | Package | Description |
@@ -352,7 +400,7 @@ identity correctly upstream.
 
 This package follows [Semantic Versioning](https://semver.org/). See [CHANGELOG.md](./CHANGELOG.md) for release notes.
 
-**Current Version:** 1.1.0
+**Current Version:** 5.1.0
 
 ## License
 

@@ -5,6 +5,43 @@ SolidJS components + chat toolkit for MCP-generated UI. Part of the [MCP UI ecos
 [![npm version](https://img.shields.io/npm/v/@seed-ship/mcp-ui-solid.svg)](https://www.npmjs.com/package/@seed-ship/mcp-ui-solid)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+## What's New in v6.6.0
+
+Sprint OpenData / macros — `docs/briefs/ROADMAP-opendata-macro-mcpui.md`.
+
+- **`StreamingUIRenderer` renders with full fidelity** — each streamed
+  component is now delegated to the real `<UIResourceRenderer>`. A streamed
+  `table` / `chart` / `map` renders exactly like a static one (no more
+  simplified type-label placeholder). New `toolbarVariant` prop forwarded
+  to streamed components.
+- **`<MCPUIStringsProvider>`** — opt-in i18n for the library's own *chrome*
+  strings (expand tooltip, feedback acks…). English defaults; override
+  partially. Payload *content* is untouched — it stays the producer's job.
+
+  ```tsx
+  import { MCPUIStringsProvider } from '@seed-ship/mcp-ui-solid'
+  <MCPUIStringsProvider strings={{ expand: 'Agrandir' }}><App /></MCPUIStringsProvider>
+  ```
+- **`<PresentationFeedback>`** — a feedback widget for how a result was
+  *presented* (layout / readability), distinct from `FeedbackInline`
+  (response quality). Emits a `ConnectorRenderFeedback` payload; stateless
+  (the host persists + re-renders).
+- **`@seed-ship/mcp-ui-solid/adapters`** — new opt-in subpath.
+  `connectorResultToUILayout()` assembles a `ConnectorDynamicResultV1` into
+  a `UILayout`; `connectorActionsToActionGroup()` wraps connector actions.
+  Pure functions; an unknown `schemaVersion` degrades gracefully, never
+  throws.
+
+  ```ts
+  import { connectorResultToUILayout } from '@seed-ship/mcp-ui-solid/adapters'
+  const layout = connectorResultToUILayout(connectorResult)
+  ```
+
+> **Note** — `FeedbackInline`'s acknowledgement defaults changed from
+> French to English (`'Thanks!'`, `"Noted — we'll improve"`). Wrap your app
+> in `<MCPUIStringsProvider>` with French strings, or pass `positiveAck` /
+> `negativeAck`, to restore French.
+
 ## What's New in v5.2.0 (`mcp-ui-solid` only)
 
 - **`createChatPromptController()`** primitive — closes the v5.1.0 boilerplate. Owns resolver closure + `AbortSignal` wiring + re-entrance. Consumers write `bus.commands.handle('showChatPrompt', ctrl.handle)` + `<Show when={ctrl.activePrompt()}>{cfg => <ChatPrompt ... />}</Show>`. `PromptReplacedError` exported for `instanceof` checks.

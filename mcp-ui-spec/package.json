@@ -1,6 +1,6 @@
 {
   "name": "@seed-ship/mcp-ui-spec",
-  "version": "5.0.6",
+  "version": "5.1.0",
   "description": "Component registry specification and JSON Schemas for MCP UI",
   "type": "module",
   "main": "./dist/index.cjs",

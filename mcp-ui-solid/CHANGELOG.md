@@ -5,10 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [6.6.0] - 2026-05-21
 
-Sprint OpenData / macros — cf. `docs/briefs/ROADMAP-opendata-macro-mcpui.md`.
-Accumulating toward v6.6.0.
+Sprint OpenData / macros — cf. `docs/briefs/ROADMAP-opendata-macro-mcpui.md`
+(decisions D1-D10 + R1-R4). Ships steps 1-5 of the execution order :
+`StreamingUIRenderer` parity, `MCPUIStringsProvider`, the
+`ConnectorDynamicResultV1` contract consumption, `PresentationFeedback`,
+and the opt-in connector adapters. The macro adapters are deferred to a
+later phase (they need a macro-run contract). Pairs with
+`@seed-ship/mcp-ui-spec@5.1.0`.
 
 ### Added — opt-in connector adapters (`@seed-ship/mcp-ui-solid/adapters`) (D5 / D6)
 

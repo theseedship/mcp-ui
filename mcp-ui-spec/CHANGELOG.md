@@ -5,11 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [5.1.0] - 2026-05-21
 
 Sprint OpenData / macros — cf.
-`mcp-ui-solid/docs/briefs/ROADMAP-opendata-macro-mcpui.md`.
-Accumulating toward 5.1.0.
+`mcp-ui-solid/docs/briefs/ROADMAP-opendata-macro-mcpui.md` (R1 + R3). Adds
+the cross-repo connector contracts. Pairs with
+`@seed-ship/mcp-ui-solid@6.6.0`.
 
 ### Added — `ConnectorDynamicResultV1` contract (R1)
 
