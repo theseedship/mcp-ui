@@ -10,6 +10,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Sprint OpenData / macros — cf. `docs/briefs/ROADMAP-opendata-macro-mcpui.md`.
 Accumulating toward v6.6.0.
 
+### Added — `MCPUIStringsProvider` : i18n for the library's chrome (D2 / R4)
+
+MCP-UI hardcoded a handful of its own UI strings (the expand-button
+tooltip, the feedback acknowledgements…) — and they were an inconsistent
+FR/EN mix. New opt-in context to localize them :
+
+```tsx
+import { MCPUIStringsProvider } from '@seed-ship/mcp-ui-solid'
+
+<MCPUIStringsProvider strings={{ expand: 'Agrandir', feedbackUseful: 'Utile' }}>
+  <App />
+</MCPUIStringsProvider>
+```
+
+- `MCPUIStrings` — flat string map of the library's own "chrome" strings.
+  **Content** (table headers, chart titles, action labels) is NOT covered:
+  it comes from the payload, already localized by the producer.
+- `DEFAULT_MCPUI_STRINGS` — English defaults. A published library ships no
+  hardcoded non-English chrome.
+- `<MCPUIStringsProvider strings={...}>` — partial override; unset keys fall
+  back to the EN defaults.
+- `useMCPUIStrings()` — reads the active strings; returns the EN defaults
+  when no provider is mounted (every renderer works standalone).
+
+Wired consumers : `FeedbackInline` (button tooltips + acks),
+`ExpandableWrapper` (expand / copy / close chrome), `StreamingUIRenderer`
+(retry button). Component props that already carry a label
+(`FeedbackInline.positiveAck`, `ExpandableWrapper.copyLabel`) keep priority
+over the provider.
+
+**Behavior change** : `FeedbackInline`'s ack defaults were French
+(`'Merci !'`, `"Noté, on s'améliore"`) — they are now English
+(`'Thanks!'`, `"Noted — we'll improve"`). Consumers relying on the FR
+defaults pass a `<MCPUIStringsProvider>` with FR strings, or the
+`positiveAck` / `negativeAck` props. `ExpandableWrapper`'s default heading
+casing was also unified to `'Expanded view'` (it was inconsistently
+`'Expanded View'` for the heading vs `'Expanded view'` for the aria-label).
+
 ### Changed — `StreamingUIRenderer` renders with full fidelity (Gap 1 / D3)
 
 `StreamingUIRenderer` previously rendered each streamed component through an

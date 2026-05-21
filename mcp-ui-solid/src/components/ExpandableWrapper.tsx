@@ -8,6 +8,7 @@
 
 import { Component, Show, createSignal, createEffect, onCleanup, JSX, createContext, useContext, Accessor } from 'solid-js'
 import { Portal } from 'solid-js/web'
+import { useMCPUIStrings } from '../context/MCPUIStringsContext'
 
 /** Context for child components to know if they're in expanded/fullscreen view */
 const ExpandedContext = createContext<Accessor<boolean>>(() => false)
@@ -50,6 +51,7 @@ export interface ExpandableWrapperProps {
 export const ExpandableWrapper: Component<ExpandableWrapperProps> = (props) => {
   const [isExpanded, setIsExpanded] = createSignal(false)
   const [copied, setCopied] = createSignal(false)
+  const strings = useMCPUIStrings()
   let dialogRef: HTMLDivElement | undefined
   let contentRef: HTMLDivElement | undefined
   let inlineSlotRef: HTMLDivElement | undefined
@@ -133,7 +135,7 @@ export const ExpandableWrapper: Component<ExpandableWrapperProps> = (props) => {
             ? 'opacity-60 hover:opacity-100'
             : 'opacity-0 group-hover:opacity-70 hover:!opacity-100'
         } p-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-all shadow-sm`}
-        title="Expand"
+        title={strings.expand}
         aria-label="Expand to fullscreen"
       >
         <svg class="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -150,7 +152,7 @@ export const ExpandableWrapper: Component<ExpandableWrapperProps> = (props) => {
             onClick={handleBackdropClick}
             role="dialog"
             aria-modal="true"
-            aria-label={props.title || 'Expanded view'}
+            aria-label={props.title || strings.expandedView}
             tabIndex={-1}
             ref={dialogRef}
           >
@@ -163,7 +165,7 @@ export const ExpandableWrapper: Component<ExpandableWrapperProps> = (props) => {
               {/* Header */}
               <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
                 <h2 class="text-lg font-semibold text-gray-900 dark:text-white truncate">
-                  {props.title || 'Expanded View'}
+                  {props.title || strings.expandedView}
                 </h2>
                 <div class="flex items-center gap-2">
                   {/* Copy button */}
@@ -171,8 +173,8 @@ export const ExpandableWrapper: Component<ExpandableWrapperProps> = (props) => {
                     <button
                       onClick={handleCopy}
                       class="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                      title={props.copyLabel || 'Copy to clipboard'}
-                      aria-label={props.copyLabel || 'Copy to clipboard'}
+                      title={props.copyLabel || strings.copyToClipboard}
+                      aria-label={props.copyLabel || strings.copyToClipboard}
                     >
                       <Show
                         when={!copied()}
@@ -192,7 +194,7 @@ export const ExpandableWrapper: Component<ExpandableWrapperProps> = (props) => {
                   <button
                     onClick={handleClose}
                     class="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                    aria-label="Close expanded view"
+                    aria-label={strings.closeExpandedView}
                   >
                     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />

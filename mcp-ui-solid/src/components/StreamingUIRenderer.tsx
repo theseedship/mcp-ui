@@ -39,6 +39,7 @@ import { Show, For, createSignal, onMount } from 'solid-js'
 import { useStreamingUI, type UseStreamingUIOptions } from '../hooks/useStreamingUI'
 import type { UIComponent, RendererError } from '../types'
 import { UIResourceRenderer, type ValidationErrorMode } from './UIResourceRenderer'
+import { useMCPUIStrings } from '../context/MCPUIStringsContext'
 
 export interface StreamingUIRendererProps extends UseStreamingUIOptions {
   class?: string
@@ -83,6 +84,7 @@ export function StreamingUIRenderer(props: StreamingUIRendererProps) {
       onComponentReceived: props.onComponentReceived,
     })
 
+  const strings = useMCPUIStrings()
   const [animatingComponents, setAnimatingComponents] = createSignal<Set<string>>(new Set())
 
   // Track new components for animation
@@ -165,7 +167,7 @@ export function StreamingUIRenderer(props: StreamingUIRendererProps) {
               class="mt-3 rounded-md bg-error-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-error-hover"
               onClick={() => startStreaming()}
             >
-              Retry
+              {strings.retry}
             </button>
           </Show>
         </div>

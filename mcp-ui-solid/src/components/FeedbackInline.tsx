@@ -41,6 +41,7 @@
  */
 
 import { Component, Show, createSignal } from 'solid-js'
+import { useMCPUIStrings } from '../context/MCPUIStringsContext'
 
 export interface FeedbackInlineContext {
   intent?: string
@@ -59,9 +60,9 @@ export interface FeedbackInlineProps {
   onSubmit: (rating: 'positive' | 'negative', context?: FeedbackInlineContext) => void | Promise<void>
   /** Extra context forwarded to `onSubmit`. */
   context?: FeedbackInlineContext
-  /** Ack text shown after positive rating. Default: 'Merci !' */
+  /** Ack text shown after positive rating. Defaults to `MCPUIStrings.feedbackPositiveAck` ('Thanks!' in EN). */
   positiveAck?: string
-  /** Ack text shown after negative rating. Default: "Noté, on s'améliore" */
+  /** Ack text shown after negative rating. Defaults to `MCPUIStrings.feedbackNegativeAck`. */
   negativeAck?: string
   /** Extra Tailwind classes on the container. */
   class?: string
@@ -73,6 +74,7 @@ export interface FeedbackInlineProps {
  */
 export const FeedbackInline: Component<FeedbackInlineProps> = (props) => {
   const [rating, setRating] = createSignal<'positive' | 'negative' | null>(null)
+  const strings = useMCPUIStrings()
 
   const handle = (value: 'positive' | 'negative') => {
     if (rating() !== null) return // already submitted, final state
@@ -98,8 +100,8 @@ export const FeedbackInline: Component<FeedbackInlineProps> = (props) => {
         fallback={
           <span class="text-[11px] text-deposium-slate-500">
             {rating() === 'positive'
-              ? (props.positiveAck ?? 'Merci !')
-              : (props.negativeAck ?? "Noté, on s'améliore")}
+              ? (props.positiveAck ?? strings.feedbackPositiveAck)
+              : (props.negativeAck ?? strings.feedbackNegativeAck)}
           </span>
         }
       >
@@ -107,7 +109,7 @@ export const FeedbackInline: Component<FeedbackInlineProps> = (props) => {
           type="button"
           onClick={() => handle('positive')}
           class="p-1 rounded hover:bg-green-500/10 text-deposium-slate-500 hover:text-green-500 transition-colors"
-          title="Utile"
+          title={strings.feedbackUseful}
           aria-label="Mark response as useful"
           data-feedback-inline-rating="positive"
         >
@@ -124,7 +126,7 @@ export const FeedbackInline: Component<FeedbackInlineProps> = (props) => {
           type="button"
           onClick={() => handle('negative')}
           class="p-1 rounded hover:bg-red-500/10 text-deposium-slate-500 hover:text-red-500 transition-colors"
-          title="Pas utile"
+          title={strings.feedbackNotUseful}
           aria-label="Mark response as not useful"
           data-feedback-inline-rating="negative"
         >

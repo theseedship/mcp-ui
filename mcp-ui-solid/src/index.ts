@@ -113,6 +113,18 @@ export type {
   DuplicateMountReporter,
 } from './utils/duplicate-mount-registry'
 
+// Chrome i18n — library's own strings, EN defaults (v6.6.0 — D2/R4)
+export {
+  MCPUIStringsProvider,
+  MCPUIStringsContext,
+  useMCPUIStrings,
+  DEFAULT_MCPUI_STRINGS,
+} from './context/MCPUIStringsContext'
+export type {
+  MCPUIStrings,
+  MCPUIStringsProviderProps,
+} from './context/MCPUIStringsContext'
+
 // Telemetry sink (B.5 — v5.6.0)
 export {
   MCPUITelemetryProvider,

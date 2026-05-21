@@ -37,7 +37,8 @@ describe('FeedbackInline — v5.2.0', () => {
       intent: 'search',
       confidenceBand: 'high',
     })
-    expect(getByText('Merci !')).toBeDefined()
+    // v6.6.0: default ack is now EN (MCPUIStrings.feedbackPositiveAck) — R4.
+    expect(getByText('Thanks!')).toBeDefined()
   })
 
   it('click thumb-down calls onSubmit with negative and shows negative ack', () => {
@@ -49,7 +50,8 @@ describe('FeedbackInline — v5.2.0', () => {
     fireEvent.click(negative)
 
     expect(onSubmit).toHaveBeenCalledWith('negative', undefined)
-    expect(getByText("Noté, on s'améliore")).toBeDefined()
+    // v6.6.0: default ack is now EN (MCPUIStrings.feedbackNegativeAck) — R4.
+    expect(getByText("Noted — we'll improve")).toBeDefined()
   })
 
   it('second click after rating is a no-op (final state)', () => {
@@ -102,7 +104,8 @@ describe('FeedbackInline — v5.2.0', () => {
     ) as HTMLElement
     // Should not throw even though onSubmit rejects
     expect(() => fireEvent.click(positive)).not.toThrow()
-    expect(getByText('Merci !')).toBeDefined()
+    // v6.6.0: default ack is now EN (MCPUIStrings.feedbackPositiveAck) — R4.
+    expect(getByText('Thanks!')).toBeDefined()
   })
 
   it('works without messageHash or context', () => {

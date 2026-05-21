@@ -143,7 +143,7 @@ describe('ExpandableWrapper', () => {
     expect(writeText).toHaveBeenCalledWith(testData)
   })
 
-  it('uses default title "Expanded View" when no title provided', async () => {
+  it('uses default title "Expanded view" when no title provided', async () => {
     const { getByLabelText, getByText } = render(() => (
       <ExpandableWrapper>
         <div>Content</div>
@@ -152,7 +152,10 @@ describe('ExpandableWrapper', () => {
 
     fireEvent.click(getByLabelText('Expand to fullscreen'))
 
-    expect(getByText('Expanded View')).toBeDefined()
+    // v6.6.0: default heading comes from MCPUIStrings.expandedView (D2).
+    // Also unified to a single casing — the pre-v6.6.0 code had
+    // 'Expanded View' as the heading but 'Expanded view' as the aria-label.
+    expect(getByText('Expanded view')).toBeDefined()
   })
 
   it('expanded content area is scrollable (overflow-auto)', async () => {
