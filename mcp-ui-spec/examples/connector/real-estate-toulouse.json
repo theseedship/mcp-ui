@@ -1,0 +1,59 @@
+{
+  "schemaVersion": "connector-dynamic-result/v1",
+  "connectorId": "datagouv",
+  "toolName": "datagouv.search",
+  "query": "immobilier toulouse",
+  "queryHash": "a1b2c3d4",
+  "intent": "real_estate_city",
+  "renderHints": {
+    "preferredLayout": "table",
+    "domain": "real_estate",
+    "confidence": 0.82
+  },
+  "primary": {
+    "id": "real-estate-toulouse-table",
+    "type": "table",
+    "position": { "colStart": 1, "colSpan": 12 },
+    "params": {
+      "title": "Prix au m2 — Toulouse (DVF)",
+      "columns": [
+        { "key": "quartier", "label": "Quartier", "sortable": true },
+        { "key": "prix_m2", "label": "Prix/m2 (EUR)", "sortable": true },
+        { "key": "mutations", "label": "Mutations 2024", "sortable": true }
+      ],
+      "rows": [
+        { "quartier": "Capitole", "prix_m2": 4850, "mutations": 142 },
+        { "quartier": "Saint-Cyprien", "prix_m2": 3920, "mutations": 218 },
+        { "quartier": "Les Minimes", "prix_m2": 3110, "mutations": 176 },
+        { "quartier": "Rangueil", "prix_m2": 3540, "mutations": 134 }
+      ],
+      "exportable": true
+    }
+  },
+  "supplemental": [
+    {
+      "id": "real-estate-toulouse-median",
+      "type": "metric",
+      "position": { "colStart": 1, "colSpan": 4 },
+      "params": { "title": "Prix median", "value": 3730, "unit": "EUR/m2" }
+    }
+  ],
+  "actions": [
+    {
+      "label": "Comparer avec Bordeaux",
+      "action": "tool-call",
+      "toolName": "datagouv.search",
+      "params": { "query": "immobilier bordeaux" }
+    },
+    {
+      "label": "Filtrer ancien / neuf",
+      "action": "tool-call",
+      "toolName": "datagouv.refine",
+      "params": { "facet": "build_type" }
+    }
+  ],
+  "followups": [
+    { "label": "Voir l'evolution sur 5 ans", "query": "evolution prix immobilier toulouse", "kind": "expand" },
+    { "label": "Comparer avec une autre ville", "kind": "compare" }
+  ]
+}

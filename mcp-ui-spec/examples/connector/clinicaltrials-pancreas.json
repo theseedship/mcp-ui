@@ -1,0 +1,52 @@
+{
+  "schemaVersion": "connector-dynamic-result/v1",
+  "connectorId": "clinicaltrials",
+  "toolName": "clinicaltrials.search",
+  "query": "clinicaltrials cancer pancreas",
+  "queryHash": "b3c4d5e6",
+  "intent": "clinical_trials_condition",
+  "renderHints": {
+    "preferredLayout": "table",
+    "domain": "health",
+    "confidence": 0.91
+  },
+  "primary": {
+    "id": "clinicaltrials-pancreas-table",
+    "type": "table",
+    "position": { "colStart": 1, "colSpan": 12 },
+    "params": {
+      "title": "Essais cliniques — cancer du pancreas",
+      "columns": [
+        { "key": "nct", "label": "NCT ID", "sortable": true },
+        { "key": "titre", "label": "Titre" },
+        { "key": "phase", "label": "Phase", "sortable": true },
+        { "key": "statut", "label": "Statut", "sortable": true }
+      ],
+      "rows": [
+        { "nct": "NCT05012345", "titre": "Gemcitabine + immunotherapie", "phase": "Phase 2", "statut": "Recrutement" },
+        { "nct": "NCT04998877", "titre": "FOLFIRINOX neoadjuvant", "phase": "Phase 3", "statut": "Actif" },
+        { "nct": "NCT05123987", "titre": "Vaccin peptidique KRAS", "phase": "Phase 1", "statut": "Recrutement" }
+      ],
+      "exportable": true
+    }
+  },
+  "supplemental": [
+    {
+      "id": "clinicaltrials-pancreas-phases",
+      "type": "metric",
+      "position": { "colStart": 1, "colSpan": 4 },
+      "params": { "title": "Essais en recrutement", "value": 2 }
+    }
+  ],
+  "actions": [
+    {
+      "label": "Filtrer par phase",
+      "action": "tool-call",
+      "toolName": "clinicaltrials.refine",
+      "params": { "facet": "phase" }
+    }
+  ],
+  "followups": [
+    { "label": "Restreindre aux essais en France", "kind": "refine" }
+  ]
+}

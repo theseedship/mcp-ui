@@ -760,3 +760,109 @@ export type ImageComponentParams = z.infer<typeof ImageComponentParamsSchema>
 export type LinkComponentParams = z.infer<typeof LinkComponentParamsSchema>
 export type CarouselComponentParams = z.infer<typeof CarouselComponentParamsSchema>
 export type ArtifactComponentParams = z.infer<typeof ArtifactComponentParamsSchema>
+
+// =============================================================================
+// Connector dynamic result contract (v6.6.0 — R1 of ROADMAP-opendata-macro-mcpui)
+//
+// `ConnectorDynamicResultV1` is the JSON contract a connector / MCP server
+// emits to describe a rich, ready-to-render result. It crosses repo
+// boundaries (MCPs emitter -> mcp-ui-solid consumer) deployed independently,
+// so it carries an explicit, namespaced `schemaVersion` discriminant — an
+// old emitter + a new consumer must fail loudly, not silently.
+//
+// HOME : this contract lives in `mcp-ui-spec` (not `mcp-ui-solid` core) on
+// purpose — it is a cross-repo JSON contract, not a Solid renderer type.
+//
+// `primary` / `supplemental` carry `UIComponent` / `UILayout` payloads.
+// They are kept as passthrough objects here : the spec validates the
+// ENVELOPE, the renderer (`mcp-ui-solid`) owns runtime component validation
+// (`validateComponent`). Adapters in `mcp-ui-solid/adapters` narrow them to
+// the real `UIComponent | UILayout` types at the consumption boundary.
+// =============================================================================
+
+/**
+ * A follow-up suggestion a connector attaches to a result — a next query
+ * the user might want to run (refine, compare, expand, clarify).
+ */
+export const ConnectorFollowupSchema = z.object({
+  /** Display text of the suggestion. */
+  label: z.string().min(1),
+  /** The follow-up query to run when the suggestion is picked. */
+  query: z.string().optional(),
+  /** Normalized intent of the follow-up query. */
+  intent: z.string().optional(),
+  /** What kind of follow-up this is — drives grouping / iconography. */
+  kind: z.enum(['refine', 'compare', 'expand', 'clarify']).optional(),
+})
+
+/**
+ * A connector action reuses the exact `action-group` action shape
+ * (`ActionParamsSchema`) — `tool-call` / `link` / `submit` with a label,
+ * params, variant, etc. No parallel type.
+ */
+export const ConnectorActionSchema = ActionParamsSchema
+
+/**
+ * Non-binding hints from the connector about how the result is best shown.
+ * Heuristic only — the renderer/adapter may override (cf. D1 priority chain:
+ * adapter default < renderHints < persisted user feedback).
+ */
+export const ConnectorRenderHintsSchema = z.object({
+  /** Preferred top-level layout for `primary`. */
+  preferredLayout: z
+    .enum(['table', 'cards', 'bar', 'line', 'doughnut', 'map', 'metric'])
+    .optional(),
+  /** Data domain — drives presets/examples, NOT the same axis as `intent`. */
+  domain: z
+    .enum(['real_estate', 'dpe', 'pollution', 'employment', 'education', 'health', 'generic'])
+    .optional(),
+  /** Connector's confidence in the result, 0..1. */
+  confidence: z.number().min(0).max(1).optional(),
+})
+
+/**
+ * Schema version discriminant. Namespaced string (not a bare integer) so
+ * it is self-describing in logs and on the wire. Bump the suffix on any
+ * breaking change ; a consumer that does not recognize the value must
+ * degrade gracefully (cf. R2 — never throw on the runtime render path).
+ */
+export const CONNECTOR_DYNAMIC_RESULT_V1 = 'connector-dynamic-result/v1' as const
+
+/**
+ * Canonical v1 contract for a connector's dynamic result.
+ */
+export const ConnectorDynamicResultV1Schema = z.object({
+  /** Version discriminant — REQUIRED. */
+  schemaVersion: z.literal(CONNECTOR_DYNAMIC_RESULT_V1),
+  /** Stable id of the connector that produced this result. */
+  connectorId: z.string().min(1),
+  /** MCP tool that was invoked. */
+  toolName: z.string().min(1),
+  /** The raw user query. */
+  query: z.string(),
+  /**
+   * Stable key for storing / retrieving persisted presentation feedback.
+   * Optional in the payload, but REQUIRED once a feedback entry is
+   * persisted against this result. Recommended derivation :
+   * `hash(connectorId + toolName + normalizedIntent)` — NOT the raw query,
+   * so two close phrasings of the same ask share the key.
+   */
+  queryHash: z.string().optional(),
+  /** Normalized user intent (e.g. `real_estate_city`, `dpe_city`). */
+  intent: z.string().optional(),
+  /** Primary result — a `UIComponent` or `UILayout` (passthrough, see header). */
+  primary: z.record(z.unknown()),
+  /** Supplemental components — related datasets, source cards, etc. */
+  supplemental: z.array(z.record(z.unknown())).optional(),
+  /** Follow-up actions (tool calls / links) the user can trigger. */
+  actions: z.array(ConnectorActionSchema).optional(),
+  /** Suggested follow-up queries. */
+  followups: z.array(ConnectorFollowupSchema).optional(),
+  /** Non-binding rendering hints. */
+  renderHints: ConnectorRenderHintsSchema.optional(),
+})
+
+export type ConnectorFollowup = z.infer<typeof ConnectorFollowupSchema>
+export type ConnectorAction = z.infer<typeof ConnectorActionSchema>
+export type ConnectorRenderHints = z.infer<typeof ConnectorRenderHintsSchema>
+export type ConnectorDynamicResultV1 = z.infer<typeof ConnectorDynamicResultV1Schema>

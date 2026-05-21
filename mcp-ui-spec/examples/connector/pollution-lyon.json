@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "connector-dynamic-result/v1",
+  "connectorId": "datagouv",
+  "toolName": "datagouv.search",
+  "query": "pollution lyon",
+  "queryHash": "c9d0e1f2",
+  "intent": "pollution_city",
+  "renderHints": {
+    "preferredLayout": "line",
+    "domain": "pollution",
+    "confidence": 0.79
+  },
+  "primary": {
+    "id": "pollution-lyon-line",
+    "type": "chart",
+    "position": { "colStart": 1, "colSpan": 12 },
+    "params": {
+      "type": "line",
+      "title": "NO2 — Lyon, moyenne mensuelle (ug/m3)",
+      "data": {
+        "labels": ["Jan", "Fev", "Mar", "Avr", "Mai", "Jun"],
+        "datasets": [
+          {
+            "label": "NO2",
+            "data": [42, 38, 31, 27, 24, 22],
+            "fill": true,
+            "tension": 0.4
+          }
+        ]
+      }
+    }
+  },
+  "supplemental": [
+    {
+      "id": "pollution-lyon-map",
+      "type": "map",
+      "position": { "colStart": 1, "colSpan": 6 },
+      "params": {
+        "center": [45.764, 4.8357],
+        "zoom": 12,
+        "fitBounds": true,
+        "markers": [
+          { "position": [45.7578, 4.832], "tooltip": "Station Centre", "popup": "NO2: 28 ug/m3" },
+          { "position": [45.7484, 4.846], "tooltip": "Station Part-Dieu", "popup": "NO2: 35 ug/m3" }
+        ]
+      }
+    }
+  ],
+  "actions": [
+    {
+      "label": "Choisir un autre polluant",
+      "action": "tool-call",
+      "toolName": "datagouv.refine",
+      "params": { "facet": "pollutant" }
+    }
+  ],
+  "followups": [
+    { "label": "Comparer avec le seuil reglementaire", "kind": "expand" },
+    { "label": "Voir les PM10", "query": "pollution pm10 lyon", "kind": "refine" }
+  ]
+}

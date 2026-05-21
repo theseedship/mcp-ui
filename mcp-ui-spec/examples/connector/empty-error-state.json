@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "connector-dynamic-result/v1",
+  "connectorId": "datagouv",
+  "toolName": "datagouv.search",
+  "query": "immobilier villabsurde",
+  "queryHash": "f7a8b9c0",
+  "intent": "real_estate_city",
+  "renderHints": {
+    "preferredLayout": "metric",
+    "domain": "generic",
+    "confidence": 0.1
+  },
+  "primary": {
+    "id": "empty-state-text",
+    "type": "text",
+    "position": { "colStart": 1, "colSpan": 12 },
+    "params": {
+      "markdown": true,
+      "content": "### Aucun resultat\n\nLe connecteur data.gouv.fr n'a renvoye aucune donnee pour cette requete. La commune n'a peut-etre pas ete reconnue.\n\n_Cet etat explicite remplace une disparition silencieuse du rendu (cf. D8)._"
+    }
+  },
+  "actions": [
+    {
+      "label": "Reessayer",
+      "action": "tool-call",
+      "toolName": "datagouv.search",
+      "params": { "query": "immobilier villabsurde" },
+      "variant": "secondary"
+    },
+    {
+      "label": "Elargir la recherche",
+      "action": "tool-call",
+      "toolName": "datagouv.search",
+      "params": { "query": "immobilier" },
+      "variant": "ghost"
+    },
+    {
+      "label": "Chercher dans les documents locaux",
+      "action": "tool-call",
+      "toolName": "documents.search",
+      "params": { "query": "immobilier villabsurde" },
+      "variant": "ghost"
+    }
+  ],
+  "followups": [
+    { "label": "Reformuler la requete", "kind": "clarify" }
+  ]
+}

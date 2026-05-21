@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+Sprint OpenData / macros — cf.
+`mcp-ui-solid/docs/briefs/ROADMAP-opendata-macro-mcpui.md`.
+Accumulating toward 5.1.0.
+
+### Added — `ConnectorDynamicResultV1` contract (R1)
+
+The canonical JSON contract a connector / MCP server emits to describe a
+rich, ready-to-render result. It crosses repo boundaries (MCPs emitter →
+`mcp-ui-solid` consumer) deployed independently, so it lives in the spec
+(the shared contract layer) and carries an explicit, namespaced
+`schemaVersion` discriminant.
+
+- `ConnectorDynamicResultV1Schema` + `ConnectorDynamicResultV1` type.
+  `schemaVersion` is a **required** string literal
+  `'connector-dynamic-result/v1'` (exported as `CONNECTOR_DYNAMIC_RESULT_V1`).
+- `ConnectorActionSchema` (alias of the existing `ActionParamsSchema` — no
+  parallel type), `ConnectorFollowupSchema`, `ConnectorRenderHintsSchema`.
+- `primary` / `supplemental` carry `UIComponent` / `UILayout` payloads as
+  passthrough objects — the spec validates the envelope, the renderer owns
+  runtime component validation.
+- `queryHash` is optional in the payload, required once presentation
+  feedback is persisted (recommended: `hash(connectorId + toolName +
+  normalizedIntent)`, not the raw query).
+
+### Added — connector fixtures
+
+`examples/connector/` ships 5 reference `ConnectorDynamicResultV1` payloads
+covering the documented data.gouv.fr / clinicaltrials scenarios:
+real-estate, DPE, pollution, clinical trials, and the empty/error degraded
+state. Every fixture is asserted to parse against the schema.
+
 ## [5.0.6] - 2026-05-05
 
 Documentation-only patch — no schema changes. Closes Demande 1.1 + 1.2 of

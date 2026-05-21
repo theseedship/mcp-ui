@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "connector-dynamic-result/v1",
+  "connectorId": "datagouv",
+  "toolName": "datagouv.search",
+  "query": "dpe montpellier",
+  "queryHash": "e5f6a7b8",
+  "intent": "dpe_city",
+  "renderHints": {
+    "preferredLayout": "table",
+    "domain": "dpe",
+    "confidence": 0.88
+  },
+  "primary": {
+    "id": "dpe-montpellier-table",
+    "type": "table",
+    "position": { "colStart": 1, "colSpan": 12 },
+    "params": {
+      "title": "Diagnostics de performance energetique — Montpellier (ADEME)",
+      "columns": [
+        { "key": "classe", "label": "Classe", "sortable": true },
+        { "key": "logements", "label": "Logements", "sortable": true },
+        { "key": "part", "label": "Part", "sortable": true }
+      ],
+      "rows": [
+        { "classe": "A", "logements": 1240, "part": "4%" },
+        { "classe": "B", "logements": 3870, "part": "12%" },
+        { "classe": "C", "logements": 7910, "part": "25%" },
+        { "classe": "D", "logements": 9120, "part": "29%" },
+        { "classe": "E", "logements": 5340, "part": "17%" },
+        { "classe": "F", "logements": 2580, "part": "8%" },
+        { "classe": "G", "logements": 1610, "part": "5%" }
+      ],
+      "exportable": true
+    }
+  },
+  "supplemental": [
+    {
+      "id": "dpe-montpellier-doughnut",
+      "type": "chart",
+      "position": { "colStart": 1, "colSpan": 6 },
+      "params": {
+        "type": "doughnut",
+        "title": "Repartition par classe DPE",
+        "data": {
+          "labels": ["A", "B", "C", "D", "E", "F", "G"],
+          "datasets": [
+            { "label": "Logements", "data": [1240, 3870, 7910, 9120, 5340, 2580, 1610] }
+          ]
+        }
+      }
+    }
+  ],
+  "actions": [
+    {
+      "label": "Comparer avec Nimes",
+      "action": "tool-call",
+      "toolName": "datagouv.search",
+      "params": { "query": "dpe nimes" }
+    }
+  ],
+  "followups": [
+    { "label": "Filtrer par periode de construction", "kind": "refine" }
+  ]
+}
