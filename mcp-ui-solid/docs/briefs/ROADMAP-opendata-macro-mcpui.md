@@ -70,10 +70,14 @@ Responsabilites:
 Un resultat connecteur devrait pouvoir emettre un layout riche:
 
 ```ts
-type ConnectorDynamicResult = {
+type ConnectorDynamicResultV1 = {
+  schemaVersion: 'connector-dynamic-result/v1'
   connectorId: string
   toolName: string
   query: string
+  /** Stable key for persisted presentation feedback; required when feedback is stored. */
+  queryHash?: string
+  /** Normalized user intent, e.g. "real_estate_city" or "dpe_city". */
   intent?: string
   primary: UIComponent | UILayout
   supplemental?: UIComponent[]
@@ -81,6 +85,7 @@ type ConnectorDynamicResult = {
   followups?: ConnectorFollowup[]
   renderHints?: {
     preferredLayout?: 'table' | 'cards' | 'bar' | 'line' | 'doughnut' | 'map' | 'metric'
+    /** Data domain, not intent: drives layout presets and examples. */
     domain?: 'real_estate' | 'dpe' | 'pollution' | 'employment' | 'education' | 'health' | 'generic'
     confidence?: number
   }
@@ -89,11 +94,13 @@ type ConnectorDynamicResult = {
 
 Le coeur MCPUI n'a pas besoin de connaitre ce type dans un premier temps. Le sprint doit fournir des adapters d'exemple qui transforment ce contrat en `UILayout`, `ScratchpadState` et `ChatPromptConfig`.
 
-A clarifier sur ce contrat:
+Contrat finalise pour le sprint:
 
-- `intent` (intention utilisateur parsee) et `renderHints.domain` (categorie de donnees) se recouvrent — desambiguiser ou fusionner.
-- `queryHash` (cf. Gap 2): hash de la query brute, de l'intent normalise, ou du tuple connecteur+tool+params? La definition conditionne la reutilisabilite du feedback (deux formulations proches partagent-elles un hash?).
-- Aucun champ `schemaVersion`: ce contrat traverse 2 repos deployes independamment (MCPs emetteur, MCPUI consommateur). Sans discriminant de version, vieux MCPs + nouveau MCPUI cassent en silence. Ajouter `schemaVersion`.
+- le type canonique vit dans `mcp-ui-spec` (voir R1), pas dans `mcp-ui-solid` core;
+- `schemaVersion` est obligatoire et string namespacee;
+- `queryHash` est optionnel dans le payload, mais requis des qu'un feedback de presentation est persiste;
+- calcul recommande: `hash(connectorId + toolName + normalizedIntent)`, pas la query brute;
+- `intent` = intention utilisateur normalisee; `renderHints.domain` = domaine de donnees pour les presets de rendu.
 
 ### 2. Cas data.gouv.fr a couvrir
 
@@ -801,7 +808,7 @@ renderer Solid.
 Repartition:
 
 - **`mcp-ui-spec`** : type + schema canonique `ConnectorDynamicResultV1`
-  (porte `schemaVersion`, cf. R2).
+  (porte `schemaVersion`, `queryHash` et les enums de feedback, cf. R2/R3).
 - **`mcp-ui-solid/adapters`** : importe ce type, fournit
   `connectorResultToUILayout()` et les autres adapters (purs, cf. D5).
 - **MCPs** : emet du JSON conforme au schema.
@@ -846,7 +853,7 @@ sinon.
 
 ### R2 - `schemaVersion` inconnu (resout A5 / corrige D4)
 
-Une `schemaVersion` inconnue **ne doit jamais throw dans le chemin de
+La forme retenue est la string namespacee `'connector-dynamic-result/v1'` (et non l'entier `1`). Une `schemaVersion` inconnue **ne doit jamais throw dans le chemin de
 rendu runtime**. Comportement requis:
 
 - version connue -> adapter normal ;
@@ -873,9 +880,10 @@ Decision: **deux composants distincts**, pas une extension de
 un composant/export separe — sinon les deux axes se recollent dans l'UX et
 dans les logs. Specs:
 
-- callback payload = `ConnectorRenderFeedback` (schema fige en D9) ;
+- callback payload = `ConnectorRenderFeedback` (schema fige en D9, heberge dans `mcp-ui-spec`) ;
 - persistence cote host ;
-- re-render cote host (cf. D1 : adapter pur + etat host).
+- re-render cote host (cf. D1 : adapter pur + etat host);
+- n'utilise pas `FeedbackInlineContext` comme canal implicite de feedback presentation, sauf eventuellement en implementation interne du composant.
 
 => `PresentationFeedback` est des lors **entierement specifie** (nom +
 payload) : Phase 4 est codable en totalite, pas a moitie.
@@ -899,6 +907,6 @@ Debloque immediatement, 100 % interne MCPUI:
 
 - **D3** — parite `StreamingUIRenderer` -> `UIResourceRenderer` (Phase 3) ;
 - **D2** — `MCPUIStringsProvider` + audit des strings en dur ;
-- squelette `mcp-ui-spec` + fixtures `ConnectorDynamicResultV1` ;
+- extension de `mcp-ui-spec` existant + fixtures `ConnectorDynamicResultV1` ;
 - **Phase 4 complete** — `PresentationFeedback` (nom + payload figes ici).
 
