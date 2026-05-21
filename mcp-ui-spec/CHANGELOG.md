@@ -38,6 +38,22 @@ covering the documented data.gouv.fr / clinicaltrials scenarios:
 real-estate, DPE, pollution, clinical trials, and the empty/error degraded
 state. Every fixture is asserted to parse against the schema.
 
+### Added — `ConnectorRenderFeedback` contract (R3 / D9)
+
+The payload the `<PresentationFeedback>` component (in `mcp-ui-solid`)
+emits when a user rates how a connector result was *presented* — a
+separate axis from response-quality feedback (`FeedbackInline`). Lives in
+the spec because, like `ConnectorDynamicResultV1`, it is a cross-boundary
+contract (component → host persistence → connector prompt tuning).
+
+- `ConnectorRenderFeedbackSchema` + `ConnectorRenderFeedback` type.
+  `verdict` (`'readable' | 'not_readable'`) is the overall judgement ;
+  `problems[]`, `preferredLayout`, `wrongUnit`, … refine it.
+- `ConnectorRenderProblemSchema` — the 7 precise problem tags.
+- `ConnectorPreferredLayoutSchema` extracted and shared between
+  `ConnectorRenderHintsSchema` (connector hint) and
+  `ConnectorRenderFeedbackSchema` (user correction).
+
 ## [5.0.6] - 2026-05-05
 
 Documentation-only patch — no schema changes. Closes Demande 1.1 + 1.2 of

@@ -807,11 +807,24 @@ export const ConnectorActionSchema = ActionParamsSchema
  * Heuristic only — the renderer/adapter may override (cf. D1 priority chain:
  * adapter default < renderHints < persisted user feedback).
  */
+/**
+ * Top-level layout shapes a connector hint / user feedback can ask for.
+ * Shared by `ConnectorRenderHintsSchema` (connector's hint) and
+ * `ConnectorRenderFeedbackSchema` (user's correction).
+ */
+export const ConnectorPreferredLayoutSchema = z.enum([
+  'table',
+  'cards',
+  'bar',
+  'line',
+  'doughnut',
+  'map',
+  'metric',
+])
+
 export const ConnectorRenderHintsSchema = z.object({
   /** Preferred top-level layout for `primary`. */
-  preferredLayout: z
-    .enum(['table', 'cards', 'bar', 'line', 'doughnut', 'map', 'metric'])
-    .optional(),
+  preferredLayout: ConnectorPreferredLayoutSchema.optional(),
   /** Data domain — drives presets/examples, NOT the same axis as `intent`. */
   domain: z
     .enum(['real_estate', 'dpe', 'pollution', 'employment', 'education', 'health', 'generic'])
@@ -864,5 +877,72 @@ export const ConnectorDynamicResultV1Schema = z.object({
 
 export type ConnectorFollowup = z.infer<typeof ConnectorFollowupSchema>
 export type ConnectorAction = z.infer<typeof ConnectorActionSchema>
+export type ConnectorPreferredLayout = z.infer<typeof ConnectorPreferredLayoutSchema>
 export type ConnectorRenderHints = z.infer<typeof ConnectorRenderHintsSchema>
 export type ConnectorDynamicResultV1 = z.infer<typeof ConnectorDynamicResultV1Schema>
+
+// =============================================================================
+// Presentation feedback contract (v6.6.0 — R3 / D9 of ROADMAP-opendata-macro-mcpui)
+//
+// `ConnectorRenderFeedback` is the payload the `<PresentationFeedback>`
+// component (in `mcp-ui-solid`) emits when a user rates how a connector
+// result was *presented* — a separate axis from response-quality feedback
+// (`FeedbackInline`). The host persists it and may re-run its adapter with
+// the corrected `preferredLayout` (cf. D1 : adapter pure + host-owned state).
+//
+// It lives in the spec because, like `ConnectorDynamicResultV1`, it is a
+// cross-boundary contract : component -> host persistence -> (aggregated)
+// connector prompt tuning.
+// =============================================================================
+
+/**
+ * A precise presentation problem. Distinct from the `verdict` (the overall
+ * readable / not-readable judgement) — a payload carries one verdict and
+ * zero-or-more problems.
+ */
+export const ConnectorRenderProblemSchema = z.enum([
+  'too_raw',
+  'wrong_columns',
+  'wrong_chart',
+  'missing_context',
+  'wrong_unit',
+  'bad_grouping',
+  'missing_dataset_context',
+])
+
+/**
+ * Payload emitted by `<PresentationFeedback>`. `verdict` is the overall
+ * judgement ; `problems` (and the precise `wrongUnit` / `selectedColumns` /
+ * … fields) refine it when the verdict is `not_readable`.
+ */
+export const ConnectorRenderFeedbackSchema = z.object({
+  /** Connector whose result is being rated. */
+  connectorId: z.string().min(1),
+  /** Tool that produced the result. */
+  toolName: z.string().min(1),
+  /** Stable key tying this feedback to a `ConnectorDynamicResultV1.queryHash`. */
+  queryHash: z.string().optional(),
+  /** What was rated (e.g. `'primary'`, `'supplemental'`). */
+  renderKind: z.string().optional(),
+  /** The layout type that was shown (e.g. `'table'`, `'bar'`). */
+  layoutType: z.string().optional(),
+  /** Overall judgement — REQUIRED. */
+  verdict: z.enum(['readable', 'not_readable']),
+  /** Zero or more precise problems (refines a `not_readable` verdict). */
+  problems: z.array(ConnectorRenderProblemSchema).optional(),
+  /** Layout the user would prefer instead. */
+  preferredLayout: ConnectorPreferredLayoutSchema.optional(),
+  /** Fields the user says are missing from the render. */
+  missingFields: z.array(z.string()).optional(),
+  /** Columns the user wishes were shown. */
+  selectedColumns: z.array(z.string()).optional(),
+  /** A unit the user flags as wrong. */
+  wrongUnit: z.string().optional(),
+  /** A grouping the user flags as wrong. */
+  wrongGrouping: z.string().optional(),
+  /** Free-text comment. */
+  comment: z.string().optional(),
+})
+
+export type ConnectorRenderProblem = z.infer<typeof ConnectorRenderProblemSchema>
+export type ConnectorRenderFeedback = z.infer<typeof ConnectorRenderFeedbackSchema>
