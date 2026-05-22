@@ -1126,3 +1126,227 @@ export const ConnectorRenderFeedbackSchema = z.object({
 
 export type ConnectorRenderProblem = z.infer<typeof ConnectorRenderProblemSchema>;
 export type ConnectorRenderFeedback = z.infer<typeof ConnectorRenderFeedbackSchema>;
+
+// =============================================================================
+// MacroRun contract (v5.3.0 — MacroRun Phase 2)
+//
+// Agnostic snapshot of an interactive macro / agent-pipeline run. Lives in the
+// spec — not in `mcp-ui-solid` — because it is a cross-boundary contract: a
+// producer runtime emits it, `mcp-ui-solid`'s pure adapters consume it. The
+// spec has NO knowledge of any specific runtime, host, corpus or domain.
+//
+// SCOPE BOUNDARY: this file defines only the wire shape. The producer side
+// (building / emitting a `macro-run/v1` snapshot, any SSE event such as
+// `macro_run_snapshot`) is a separate, later goal on the producing repo and
+// is intentionally NOT modelled here. Likewise the host-side wiring (SSE
+// listener, fetch, persistence, resume) is out of scope — `mcp-ui-solid`
+// only ships pure adapters from this contract to existing render primitives.
+// =============================================================================
+
+/**
+ * Schema-version discriminants. Namespaced strings (not bare integers) so
+ * they are self-describing on the wire and in logs. A consumer that does not
+ * recognize the value must degrade gracefully, never throw on a render path.
+ */
+export const MACRO_RUN_V1 = 'macro-run/v1' as const;
+export const MACRO_INTERROGATION_V1 = 'macro-interrogation/v1' as const;
+
+/**
+ * Run-level status. Uses `completed` — NOT `done`. `done` is reserved for
+ * step-level status and `AgentCardContent.status`, which is already the
+ * MCP-UI vocabulary. `aborted` is kept distinct from `failed` so a host can
+ * map it to a non-retryable error.
+ */
+export const MacroRunStatusSchema = z.enum([
+  'pending',
+  'running',
+  'awaiting_input',
+  'completed',
+  'failed',
+  'aborted',
+]);
+
+/**
+ * Step-level status. MAY use `done` (distinct from the run-level vocabulary).
+ * The MCP-UI stepper primitive renders `failed` as `error`.
+ */
+export const MacroStepStatusSchema = z.enum(['pending', 'active', 'done', 'skipped', 'failed']);
+
+/** How the macro run was invoked. Free-form routing hint, opaque to the lib. */
+export const MacroInvocationTypeSchema = z.enum([
+  'slash_command',
+  'natural_language',
+  'api_direct',
+  'pipeline',
+  'chat_stream',
+]);
+
+/**
+ * A single macro step.
+ *
+ * `parallel` is reserved for a future parallel execution model — the current
+ * canonical runtime is sequential. When present, an adapter renders a
+ * `split_stepper` instead of a `stepper`; when absent, a `stepper`.
+ */
+export interface MacroStepV1 {
+  id: string;
+  label: string;
+  toolName?: string;
+  status: 'pending' | 'active' | 'done' | 'skipped' | 'failed';
+  summary?: string;
+  durationMs?: number;
+  error?: string;
+  /** Opaque pointer to a result payload held elsewhere (not inlined here). */
+  resultRef?: string;
+  /** Reserved/future — parallel sub-steps. The canonical runtime is sequential. */
+  parallel?: MacroStepV1[];
+}
+
+/** Recursive — `parallel` nests `MacroStepV1`. */
+export const MacroStepV1Schema: z.ZodType<MacroStepV1> = z.lazy(() =>
+  z.object({
+    id: z.string().min(1),
+    label: z.string(),
+    toolName: z.string().optional(),
+    status: MacroStepStatusSchema,
+    summary: z.string().optional(),
+    durationMs: z.number().optional(),
+    error: z.string().optional(),
+    resultRef: z.string().optional(),
+    parallel: z.array(MacroStepV1Schema).optional(),
+  })
+);
+
+/** A single interrogation option (for a `choice` interrogation). */
+export const MacroInterrogationOptionSchema = z.object({
+  value: z.string(),
+  label: z.string(),
+  icon: z.string().optional(),
+  description: z.string().optional(),
+  metadata: z.record(z.unknown()).optional(),
+});
+
+/** The four interrogation kinds an adapter can map to a `ChatPromptConfig`. */
+export const MacroInterrogationKindSchema = z.enum(['choice', 'confirm', 'form', 'elicitation']);
+
+/**
+ * A Human-In-The-Loop interrogation raised by a macro run. Can be embedded in
+ * `MacroRunV1.pendingInterrogation` OR emitted standalone if a host receives
+ * a HITL event on its own. `fields` / `elicitationSchema` are deliberately
+ * opaque (`unknown`) so the contract stays domain-agnostic — the adapter
+ * coerces them to the renderer's form / elicitation shapes.
+ */
+export const MacroInterrogationV1Schema = z.object({
+  schemaVersion: z.literal(MACRO_INTERROGATION_V1),
+  interrogationId: z.string().min(1),
+  runId: z.string().min(1),
+  correlationId: z.string().optional(),
+  stepId: z.string().optional(),
+  /** Free-form tag describing what the run is blocked on. */
+  waitingFor: z.string().optional(),
+  kind: MacroInterrogationKindSchema,
+  title: z.string(),
+  message: z.string().optional(),
+  /** Options for a `choice` interrogation. */
+  options: z.array(MacroInterrogationOptionSchema).optional(),
+  /** Labels / variant for a `confirm` interrogation. */
+  confirm: z
+    .object({
+      confirmLabel: z.string().optional(),
+      cancelLabel: z.string().optional(),
+      variant: z.enum(['default', 'danger']).optional(),
+    })
+    .optional(),
+  /** Opaque field list for a `form` interrogation (renderer-side shape). */
+  fields: z.array(z.unknown()).optional(),
+  /** Opaque MCP elicitation JSON Schema for an `elicitation` interrogation. */
+  elicitationSchema: z.unknown().optional(),
+  /** A pre-selected default the host may surface (e.g. timeout fallback). */
+  defaultChoice: z
+    .object({
+      value: z.string(),
+      reason: z.string().optional(),
+    })
+    .optional(),
+  /** How the host resumes the run once answered — host-side, opaque to the lib. */
+  resume: z
+    .object({
+      endpoint: z.string(),
+      mode: z.enum(['agent_resume', 'legacy_chat_prompt', 'macro_resume']),
+    })
+    .optional(),
+  metadata: z.record(z.unknown()).optional(),
+});
+
+/** Presentation agent attached to a run (optional — macro-tools have none). */
+export const MacroRunAgentSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  avatar: z.string().optional(),
+  capabilities: z.array(z.string()).optional(),
+  status: z.enum(['idle', 'running', 'waiting', 'done', 'error']).optional(),
+  currentStep: z.object({ id: z.string(), label: z.string() }).optional(),
+});
+
+/** Run-level error detail. */
+export const MacroRunErrorSchema = z.object({
+  message: z.string(),
+  code: z.string().optional(),
+  stepId: z.string().optional(),
+  retryable: z.boolean().optional(),
+});
+
+/** Optional terminal outcome. No single shape exists — kept opaque. */
+export const MacroRunOutcomeSchema = z.object({
+  kind: z.enum(['verified_text', 'briefing_diff', 'agent_result', 'raw']),
+  content: z.unknown(),
+});
+
+/**
+ * Canonical v1 snapshot of a macro run.
+ *
+ * `runId` is REQUIRED; a producer with no canonical execution id may fall
+ * back to its correlation id. `results` carries `UIComponent`-shaped objects
+ * (validated by the renderer, passthrough here — the spec has no runtime
+ * `UIComponent` schema) and is OPTIONAL: a run may complete with no UI
+ * results, in which case an adapter still produces the agent / stepper /
+ * HITL sections.
+ */
+export const MacroRunV1Schema = z.object({
+  schemaVersion: z.literal(MACRO_RUN_V1),
+  // Identity
+  runId: z.string().min(1),
+  correlationId: z.string().optional(),
+  macroId: z.string().min(1),
+  macroName: z.string().optional(),
+  macroVersion: z.string().optional(),
+  title: z.string().optional(),
+  invocationType: MacroInvocationTypeSchema.optional(),
+  // State
+  status: MacroRunStatusSchema,
+  startedAt: z.string().optional(),
+  updatedAt: z.string().optional(),
+  completedAt: z.string().optional(),
+  // Presentation
+  agent: MacroRunAgentSchema.optional(),
+  // Execution
+  steps: z.array(MacroStepV1Schema),
+  /** `UIComponent`-shaped results (passthrough). Optional — see header. */
+  results: z.array(z.record(z.unknown())).optional(),
+  pendingInterrogation: MacroInterrogationV1Schema.optional(),
+  error: MacroRunErrorSchema.optional(),
+  outcome: MacroRunOutcomeSchema.optional(),
+  variables: z.record(z.unknown()).optional(),
+  metadata: z.record(z.unknown()).optional(),
+});
+
+export type MacroRunStatus = z.infer<typeof MacroRunStatusSchema>;
+export type MacroStepStatus = z.infer<typeof MacroStepStatusSchema>;
+export type MacroInvocationType = z.infer<typeof MacroInvocationTypeSchema>;
+export type MacroInterrogationKind = z.infer<typeof MacroInterrogationKindSchema>;
+export type MacroInterrogationOption = z.infer<typeof MacroInterrogationOptionSchema>;
+export type MacroInterrogationV1 = z.infer<typeof MacroInterrogationV1Schema>;
+export type MacroRunAgent = z.infer<typeof MacroRunAgentSchema>;
+export type MacroRunError = z.infer<typeof MacroRunErrorSchema>;
+export type MacroRunOutcome = z.infer<typeof MacroRunOutcomeSchema>;
+export type MacroRunV1 = z.infer<typeof MacroRunV1Schema>;

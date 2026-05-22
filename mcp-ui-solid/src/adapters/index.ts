@@ -14,11 +14,10 @@
  * ```
  */
 
-export {
-  connectorResultToUILayout,
-  connectorActionsToActionGroup,
-} from './connector'
+export { connectorResultToUILayout, connectorActionsToActionGroup } from './connector';
 export type {
   ConnectorResultToUILayoutOptions,
   ConnectorActionsToActionGroupOptions,
-} from './connector'
+} from './connector';
+
+export { macroRunToScratchpadState, macroInterrogationToChatPromptConfig } from './macro-run';

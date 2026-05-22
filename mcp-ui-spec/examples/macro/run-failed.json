@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "macro-run/v1",
+  "runId": "run_d11277",
+  "macroId": "research-pipeline",
+  "macroName": "Research pipeline",
+  "status": "failed",
+  "startedAt": "2026-05-22T10:20:00.000Z",
+  "updatedAt": "2026-05-22T10:20:09.000Z",
+  "steps": [
+    { "id": "step-1", "label": "Collect sources", "status": "done" },
+    {
+      "id": "step-2",
+      "label": "Summarize sources",
+      "status": "failed",
+      "error": "Upstream tool timed out"
+    }
+  ],
+  "error": {
+    "message": "Upstream tool timed out",
+    "code": "TOOL_TIMEOUT",
+    "stepId": "step-2",
+    "retryable": true
+  }
+}

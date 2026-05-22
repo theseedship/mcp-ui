@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "macro-run/v1",
+  "runId": "run_8f3a21",
+  "correlationId": "corr_8f3a21",
+  "macroId": "research-pipeline",
+  "macroName": "Research pipeline",
+  "macroVersion": "1.2.0",
+  "title": "Research pipeline",
+  "invocationType": "slash_command",
+  "status": "running",
+  "startedAt": "2026-05-22T10:00:00.000Z",
+  "updatedAt": "2026-05-22T10:00:12.000Z",
+  "agent": {
+    "id": "researcher",
+    "name": "Researcher",
+    "avatar": "search",
+    "capabilities": ["search", "summarize"],
+    "status": "running",
+    "currentStep": { "id": "step-2", "label": "Summarize sources" }
+  },
+  "steps": [
+    { "id": "step-1", "label": "Collect sources", "status": "done", "durationMs": 2400 },
+    { "id": "step-2", "label": "Summarize sources", "status": "active", "toolName": "summarize" },
+    { "id": "step-3", "label": "Draft answer", "status": "pending" }
+  ]
+}

@@ -486,6 +486,39 @@ as it did before v5.2.0.
 The renderer side lives in `@seed-ship/mcp-ui-solid`'s `<MapRenderer>` /
 `<UIResourceRenderer>` — see that package's README for rendering examples.
 
+## MacroRun Contract (v5.3.0)
+
+An agnostic snapshot contract for interactive macro / agent-pipeline runs.
+Like the connector contracts, it lives in the spec because it crosses
+independently-deployed boundaries: a **producer runtime** emits it,
+`@seed-ship/mcp-ui-solid`'s pure adapters consume it.
+
+```typescript
+import { MacroRunV1Schema, MACRO_RUN_V1 } from '@seed-ship/mcp-ui-spec';
+
+const run = MacroRunV1Schema.parse(snapshot);
+```
+
+- `MacroRunV1` — `schemaVersion` (`'macro-run/v1'`), identity (`runId`
+  required, `macroId`, …), `status`, optional `agent`, `steps`, optional
+  `results` (`UIComponent`-shaped passthrough), `pendingInterrogation`,
+  `error`, `outcome`.
+- `MacroStepV1` — a step; `parallel` sub-steps are reserved for a future
+  parallel execution model (the canonical runtime is sequential).
+- `MacroInterrogationV1` — a Human-In-The-Loop interrogation (`choice` /
+  `confirm` / `form` / `elicitation`), embeddable in a run or standalone.
+- Run-level status uses `completed`, **not** `done`; `done` is step-level
+  only. `aborted` is distinct from `failed` (maps to a non-retryable error).
+
+Reference payloads live in [`examples/macro/`](./examples/macro/).
+
+**Scope** — the spec defines only the wire shape. The producer runtime
+(building / emitting a `macro-run/v1` snapshot, any SSE event) and all
+host-side wiring (SSE listener, fetch, persistence, resume) are out of scope.
+The renderer-side adapters — `macroRunToScratchpadState()` and
+`macroInterrogationToChatPromptConfig()` — live in
+`@seed-ship/mcp-ui-solid/adapters`.
+
 ## Related Packages
 
 | Package                                      | Description                            |
@@ -497,7 +530,7 @@ The renderer side lives in `@seed-ship/mcp-ui-solid`'s `<MapRenderer>` /
 
 This package follows [Semantic Versioning](https://semver.org/). See [CHANGELOG.md](./CHANGELOG.md) for release notes.
 
-**Current Version:** 5.2.0
+**Current Version:** 5.3.0
 
 ## License
 
