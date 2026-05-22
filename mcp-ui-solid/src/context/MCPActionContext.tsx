@@ -10,7 +10,9 @@ import { createContext, createSignal, useContext, ParentComponent, Accessor } fr
  */
 export interface ActionRequest {
   /**
-   * MCP tool name to execute
+   * MCP tool name to execute. For a `submit` action with no associated
+   * tool, renderers pass the sentinel `'submit'` — branch on `action`,
+   * not on `toolName`, to tell a submit apart from a tool call.
    */
   toolName: string
 
@@ -28,6 +30,17 @@ export interface ActionRequest {
    * Optional macro ID for template execution
    */
   macroId?: string
+
+  /**
+   * Action kind (v6.6.1). Lets a host `executor` tell a tool call apart
+   * from a form-style `submit`. Absent ⇒ treat as `'tool-call'` (backward
+   * compatible — every pre-v6.6.1 request omits it).
+   *
+   * A `submit` action carries its payload in `params` (e.g. `submit_url`,
+   * `connector_id`, `feedback_value`) and **must NOT** be executed as a
+   * tool call — the host routes it (e.g. POST to `params.submit_url`).
+   */
+  action?: 'tool-call' | 'submit' | 'link'
 }
 
 /**
@@ -149,6 +162,9 @@ const defaultExecutor = async (request: ActionRequest): Promise<ActionResult> =>
           params: request.params || {},
           spaceIds: request.spaceIds,
           macroId: request.macroId,
+          // v6.6.1 — action kind so a window-level listener can route a
+          // `submit` (POST to params.submit_url) vs a tool call.
+          action: request.action ?? 'tool-call',
         },
         bubbles: true,
       })

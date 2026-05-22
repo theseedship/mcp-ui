@@ -12,6 +12,7 @@ import type { UIComponent, ActionGroupParams, ActionComponentParams } from '../t
 vi.mock('../hooks/useAction', () => ({
   useAction: () => ({
     execute: vi.fn().mockResolvedValue({ success: true }),
+    executeAction: vi.fn().mockResolvedValue({ success: true }),
     isExecuting: () => false,
     lastResult: () => undefined,
     lastError: () => undefined,

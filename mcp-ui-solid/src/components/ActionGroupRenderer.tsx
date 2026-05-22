@@ -26,7 +26,12 @@ const ActionButton: Component<{
   action: ActionComponentParams
   index: number
 }> = (props) => {
-  const { execute, isExecuting } = useAction()
+  const { execute, executeAction, isExecuting } = useAction()
+
+  // tool-call and submit both go through the host executor — they show a
+  // loading state and gate disabled while running. link does neither.
+  const isExecutable = () =>
+    props.action.action === 'tool-call' || props.action.action === 'submit'
 
   const handleClick = async (e: MouseEvent) => {
     if (props.action.disabled) return
@@ -34,13 +39,23 @@ const ActionButton: Component<{
     if (props.action.action === 'tool-call' && props.action.toolName) {
       e.preventDefault()
       await execute(props.action.toolName, props.action.params || {})
+    } else if (props.action.action === 'submit') {
+      // submit is NOT a tool call — route it through the executor with the
+      // `action: 'submit'` kind preserved so the host can POST to
+      // params.submit_url etc. Works without a surrounding <form>.
+      e.preventDefault()
+      await executeAction({
+        action: 'submit',
+        toolName: props.action.toolName || 'submit',
+        params: props.action.params || {},
+      })
     } else if (props.action.action === 'link' && props.action.url) {
       window.open(props.action.url, '_blank', 'noopener,noreferrer')
     }
   }
 
   const isDisabled = () =>
-    props.action.disabled || (props.action.action === 'tool-call' && isExecuting())
+    props.action.disabled || (isExecutable() && isExecuting())
 
   const variantClass = () => {
     switch (props.action.variant) {
@@ -98,10 +113,10 @@ const ActionButton: Component<{
         isDisabled() ? 'opacity-50 cursor-not-allowed' : ''
       }`}
     >
-      <Show when={isExecuting() && props.action.action === 'tool-call'}>
+      <Show when={isExecuting() && isExecutable()}>
         <span class="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
       </Show>
-      <Show when={props.action.icon && !(isExecuting() && props.action.action === 'tool-call')}>
+      <Show when={props.action.icon && !(isExecuting() && isExecutable())}>
         <span class="text-current">{props.action.icon}</span>
       </Show>
       {props.action.label}

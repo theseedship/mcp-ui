@@ -1524,8 +1524,12 @@ function ComponentRenderer(props: {
  */
 function ActionRenderer(props: { component: UIComponent }) {
   const params = props.component.params as any
-  const { execute, isExecuting } = useAction()
+  const { execute, executeAction, isExecuting } = useAction()
   const telemetry = useTelemetry()
+
+  // tool-call and submit both run through the host executor — loading +
+  // disabled state apply to both. link does neither.
+  const isExecutable = () => params.action === 'tool-call' || params.action === 'submit'
 
   // Telemetry: action:dispatched on click (B.5 — v5.6.0). Fires for every
   // click attempt (tool-call or link), regardless of execute success.
@@ -1549,11 +1553,20 @@ function ActionRenderer(props: { component: UIComponent }) {
     if (params.action === 'tool-call' && params.toolName) {
       e.preventDefault()
       await execute(params.toolName, params.params || {})
+    } else if (params.action === 'submit') {
+      // submit is NOT a tool call — route through the executor with the
+      // `action: 'submit'` kind preserved. Works outside any <form>.
+      e.preventDefault()
+      await executeAction({
+        action: 'submit',
+        toolName: params.toolName || 'submit',
+        params: params.params || {},
+      })
     }
   }
 
   // Determine if button should be disabled (explicit disable or currently executing)
-  const isDisabled = () => params.disabled || (params.action === 'tool-call' && isExecuting())
+  const isDisabled = () => params.disabled || (isExecutable() && isExecuting())
 
   if (params.type === 'link' || params.action === 'link') {
     return (
@@ -1579,9 +1592,9 @@ function ActionRenderer(props: { component: UIComponent }) {
 
   return (
     <button
-      type={params.action === 'submit' ? 'submit' : 'button'}
+      type="button"
       disabled={isDisabled()}
-      aria-busy={isExecuting() && params.action === 'tool-call'}
+      aria-busy={isExecuting() && isExecutable()}
       aria-label={params.ariaLabel || params.label}
       class={`inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500
         ${params.variant === 'primary' ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm' :
@@ -1594,10 +1607,10 @@ function ActionRenderer(props: { component: UIComponent }) {
         ${params.className || ''}`}
       onClick={handleClick}
     >
-      <Show when={isExecuting() && params.action === 'tool-call'}>
+      <Show when={isExecuting() && isExecutable()}>
         <span class="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" aria-hidden="true" />
       </Show>
-      <Show when={params.icon && !(isExecuting() && params.action === 'tool-call')}>
+      <Show when={params.icon && !(isExecuting() && isExecutable())}>
         <span aria-hidden="true">{params.icon}</span>
       </Show>
       {params.label}

@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.6.1] - 2026-05-22
+
+### Fixed — `action: 'submit'` is no longer inert outside a `<form>`
+
+`ActionParamsSchema.action` allows `'tool-call' | 'link' | 'submit'`, but
+at runtime `submit` did nothing : `ActionGroupRenderer` only branched on
+`tool-call` / `link`, and the standalone `action` renderer emitted a
+native `type="submit"` button — which only fires inside a real `<form>`.
+Standalone resources rendered by `<UIResourceRenderer>` have no
+surrounding form, so the click was inert.
+
+`submit` actions now route through the host executor — like `tool-call`,
+but **not treated as a tool call** :
+
+- `<ActionGroupRenderer>` and the standalone `action` renderer both call
+  `executeAction({ action: 'submit', toolName, params })` on click.
+- The action **kind** is preserved : `ActionRequest` gains an optional
+  `action?: 'tool-call' | 'submit' | 'link'` field so a host `executor`
+  can tell a submit apart from a tool call (e.g. POST to
+  `params.submit_url`). The full `params` payload (`submit_url`,
+  `connector_id`, `feedback_value`, `preferred_layout`, …) is passed
+  through intact.
+- The submit button is now `type="button"` (JS-handled) — it works with
+  no surrounding `<form>`, and shows the same loading / disabled state as
+  a `tool-call` button.
+- The `defaultExecutor` `mcp-action` `CustomEvent` detail now carries
+  `action`, so a window-level listener can route submits too.
+
+Backward compatible : `action` is optional everywhere and absent on every
+pre-6.6.1 request — a request without it is still treated as `tool-call`.
+
 ## [6.6.0] - 2026-05-21
 
 Sprint OpenData / macros — cf. `docs/briefs/ROADMAP-opendata-macro-mcpui.md`
