@@ -310,7 +310,159 @@ export const MapMarkerSchema = z.object({
   popup: z.string().optional(),
 });
 
-// Map component params schema (Sprint 6, center relaxed to LatLngPoint in v5.0.2)
+// =============================================================================
+// GeoJSON contract for the `map` component (v5.2.0)
+//
+// `@seed-ship/mcp-ui-solid`'s <MapRenderer> has shipped GeoJSON / choropleth /
+// popup / multi-layer / PMTiles support since its v3.1.0, but the spec only
+// validated `markers` — a host emitting `type:'map'` with `params.geojson`
+// had those fields silently stripped by Zod. These schemas close that gap so
+// a FeatureCollection is a first-class, validated part of the map contract.
+//
+// Geometry `coordinates` are typed as a depth-bounded union of number arrays
+// rather than per-geometry-type tuples: that accepts every standard geometry
+// (Point → MultiPolygon) without rejecting valid edge cases such as 3D
+// positions `[lng, lat, elevation]`. The contract stays "typed but
+// permissive" — an obviously-wrong payload (bad `type`, non-numeric
+// coordinates) is still rejected, but a structurally-valid FeatureCollection
+// is never refused. No domain logic (Cadastre / data.gouv / IGN) lives here.
+// =============================================================================
+
+// A GeoJSON position: [lng, lat] or [lng, lat, elevation] (RFC 7946 §3.1.1).
+export const GeoJSONPositionSchema = z.array(z.number()).min(2);
+
+// Coordinates nest 0–3 levels deep depending on geometry type:
+//   Point                       → Position
+//   LineString / MultiPoint     → Position[]
+//   Polygon / MultiLineString   → Position[][]
+//   MultiPolygon                → Position[][][]
+export const GeoJSONCoordinatesSchema = z.union([
+  GeoJSONPositionSchema,
+  z.array(GeoJSONPositionSchema),
+  z.array(z.array(GeoJSONPositionSchema)),
+  z.array(z.array(z.array(GeoJSONPositionSchema))),
+]);
+
+export const GeoJSONGeometryTypeSchema = z.enum([
+  'Point',
+  'MultiPoint',
+  'LineString',
+  'MultiLineString',
+  'Polygon',
+  'MultiPolygon',
+  'GeometryCollection',
+]);
+
+// A geometry without `geometries` — used inside a GeometryCollection. GeoJSON
+// (RFC 7946 §3.1.8) recommends against nesting GeometryCollections, so this
+// is intentionally one level deep.
+const GeoJSONSimpleGeometrySchema = z.object({
+  type: GeoJSONGeometryTypeSchema,
+  coordinates: GeoJSONCoordinatesSchema.optional(),
+  bbox: z.array(z.number()).optional(),
+});
+
+// A single geometry. `coordinates` carries every type except
+// GeometryCollection, which instead nests `geometries`. Both are optional at
+// this level so the union stays permissive; the `type` enum is the real gate.
+export const GeoJSONGeometrySchema = z.object({
+  type: GeoJSONGeometryTypeSchema,
+  coordinates: GeoJSONCoordinatesSchema.optional(),
+  geometries: z.array(GeoJSONSimpleGeometrySchema).optional(),
+  bbox: z.array(z.number()).optional(),
+});
+
+export const GeoJSONFeatureSchema = z.object({
+  type: z.literal('Feature'),
+  geometry: GeoJSONGeometrySchema.nullable(),
+  properties: z.record(z.unknown()).nullable().optional(),
+  id: z.union([z.string(), z.number()]).optional(),
+  bbox: z.array(z.number()).optional(),
+});
+
+export const GeoJSONFeatureCollectionSchema = z.object({
+  type: z.literal('FeatureCollection'),
+  features: z.array(GeoJSONFeatureSchema),
+  bbox: z.array(z.number()).optional(),
+});
+
+// What the `geojson` field accepts. Leaflet's `L.geoJSON()` — which
+// <MapRenderer> calls directly — takes a FeatureCollection, a bare Feature,
+// or a raw Geometry, so the spec mirrors that. FeatureCollection is the
+// expected shape for connector / opendata payloads.
+export const GeoJSONSchema = z.union([
+  GeoJSONFeatureCollectionSchema,
+  GeoJSONFeatureSchema,
+  GeoJSONGeometrySchema,
+]);
+
+// Static + choropleth (data-driven) style for a GeoJSON layer. Mirrors
+// `MapGeoJSONStyle` in @seed-ship/mcp-ui-solid.
+export const MapGeoJSONStyleSchema = z.object({
+  fillColor: z.string().optional(),
+  fillOpacity: z.number().optional(),
+  strokeColor: z.string().optional(),
+  strokeWeight: z.number().optional(),
+  strokeOpacity: z.number().optional(),
+  choroplethField: z.string().optional(),
+  choroplethScale: z.array(z.tuple([z.number(), z.string()])).optional(),
+  choroplethFallback: z.string().optional(),
+});
+
+// Feature popup configuration — auto-generated from `fields`/`titleField`, or
+// a custom `template` with `{{property}}` placeholders.
+export const MapPopupConfigSchema = z.object({
+  titleField: z.string().optional(),
+  fields: z.array(z.string()).optional(),
+  template: z.string().optional(),
+});
+
+// A named GeoJSON overlay; the renderer adds a Leaflet layer control when
+// more than one is present.
+export const MapLayerSchema = z.object({
+  name: z.string().min(1),
+  visible: z.boolean().optional(),
+  geojson: GeoJSONSchema,
+  style: MapGeoJSONStyleSchema.optional(),
+  popup: MapPopupConfigSchema.optional(),
+});
+
+// Marker clustering options (Leaflet.markercluster).
+export const MapClusterOptionsSchema = z.object({
+  maxClusterRadius: z.number().optional(),
+  spiderfyOnMaxZoom: z.boolean().optional(),
+  showCoverageOnHover: z.boolean().optional(),
+  disableClusteringAtZoom: z.number().optional(),
+  animateAddingMarkers: z.boolean().optional(),
+});
+
+// PMTiles vector-tile source for large datasets (protomaps-leaflet peer).
+export const MapPMTilesPaintRuleSchema = z.object({
+  dataLayer: z.string(),
+  symbolizer: z.enum(['polygon', 'line', 'circle']),
+  color: z.string().optional(),
+  width: z.number().optional(),
+  opacity: z.number().optional(),
+});
+
+export const MapPMTilesLabelRuleSchema = z.object({
+  dataLayer: z.string(),
+  textField: z.string(),
+  fontSize: z.number().optional(),
+});
+
+export const MapPMTilesConfigSchema = z.object({
+  url: z.string(),
+  attribution: z.string().optional(),
+  paintRules: z.array(MapPMTilesPaintRuleSchema).optional(),
+  labelRules: z.array(MapPMTilesLabelRuleSchema).optional(),
+  maxZoom: z.number().optional(),
+  minZoom: z.number().optional(),
+});
+
+// Map component params schema (Sprint 6; center relaxed to LatLngPoint in
+// v5.0.2; GeoJSON / layers / clustering / PMTiles aligned with <MapRenderer>
+// in v5.2.0). All new fields are optional — a markers-only map is unchanged.
 export const MapComponentParamsSchema = z.object({
   center: LatLngPointSchema.optional(),
   zoom: z.number().optional(),
@@ -321,6 +473,17 @@ export const MapComponentParamsSchema = z.object({
   scrollWheelZoom: z.boolean().optional(),
   tileLayer: z.string().optional(),
   attribution: z.string().optional(),
+  className: z.string().optional(),
+  // GeoJSON layer (v5.2.0) — polygons / lines / points from structured data.
+  geojson: GeoJSONSchema.optional(),
+  geojsonStyle: MapGeoJSONStyleSchema.optional(),
+  popup: MapPopupConfigSchema.optional(),
+  // Multiple named GeoJSON overlays with a Leaflet layer control (v5.2.0).
+  layers: z.array(MapLayerSchema).optional(),
+  // Marker clustering — `true` for defaults, or an options object (v5.2.0).
+  clustering: z.union([z.boolean(), MapClusterOptionsSchema]).optional(),
+  // PMTiles vector-tile source for large datasets (v5.2.0).
+  pmtiles: MapPMTilesConfigSchema.optional(),
 });
 
 // =============================================================================
@@ -737,6 +900,19 @@ export type LatLngTuple = z.infer<typeof LatLngTupleSchema>;
 export type LatLngPoint = z.infer<typeof LatLngPointSchema>;
 export type MapMarker = z.infer<typeof MapMarkerSchema>;
 export type MapComponentParams = z.infer<typeof MapComponentParamsSchema>;
+
+// GeoJSON + map layer types (v5.2.0 — <MapRenderer> contract alignment)
+export type GeoJSONPosition = z.infer<typeof GeoJSONPositionSchema>;
+export type GeoJSONGeometryType = z.infer<typeof GeoJSONGeometryTypeSchema>;
+export type GeoJSONGeometry = z.infer<typeof GeoJSONGeometrySchema>;
+export type GeoJSONFeature = z.infer<typeof GeoJSONFeatureSchema>;
+export type GeoJSONFeatureCollection = z.infer<typeof GeoJSONFeatureCollectionSchema>;
+export type GeoJSON = z.infer<typeof GeoJSONSchema>;
+export type MapGeoJSONStyle = z.infer<typeof MapGeoJSONStyleSchema>;
+export type MapPopupConfig = z.infer<typeof MapPopupConfigSchema>;
+export type MapLayer = z.infer<typeof MapLayerSchema>;
+export type MapClusterOptions = z.infer<typeof MapClusterOptionsSchema>;
+export type MapPMTilesConfig = z.infer<typeof MapPMTilesConfigSchema>;
 
 // Graph types (v5.0.4)
 export type GraphNode = z.infer<typeof GraphNodeSchema>;

@@ -83,22 +83,26 @@ import type {
 
 ## Component Types
 
-The spec supports **11 component types**:
+The spec supports the following component types (see `ComponentTypeSchema`
+for the authoritative enum):
 
-| Type        | Description                                | Renderer           |
-| ----------- | ------------------------------------------ | ------------------ |
-| `chart`     | Data visualizations (bar, line, pie, etc.) | ChartRenderer      |
-| `table`     | Tabular data display                       | TableRenderer      |
-| `metric`    | KPI cards with trends                      | MetricRenderer     |
-| `text`      | Markdown text blocks                       | TextRenderer       |
-| `composite` | Nested component layouts                   | UIResourceRenderer |
-| `image`     | Image display with captions                | ImageRenderer      |
-| `link`      | External link cards                        | LinkRenderer       |
-| `iframe`    | Sandboxed embedded content                 | IframeRenderer     |
-| `action`    | Interactive buttons                        | ActionRenderer     |
-| `artifact`  | Downloadable files                         | ArtifactRenderer   |
-| `carousel`  | Scrollable component list                  | CarouselRenderer   |
-| `footer`    | Metadata display                           | FooterRenderer     |
+| Type        | Description                                         | Renderer           |
+| ----------- | --------------------------------------------------- | ------------------ |
+| `chart`     | Data visualizations (bar, line, pie, etc.)          | ChartRenderer      |
+| `table`     | Tabular data display                                | TableRenderer      |
+| `metric`    | KPI cards with trends                               | MetricRenderer     |
+| `text`      | Markdown text blocks                                | TextRenderer       |
+| `composite` | Nested component layouts                            | UIResourceRenderer |
+| `grid`      | Nested 12-column grid layouts                       | GridRenderer       |
+| `image`     | Image display with captions                         | ImageRenderer      |
+| `link`      | External link cards                                 | LinkRenderer       |
+| `iframe`    | Sandboxed embedded content                          | IframeRenderer     |
+| `action`    | Interactive buttons                                 | ActionRenderer     |
+| `artifact`  | Downloadable files                                  | ArtifactRenderer   |
+| `carousel`  | Scrollable component list                           | CarouselRenderer   |
+| `footer`    | Metadata display                                    | FooterRenderer     |
+| `map`       | Interactive Leaflet map (markers, GeoJSON, PMTiles) | MapRenderer        |
+| `graph`     | Node-link graph visualization (peer `@antv/g6`)     | GraphRenderer      |
 
 ## Registry Format
 
@@ -116,7 +120,7 @@ interface ComponentRegistry {
 
 interface Component {
   id: string; // kebab-case: /^[a-z0-9-]+$/
-  type: ComponentType; // One of 11 types
+  type: ComponentType; // see ComponentTypeSchema
   name: string;
   description?: string;
   schema: {
@@ -390,6 +394,98 @@ feedback:
   refinements. The host persists this and may re-run its adapter with the
   corrected layout.
 
+## Map Component Contract (v5.2.0)
+
+The `map` component (`type: 'map'`) renders an interactive Leaflet map. Its
+params schema — `MapComponentParamsSchema` — historically validated only
+`markers`; since v5.2.0 it also validates the GeoJSON, multi-layer, marker
+clustering and PMTiles fields that `@seed-ship/mcp-ui-solid`'s `<MapRenderer>`
+has supported since its v3.1.0. Before v5.2.0 those fields were silently
+stripped by Zod.
+
+The contract carries **no domain logic** — it is a generic geographic
+payload. Cadastre / data.gouv / IGN specifics belong in the connector or
+host, never in the spec.
+
+### GeoJSON
+
+`params.geojson` accepts a GeoJSON `FeatureCollection`, a bare `Feature`, or a
+raw `Geometry` — the same shapes Leaflet's `L.geoJSON()` accepts.
+`FeatureCollection` is the expected shape for connector / opendata payloads.
+
+```typescript
+import { MapComponentParamsSchema } from '@seed-ship/mcp-ui-spec';
+
+const map = MapComponentParamsSchema.parse({
+  geojson: {
+    type: 'FeatureCollection',
+    features: [
+      {
+        type: 'Feature',
+        geometry: {
+          type: 'Polygon',
+          coordinates: [
+            [
+              [2.3, 48.8],
+              [2.4, 48.8],
+              [2.4, 48.9],
+              [2.3, 48.8],
+            ],
+          ],
+        },
+        properties: { name: 'Zone A', value: 42 },
+      },
+    ],
+  },
+  geojsonStyle: {
+    choroplethField: 'value',
+    choroplethScale: [
+      [0, '#eff3ff'],
+      [100, '#084594'],
+    ],
+  },
+  popup: { titleField: 'name', fields: ['value'] },
+  fitBounds: true,
+});
+```
+
+Geometry `coordinates` are typed as a depth-bounded union of number arrays,
+so every standard geometry validates — `Point`, `MultiPoint`, `LineString`,
+`MultiLineString`, `Polygon`, `MultiPolygon`, `GeometryCollection` — and 3D
+positions `[lng, lat, elevation]` stay valid. The contract is **typed but
+permissive**: a structurally-valid `FeatureCollection` is never refused,
+while an obviously-wrong payload (bad `type`, non-numeric coordinate) is
+rejected.
+
+### `MapComponentParams` fields
+
+| Field                                                                                    | Type                           | Description                                                 |
+| ---------------------------------------------------------------------------------------- | ------------------------------ | ----------------------------------------------------------- |
+| `center`                                                                                 | `LatLngPoint`                  | Initial center — `[lat, lng]` tuple or `{ lat, lng }`       |
+| `zoom`                                                                                   | `number`                       | Initial zoom level                                          |
+| `markers`                                                                                | `MapMarker[]`                  | Point markers (unchanged since Sprint 6)                    |
+| `geojson`                                                                                | `GeoJSON`                      | FeatureCollection / Feature / Geometry to render            |
+| `geojsonStyle`                                                                           | `MapGeoJSONStyle`              | Static or choropleth (data-driven) styling                  |
+| `popup`                                                                                  | `MapPopupConfig`               | Feature popup config — `titleField` / `fields` / `template` |
+| `layers`                                                                                 | `MapLayer[]`                   | Named GeoJSON overlays — a Leaflet layer control is added   |
+| `clustering`                                                                             | `boolean \| MapClusterOptions` | Marker clustering                                           |
+| `pmtiles`                                                                                | `MapPMTilesConfig`             | PMTiles vector-tile source for large datasets               |
+| `fitBounds`                                                                              | `boolean`                      | Auto-fit the viewport to all markers / features             |
+| `tileLayer` · `attribution` · `zoomControl` · `scrollWheelZoom` · `height` · `className` | —                              | Base-map / display options                                  |
+
+Every field is optional and additive — a markers-only map validates exactly
+as it did before v5.2.0.
+
+### Exported types
+
+`GeoJSON`, `GeoJSONFeatureCollection`, `GeoJSONFeature`, `GeoJSONGeometry`,
+`GeoJSONGeometryType`, `GeoJSONPosition`, `MapGeoJSONStyle`, `MapPopupConfig`,
+`MapLayer`, `MapClusterOptions`, `MapPMTilesConfig` — alongside the existing
+`MapComponentParams`, `MapMarker`, `LatLngPoint`.
+
+The renderer side lives in `@seed-ship/mcp-ui-solid`'s `<MapRenderer>` /
+`<UIResourceRenderer>` — see that package's README for rendering examples.
+
 ## Related Packages
 
 | Package                                      | Description                            |
@@ -401,7 +497,7 @@ feedback:
 
 This package follows [Semantic Versioning](https://semver.org/). See [CHANGELOG.md](./CHANGELOG.md) for release notes.
 
-**Current Version:** 5.1.0
+**Current Version:** 5.2.0
 
 ## License
 

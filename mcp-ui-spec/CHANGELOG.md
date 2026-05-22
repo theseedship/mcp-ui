@@ -5,6 +5,53 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.2.0] - 2026-05-22
+
+`map` component contract alignment. `@seed-ship/mcp-ui-solid`'s `<MapRenderer>`
+has supported GeoJSON, choropleth, popups, named layers, marker clustering and
+PMTiles since its v3.1.0, but `MapComponentParamsSchema` only validated
+`markers` — a host emitting `type:'map'` with `params.geojson` had those
+fields silently stripped by Zod. This release closes that gap so a GeoJSON
+`FeatureCollection` is a first-class, validated part of the map contract. No
+domain logic (Cadastre / data.gouv / IGN) is involved — only schema shape.
+
+### Added — GeoJSON schemas
+
+- `GeoJSONSchema` — what `params.geojson` accepts: a `FeatureCollection`, a
+  bare `Feature`, or a raw `Geometry` (mirrors what Leaflet's `L.geoJSON()`
+  takes). `FeatureCollection` is the expected shape for connector / opendata
+  payloads.
+- `GeoJSONFeatureCollectionSchema`, `GeoJSONFeatureSchema`,
+  `GeoJSONGeometrySchema`, `GeoJSONGeometryTypeSchema`,
+  `GeoJSONCoordinatesSchema`, `GeoJSONPositionSchema`.
+- Geometry `coordinates` are typed as a depth-bounded union of number arrays
+  (Point → MultiPolygon), so the contract stays "typed but permissive": 3D
+  positions `[lng, lat, elevation]` stay valid, while an obviously-wrong
+  payload (bad `type`, non-numeric coordinate) is rejected.
+
+### Added — map sub-schemas (parity with `<MapRenderer>`)
+
+- `MapGeoJSONStyleSchema` — static + choropleth (data-driven) styling.
+- `MapPopupConfigSchema` — feature popup config (`titleField` / `fields` /
+  `template`).
+- `MapLayerSchema` — a named GeoJSON overlay.
+- `MapClusterOptionsSchema` — Leaflet.markercluster options.
+- `MapPMTilesConfigSchema` (+ paint / label rule schemas) — PMTiles
+  vector-tile source for large datasets.
+
+### Changed — `MapComponentParamsSchema`
+
+- New optional fields: `geojson`, `geojsonStyle`, `popup`, `layers`,
+  `clustering`, `pmtiles`, `className`. **Backward compatible** — every field
+  is optional, so a markers-only map validates exactly as before.
+
+### Types
+
+- New exported types: `GeoJSON`, `GeoJSONFeatureCollection`, `GeoJSONFeature`,
+  `GeoJSONGeometry`, `GeoJSONGeometryType`, `GeoJSONPosition`,
+  `MapGeoJSONStyle`, `MapPopupConfig`, `MapLayer`, `MapClusterOptions`,
+  `MapPMTilesConfig`.
+
 ## [5.1.0] - 2026-05-21
 
 Sprint OpenData / macros — cf.
