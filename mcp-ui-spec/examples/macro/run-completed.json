@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "macro-run/v1",
+  "runId": "run_c40988",
+  "macroId": "research-pipeline",
+  "macroName": "Research pipeline",
+  "status": "completed",
+  "startedAt": "2026-05-22T10:10:00.000Z",
+  "completedAt": "2026-05-22T10:10:48.000Z",
+  "steps": [
+    { "id": "step-1", "label": "Collect sources", "status": "done", "durationMs": 2400 },
+    { "id": "step-2", "label": "Summarize sources", "status": "done", "durationMs": 5100 },
+    { "id": "step-3", "label": "Draft answer", "status": "done", "durationMs": 3300 }
+  ],
+  "results": [
+    {
+      "id": "answer-chart",
+      "type": "chart",
+      "position": { "colStart": 1, "colSpan": 12 },
+      "params": { "chartType": "bar", "labels": ["A", "B"], "datasets": [{ "data": [1, 2] }] }
+    },
+    {
+      "id": "answer-text",
+      "type": "text",
+      "position": { "colStart": 1, "colSpan": 12 },
+      "params": { "content": "Summary of findings." }
+    }
+  ],
+  "outcome": { "kind": "agent_result", "content": { "verified": true } }
+}

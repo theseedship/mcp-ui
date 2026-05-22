@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.3.0] - 2026-05-22
+
+MacroRun Phase 2 — agnostic contract for interactive macro / agent-pipeline
+runs. Consolidated from `deposium_MCPs`
+`docs/2026/briefs/2026-05-22-macro-run-runtime-contract-consolidation.md`.
+
+**Scope** — this release adds only the wire shape. The **producer runtime
+stays external**: building / emitting a `macro-run/v1` snapshot (and any
+future SSE event such as `macro_run_snapshot`) is a separate, later goal on
+the producing repo. Host-side wiring (SSE listener, fetch, persistence,
+resume) is **out of scope** — `@seed-ship/mcp-ui-solid` ships only pure
+adapters from this contract (see its 6.7.0 entry).
+
+### Added — `MacroRunV1` contract
+
+- `MacroRunV1Schema` — snapshot of a macro run: identity (`runId`,
+  `macroId`, …), `status`, optional `agent`, `steps`, optional
+  `results` (`UIComponent`-shaped passthrough), `pendingInterrogation`,
+  `error`, `outcome`.
+- `MacroStepV1Schema` — a step; recursive `parallel` sub-steps reserved for a
+  future parallel execution model.
+- `MacroInterrogationV1Schema` — a HITL interrogation (`choice` / `confirm` /
+  `form` / `elicitation`), embeddable in a run or emitted standalone.
+- `MacroRunStatusSchema` (`pending` → `aborted`) and `MacroStepStatusSchema`
+  (`pending` → `failed`). Run level uses `completed`, **not** `done`; `done`
+  is step-level only.
+- Discriminants `MACRO_RUN_V1` / `MACRO_INTERROGATION_V1`, supporting
+  schemas, inferred types, and JSON fixtures in `examples/macro/`.
+
+The contract is fully agnostic — no runtime, host, corpus or domain coupling.
+
 ## [5.2.0] - 2026-05-22
 
 `map` component contract alignment. `@seed-ship/mcp-ui-solid`'s `<MapRenderer>`

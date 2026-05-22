@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "macro-interrogation/v1",
+  "interrogationId": "int_042",
+  "runId": "run_8f3a21",
+  "stepId": "step-3",
+  "waitingFor": "report_options",
+  "kind": "elicitation",
+  "title": "Report options",
+  "message": "Provide the report parameters before the final draft.",
+  "elicitationSchema": {
+    "type": "object",
+    "properties": {
+      "tone": {
+        "type": "string",
+        "title": "Tone",
+        "enum": ["formal", "casual"],
+        "enumNames": ["Formal", "Casual"]
+      },
+      "maxPages": { "type": "integer", "title": "Max pages", "minimum": 1, "maximum": 20 }
+    },
+    "required": ["tone"]
+  },
+  "resume": { "endpoint": "/api/agent-resume", "mode": "agent_resume" }
+}

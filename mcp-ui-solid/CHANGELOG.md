@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.7.0] - 2026-05-22
+
+### Added — MacroRun Phase 2 adapters
+
+Pure adapters from the `MacroRunV1` contract (new in
+`@seed-ship/mcp-ui-spec@5.3.0`) to existing MCP-UI primitives. Published on
+the opt-in `@seed-ship/mcp-ui-solid/adapters` subpath — never imported by the
+core renderer path.
+
+- `macroRunToScratchpadState(run: MacroRunV1): ScratchpadState` — builds an
+  `agent_card` section, a `stepper` (or `split_stepper` when steps carry
+  `parallel` branches), a `prompt` section for an embedded
+  `pendingInterrogation`, and one section per `results` entry. Run status
+  maps `pending→loading`, `running→processing`, `awaiting_input→waiting_human`,
+  `completed→complete`, `failed`/`aborted`→`error` (aborted is never
+  retryable). `results` is optional — the adapter works without UI results.
+- `macroInterrogationToChatPromptConfig(q: MacroInterrogationV1): ChatPromptConfig`
+  — maps `choice` / `confirm` / `form` directly, and routes `elicitation`
+  through the existing `elicitationToPromptConfig()` helper. Always returns a
+  `ChatPromptConfig`. Usable standalone or via `macroRunToScratchpadState`.
+
+Both are **pure functions** — no fetch, no SSE listener, no persistence, no
+global state.
+
+**Out of scope (host / runtime responsibility):** the producer runtime that
+emits a `macro-run/v1` snapshot (a later goal on the producing repo), and all
+host-side wiring — SSE listener, fetch, persistence, resume. These adapters
+only translate a snapshot the host already has. The `action:'submit'`
+executors are untouched, and MacroRun is kept separate from the tool-call
+action path.
+
 ## [6.6.1] - 2026-05-22
 
 ### Fixed — `action: 'submit'` is no longer inert outside a `<form>`

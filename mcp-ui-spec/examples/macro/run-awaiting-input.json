@@ -1,0 +1,34 @@
+{
+  "schemaVersion": "macro-run/v1",
+  "runId": "run_b7c012",
+  "macroId": "research-pipeline",
+  "macroName": "Research pipeline",
+  "status": "awaiting_input",
+  "startedAt": "2026-05-22T10:05:00.000Z",
+  "updatedAt": "2026-05-22T10:05:30.000Z",
+  "agent": {
+    "id": "researcher",
+    "name": "Researcher",
+    "status": "waiting"
+  },
+  "steps": [
+    { "id": "step-1", "label": "Collect sources", "status": "done" },
+    { "id": "step-2", "label": "Pick a direction", "status": "active" }
+  ],
+  "pendingInterrogation": {
+    "schemaVersion": "macro-interrogation/v1",
+    "interrogationId": "int_001",
+    "runId": "run_b7c012",
+    "stepId": "step-2",
+    "waitingFor": "direction",
+    "kind": "choice",
+    "title": "Which direction should the research take?",
+    "message": "Two viable angles surfaced from the collected sources.",
+    "options": [
+      { "value": "breadth", "label": "Broad overview", "description": "Cover many angles briefly" },
+      { "value": "depth", "label": "Deep dive", "description": "Focus on one angle in detail" }
+    ],
+    "defaultChoice": { "value": "breadth", "reason": "Default when no answer within timeout" },
+    "resume": { "endpoint": "/api/macro-resume", "mode": "macro_resume" }
+  }
+}
