@@ -20,29 +20,29 @@ pnpm add @seed-ship/mcp-ui-spec
 ### Zod Validation (Recommended)
 
 ```typescript
-import { ComponentRegistrySchema, ComponentSchema } from '@seed-ship/mcp-ui-spec'
+import { ComponentRegistrySchema, ComponentSchema } from '@seed-ship/mcp-ui-spec';
 
 // Validate a full registry
-const result = ComponentRegistrySchema.safeParse(myRegistry)
+const result = ComponentRegistrySchema.safeParse(myRegistry);
 if (!result.success) {
-  console.error('Validation errors:', result.error.issues)
+  console.error('Validation errors:', result.error.issues);
 }
 
 // Validate a single component
-const componentResult = ComponentSchema.safeParse(myComponent)
+const componentResult = ComponentSchema.safeParse(myComponent);
 ```
 
 ### JSON Schema Validation
 
 ```typescript
-import registrySchema from '@seed-ship/mcp-ui-spec/schemas/component-registry-v1.json'
-import Ajv from 'ajv'
+import registrySchema from '@seed-ship/mcp-ui-spec/schemas/component-registry-v1.json';
+import Ajv from 'ajv';
 
-const ajv = new Ajv()
-const validate = ajv.compile(registrySchema)
+const ajv = new Ajv();
+const validate = ajv.compile(registrySchema);
 
 if (!validate(myRegistry)) {
-  console.error(validate.errors)
+  console.error(validate.errors);
 }
 ```
 
@@ -50,18 +50,18 @@ if (!validate(myRegistry)) {
 
 ### Zod Schemas (10 total)
 
-| Schema | Description |
-|--------|-------------|
-| `ComponentRegistrySchema` | Root registry object with version and components |
-| `ComponentSchema` | Individual component definition |
-| `ComponentExampleSchema` | Working example for a component |
-| `GridPositionSchema` | 12-column grid positioning |
-| `SecurityConstraintsSchema` | Security configuration (auth, domains, sandbox) |
-| `PerformanceConstraintsSchema` | Performance limits (render time, data size) |
-| `ComponentTypeSchema` | Enum of supported component types |
-| `SandboxFlagSchema` | Iframe sandbox permissions |
-| `RegistryMetadataSchema` | Optional registry metadata |
-| `ComponentSchemaSchema` | JSON Schema definition for component params |
+| Schema                         | Description                                      |
+| ------------------------------ | ------------------------------------------------ |
+| `ComponentRegistrySchema`      | Root registry object with version and components |
+| `ComponentSchema`              | Individual component definition                  |
+| `ComponentExampleSchema`       | Working example for a component                  |
+| `GridPositionSchema`           | 12-column grid positioning                       |
+| `SecurityConstraintsSchema`    | Security configuration (auth, domains, sandbox)  |
+| `PerformanceConstraintsSchema` | Performance limits (render time, data size)      |
+| `ComponentTypeSchema`          | Enum of supported component types                |
+| `SandboxFlagSchema`            | Iframe sandbox permissions                       |
+| `RegistryMetadataSchema`       | Optional registry metadata                       |
+| `ComponentSchemaSchema`        | JSON Schema definition for component params      |
 
 ### TypeScript Types
 
@@ -77,61 +77,62 @@ import type {
   PerformanceConstraints,
   ComponentType,
   SandboxFlag,
-  RegistryMetadata
-} from '@seed-ship/mcp-ui-spec'
+  RegistryMetadata,
+} from '@seed-ship/mcp-ui-spec';
 ```
 
 ## Component Types
 
 The spec supports **11 component types**:
 
-| Type | Description | Renderer |
-|------|-------------|----------|
-| `chart` | Data visualizations (bar, line, pie, etc.) | ChartRenderer |
-| `table` | Tabular data display | TableRenderer |
-| `metric` | KPI cards with trends | MetricRenderer |
-| `text` | Markdown text blocks | TextRenderer |
-| `composite` | Nested component layouts | UIResourceRenderer |
-| `image` | Image display with captions | ImageRenderer |
-| `link` | External link cards | LinkRenderer |
-| `iframe` | Sandboxed embedded content | IframeRenderer |
-| `action` | Interactive buttons | ActionRenderer |
-| `artifact` | Downloadable files | ArtifactRenderer |
-| `carousel` | Scrollable component list | CarouselRenderer |
-| `footer` | Metadata display | FooterRenderer |
+| Type        | Description                                | Renderer           |
+| ----------- | ------------------------------------------ | ------------------ |
+| `chart`     | Data visualizations (bar, line, pie, etc.) | ChartRenderer      |
+| `table`     | Tabular data display                       | TableRenderer      |
+| `metric`    | KPI cards with trends                      | MetricRenderer     |
+| `text`      | Markdown text blocks                       | TextRenderer       |
+| `composite` | Nested component layouts                   | UIResourceRenderer |
+| `image`     | Image display with captions                | ImageRenderer      |
+| `link`      | External link cards                        | LinkRenderer       |
+| `iframe`    | Sandboxed embedded content                 | IframeRenderer     |
+| `action`    | Interactive buttons                        | ActionRenderer     |
+| `artifact`  | Downloadable files                         | ArtifactRenderer   |
+| `carousel`  | Scrollable component list                  | CarouselRenderer   |
+| `footer`    | Metadata display                           | FooterRenderer     |
 
 ## Registry Format
 
 ```typescript
 interface ComponentRegistry {
-  version: '1.0.0'
+  version: '1.0.0';
   metadata?: {
-    name?: string
-    description?: string
-    author?: string
-    repository?: string  // URL format
-  }
-  components: Component[]  // At least 1 required
+    name?: string;
+    description?: string;
+    author?: string;
+    repository?: string; // URL format
+  };
+  components: Component[]; // At least 1 required
 }
 
 interface Component {
-  id: string              // kebab-case: /^[a-z0-9-]+$/
-  type: ComponentType     // One of 11 types
-  name: string
-  description?: string
-  schema: {               // JSON Schema for params
-    type: 'object'
-    required: string[]
-    properties: Record<string, unknown>
-    additionalProperties?: boolean
-  }
-  examples: ComponentExample[]  // At least 1 required
-  security?: SecurityConstraints
-  performance?: PerformanceConstraints
-  tags?: string[]         // kebab-case tags
-  version?: string        // semver: /^\d+\.\d+\.\d+$/
-  deprecated?: boolean
-  deprecationMessage?: string
+  id: string; // kebab-case: /^[a-z0-9-]+$/
+  type: ComponentType; // One of 11 types
+  name: string;
+  description?: string;
+  schema: {
+    // JSON Schema for params
+    type: 'object';
+    required: string[];
+    properties: Record<string, unknown>;
+    additionalProperties?: boolean;
+  };
+  examples: ComponentExample[]; // At least 1 required
+  security?: SecurityConstraints;
+  performance?: PerformanceConstraints;
+  tags?: string[]; // kebab-case tags
+  version?: string; // semver: /^\d+\.\d+\.\d+$/
+  deprecated?: boolean;
+  deprecationMessage?: string;
 }
 ```
 
@@ -163,10 +164,10 @@ Configure security requirements per component:
 
 ```typescript
 interface SecurityConstraints {
-  requiresAuth?: boolean           // Default: false
-  allowedDomains?: string[]        // Domain whitelist
-  maxIframeDepth?: number          // 0-3, default: 1
-  sandboxFlags?: SandboxFlag[]     // Iframe permissions
+  requiresAuth?: boolean; // Default: false
+  allowedDomains?: string[]; // Domain whitelist
+  maxIframeDepth?: number; // 0-3, default: 1
+  sandboxFlags?: SandboxFlag[]; // Iframe permissions
 }
 
 type SandboxFlag =
@@ -174,7 +175,7 @@ type SandboxFlag =
   | 'allow-same-origin'
   | 'allow-forms'
   | 'allow-popups'
-  | 'allow-modals'
+  | 'allow-modals';
 ```
 
 ### Performance Constraints
@@ -183,8 +184,8 @@ Set performance limits per component:
 
 ```typescript
 interface PerformanceConstraints {
-  maxRenderTime?: number   // Milliseconds, min: 100, default: 5000
-  maxDataSize?: number     // Bytes, min: 1024, default: 102400 (100KB)
+  maxRenderTime?: number; // Milliseconds, min: 100, default: 5000
+  maxDataSize?: number; // Bytes, min: 1024, default: 102400 (100KB)
 }
 ```
 
@@ -268,9 +269,9 @@ Individual components support semantic versioning:
 
 ## Runtime Payload Identity
 
-> **Note** — this section concerns *runtime* payloads (`UILayout` / `UIComponent`
+> **Note** — this section concerns _runtime_ payloads (`UILayout` / `UIComponent`
 > objects emitted by an LLM and passed to a renderer), distinct from the
-> `Component` *registry* definitions documented above. The runtime types live
+> `Component` _registry_ definitions documented above. The runtime types live
 > in [`@seed-ship/mcp-ui-solid`](../mcp-ui-solid) but the identity contract
 > below is part of the spec.
 
@@ -321,9 +322,9 @@ to wrap a bare chart config into a layout) should reuse this helper so the
 keys they produce match what the renderer would compute internally.
 
 ```ts
-import { getUiResourceStableKey } from '@seed-ship/mcp-ui-solid'
+import { getUiResourceStableKey } from '@seed-ship/mcp-ui-solid';
 
-const key = getUiResourceStableKey(barePayload)
+const key = getUiResourceStableKey(barePayload);
 // → 'dashboard-2024-Q3' (passthrough)  or  'a4f3b91' (FNV-1a, 7 chars base36)
 ```
 
@@ -353,9 +354,9 @@ them) and must version explicitly.
 What a connector emits to describe a rich, ready-to-render result:
 
 ```typescript
-import { ConnectorDynamicResultV1Schema } from '@seed-ship/mcp-ui-spec'
+import { ConnectorDynamicResultV1Schema } from '@seed-ship/mcp-ui-spec';
 
-const result = ConnectorDynamicResultV1Schema.parse(payload)
+const result = ConnectorDynamicResultV1Schema.parse(payload);
 ```
 
 - `schemaVersion` — **required**, the namespaced literal
@@ -379,7 +380,7 @@ The renderer-side assembler is `connectorResultToUILayout()` from
 ### `ConnectorRenderFeedback`
 
 What `<PresentationFeedback>` (in `mcp-ui-solid`) emits when a user rates
-how a result was *presented* — a separate axis from response-quality
+how a result was _presented_ — a separate axis from response-quality
 feedback:
 
 - `verdict` — `'readable' | 'not_readable'`, the overall judgement.
@@ -391,10 +392,10 @@ feedback:
 
 ## Related Packages
 
-| Package | Description |
-|---------|-------------|
-| [`@seed-ship/mcp-ui-solid`](../mcp-ui-solid) | SolidJS UI components |
-| [`@seed-ship/mcp-ui-cli`](../mcp-ui-cli) | CLI for validation and type generation |
+| Package                                      | Description                            |
+| -------------------------------------------- | -------------------------------------- |
+| [`@seed-ship/mcp-ui-solid`](../mcp-ui-solid) | SolidJS UI components                  |
+| [`@seed-ship/mcp-ui-cli`](../mcp-ui-cli)     | CLI for validation and type generation |
 
 ## Versioning
 
