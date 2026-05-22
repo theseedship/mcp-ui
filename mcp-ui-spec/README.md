@@ -20,29 +20,29 @@ pnpm add @seed-ship/mcp-ui-spec
 ### Zod Validation (Recommended)
 
 ```typescript
-import { ComponentRegistrySchema, ComponentSchema } from '@seed-ship/mcp-ui-spec'
+import { ComponentRegistrySchema, ComponentSchema } from '@seed-ship/mcp-ui-spec';
 
 // Validate a full registry
-const result = ComponentRegistrySchema.safeParse(myRegistry)
+const result = ComponentRegistrySchema.safeParse(myRegistry);
 if (!result.success) {
-  console.error('Validation errors:', result.error.issues)
+  console.error('Validation errors:', result.error.issues);
 }
 
 // Validate a single component
-const componentResult = ComponentSchema.safeParse(myComponent)
+const componentResult = ComponentSchema.safeParse(myComponent);
 ```
 
 ### JSON Schema Validation
 
 ```typescript
-import registrySchema from '@seed-ship/mcp-ui-spec/schemas/component-registry-v1.json'
-import Ajv from 'ajv'
+import registrySchema from '@seed-ship/mcp-ui-spec/schemas/component-registry-v1.json';
+import Ajv from 'ajv';
 
-const ajv = new Ajv()
-const validate = ajv.compile(registrySchema)
+const ajv = new Ajv();
+const validate = ajv.compile(registrySchema);
 
 if (!validate(myRegistry)) {
-  console.error(validate.errors)
+  console.error(validate.errors);
 }
 ```
 
@@ -50,18 +50,18 @@ if (!validate(myRegistry)) {
 
 ### Zod Schemas (10 total)
 
-| Schema | Description |
-|--------|-------------|
-| `ComponentRegistrySchema` | Root registry object with version and components |
-| `ComponentSchema` | Individual component definition |
-| `ComponentExampleSchema` | Working example for a component |
-| `GridPositionSchema` | 12-column grid positioning |
-| `SecurityConstraintsSchema` | Security configuration (auth, domains, sandbox) |
-| `PerformanceConstraintsSchema` | Performance limits (render time, data size) |
-| `ComponentTypeSchema` | Enum of supported component types |
-| `SandboxFlagSchema` | Iframe sandbox permissions |
-| `RegistryMetadataSchema` | Optional registry metadata |
-| `ComponentSchemaSchema` | JSON Schema definition for component params |
+| Schema                         | Description                                      |
+| ------------------------------ | ------------------------------------------------ |
+| `ComponentRegistrySchema`      | Root registry object with version and components |
+| `ComponentSchema`              | Individual component definition                  |
+| `ComponentExampleSchema`       | Working example for a component                  |
+| `GridPositionSchema`           | 12-column grid positioning                       |
+| `SecurityConstraintsSchema`    | Security configuration (auth, domains, sandbox)  |
+| `PerformanceConstraintsSchema` | Performance limits (render time, data size)      |
+| `ComponentTypeSchema`          | Enum of supported component types                |
+| `SandboxFlagSchema`            | Iframe sandbox permissions                       |
+| `RegistryMetadataSchema`       | Optional registry metadata                       |
+| `ComponentSchemaSchema`        | JSON Schema definition for component params      |
 
 ### TypeScript Types
 
@@ -77,61 +77,66 @@ import type {
   PerformanceConstraints,
   ComponentType,
   SandboxFlag,
-  RegistryMetadata
-} from '@seed-ship/mcp-ui-spec'
+  RegistryMetadata,
+} from '@seed-ship/mcp-ui-spec';
 ```
 
 ## Component Types
 
-The spec supports **11 component types**:
+The spec supports the following component types (see `ComponentTypeSchema`
+for the authoritative enum):
 
-| Type | Description | Renderer |
-|------|-------------|----------|
-| `chart` | Data visualizations (bar, line, pie, etc.) | ChartRenderer |
-| `table` | Tabular data display | TableRenderer |
-| `metric` | KPI cards with trends | MetricRenderer |
-| `text` | Markdown text blocks | TextRenderer |
-| `composite` | Nested component layouts | UIResourceRenderer |
-| `image` | Image display with captions | ImageRenderer |
-| `link` | External link cards | LinkRenderer |
-| `iframe` | Sandboxed embedded content | IframeRenderer |
-| `action` | Interactive buttons | ActionRenderer |
-| `artifact` | Downloadable files | ArtifactRenderer |
-| `carousel` | Scrollable component list | CarouselRenderer |
-| `footer` | Metadata display | FooterRenderer |
+| Type        | Description                                         | Renderer           |
+| ----------- | --------------------------------------------------- | ------------------ |
+| `chart`     | Data visualizations (bar, line, pie, etc.)          | ChartRenderer      |
+| `table`     | Tabular data display                                | TableRenderer      |
+| `metric`    | KPI cards with trends                               | MetricRenderer     |
+| `text`      | Markdown text blocks                                | TextRenderer       |
+| `composite` | Nested component layouts                            | UIResourceRenderer |
+| `grid`      | Nested 12-column grid layouts                       | GridRenderer       |
+| `image`     | Image display with captions                         | ImageRenderer      |
+| `link`      | External link cards                                 | LinkRenderer       |
+| `iframe`    | Sandboxed embedded content                          | IframeRenderer     |
+| `action`    | Interactive buttons                                 | ActionRenderer     |
+| `artifact`  | Downloadable files                                  | ArtifactRenderer   |
+| `carousel`  | Scrollable component list                           | CarouselRenderer   |
+| `footer`    | Metadata display                                    | FooterRenderer     |
+| `map`       | Interactive Leaflet map (markers, GeoJSON, PMTiles) | MapRenderer        |
+| `graph`     | Node-link graph visualization (peer `@antv/g6`)     | GraphRenderer      |
 
 ## Registry Format
 
 ```typescript
 interface ComponentRegistry {
-  version: '1.0.0'
+  version: '1.0.0';
   metadata?: {
-    name?: string
-    description?: string
-    author?: string
-    repository?: string  // URL format
-  }
-  components: Component[]  // At least 1 required
+    name?: string;
+    description?: string;
+    author?: string;
+    repository?: string; // URL format
+  };
+  components: Component[]; // At least 1 required
 }
 
 interface Component {
-  id: string              // kebab-case: /^[a-z0-9-]+$/
-  type: ComponentType     // One of 11 types
-  name: string
-  description?: string
-  schema: {               // JSON Schema for params
-    type: 'object'
-    required: string[]
-    properties: Record<string, unknown>
-    additionalProperties?: boolean
-  }
-  examples: ComponentExample[]  // At least 1 required
-  security?: SecurityConstraints
-  performance?: PerformanceConstraints
-  tags?: string[]         // kebab-case tags
-  version?: string        // semver: /^\d+\.\d+\.\d+$/
-  deprecated?: boolean
-  deprecationMessage?: string
+  id: string; // kebab-case: /^[a-z0-9-]+$/
+  type: ComponentType; // see ComponentTypeSchema
+  name: string;
+  description?: string;
+  schema: {
+    // JSON Schema for params
+    type: 'object';
+    required: string[];
+    properties: Record<string, unknown>;
+    additionalProperties?: boolean;
+  };
+  examples: ComponentExample[]; // At least 1 required
+  security?: SecurityConstraints;
+  performance?: PerformanceConstraints;
+  tags?: string[]; // kebab-case tags
+  version?: string; // semver: /^\d+\.\d+\.\d+$/
+  deprecated?: boolean;
+  deprecationMessage?: string;
 }
 ```
 
@@ -163,10 +168,10 @@ Configure security requirements per component:
 
 ```typescript
 interface SecurityConstraints {
-  requiresAuth?: boolean           // Default: false
-  allowedDomains?: string[]        // Domain whitelist
-  maxIframeDepth?: number          // 0-3, default: 1
-  sandboxFlags?: SandboxFlag[]     // Iframe permissions
+  requiresAuth?: boolean; // Default: false
+  allowedDomains?: string[]; // Domain whitelist
+  maxIframeDepth?: number; // 0-3, default: 1
+  sandboxFlags?: SandboxFlag[]; // Iframe permissions
 }
 
 type SandboxFlag =
@@ -174,7 +179,7 @@ type SandboxFlag =
   | 'allow-same-origin'
   | 'allow-forms'
   | 'allow-popups'
-  | 'allow-modals'
+  | 'allow-modals';
 ```
 
 ### Performance Constraints
@@ -183,8 +188,8 @@ Set performance limits per component:
 
 ```typescript
 interface PerformanceConstraints {
-  maxRenderTime?: number   // Milliseconds, min: 100, default: 5000
-  maxDataSize?: number     // Bytes, min: 1024, default: 102400 (100KB)
+  maxRenderTime?: number; // Milliseconds, min: 100, default: 5000
+  maxDataSize?: number; // Bytes, min: 1024, default: 102400 (100KB)
 }
 ```
 
@@ -268,9 +273,9 @@ Individual components support semantic versioning:
 
 ## Runtime Payload Identity
 
-> **Note** — this section concerns *runtime* payloads (`UILayout` / `UIComponent`
+> **Note** — this section concerns _runtime_ payloads (`UILayout` / `UIComponent`
 > objects emitted by an LLM and passed to a renderer), distinct from the
-> `Component` *registry* definitions documented above. The runtime types live
+> `Component` _registry_ definitions documented above. The runtime types live
 > in [`@seed-ship/mcp-ui-solid`](../mcp-ui-solid) but the identity contract
 > below is part of the spec.
 
@@ -321,9 +326,9 @@ to wrap a bare chart config into a layout) should reuse this helper so the
 keys they produce match what the renderer would compute internally.
 
 ```ts
-import { getUiResourceStableKey } from '@seed-ship/mcp-ui-solid'
+import { getUiResourceStableKey } from '@seed-ship/mcp-ui-solid';
 
-const key = getUiResourceStableKey(barePayload)
+const key = getUiResourceStableKey(barePayload);
 // → 'dashboard-2024-Q3' (passthrough)  or  'a4f3b91' (FNV-1a, 7 chars base36)
 ```
 
@@ -353,9 +358,9 @@ them) and must version explicitly.
 What a connector emits to describe a rich, ready-to-render result:
 
 ```typescript
-import { ConnectorDynamicResultV1Schema } from '@seed-ship/mcp-ui-spec'
+import { ConnectorDynamicResultV1Schema } from '@seed-ship/mcp-ui-spec';
 
-const result = ConnectorDynamicResultV1Schema.parse(payload)
+const result = ConnectorDynamicResultV1Schema.parse(payload);
 ```
 
 - `schemaVersion` — **required**, the namespaced literal
@@ -379,7 +384,7 @@ The renderer-side assembler is `connectorResultToUILayout()` from
 ### `ConnectorRenderFeedback`
 
 What `<PresentationFeedback>` (in `mcp-ui-solid`) emits when a user rates
-how a result was *presented* — a separate axis from response-quality
+how a result was _presented_ — a separate axis from response-quality
 feedback:
 
 - `verdict` — `'readable' | 'not_readable'`, the overall judgement.
@@ -389,18 +394,110 @@ feedback:
   refinements. The host persists this and may re-run its adapter with the
   corrected layout.
 
+## Map Component Contract (v5.2.0)
+
+The `map` component (`type: 'map'`) renders an interactive Leaflet map. Its
+params schema — `MapComponentParamsSchema` — historically validated only
+`markers`; since v5.2.0 it also validates the GeoJSON, multi-layer, marker
+clustering and PMTiles fields that `@seed-ship/mcp-ui-solid`'s `<MapRenderer>`
+has supported since its v3.1.0. Before v5.2.0 those fields were silently
+stripped by Zod.
+
+The contract carries **no domain logic** — it is a generic geographic
+payload. Cadastre / data.gouv / IGN specifics belong in the connector or
+host, never in the spec.
+
+### GeoJSON
+
+`params.geojson` accepts a GeoJSON `FeatureCollection`, a bare `Feature`, or a
+raw `Geometry` — the same shapes Leaflet's `L.geoJSON()` accepts.
+`FeatureCollection` is the expected shape for connector / opendata payloads.
+
+```typescript
+import { MapComponentParamsSchema } from '@seed-ship/mcp-ui-spec';
+
+const map = MapComponentParamsSchema.parse({
+  geojson: {
+    type: 'FeatureCollection',
+    features: [
+      {
+        type: 'Feature',
+        geometry: {
+          type: 'Polygon',
+          coordinates: [
+            [
+              [2.3, 48.8],
+              [2.4, 48.8],
+              [2.4, 48.9],
+              [2.3, 48.8],
+            ],
+          ],
+        },
+        properties: { name: 'Zone A', value: 42 },
+      },
+    ],
+  },
+  geojsonStyle: {
+    choroplethField: 'value',
+    choroplethScale: [
+      [0, '#eff3ff'],
+      [100, '#084594'],
+    ],
+  },
+  popup: { titleField: 'name', fields: ['value'] },
+  fitBounds: true,
+});
+```
+
+Geometry `coordinates` are typed as a depth-bounded union of number arrays,
+so every standard geometry validates — `Point`, `MultiPoint`, `LineString`,
+`MultiLineString`, `Polygon`, `MultiPolygon`, `GeometryCollection` — and 3D
+positions `[lng, lat, elevation]` stay valid. The contract is **typed but
+permissive**: a structurally-valid `FeatureCollection` is never refused,
+while an obviously-wrong payload (bad `type`, non-numeric coordinate) is
+rejected.
+
+### `MapComponentParams` fields
+
+| Field                                                                                    | Type                           | Description                                                 |
+| ---------------------------------------------------------------------------------------- | ------------------------------ | ----------------------------------------------------------- |
+| `center`                                                                                 | `LatLngPoint`                  | Initial center — `[lat, lng]` tuple or `{ lat, lng }`       |
+| `zoom`                                                                                   | `number`                       | Initial zoom level                                          |
+| `markers`                                                                                | `MapMarker[]`                  | Point markers (unchanged since Sprint 6)                    |
+| `geojson`                                                                                | `GeoJSON`                      | FeatureCollection / Feature / Geometry to render            |
+| `geojsonStyle`                                                                           | `MapGeoJSONStyle`              | Static or choropleth (data-driven) styling                  |
+| `popup`                                                                                  | `MapPopupConfig`               | Feature popup config — `titleField` / `fields` / `template` |
+| `layers`                                                                                 | `MapLayer[]`                   | Named GeoJSON overlays — a Leaflet layer control is added   |
+| `clustering`                                                                             | `boolean \| MapClusterOptions` | Marker clustering                                           |
+| `pmtiles`                                                                                | `MapPMTilesConfig`             | PMTiles vector-tile source for large datasets               |
+| `fitBounds`                                                                              | `boolean`                      | Auto-fit the viewport to all markers / features             |
+| `tileLayer` · `attribution` · `zoomControl` · `scrollWheelZoom` · `height` · `className` | —                              | Base-map / display options                                  |
+
+Every field is optional and additive — a markers-only map validates exactly
+as it did before v5.2.0.
+
+### Exported types
+
+`GeoJSON`, `GeoJSONFeatureCollection`, `GeoJSONFeature`, `GeoJSONGeometry`,
+`GeoJSONGeometryType`, `GeoJSONPosition`, `MapGeoJSONStyle`, `MapPopupConfig`,
+`MapLayer`, `MapClusterOptions`, `MapPMTilesConfig` — alongside the existing
+`MapComponentParams`, `MapMarker`, `LatLngPoint`.
+
+The renderer side lives in `@seed-ship/mcp-ui-solid`'s `<MapRenderer>` /
+`<UIResourceRenderer>` — see that package's README for rendering examples.
+
 ## Related Packages
 
-| Package | Description |
-|---------|-------------|
-| [`@seed-ship/mcp-ui-solid`](../mcp-ui-solid) | SolidJS UI components |
-| [`@seed-ship/mcp-ui-cli`](../mcp-ui-cli) | CLI for validation and type generation |
+| Package                                      | Description                            |
+| -------------------------------------------- | -------------------------------------- |
+| [`@seed-ship/mcp-ui-solid`](../mcp-ui-solid) | SolidJS UI components                  |
+| [`@seed-ship/mcp-ui-cli`](../mcp-ui-cli)     | CLI for validation and type generation |
 
 ## Versioning
 
 This package follows [Semantic Versioning](https://semver.org/). See [CHANGELOG.md](./CHANGELOG.md) for release notes.
 
-**Current Version:** 5.1.0
+**Current Version:** 5.2.0
 
 ## License
 
