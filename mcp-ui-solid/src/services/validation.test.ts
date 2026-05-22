@@ -6,7 +6,14 @@
  */
 
 import { describe, it, expect, vi } from 'vitest'
-import { validateComponent, validateChartComponent, getIframeSandbox, validateIframeDomain } from './validation'
+import {
+  validateComponent,
+  validateChartComponent,
+  validatePayloadSize,
+  getIframeSandbox,
+  validateIframeDomain,
+  DEFAULT_RESOURCE_LIMITS,
+} from './validation'
 import type { UIComponent, ComponentType } from '../types'
 
 /** Helper to create a minimal valid UIComponent for testing */
@@ -188,6 +195,77 @@ describe('component-specific validation', () => {
   it('accepts modal with no params beyond type', () => {
     const result = validateComponent(makeComponent('modal', { title: 'Test' }))
     expect(result.valid).toBe(true)
+  })
+})
+
+describe('validatePayloadSize — payload size guard (v6.8.0: 50KB → 512KB)', () => {
+  /**
+   * Build a `map` component whose JSON payload is at least `targetBytes`,
+   * by appending valid GeoJSON Point features to a FeatureCollection.
+   * Deterministic — no randomness, no clock.
+   */
+  function mapComponentOfSize(targetBytes: number): UIComponent {
+    const component = makeComponent('map', {
+      center: { lat: 48.8566, lng: 2.3522 },
+      zoom: 12,
+      geojson: { type: 'FeatureCollection', features: [] as unknown[] },
+    })
+    const features = (component.params as any).geojson.features as unknown[]
+    while (JSON.stringify(component).length < targetBytes) {
+      // Grow in batches to keep the size loop cheap.
+      for (let i = 0; i < 200; i++) {
+        features.push({
+          type: 'Feature',
+          geometry: { type: 'Point', coordinates: [2.3522, 48.8566] },
+          properties: { i: features.length },
+        })
+      }
+    }
+    return component
+  }
+
+  it('the default ceiling is 512KB', () => {
+    expect(DEFAULT_RESOURCE_LIMITS.maxPayloadSize).toBe(512 * 1024)
+  })
+
+  it('accepts a map with valid GeoJSON ~350KB (rejected under the old 50KB/256KB limits)', () => {
+    const component = mapComponentOfSize(350 * 1024)
+    const size = JSON.stringify(component).length
+    expect(size).toBeGreaterThan(256 * 1024) // exceeds the interim 256KB ceiling
+    expect(size).toBeLessThan(512 * 1024) // under the NEW 512KB limit
+
+    expect(validatePayloadSize(component).valid).toBe(true)
+    // Full component validation also passes — no PAYLOAD_TOO_LARGE.
+    const result = validateComponent(component)
+    expect(result.errors?.some((e) => e.code === 'PAYLOAD_TOO_LARGE')).toBeFalsy()
+    expect(result.valid).toBe(true)
+  })
+
+  it('still rejects a map payload over 512KB', () => {
+    const component = mapComponentOfSize(600 * 1024)
+    expect(JSON.stringify(component).length).toBeGreaterThan(512 * 1024)
+
+    const sizeResult = validatePayloadSize(component)
+    expect(sizeResult.valid).toBe(false)
+    expect(sizeResult.errors?.[0].code).toBe('PAYLOAD_TOO_LARGE')
+
+    expect(validateComponent(component).errors?.some((e) => e.code === 'PAYLOAD_TOO_LARGE')).toBe(
+      true
+    )
+  })
+
+  it('still rejects an oversized NON-map payload (guard-rail intact for every type)', () => {
+    const component = makeComponent('text', { content: 'x'.repeat(600 * 1024) })
+    const result = validatePayloadSize(component)
+    expect(result.valid).toBe(false)
+    expect(result.errors?.[0].code).toBe('PAYLOAD_TOO_LARGE')
+  })
+
+  it('honours a caller-supplied lower limit (validation is not disabled)', () => {
+    // A consumer passing stricter limits keeps full control.
+    const component = mapComponentOfSize(60 * 1024)
+    const strict = { ...DEFAULT_RESOURCE_LIMITS, maxPayloadSize: 50 * 1024 }
+    expect(validatePayloadSize(component, strict).valid).toBe(false)
   })
 })
 

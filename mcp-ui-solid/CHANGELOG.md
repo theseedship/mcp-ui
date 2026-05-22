@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.8.0] - 2026-05-22
+
+### Changed — payload-size limit raised 50KB → 512KB
+
+`DEFAULT_RESOURCE_LIMITS.maxPayloadSize` moved from `50 * 1024` to
+`512 * 1024`. The single payload-size guard is shared by every component
+type; at 50KB it rejected otherwise-valid `type:'map'` components carrying a
+realistic `params.geojson` `FeatureCollection` as `PAYLOAD_TOO_LARGE`. A
+dense multi-feature map (e.g. a département-wide choropleth) runs 300-500KB
+even after reasonable geometry simplification — 512KB leaves real headroom
+for that while still rejecting runaway payloads. Genuinely large datasets
+belong in vector tiles (PMTiles), not inline GeoJSON.
+
+- `validatePayloadSize()` and the reject-on-oversize principle are
+  **unchanged** — only the default ceiling moved. Validation is not disabled,
+  and a caller passing stricter `limits` keeps full control.
+- Behaviour before/after: a valid component between 50KB and 512KB was
+  rejected, now passes; a payload over 512KB is still rejected. Components
+  under 50KB are unaffected. Per-registry limits (e.g. the 5KB/10KB presets
+  in `component-registry.ts`) are independent and untouched.
+
 ## [6.7.0] - 2026-05-22
 
 ### Added — MacroRun Phase 2 adapters

@@ -75,7 +75,7 @@ export interface ResourceLimits {
   maxTableRows: number
 
   /**
-   * Max payload size in bytes (default: 50KB)
+   * Max payload size in bytes (default: 512KB)
    */
   maxPayloadSize: number
 

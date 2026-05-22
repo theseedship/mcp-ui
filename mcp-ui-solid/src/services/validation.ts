@@ -122,7 +122,16 @@ function mapZodIssuesToErrors(
 export const DEFAULT_RESOURCE_LIMITS: ResourceLimits = {
   maxDataPoints: 1000,
   maxTableRows: 100,
-  maxPayloadSize: 50 * 1024, // 50KB
+  // v6.8.0 — raised 50KB → 512KB. The single payload-size guard is shared by
+  // every component type ; 50KB rejected otherwise-valid `map` components
+  // carrying a realistic `params.geojson` FeatureCollection (a dense
+  // multi-feature map — e.g. a département-wide choropleth — runs 300-500KB
+  // even after reasonable geometry simplification). 512KB leaves real
+  // headroom for that while still rejecting runaway payloads ; genuinely
+  // large datasets belong in vector tiles (PMTiles), not inline GeoJSON.
+  // The guard itself (`validatePayloadSize`) is unchanged — only the
+  // default ceiling moved.
+  maxPayloadSize: 512 * 1024, // 512KB
   renderTimeout: 5000, // 5 seconds
 }
 
