@@ -192,6 +192,36 @@ describe('component-specific validation', () => {
     expect(mapError).toBeUndefined()
   })
 
+  // v6.8.2 — a map may render purely from geojson / layers / pmtiles
+  // (spec@5.2.0 contract). These must NOT be rejected as INVALID_MAP.
+  it('accepts map with geojson but no center/markers', () => {
+    const result = validateComponent(
+      makeComponent('map', { geojson: { type: 'FeatureCollection', features: [] }, fitBounds: true })
+    )
+    expect(result.errors?.some((e) => e.code === 'INVALID_MAP')).toBe(false)
+  })
+
+  it('accepts map with named layers but no center/markers', () => {
+    const result = validateComponent(
+      makeComponent('map', {
+        layers: [{ name: 'Communes', geojson: { type: 'FeatureCollection', features: [] } }],
+      })
+    )
+    expect(result.errors?.some((e) => e.code === 'INVALID_MAP')).toBe(false)
+  })
+
+  it('accepts map with a pmtiles source but no center/markers', () => {
+    const result = validateComponent(
+      makeComponent('map', { pmtiles: { url: 'https://cdn.example.com/x.pmtiles' } })
+    )
+    expect(result.errors?.some((e) => e.code === 'INVALID_MAP')).toBe(false)
+  })
+
+  it('still rejects an empty map (no center/markers/geojson/layers/pmtiles)', () => {
+    const result = validateComponent(makeComponent('map', {}))
+    expect(result.errors?.some((e) => e.code === 'INVALID_MAP')).toBe(true)
+  })
+
   it('accepts modal with no params beyond type', () => {
     const result = validateComponent(makeComponent('modal', { title: 'Test' }))
     expect(result.valid).toBe(true)

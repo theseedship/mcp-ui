@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.8.2] - 2026-05-30
+
+### Fixed — `type:'map'` rejected when it renders purely from GeoJSON
+
+`validateComponent` rejected a `type:'map'` as `INVALID_MAP` unless it had
+`center` or `markers`. But since spec@5.2.0 a map can render purely from
+`params.geojson`, named `layers`, or a `pmtiles` source (e.g. a Cadastre /
+choropleth map with an auto-fit viewport and no markers). Those valid maps —
+which `<MapRenderer>` draws fine — were blocked before reaching the renderer.
+
+The validator now accepts a map carrying **any** of `center`, `markers`,
+`geojson`, `layers`, or `pmtiles`, aligning the Solid check with
+`MapComponentParamsSchema`. A genuinely empty map (none of those) is still
+rejected. Per audit `docs/briefs/AUDIT-2026-05-30-visual-renderers-g6-ontology.md` (P1.1).
+
 ## [6.8.1] - 2026-05-30
 
 ### Fixed — `type:'graph'` crashed with "renderer is not a function"
