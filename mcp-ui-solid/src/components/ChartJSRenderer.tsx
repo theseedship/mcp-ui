@@ -8,41 +8,44 @@
  * ```
  */
 
-import { Component, createEffect, onCleanup, createSignal, Show } from 'solid-js'
-import type { UIComponent, ChartComponentParams } from '../types'
-import { ExpandableWrapper, useExpanded } from './ExpandableWrapper'
+import { Component, createEffect, onCleanup, createSignal, Show } from 'solid-js';
+import type { UIComponent, ChartComponentParams } from '../types';
+import { ExpandableWrapper, useExpanded } from './ExpandableWrapper';
+import { DegradedFallback } from './DegradedFallback';
+import { chartToDegradedTable } from '../utils/degraded-projections';
+import { useTelemetry } from '../context/MCPUITelemetryContext';
 
 // Lazy load Chart.js to avoid bundling if not used
-let ChartJS: any = null
-let chartJSLoadPromise: Promise<any> | null = null
+let ChartJS: any = null;
+let chartJSLoadPromise: Promise<any> | null = null;
 
 const loadChartJS = async () => {
-  if (ChartJS) return ChartJS
+  if (ChartJS) return ChartJS;
 
   if (!chartJSLoadPromise) {
     chartJSLoadPromise = import('chart.js/auto')
       .then((module) => {
-        ChartJS = module.default || module.Chart
-        return ChartJS
+        ChartJS = module.default || module.Chart;
+        return ChartJS;
       })
       .catch((err) => {
-        chartJSLoadPromise = null
-        throw err
-      })
+        chartJSLoadPromise = null;
+        throw err;
+      });
   }
 
-  return chartJSLoadPromise
-}
+  return chartJSLoadPromise;
+};
 
 /**
  * Check if Chart.js is available
  */
 export async function isChartJSAvailable(): Promise<boolean> {
   try {
-    await loadChartJS()
-    return true
+    await loadChartJS();
+    return true;
   } catch {
-    return false
+    return false;
   }
 }
 
@@ -50,18 +53,18 @@ export interface ChartJSRendererProps {
   /**
    * UIComponent with chart params
    */
-  component: UIComponent
+  component: UIComponent;
 
   /**
    * Error callback
    */
-  onError?: (error: Error) => void
+  onError?: (error: Error) => void;
 
   /**
    * Forwarded to the underlying `<ExpandableWrapper>` (v6.3.1).
    * @see ExpandableWrapperProps.toolbarVariant
    */
-  toolbarVariant?: 'hover' | 'always-visible'
+  toolbarVariant?: 'hover' | 'always-visible';
 }
 
 /**
@@ -87,50 +90,51 @@ export interface ChartJSRendererProps {
  * ```
  */
 export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
-  const [isLoading, setIsLoading] = createSignal(true)
-  const [error, setError] = createSignal<string>()
-  let canvasRef: HTMLCanvasElement | undefined
-  let chartInstance: any
+  const [isLoading, setIsLoading] = createSignal(true);
+  const [error, setError] = createSignal<string>();
+  let canvasRef: HTMLCanvasElement | undefined;
+  let chartInstance: any;
 
-  const params = () => props.component.params as ChartComponentParams
-  const isExpanded = useExpanded()
+  const params = () => props.component.params as ChartComponentParams;
+  const isExpanded = useExpanded();
+  const telemetry = useTelemetry();
 
   // v6.1.0 — export visibility :
   //   - undefined / true  → button shown (new default, was opt-in)
   //   - false             → button hidden (explicit opt-out, unchanged)
-  const exportEnabled = () => params().exportable !== false
+  const exportEnabled = () => params().exportable !== false;
 
   // v6.1.0 — copy data for the ExpandableWrapper modal-header copy button.
   // Lazy-stringified each time the button is clicked.
-  const copyDataJSON = () => JSON.stringify({ type: params().type, data: params().data }, null, 2)
+  const copyDataJSON = () => JSON.stringify({ type: params().type, data: params().data }, null, 2);
 
   // Chart PNG export
   const handleExportPNG = () => {
-    if (!canvasRef) return
-    const url = canvasRef.toDataURL('image/png')
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${(params().title || 'chart').replace(/\s+/g, '-').toLowerCase()}.png`
-    a.click()
-  }
+    if (!canvasRef) return;
+    const url = canvasRef.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${(params().title || 'chart').replace(/\s+/g, '-').toLowerCase()}.png`;
+    a.click();
+  };
 
   // Create/update chart when params change
   createEffect(async () => {
-    if (!canvasRef) return
+    if (!canvasRef) return;
 
     // Access params to track dependencies
-    const chartParams = params()
+    const chartParams = params();
 
-    setIsLoading(true)
-    setError(undefined)
+    setIsLoading(true);
+    setError(undefined);
 
     try {
-      const Chart = await loadChartJS()
+      const Chart = await loadChartJS();
 
       // Destroy previous instance
       if (chartInstance) {
-        chartInstance.destroy()
-        chartInstance = null
+        chartInstance.destroy();
+        chartInstance = null;
       }
 
       // Build options, merging time-axis config if present (v3.1.0)
@@ -146,11 +150,11 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
             ...chartParams.options?.plugins?.legend,
           },
         },
-      }
+      };
 
       // Time-series axis (v3.1.0)
       if (chartParams.timeAxis) {
-        const ta = chartParams.timeAxis
+        const ta = chartParams.timeAxis;
         baseOptions.scales = {
           ...baseOptions.scales,
           x: {
@@ -164,7 +168,7 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
             ...(ta.min ? { min: ta.min } : {}),
             ...(ta.max ? { max: ta.max } : {}),
           },
-        }
+        };
       }
 
       // Create new chart
@@ -172,24 +176,33 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
         type: chartParams.type,
         data: chartParams.data,
         options: baseOptions,
-      })
+      });
 
-      setIsLoading(false)
+      setIsLoading(false);
     } catch (err) {
-      const error = err instanceof Error ? err : new Error('Chart rendering failed')
-      setError(error.message)
-      setIsLoading(false)
-      props.onError?.(error)
+      const error = err instanceof Error ? err : new Error('Chart rendering failed');
+      setError(error.message);
+      setIsLoading(false);
+      // Fallback ladder (P2.5): record the failure so it's observable, then
+      // degrade to the series table below instead of a blank canvas.
+      telemetry?.dispatch({
+        type: 'render:error',
+        errorMessage: error.message,
+        id: props.component?.id ?? '',
+        componentType: 'chart',
+        ts: Date.now(),
+      });
+      props.onError?.(error);
     }
-  })
+  });
 
   // Cleanup on unmount
   onCleanup(() => {
     if (chartInstance) {
-      chartInstance.destroy()
-      chartInstance = null
+      chartInstance.destroy();
+      chartInstance = null;
     }
-  })
+  });
 
   return (
     <ExpandableWrapper
@@ -198,15 +211,15 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
       copyLabel="Copy chart data (JSON)"
       toolbarVariant={props.toolbarVariant}
     >
-      <div class={`relative w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden p-4 group ${
-        isExpanded() ? 'flex-1 min-h-0 flex flex-col' : ''
-      }`}>
+      <div
+        class={`relative w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden p-4 group ${
+          isExpanded() ? 'flex-1 min-h-0 flex flex-col' : ''
+        }`}
+      >
         <Show when={params().title || exportEnabled()}>
           <div class="flex items-center justify-between mb-3 flex-shrink-0">
             <Show when={params().title}>
-              <h3 class="text-sm font-semibold text-gray-900 dark:text-white">
-                {params().title}
-              </h3>
+              <h3 class="text-sm font-semibold text-gray-900 dark:text-white">{params().title}</h3>
             </Show>
             <Show when={exportEnabled()}>
               <button
@@ -215,8 +228,18 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
                 title="Download PNG"
                 aria-label="Download chart as PNG"
               >
-                <svg class="w-3 h-3 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                <svg
+                  class="w-3 h-3 text-gray-500 dark:text-gray-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
                 </svg>
               </button>
             </Show>
@@ -232,28 +255,14 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
           </div>
         </Show>
 
+        {/* Fallback ladder (P2.5): degrade to a series table on render error
+            instead of a bare "Chart Error" message. */}
         <Show when={error()}>
-          <div class="absolute inset-0 flex items-center justify-center p-4 bg-white dark:bg-gray-800">
-            <div class="text-center">
-              <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/20 mb-3">
-                <svg
-                  class="w-6 h-6 text-red-600 dark:text-red-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                  />
-                </svg>
-              </div>
-              <p class="text-red-600 dark:text-red-400 text-sm font-medium">Chart Error</p>
-              <p class="text-gray-600 dark:text-gray-400 text-xs mt-1 max-w-xs">{error()}</p>
-            </div>
-          </div>
+          <DegradedFallback
+            message={`Chart rendering failed: ${error()}`}
+            caption="Showing the chart data as a table — the interactive chart is unavailable."
+            {...chartToDegradedTable(params() ?? {})}
+          />
         </Show>
 
         <div
@@ -270,5 +279,5 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
         </div>
       </div>
     </ExpandableWrapper>
-  )
-}
+  );
+};

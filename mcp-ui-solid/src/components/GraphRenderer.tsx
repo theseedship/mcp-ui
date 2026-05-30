@@ -303,11 +303,11 @@ export const GraphRenderer: Component<GraphRendererProps> = (props) => {
       // so the failure is observable, then degrade to the edge/node table
       // below instead of leaving a blank canvas.
       telemetry?.dispatch({
-        type: 'component:error',
-        id: props.component.id,
+        type: 'render:error',
+        errorMessage: message,
+        id: props.component.id ?? '',
         componentType: 'graph',
         ts: Date.now(),
-        detail: { degraded: true, reason: message },
       });
     }
   });
