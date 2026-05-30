@@ -18,15 +18,20 @@
  * data). All three are computed lazily on click.
  */
 
-import { Component, createSignal, onCleanup, onMount, Show, For } from 'solid-js'
-import type { UIComponent } from '../types'
-import type { GraphComponentParams, GraphLayout, GraphNode, GraphEdge } from '@seed-ship/mcp-ui-spec'
-import { ExpandableWrapper, useExpanded } from './ExpandableWrapper'
-import { PortalDropdownMenu } from './PortalDropdownMenu'
+import { Component, createSignal, onCleanup, onMount, Show, For } from 'solid-js';
+import type { UIComponent } from '../types';
+import type {
+  GraphComponentParams,
+  GraphLayout,
+  GraphNode,
+  GraphEdge,
+} from '@seed-ship/mcp-ui-spec';
+import { ExpandableWrapper, useExpanded } from './ExpandableWrapper';
+import { PortalDropdownMenu } from './PortalDropdownMenu';
 
 // Module-scoped lazy import promise — first call triggers the dynamic
 // import, subsequent calls reuse the resolved module.
-let g6ModulePromise: Promise<typeof import('@antv/g6')> | undefined
+let g6ModulePromise: Promise<typeof import('@antv/g6')> | undefined;
 
 /**
  * Whether the `@antv/g6` peer dependency is installed and importable.
@@ -37,12 +42,12 @@ let g6ModulePromise: Promise<typeof import('@antv/g6')> | undefined
 export async function isG6Available(): Promise<boolean> {
   try {
     if (!g6ModulePromise) {
-      g6ModulePromise = import('@antv/g6')
+      g6ModulePromise = import('@antv/g6');
     }
-    await g6ModulePromise
-    return true
+    await g6ModulePromise;
+    return true;
   } catch {
-    return false
+    return false;
   }
 }
 
@@ -52,16 +57,16 @@ export async function isG6Available(): Promise<boolean> {
  * present (universal default) or `'circular'` otherwise.
  */
 function resolveLayout(params: GraphComponentParams): { type: string; [key: string]: unknown } {
-  const layout: GraphLayout | undefined = params.layout
+  const layout: GraphLayout | undefined = params.layout;
   if (layout === undefined) {
-    const hasEdges = (params.edges?.length ?? 0) > 0
-    return { type: hasEdges ? 'force' : 'circular' }
+    const hasEdges = (params.edges?.length ?? 0) > 0;
+    return { type: hasEdges ? 'force' : 'circular' };
   }
   if (typeof layout === 'string') {
-    return { type: layout }
+    return { type: layout };
   }
   // Object form: spread the passthrough options alongside `type`.
-  return { type: layout.type, ...(layout.options ?? {}) }
+  return { type: layout.type, ...(layout.options ?? {}) };
 }
 
 /**
@@ -70,13 +75,13 @@ function resolveLayout(params: GraphComponentParams): { type: string; [key: stri
  * Any flag set to `false` opts out.
  */
 function resolveBehaviors(params: GraphComponentParams): string[] {
-  const behaviors: string[] = []
-  if (params.enableDrag !== false) behaviors.push('drag-element')
+  const behaviors: string[] = [];
+  if (params.enableDrag !== false) behaviors.push('drag-element');
   if (params.enableZoom !== false) {
-    behaviors.push('zoom-canvas', 'drag-canvas')
+    behaviors.push('zoom-canvas', 'drag-canvas');
   }
-  if (params.enableSelect !== false) behaviors.push('click-select')
-  return behaviors
+  if (params.enableSelect !== false) behaviors.push('click-select');
+  return behaviors;
 }
 
 /**
@@ -85,7 +90,7 @@ function resolveBehaviors(params: GraphComponentParams): string[] {
  * else (force, concentric, circular, grid) → LR (default mermaid).
  */
 function mermaidDirection(layoutType: string): 'TD' | 'LR' {
-  return layoutType === 'dagre' || layoutType === 'tree' || layoutType === 'mindmap' ? 'TD' : 'LR'
+  return layoutType === 'dagre' || layoutType === 'tree' || layoutType === 'mindmap' ? 'TD' : 'LR';
 }
 
 /**
@@ -93,7 +98,10 @@ function mermaidDirection(layoutType: string): 'TD' | 'LR' {
  * on raw quotes / brackets / pipes ; we strip the worst offenders.
  */
 function mermaidLabel(s: string): string {
-  return s.replace(/["[\]|]/g, '').replace(/\s+/g, ' ').trim()
+  return s
+    .replace(/["[\]|]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 /**
@@ -101,82 +109,106 @@ function mermaidLabel(s: string): string {
  * carries the optional `weight` prefix when present (e.g. `|3| label`).
  */
 function toMermaid(params: GraphComponentParams): string {
-  const layoutType = resolveLayout(params).type
-  const dir = mermaidDirection(layoutType)
-  const lines: string[] = [`flowchart ${dir}`]
+  const layoutType = resolveLayout(params).type;
+  const dir = mermaidDirection(layoutType);
+  const lines: string[] = [`flowchart ${dir}`];
   for (const n of params.nodes) {
-    const label = mermaidLabel(n.label ?? n.id)
-    lines.push(`  ${n.id}["${label}"]`)
+    const label = mermaidLabel(n.label ?? n.id);
+    lines.push(`  ${n.id}["${label}"]`);
   }
   for (const e of params.edges ?? []) {
-    const labelParts: string[] = []
-    if (e.weight !== undefined) labelParts.push(String(e.weight))
-    if (e.label) labelParts.push(mermaidLabel(e.label))
-    const labelText = labelParts.join(' · ')
+    const labelParts: string[] = [];
+    if (e.weight !== undefined) labelParts.push(String(e.weight));
+    if (e.label) labelParts.push(mermaidLabel(e.label));
+    const labelText = labelParts.join(' · ');
     if (labelText) {
-      lines.push(`  ${e.source} -->|${labelText}| ${e.target}`)
+      lines.push(`  ${e.source} -->|${labelText}| ${e.target}`);
     } else {
-      lines.push(`  ${e.source} --> ${e.target}`)
+      lines.push(`  ${e.source} --> ${e.target}`);
     }
   }
-  return lines.join('\n')
+  return lines.join('\n');
 }
 
 function toJSON(params: GraphComponentParams): string {
-  return JSON.stringify({ nodes: params.nodes, edges: params.edges ?? [] }, null, 2)
+  return JSON.stringify({ nodes: params.nodes, edges: params.edges ?? [] }, null, 2);
 }
 
 function downloadBlob(content: string | Blob, filename: string, mimeType?: string): void {
-  const blob = typeof content === 'string' ? new Blob([content], { type: mimeType ?? 'text/plain' }) : content
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
+  const blob =
+    typeof content === 'string' ? new Blob([content], { type: mimeType ?? 'text/plain' }) : content;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 export interface GraphRendererProps {
-  component: UIComponent
+  component: UIComponent;
   /**
    * Forwarded to the underlying `<ExpandableWrapper>` (v6.3.1).
    * @see ExpandableWrapperProps.toolbarVariant
    */
-  toolbarVariant?: 'hover' | 'always-visible'
+  toolbarVariant?: 'hover' | 'always-visible';
 }
 
 export const GraphRenderer: Component<GraphRendererProps> = (props) => {
-  const params = () => props.component.params as GraphComponentParams
-  const isExpanded = useExpanded()
-  const [available, setAvailable] = createSignal<boolean | null>(null)
-  const [error, setError] = createSignal<string | undefined>()
-  const [exportMenuOpen, setExportMenuOpen] = createSignal(false)
-  let containerRef: HTMLDivElement | undefined
+  const params = () => props.component.params as GraphComponentParams;
+  const isExpanded = useExpanded();
+  const [available, setAvailable] = createSignal<boolean | null>(null);
+  const [error, setError] = createSignal<string | undefined>();
+  const [exportMenuOpen, setExportMenuOpen] = createSignal(false);
+  let containerRef: HTMLDivElement | undefined;
   // v6.4.0 — trigger ref consumed by <PortalDropdownMenu> for positioning
-  let exportTriggerRef: HTMLButtonElement | undefined
+  let exportTriggerRef: HTMLButtonElement | undefined;
   // Loosely typed because G6 is a peer-optional — we don't pull its
   // types into the bundle just to type a transient local handle.
-  let graphInstance: any | undefined
+  let graphInstance: any | undefined;
 
   onMount(async () => {
-    const g6Available = await isG6Available()
-    setAvailable(g6Available)
-    if (!g6Available || !containerRef) return
+    const g6Available = await isG6Available();
+    setAvailable(g6Available);
+    if (!g6Available || !containerRef) return;
 
     try {
-      const { Graph } = await g6ModulePromise!
-      const p = params()
+      const { Graph } = await g6ModulePromise!;
+      const p = params();
       const config: Record<string, unknown> = {
         container: containerRef,
         data: { nodes: p.nodes, edges: p.edges ?? [] },
         layout: resolveLayout(p),
         behaviors: resolveBehaviors(p),
-        renderer: p.rendererPref === 'svg' ? 'svg' : 'canvas',
+      };
+
+      // G6 v5's `renderer` is a factory `(layer) => IRenderer`, NOT a string
+      // (that was the v4 contract). Passing `'canvas'` / `'svg'` makes G6
+      // throw `renderer is not a function` — and because the default path
+      // also passed the string `'canvas'`, EVERY graph crashed, not just the
+      // svg one. So:
+      //   - default (canvas) → omit `renderer`; G6 uses its built-in canvas
+      //     renderer (documented default `() => new CanvasRenderer()`).
+      //   - `rendererPref: 'svg'` → lazy-load the `@antv/g-svg` renderer
+      //     factory. It ships as a dependency of `@antv/g6`, so it resolves
+      //     whenever the peer is installed; if it can't be loaded we warn and
+      //     stay on the default canvas instead of crashing.
+      if (p.rendererPref === 'svg') {
+        try {
+          // @ts-ignore — g-svg is a transitive dep of g6, not a declared peer
+          const svgMod = await import(/* @vite-ignore */ '@antv/g-svg');
+          const SVGRenderer = svgMod.Renderer;
+          config.renderer = () => new SVGRenderer();
+        } catch {
+          console.warn(
+            '[MCP-UI] GraphRenderer: SVG renderer (@antv/g-svg) unavailable, falling back to canvas.'
+          );
+        }
       }
       if (p.fitView !== false) {
-        config.autoFit = 'view'
+        config.autoFit = 'view';
       }
       if (p.tooltip !== false) {
         // Built-in tooltip plugin — shows label + a compact dump of
@@ -185,67 +217,69 @@ export const GraphRenderer: Component<GraphRendererProps> = (props) => {
           {
             type: 'tooltip',
             getContent: (_evt: unknown, items: any[]) => {
-              const item = items?.[0]
-              if (!item) return ''
-              const label = item.label ?? item.id ?? ''
-              const data = item.data ? JSON.stringify(item.data) : ''
+              const item = items?.[0];
+              if (!item) return '';
+              const label = item.label ?? item.id ?? '';
+              const data = item.data ? JSON.stringify(item.data) : '';
               return `<div style="padding:4px 8px"><strong>${escapeHtml(String(label))}</strong>${
-                data ? `<br><span style="font-size:11px;opacity:0.7">${escapeHtml(data)}</span>` : ''
-              }</div>`
+                data
+                  ? `<br><span style="font-size:11px;opacity:0.7">${escapeHtml(data)}</span>`
+                  : ''
+              }</div>`;
             },
           },
-        ]
+        ];
       }
-      graphInstance = new (Graph as any)(config)
-      await graphInstance.render()
+      graphInstance = new (Graph as any)(config);
+      await graphInstance.render();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to render graph')
+      setError(err instanceof Error ? err.message : 'Failed to render graph');
     }
-  })
+  });
 
   onCleanup(() => {
     try {
-      graphInstance?.destroy()
+      graphInstance?.destroy();
     } catch {
       // G6 destroy can throw on already-destroyed instances or partial
       // init failures — silent because the component is unmounting anyway.
     }
-    graphInstance = undefined
-  })
+    graphInstance = undefined;
+  });
 
   // ─── Export handlers ────────────────────────────────────────────────
   const handleExportJSON = () => {
-    downloadBlob(toJSON(params()), `${graphFilenameStem(params())}.json`, 'application/json')
-    setExportMenuOpen(false)
-  }
+    downloadBlob(toJSON(params()), `${graphFilenameStem(params())}.json`, 'application/json');
+    setExportMenuOpen(false);
+  };
 
   const handleExportMermaid = () => {
-    downloadBlob(toMermaid(params()), `${graphFilenameStem(params())}.mmd`, 'text/plain')
-    setExportMenuOpen(false)
-  }
+    downloadBlob(toMermaid(params()), `${graphFilenameStem(params())}.mmd`, 'text/plain');
+    setExportMenuOpen(false);
+  };
 
   const handleExportPNG = async () => {
-    if (!graphInstance) return
+    if (!graphInstance) return;
     try {
       // G6 v5 exposes `toDataURL()` on the graph instance.
-      const dataUrl: string = await graphInstance.toDataURL?.('image/png')
+      const dataUrl: string = await graphInstance.toDataURL?.('image/png');
       if (!dataUrl) {
         // Fallback: try to grab the underlying canvas directly.
-        const canvas = containerRef?.querySelector('canvas')
+        const canvas = containerRef?.querySelector('canvas');
         if (canvas) {
-          const url = (canvas as HTMLCanvasElement).toDataURL('image/png')
-          await downloadDataUrl(url, `${graphFilenameStem(params())}.png`)
+          const url = (canvas as HTMLCanvasElement).toDataURL('image/png');
+          await downloadDataUrl(url, `${graphFilenameStem(params())}.png`);
         } else {
-          setError('PNG export not supported in current renderer mode')
+          setError('PNG export not supported in current renderer mode');
         }
       } else {
-        await downloadDataUrl(dataUrl, `${graphFilenameStem(params())}.png`)
+        await downloadDataUrl(dataUrl, `${graphFilenameStem(params())}.png`);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'PNG export failed')
+      setError(err instanceof Error ? err.message : 'PNG export failed');
     }
-    setExportMenuOpen(false)
-  }
+    setExportMenuOpen(false);
+  };
 
   return (
     <Show
@@ -266,7 +300,8 @@ export const GraphRenderer: Component<GraphRendererProps> = (props) => {
               Graph rendering unavailable
             </p>
             <p class="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
-              Install <code>@antv/g6</code> peer dependency to render <code>type: "graph"</code> components.
+              Install <code>@antv/g6</code> peer dependency to render <code>type: "graph"</code>{' '}
+              components.
             </p>
           </div>
         </Show>
@@ -278,9 +313,11 @@ export const GraphRenderer: Component<GraphRendererProps> = (props) => {
         copyLabel="Copy graph (JSON)"
         toolbarVariant={props.toolbarVariant}
       >
-        <div class={`relative w-full ${params().className ?? ''} ${
-          isExpanded() ? 'flex-1 min-h-0 flex flex-col' : ''
-        }`}>
+        <div
+          class={`relative w-full ${params().className ?? ''} ${
+            isExpanded() ? 'flex-1 min-h-0 flex flex-col' : ''
+          }`}
+        >
           {/* Export menu — top-right, mirrors TableRenderer's pattern */}
           <div class="absolute right-2 top-2 z-10">
             <button
@@ -302,11 +339,17 @@ export const GraphRenderer: Component<GraphRendererProps> = (props) => {
               width={176}
               class="text-xs"
             >
-              <For each={[
-                { label: 'Download PNG', onClick: handleExportPNG, hint: 'visual snapshot' },
-                { label: 'Download Mermaid', onClick: handleExportMermaid, hint: 'markdown / GitHub' },
-                { label: 'Download JSON', onClick: handleExportJSON, hint: 'raw data' },
-              ]}>
+              <For
+                each={[
+                  { label: 'Download PNG', onClick: handleExportPNG, hint: 'visual snapshot' },
+                  {
+                    label: 'Download Mermaid',
+                    onClick: handleExportMermaid,
+                    hint: 'markdown / GitHub',
+                  },
+                  { label: 'Download JSON', onClick: handleExportJSON, hint: 'raw data' },
+                ]}
+              >
                 {(item) => (
                   <button
                     type="button"
@@ -338,34 +381,40 @@ export const GraphRenderer: Component<GraphRendererProps> = (props) => {
         </div>
       </ExpandableWrapper>
     </Show>
-  )
-}
+  );
+};
 
 // ─── Helpers ──────────────────────────────────────────────────────────
 
 function graphFilenameStem(params: GraphComponentParams): string {
-  const base = (params.title ?? 'graph').replace(/[^a-z0-9-_]+/gi, '-').replace(/^-+|-+$/g, '')
-  return base || 'graph'
+  const base = (params.title ?? 'graph').replace(/[^a-z0-9-_]+/gi, '-').replace(/^-+|-+$/g, '');
+  return base || 'graph';
 }
 
 async function downloadDataUrl(dataUrl: string, filename: string): Promise<void> {
-  const res = await fetch(dataUrl)
-  const blob = await res.blob()
-  downloadBlob(blob, filename)
+  const res = await fetch(dataUrl);
+  const blob = await res.blob();
+  downloadBlob(blob, filename);
 }
 
 function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) => {
     switch (c) {
-      case '&': return '&amp;'
-      case '<': return '&lt;'
-      case '>': return '&gt;'
-      case '"': return '&quot;'
-      case "'": return '&#39;'
-      default: return c
+      case '&':
+        return '&amp;';
+      case '<':
+        return '&lt;';
+      case '>':
+        return '&gt;';
+      case '"':
+        return '&quot;';
+      case "'":
+        return '&#39;';
+      default:
+        return c;
     }
-  })
+  });
 }
 
 // Re-export for tests + consumers that want to compose their own export menu
-export { toMermaid as graphToMermaid, toJSON as graphToJSON }
+export { toMermaid as graphToMermaid, toJSON as graphToJSON };
