@@ -8,6 +8,9 @@ import { Component, createEffect, onCleanup, createSignal, Show } from 'solid-js
 import { isServer } from 'solid-js/web'
 import type { UIComponent, MapComponentParams, MapClusterOptions, MapGeoJSONStyle, MapPopupConfig, MapLayer, MapPMTilesConfig } from '../types'
 import { ExpandableWrapper, useExpanded } from './ExpandableWrapper'
+import { DegradedFallback } from './DegradedFallback'
+import { mapToDegradedTable } from '../utils/degraded-projections'
+import { useTelemetry } from '../context/MCPUITelemetryContext'
 
 // Lazy load leaflet (it doesn't support SSR well)
 let L: any = null
@@ -205,6 +208,7 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
     const [isLeafletLoaded, setIsLeafletLoaded] = createSignal(false)
     const [error, setError] = createSignal<string | null>(null)
     const isExpanded = useExpanded()
+    const telemetry = useTelemetry()
 
     const params = () => props.params || (props.component?.params as MapComponentParams)
 
@@ -272,6 +276,7 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
 
         // Update markers and view
         if (mapInstance && L) {
+          try {
             const p = params()
             const allBoundsLayers: any[] = []
 
@@ -420,6 +425,19 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
             } else if (p?.center) {
                 mapInstance.setView(p.center, p.zoom || mapInstance.getZoom())
             }
+          } catch (err) {
+            // Fallback ladder (P2.5): a Leaflet drawing failure degrades to
+            // the coordinate table below instead of a blank/partial map.
+            const message = err instanceof Error ? err.message : 'Failed to render map'
+            setError(message)
+            telemetry?.dispatch({
+                type: 'component:error',
+                id: props.component?.id,
+                componentType: 'map',
+                ts: Date.now(),
+                detail: { degraded: true, reason: message },
+            })
+          }
         }
     })
 
@@ -442,8 +460,14 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
                 isExpanded() ? 'flex-1 min-h-0 flex flex-col' : ''
             }`}>
                 <Show when={error()}>
-                    <div class="p-4 text-red-500 bg-red-50 dark:bg-red-900/20 text-center">
-                        {error()}
+                    {/* Fallback ladder (P2.5): degrade to a coordinate table
+                        rather than a bare error string. */}
+                    <div class="p-3">
+                        <DegradedFallback
+                            message={`Map rendering failed: ${error()}`}
+                            caption="Showing the map data as a coordinate table — the interactive map is unavailable."
+                            {...mapToDegradedTable(params() ?? {})}
+                        />
                     </div>
                 </Show>
                 <Show when={!error()}>

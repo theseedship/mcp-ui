@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.9.0] - 2026-05-31
+
+### Added — renderer fallback ladder (no silent blanks)
+
+Every heavy renderer now follows the same three-rung contract (audit
+`docs/briefs/AUDIT-2026-05-30-visual-renderers-g6-ontology.md`, P2.5):
+
+1. **native** render when the peer lib is available and succeeds;
+2. **degraded but useful** view when the native render throws — a visible
+   notice plus a plain data table, so the user still sees the underlying
+   data instead of a blank space;
+3. a `component:error` **telemetry** event (`detail.degraded = true`) so the
+   failure is observable by hosts that mount `<MCPUITelemetryProvider>`.
+
+Previously a render-path failure left an empty canvas / blank container
+(graph, chart) or a bare red error string (map). Now:
+
+- **`graph`** (`<GraphRenderer>`) — on G6 render error, degrades to an
+  edge table (Source / Target / Label) or, when there are no edges, a node
+  list. The export menu (PNG / Mermaid / JSON) stays usable.
+- **`map`** (`<MapRenderer>`) — the Leaflet drawing block is now wrapped;
+  on failure it degrades to a coordinate table (markers + GeoJSON features
+  → Type / Lat / Lng / Info).
+- **`chart`** (`<ChartJSRenderer>`) — on Chart.js render error, degrades to
+  a series table (labels × datasets) instead of a blank canvas.
+
+New exports: `DegradedFallback` component (+ `DegradedFallbackProps`) for
+hosts that want to build consistent fallbacks of their own. New pure
+projection helpers (`graphToDegradedTable`, `mapToDegradedTable`,
+`chartToDegradedTable`) under `src/utils/degraded-projections`.
+
+`source_card` is intentionally out of scope here — it is not yet a real
+`UIResourceRenderer` type (tracked separately as audit P2.6).
+
 ## [6.8.2] - 2026-05-30
 
 ### Fixed — `type:'map'` rejected when it renders purely from GeoJSON

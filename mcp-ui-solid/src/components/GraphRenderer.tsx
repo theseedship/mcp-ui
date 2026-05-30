@@ -28,6 +28,9 @@ import type {
 } from '@seed-ship/mcp-ui-spec';
 import { ExpandableWrapper, useExpanded } from './ExpandableWrapper';
 import { PortalDropdownMenu } from './PortalDropdownMenu';
+import { DegradedFallback } from './DegradedFallback';
+import { graphToDegradedTable } from '../utils/degraded-projections';
+import { useTelemetry } from '../context/MCPUITelemetryContext';
 
 // Module-scoped lazy import promise — first call triggers the dynamic
 // import, subsequent calls reuse the resolved module.
@@ -220,6 +223,7 @@ export interface GraphRendererProps {
 export const GraphRenderer: Component<GraphRendererProps> = (props) => {
   const params = () => props.component.params as GraphComponentParams;
   const isExpanded = useExpanded();
+  const telemetry = useTelemetry();
   const [available, setAvailable] = createSignal<boolean | null>(null);
   const [error, setError] = createSignal<string | undefined>();
   const [exportMenuOpen, setExportMenuOpen] = createSignal(false);
@@ -293,7 +297,18 @@ export const GraphRenderer: Component<GraphRendererProps> = (props) => {
       graphInstance = new (Graph as any)(config);
       await graphInstance.render();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to render graph');
+      const message = err instanceof Error ? err.message : 'Failed to render graph';
+      setError(message);
+      // Fallback ladder (P2.5): the native G6 render threw — emit telemetry
+      // so the failure is observable, then degrade to the edge/node table
+      // below instead of leaving a blank canvas.
+      telemetry?.dispatch({
+        type: 'component:error',
+        id: props.component.id,
+        componentType: 'graph',
+        ts: Date.now(),
+        detail: { degraded: true, reason: message },
+      });
     }
   });
 
@@ -424,19 +439,26 @@ export const GraphRenderer: Component<GraphRendererProps> = (props) => {
             </PortalDropdownMenu>
           </div>
 
+          {/* Native G6 canvas — hidden once a render error degrades us. */}
           <div
             ref={containerRef}
             class={`bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden ${
-              isExpanded() ? 'flex-1 min-h-0' : ''
-            }`}
+              error() ? 'hidden' : ''
+            } ${isExpanded() ? 'flex-1 min-h-0' : ''}`}
             style={
               isExpanded()
                 ? `height: 100%; width: ${params().width ?? '100%'};`
                 : `height: ${params().height ?? '400px'}; width: ${params().width ?? '100%'};`
             }
           />
+          {/* Fallback ladder (P2.5): degrade to an edge/node table on error
+              rather than showing a bare message. Export menu stays usable. */}
           <Show when={error()}>
-            <p class="text-xs text-red-600 dark:text-red-400 mt-1">Render error: {error()}</p>
+            <DegradedFallback
+              message={`Graph rendering failed: ${error()}`}
+              caption="Showing the graph data as a table — the interactive view is unavailable."
+              {...graphToDegradedTable(params())}
+            />
           </Show>
         </div>
       </ExpandableWrapper>
