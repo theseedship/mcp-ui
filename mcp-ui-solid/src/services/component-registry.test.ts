@@ -5,19 +5,46 @@
 import { describe, it, expect } from 'vitest'
 import { validateAgainstRegistry, getComponentEntry, ComponentRegistry } from './component-registry'
 import type { ComponentType } from '../types'
+import { ComponentTypeSchema } from '@seed-ship/mcp-ui-spec'
 
-/** All 19 component types in the registry */
+/** All 20 component types in the registry */
 const ALL_TYPES: ComponentType[] = [
   'chart', 'table', 'metric', 'text', 'grid',
   'action', 'footer', 'carousel', 'artifact',
-  'code', 'map', 'form', 'modal', 'action-group',
+  'code', 'map', 'graph', 'form', 'modal', 'action-group',
   'image-gallery', 'video', 'iframe', 'image', 'link',
 ]
 
+// Schema component types that are intentionally NOT standalone registry
+// entries. `composite` is a layout container rendered inline by
+// UIResourceRenderer (like a bare layout), not a leaf component with its own
+// params schema / examples.
+const REGISTRY_EXCEPTIONS = new Set<string>(['composite'])
+
+describe('registry ↔ schema parity (P1.5)', () => {
+  it('every schema component type has a registry entry (except documented containers)', () => {
+    const missing = (ComponentTypeSchema.options as readonly string[]).filter(
+      (t) => !REGISTRY_EXCEPTIONS.has(t) && !ComponentRegistry.has(t as ComponentType)
+    )
+    expect(missing).toEqual([])
+  })
+
+  it('every registry type is a valid schema component type', () => {
+    const schemaTypes = new Set<string>(ComponentTypeSchema.options)
+    const extra = Array.from(ComponentRegistry.keys()).filter((t) => !schemaTypes.has(t))
+    expect(extra).toEqual([])
+  })
+
+  it('graph is registered (regression for P1.5)', () => {
+    expect(ComponentRegistry.has('graph')).toBe(true)
+    expect(getComponentEntry('graph')?.type).toBe('graph')
+  })
+})
+
 describe('ComponentRegistry', () => {
   describe('registry completeness', () => {
-    it('has exactly 19 registered types', () => {
-      expect(ComponentRegistry.size).toBe(19)
+    it('has exactly 20 registered types', () => {
+      expect(ComponentRegistry.size).toBe(20)
     })
 
     it.each(ALL_TYPES)('has registry entry for "%s"', (type) => {

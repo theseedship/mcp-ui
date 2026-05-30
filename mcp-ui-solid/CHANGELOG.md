@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.12.0] - 2026-05-31
+
+Registry/schema parity for `graph` (audit P1.5).
+
+### Added
+
+- `GraphRegistry` — the static `ComponentRegistry` now includes a `graph`
+  entry (it previously knew `graph` in `KNOWN_COMPONENT_TYPES` and the schema
+  but had no registry entry). The registry is now 20 types.
+- A registry ↔ schema parity test: every `ComponentTypeSchema` option must
+  have a registry entry, with an explicit exceptions list (`composite`, a
+  layout container rendered inline rather than a leaf registry entry). Guards
+  against a future type being added to the schema/renderer but forgotten in
+  the registry.
+
+### Known limitation
+
+- `GraphRegistry.examples` is empty for now: the registry `ComponentExample`
+  `params` type is a union of the legacy component params that does not yet
+  include graph (`nodes` / `edges`). The entry's `schema` fully documents
+  graph params; a typed example will follow once `GraphComponentParams` is
+  added to the `UIComponent` params union (a separate solid-types task).
+
 ## [6.11.0] - 2026-05-31
 
 Map hardening (audit `docs/briefs/AUDIT-2026-05-30-visual-renderers-g6-ontology.md`).

@@ -633,6 +633,62 @@ export const MapRegistry: ComponentRegistryEntry = {
 }
 
 /**
+ * Graph Registry Entry (v6.12.0 — audit P1.5)
+ */
+export const GraphRegistry: ComponentRegistryEntry = {
+  type: 'graph',
+  name: 'NodeLinkGraph',
+  description:
+    'Render a node-link graph (entities and their relationships) with @antv/g6. Best for provenance/source chains, dependency or process graphs, and ontology-lite entity/relation views. Degrades to an edge table when the graph engine is unavailable.',
+  schema: {
+    type: 'object',
+    properties: {
+      nodes: {
+        type: 'array',
+        description: 'Graph nodes (at least one required)',
+        items: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            label: { type: 'string' },
+            group: { type: 'string' },
+          },
+          required: ['id'],
+        },
+      },
+      edges: {
+        type: 'array',
+        description: 'Edges between node ids',
+        items: {
+          type: 'object',
+          properties: {
+            source: { type: 'string' },
+            target: { type: 'string' },
+            label: { type: 'string' },
+            weight: { type: 'number' },
+          },
+          required: ['source', 'target'],
+        },
+      },
+      layout: {
+        type: 'string',
+        enum: ['force', 'radial', 'grid', 'dagre', 'circular'],
+        description: 'Layout algorithm (default: force)',
+      },
+      directed: { type: 'boolean', description: 'Render edges as directed (arrows)' },
+    },
+    required: ['nodes'],
+  },
+  // No typed example yet: the registry `ComponentExample` `params` type is a
+  // union of the legacy component params that does not (yet) include graph
+  // (`nodes` / `edges`). The `schema` above fully documents graph params; a
+  // typed example can be added once `GraphComponentParams` joins the
+  // `UIComponent` params union (a separate solid-types task).
+  examples: [],
+  limits: DEFAULT_RESOURCE_LIMITS,
+}
+
+/**
  * Form Registry Entry
  */
 export const FormRegistry: ComponentRegistryEntry = {
@@ -990,6 +1046,8 @@ export const ComponentRegistry: Map<ComponentType, ComponentRegistryEntry> = new
   // v2.2.5: Complete registry
   ['code', CodeRegistry],
   ['map', MapRegistry],
+  ['graph', GraphRegistry], // v6.12.0: audit P1.5 — registry/schema parity
+
   ['form', FormRegistry],
   ['modal', ModalRegistry],
   ['action-group', ActionGroupRegistry],
