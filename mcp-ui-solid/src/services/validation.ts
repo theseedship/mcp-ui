@@ -8,7 +8,7 @@
  * - Security constraints (domain whitelist, XSS prevention)
  */
 
-import type { ZodIssue, ZodSchema } from 'zod'
+import type { ZodIssue, ZodSchema } from 'zod';
 import {
   MetricComponentParamsSchema,
   TextComponentParamsSchema,
@@ -27,7 +27,7 @@ import {
   FormComponentParamsSchema,
   // v6.0.0 — graph primitive (peer @antv/g6 ^5)
   GraphComponentParamsSchema,
-} from '@seed-ship/mcp-ui-spec'
+} from '@seed-ship/mcp-ui-spec';
 import type {
   UIComponent,
   UILayout,
@@ -39,19 +39,35 @@ import type {
   IframePolicy,
   ValidationOptions,
   ComponentType,
-} from '../types'
+} from '../types';
 
 /**
  * All known ComponentType values — used to distinguish known-but-unvalidated
  * types (pass through) from truly unknown strings (reject).
  */
 const KNOWN_COMPONENT_TYPES: Set<string> = new Set<ComponentType>([
-  'chart', 'table', 'metric', 'text', 'grid', 'iframe', 'image', 'link',
-  'action', 'footer', 'carousel', 'artifact', 'form', 'modal',
-  'action-group', 'image-gallery', 'video', 'code', 'map',
+  'chart',
+  'table',
+  'metric',
+  'text',
+  'grid',
+  'iframe',
+  'image',
+  'link',
+  'action',
+  'footer',
+  'carousel',
+  'artifact',
+  'form',
+  'modal',
+  'action-group',
+  'image-gallery',
+  'video',
+  'code',
+  'map',
   // v6.0.0
   'graph',
-])
+]);
 
 /**
  * Spec-driven validation dispatch table (B.1 — v5.5.0, expanded in v5.6.0).
@@ -95,7 +111,7 @@ const SPEC_VALIDATORS: Partial<Record<ComponentType, { schema: ZodSchema; legacy
   // because LLM payloads sometimes ship edges to nodes added later.
   // Unresolved refs are gracefully ignored by G6 v5.)
   graph: { schema: GraphComponentParamsSchema, legacyCode: 'INVALID_GRAPH' },
-}
+};
 
 /**
  * Map a Zod issue list to the legacy `ValidationError[]` shape.
@@ -113,7 +129,7 @@ function mapZodIssuesToErrors(
     path: issue.path.length > 0 ? `params.${issue.path.join('.')}` : 'params',
     message: issue.message,
     code: legacyCode,
-  }))
+  }));
 }
 
 /**
@@ -133,7 +149,7 @@ export const DEFAULT_RESOURCE_LIMITS: ResourceLimits = {
   // default ceiling moved.
   maxPayloadSize: 512 * 1024, // 512KB
   renderTimeout: 5000, // 5 seconds
-}
+};
 
 /**
  * Default allowed iframe domains (whitelist)
@@ -264,7 +280,7 @@ export const DEFAULT_IFRAME_DOMAINS = [
   'buy.stripe.com',
   'connect.stripe.com',
   'invoice.stripe.com',
-]
+];
 
 /**
  * Trusted iframe domains that require allow-same-origin to function.
@@ -315,13 +331,13 @@ export const TRUSTED_IFRAME_DOMAINS = [
   'typeform.com',
   'cal.com',
   'canva.com',
-]
+];
 
 /**
  * Validate grid position bounds (1-12 columns)
  */
 export function validateGridPosition(position: UIComponent['position']): ValidationResult {
-  const errors: ValidationResult['errors'] = []
+  const errors: ValidationResult['errors'] = [];
 
   // ✅ PHASE 3 FIX: Defensive check for undefined position
   if (!position) {
@@ -334,7 +350,7 @@ export function validateGridPosition(position: UIComponent['position']): Validat
           code: 'MISSING_POSITION',
         },
       ],
-    }
+    };
   }
 
   if (position.colStart < 1 || position.colStart > 12) {
@@ -342,7 +358,7 @@ export function validateGridPosition(position: UIComponent['position']): Validat
       path: 'position.colStart',
       message: 'Column start must be between 1 and 12',
       code: 'INVALID_GRID_COL_START',
-    })
+    });
   }
 
   if (position.colSpan < 1 || position.colSpan > 12) {
@@ -350,7 +366,7 @@ export function validateGridPosition(position: UIComponent['position']): Validat
       path: 'position.colSpan',
       message: 'Column span must be between 1 and 12',
       code: 'INVALID_GRID_COL_SPAN',
-    })
+    });
   }
 
   if (position.colStart + position.colSpan - 1 > 12) {
@@ -358,7 +374,7 @@ export function validateGridPosition(position: UIComponent['position']): Validat
       path: 'position',
       message: 'Column start + span exceeds grid width (12)',
       code: 'GRID_OVERFLOW',
-    })
+    });
   }
 
   if (position.rowStart !== undefined && position.rowStart < 1) {
@@ -366,7 +382,7 @@ export function validateGridPosition(position: UIComponent['position']): Validat
       path: 'position.rowStart',
       message: 'Row start must be >= 1',
       code: 'INVALID_GRID_ROW_START',
-    })
+    });
   }
 
   if (position.rowSpan !== undefined && position.rowSpan < 1) {
@@ -374,13 +390,13 @@ export function validateGridPosition(position: UIComponent['position']): Validat
       path: 'position.rowSpan',
       message: 'Row span must be >= 1',
       code: 'INVALID_GRID_ROW_SPAN',
-    })
+    });
   }
 
   return {
     valid: errors.length === 0,
     errors: errors.length > 0 ? errors : undefined,
-  }
+  };
 }
 
 /**
@@ -390,25 +406,47 @@ export function validateChartComponent(
   params: ChartComponentParams,
   limits: ResourceLimits = DEFAULT_RESOURCE_LIMITS
 ): ValidationResult {
-  const errors: ValidationResult['errors'] = []
+  const errors: ValidationResult['errors'] = [];
 
   // Guard: params.data must exist with labels + datasets
   if (!params?.data) {
-    return { valid: false, errors: [{ path: 'params.data', message: 'Missing chart data object', code: 'MISSING_DATA' }] }
+    return {
+      valid: false,
+      errors: [{ path: 'params.data', message: 'Missing chart data object', code: 'MISSING_DATA' }],
+    };
   }
   if (!Array.isArray(params.data.datasets)) {
-    return { valid: false, errors: [{ path: 'params.data.datasets', message: 'Missing or invalid datasets array', code: 'MISSING_DATASETS' }] }
+    return {
+      valid: false,
+      errors: [
+        {
+          path: 'params.data.datasets',
+          message: 'Missing or invalid datasets array',
+          code: 'MISSING_DATASETS',
+        },
+      ],
+    };
   }
   // Detect point-based charts (scatter/bubble) or object data (time-series line)
-  const chartType = params.type || 'bar'
-  const firstDataPoint = params.data.datasets[0]?.data?.[0]
-  const hasObjectData = typeof firstDataPoint === 'object' && firstDataPoint !== null && 'x' in firstDataPoint
-  const isPointChart = chartType === 'scatter' || chartType === 'bubble' || hasObjectData
+  const chartType = params.type || 'bar';
+  const firstDataPoint = params.data.datasets[0]?.data?.[0];
+  const hasObjectData =
+    typeof firstDataPoint === 'object' && firstDataPoint !== null && 'x' in firstDataPoint;
+  const isPointChart = chartType === 'scatter' || chartType === 'bubble' || hasObjectData;
 
   // Labels required only for categorical charts (not scatter/bubble/time-series)
   if (!isPointChart) {
     if (!Array.isArray(params.data.labels)) {
-      return { valid: false, errors: [{ path: 'params.data.labels', message: 'Missing or invalid labels array', code: 'MISSING_LABELS' }] }
+      return {
+        valid: false,
+        errors: [
+          {
+            path: 'params.data.labels',
+            message: 'Missing or invalid labels array',
+            code: 'MISSING_LABELS',
+          },
+        ],
+      };
     }
   }
 
@@ -416,42 +454,51 @@ export function validateChartComponent(
   const totalDataPoints = params.data.datasets.reduce(
     (sum, dataset) => sum + (Array.isArray(dataset.data) ? dataset.data.length : 0),
     0
-  )
+  );
 
   if (totalDataPoints > limits.maxDataPoints) {
     errors.push({
       path: 'params.data',
       message: `Chart exceeds max data points: ${totalDataPoints} > ${limits.maxDataPoints}`,
       code: 'RESOURCE_LIMIT_EXCEEDED',
-    })
+    });
   }
 
   // Length mismatch check — only for categorical charts, skip empty datasets
   if (!isPointChart && Array.isArray(params.data.labels)) {
-    const expectedLength = params.data.labels.length
+    const expectedLength = params.data.labels.length;
     for (const [index, dataset] of params.data.datasets.entries()) {
-      if (Array.isArray(dataset.data) && dataset.data.length > 0 && dataset.data.length !== expectedLength) {
+      if (
+        Array.isArray(dataset.data) &&
+        dataset.data.length > 0 &&
+        dataset.data.length !== expectedLength
+      ) {
         errors.push({
           path: `params.data.datasets[${index}]`,
           message: `Dataset length mismatch: expected ${expectedLength}, got ${dataset.data.length}`,
           code: 'DATA_LENGTH_MISMATCH',
-        })
+        });
       }
     }
   }
 
   // Data type validation — numbers for categorical, {x,y} objects for point charts
   for (const [index, dataset] of params.data.datasets.entries()) {
-    if (!Array.isArray(dataset.data)) continue
+    if (!Array.isArray(dataset.data)) continue;
     for (const [dataIndex, value] of dataset.data.entries()) {
       if (isPointChart) {
-        const vObj = value as any
-        if (typeof value !== 'object' || value === null || vObj.x == null || typeof vObj.y !== 'number') {
+        const vObj = value as any;
+        if (
+          typeof value !== 'object' ||
+          value === null ||
+          vObj.x == null ||
+          typeof vObj.y !== 'number'
+        ) {
           errors.push({
             path: `params.data.datasets[${index}].data[${dataIndex}]`,
             message: `Invalid point data: expected {x, y} object`,
             code: 'INVALID_POINT_DATA',
-          })
+          });
         }
       } else {
         if (typeof value !== 'number' || !Number.isFinite(value)) {
@@ -459,7 +506,7 @@ export function validateChartComponent(
             path: `params.data.datasets[${index}].data[${dataIndex}]`,
             message: `Invalid data value: ${value} (must be finite number)`,
             code: 'INVALID_DATA_TYPE',
-          })
+          });
         }
       }
     }
@@ -468,7 +515,7 @@ export function validateChartComponent(
   return {
     valid: errors.length === 0,
     errors: errors.length > 0 ? errors : undefined,
-  }
+  };
 }
 
 /**
@@ -478,7 +525,7 @@ export function validateTableComponent(
   params: TableComponentParams,
   limits: ResourceLimits = DEFAULT_RESOURCE_LIMITS
 ): ValidationResult {
-  const errors: ValidationResult['errors'] = []
+  const errors: ValidationResult['errors'] = [];
 
   // Validate row count
   if (params.rows.length > limits.maxTableRows) {
@@ -486,7 +533,7 @@ export function validateTableComponent(
       path: 'params.rows',
       message: `Table exceeds max rows: ${params.rows.length} > ${limits.maxTableRows}`,
       code: 'RESOURCE_LIMIT_EXCEEDED',
-    })
+    });
   }
 
   // Validate columns
@@ -495,20 +542,20 @@ export function validateTableComponent(
       path: 'params.columns',
       message: 'Table must have at least one column',
       code: 'EMPTY_COLUMNS',
-    })
+    });
   }
 
   // Validate column keys are unique
-  const columnKeys = new Set<string>()
+  const columnKeys = new Set<string>();
   for (const [index, column] of params.columns.entries()) {
     if (columnKeys.has(column.key)) {
       errors.push({
         path: `params.columns[${index}]`,
         message: `Duplicate column key: ${column.key}`,
         code: 'DUPLICATE_COLUMN_KEY',
-      })
+      });
     }
-    columnKeys.add(column.key)
+    columnKeys.add(column.key);
   }
 
   // Validate rows have valid data for defined columns
@@ -519,7 +566,7 @@ export function validateTableComponent(
           path: `params.rows[${rowIndex}]`,
           message: `Missing column key: ${column.key}`,
           code: 'MISSING_COLUMN_DATA',
-        })
+        });
       }
     }
   }
@@ -527,7 +574,7 @@ export function validateTableComponent(
   return {
     valid: errors.length === 0,
     errors: errors.length > 0 ? errors : undefined,
-  }
+  };
 }
 
 /**
@@ -537,7 +584,7 @@ export function validatePayloadSize(
   component: UIComponent,
   limits: ResourceLimits = DEFAULT_RESOURCE_LIMITS
 ): ValidationResult {
-  const payloadSize = JSON.stringify(component).length
+  const payloadSize = JSON.stringify(component).length;
 
   if (payloadSize > limits.maxPayloadSize) {
     return {
@@ -549,10 +596,10 @@ export function validatePayloadSize(
           code: 'PAYLOAD_TOO_LARGE',
         },
       ],
-    }
+    };
   }
 
-  return { valid: true }
+  return { valid: true };
 }
 
 /**
@@ -563,7 +610,7 @@ export function sanitizeString(input: string): string {
   return input
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
     .replace(/on\w+="[^"]*"/gi, '')
-    .replace(/javascript:/gi, '')
+    .replace(/javascript:/gi, '');
 }
 
 /**
@@ -580,17 +627,17 @@ export function validateIframeDomain(
 ): ValidationResult {
   // If allow-all, skip validation
   if (options?.policy === 'allow-all') {
-    return { valid: true }
+    return { valid: true };
   }
 
   try {
-    const parsedUrl = new URL(url)
-    const domain = parsedUrl.hostname
+    const parsedUrl = new URL(url);
+    const domain = parsedUrl.hostname;
 
     // Build effective whitelist
-    let effectiveWhitelist = DEFAULT_IFRAME_DOMAINS
+    let effectiveWhitelist = DEFAULT_IFRAME_DOMAINS;
     if (options?.policy === 'extend' && options.customDomains) {
-      effectiveWhitelist = [...DEFAULT_IFRAME_DOMAINS, ...options.customDomains]
+      effectiveWhitelist = [...DEFAULT_IFRAME_DOMAINS, ...options.customDomains];
     }
 
     // SECURITY (v5.5.1) — pre-fix bug: predicate was `allowed === 'localhost'`
@@ -598,12 +645,13 @@ export function validateIframeDomain(
     // 'localhost' (an entry from DEFAULT_IFRAME_DOMAINS), making the entire
     // domain whitelist inoperative. Fixed: only the URL's actual hostname
     // being 'localhost' (or a 127.0.0.x loopback) bypasses the whitelist.
-    const isLoopback = domain === 'localhost' || /^127(\.\d{1,3}){3}$/.test(domain)
+    const isLoopback = domain === 'localhost' || /^127(\.\d{1,3}){3}$/.test(domain);
     const isAllowed =
       isLoopback ||
       effectiveWhitelist.some(
-        (allowed) => allowed !== 'localhost' && (domain === allowed || domain.endsWith(`.${allowed}`))
-      )
+        (allowed) =>
+          allowed !== 'localhost' && (domain === allowed || domain.endsWith(`.${allowed}`))
+      );
 
     if (!isAllowed) {
       return {
@@ -615,10 +663,10 @@ export function validateIframeDomain(
             code: 'DOMAIN_NOT_WHITELISTED',
           },
         ],
-      }
+      };
     }
 
-    return { valid: true }
+    return { valid: true };
   } catch (error) {
     return {
       valid: false,
@@ -629,7 +677,7 @@ export function validateIframeDomain(
           code: 'INVALID_URL',
         },
       ],
-    }
+    };
   }
 }
 
@@ -649,27 +697,27 @@ export function getIframeSandbox(
   url: string,
   options?: { customTrustedDomains?: string[] }
 ): string {
-  const baseSandbox = 'allow-scripts allow-popups'
+  const baseSandbox = 'allow-scripts allow-popups';
 
   try {
-    const domain = new URL(url).hostname
-    let trustedList = TRUSTED_IFRAME_DOMAINS
+    const domain = new URL(url).hostname;
+    let trustedList = TRUSTED_IFRAME_DOMAINS;
     if (options?.customTrustedDomains) {
-      trustedList = [...TRUSTED_IFRAME_DOMAINS, ...options.customTrustedDomains]
+      trustedList = [...TRUSTED_IFRAME_DOMAINS, ...options.customTrustedDomains];
     }
 
     const isTrusted = trustedList.some(
       (trusted) => domain === trusted || domain.endsWith(`.${trusted}`)
-    )
+    );
 
     if (isTrusted) {
-      return `${baseSandbox} allow-same-origin allow-forms`
+      return `${baseSandbox} allow-same-origin allow-forms`;
     }
   } catch {
     // Invalid URL — use restrictive sandbox
   }
 
-  return baseSandbox
+  return baseSandbox;
 }
 
 /**
@@ -682,24 +730,27 @@ export function validateComponent(
   component: UIComponent,
   options?: ValidationOptions
 ): ValidationResult {
-  const limits = options?.limits ?? DEFAULT_RESOURCE_LIMITS
-  const errors: ValidationResult['errors'] = []
+  const limits = options?.limits ?? DEFAULT_RESOURCE_LIMITS;
+  const errors: ValidationResult['errors'] = [];
 
   // Guard: params must exist
   if (!component.params) {
-    return { valid: false, errors: [{ path: 'params', message: 'Missing component params', code: 'MISSING_PARAMS' }] }
+    return {
+      valid: false,
+      errors: [{ path: 'params', message: 'Missing component params', code: 'MISSING_PARAMS' }],
+    };
   }
 
   // Validate grid position
-  const gridResult = validateGridPosition(component.position)
+  const gridResult = validateGridPosition(component.position);
   if (!gridResult.valid) {
-    errors.push(...(gridResult.errors || []))
+    errors.push(...(gridResult.errors || []));
   }
 
   // Validate payload size
-  const sizeResult = validatePayloadSize(component, limits)
+  const sizeResult = validatePayloadSize(component, limits);
   if (!sizeResult.valid) {
-    errors.push(...(sizeResult.errors || []))
+    errors.push(...(sizeResult.errors || []));
   }
 
   // Type-specific validation (B.1 — v5.5.0, expanded v5.6.0).
@@ -708,38 +759,55 @@ export function validateComponent(
   // SPEC_VALIDATORS. The 3 remaining types stay imperative because they
   // need cross-field consistency, resource limits, or have nothing to validate
   // (see SPEC_VALIDATORS docstring).
-  const specValidator = SPEC_VALIDATORS[component.type]
+  const specValidator = SPEC_VALIDATORS[component.type];
   if (specValidator) {
-    const result = specValidator.schema.safeParse(component.params)
+    const result = specValidator.schema.safeParse(component.params);
     if (!result.success) {
-      errors.push(...mapZodIssuesToErrors(result.error.issues, specValidator.legacyCode))
+      errors.push(...mapZodIssuesToErrors(result.error.issues, specValidator.legacyCode));
     }
     // Post-spec chained checks. Skipped when the shape parse failed to avoid
     // cascading errors on already-broken payloads.
     if (result.success) {
       // Iframe + video: domain whitelist
       if (component.type === 'iframe' || component.type === 'video') {
-        const url = (component.params as { url?: string })?.url
+        const url = (component.params as { url?: string })?.url;
         if (typeof url === 'string') {
           const domainResult = validateIframeDomain(url, {
             policy: options?.iframePolicy,
             customDomains: options?.customIframeDomains,
-          })
+          });
           if (!domainResult.valid) {
-            errors.push(...(domainResult.errors || []))
+            errors.push(...(domainResult.errors || []));
           }
         }
       }
-      // Map (v5.6.0): center OR markers required. Spec has both .optional()
-      // since auto-center from markers is supported, but we need ONE of them.
+      // Map (v5.6.0; widened v6.8.2): a map must carry at least one
+      // visualizable thing. Originally only center/markers counted, but since
+      // spec@5.2.0 a `type:'map'` may render purely from `geojson`, named
+      // `layers`, or a `pmtiles` source (e.g. a Cadastre choropleth with no
+      // markers and an auto-fit viewport). Rejecting those as INVALID_MAP
+      // blocked valid maps the renderer draws. Accept ANY of:
+      // center | markers | geojson | layers | pmtiles.
       if (component.type === 'map') {
-        const mapParams = component.params as { center?: unknown; markers?: unknown[] }
-        if (!mapParams.center && (!Array.isArray(mapParams.markers) || mapParams.markers.length === 0)) {
+        const mapParams = component.params as {
+          center?: unknown;
+          markers?: unknown[];
+          geojson?: unknown;
+          layers?: unknown[];
+          pmtiles?: unknown;
+        };
+        const hasContent =
+          mapParams.center != null ||
+          (Array.isArray(mapParams.markers) && mapParams.markers.length > 0) ||
+          mapParams.geojson != null ||
+          (Array.isArray(mapParams.layers) && mapParams.layers.length > 0) ||
+          mapParams.pmtiles != null;
+        if (!hasContent) {
           errors.push({
             path: 'params',
-            message: 'Map must have center or markers',
+            message: 'Map must have center, markers, geojson, layers, or pmtiles',
             code: 'INVALID_MAP',
-          })
+          });
         }
       }
     }
@@ -747,24 +815,30 @@ export function validateComponent(
     // Imperative path for chart/table/modal/grid/footer/composite.
     switch (component.type) {
       case 'chart': {
-        const chartResult = validateChartComponent(component.params as ChartComponentParams, limits)
+        const chartResult = validateChartComponent(
+          component.params as ChartComponentParams,
+          limits
+        );
         if (!chartResult.valid) {
-          errors.push(...(chartResult.errors || []))
+          errors.push(...(chartResult.errors || []));
         }
-        break
+        break;
       }
 
       case 'table': {
-        const tableResult = validateTableComponent(component.params as TableComponentParams, limits)
+        const tableResult = validateTableComponent(
+          component.params as TableComponentParams,
+          limits
+        );
         if (!tableResult.valid) {
-          errors.push(...(tableResult.errors || []))
+          errors.push(...(tableResult.errors || []));
         }
-        break
+        break;
       }
 
       case 'modal':
         // Modal is valid with minimal params (title optional, content can be children).
-        break
+        break;
 
       default:
         // Known types without specific validation pass through — renderer handles errors.
@@ -774,16 +848,16 @@ export function validateComponent(
             path: 'type',
             message: `Unknown component type: ${component.type}`,
             code: 'UNKNOWN_COMPONENT_TYPE',
-          })
+          });
         }
-        break
+        break;
     }
   }
 
   return {
     valid: errors.length === 0,
     errors: errors.length > 0 ? errors : undefined,
-  }
+  };
 }
 
 /**
@@ -792,11 +866,8 @@ export function validateComponent(
  * @param layout - The layout to validate
  * @param options - Optional validation options (limits, iframePolicy, customIframeDomains)
  */
-export function validateLayout(
-  layout: UILayout,
-  options?: ValidationOptions
-): ValidationResult {
-  const errors: ValidationResult['errors'] = []
+export function validateLayout(layout: UILayout, options?: ValidationOptions): ValidationResult {
+  const errors: ValidationResult['errors'] = [];
 
   // Validate component count
   if (layout.components.length === 0) {
@@ -804,7 +875,7 @@ export function validateLayout(
       path: 'components',
       message: 'Layout must have at least one component',
       code: 'EMPTY_LAYOUT',
-    })
+    });
   }
 
   if (layout.components.length > 12) {
@@ -812,19 +883,19 @@ export function validateLayout(
       path: 'components',
       message: `Layout exceeds max components: ${layout.components.length} > 12`,
       code: 'TOO_MANY_COMPONENTS',
-    })
+    });
   }
 
   // Validate each component
   for (const [index, component] of layout.components.entries()) {
-    const result = validateComponent(component, options)
+    const result = validateComponent(component, options);
     if (!result.valid) {
       errors.push(
         ...(result.errors?.map((error) => ({
           ...error,
           path: `components[${index}].${error.path}`,
         })) || [])
-      )
+      );
     }
   }
 
@@ -834,13 +905,13 @@ export function validateLayout(
       path: 'grid.columns',
       message: 'Grid must have 12 columns (Bootstrap-like)',
       code: 'INVALID_GRID_COLUMNS',
-    })
+    });
   }
 
   return {
     valid: errors.length === 0,
     errors: errors.length > 0 ? errors : undefined,
-  }
+  };
 }
 
 /**
@@ -853,16 +924,16 @@ export function validateFieldValue(
   // Required check
   if (field.required) {
     if (value === undefined || value === null || value === '') {
-      return { valid: false, error: `${field.label || field.name} is required` }
+      return { valid: false, error: `${field.label || field.name} is required` };
     }
     if (field.type === 'checkbox' && value !== true) {
-      return { valid: false, error: `${field.label || field.name} must be checked` }
+      return { valid: false, error: `${field.label || field.name} must be checked` };
     }
   }
 
   // Skip further validation if value is empty and not required
   if (value === undefined || value === null || value === '') {
-    return { valid: true }
+    return { valid: true };
   }
 
   // Type-specific validation
@@ -871,68 +942,71 @@ export function validateFieldValue(
     case 'textarea':
     case 'password':
       if (field.minLength && String(value).length < field.minLength) {
-        return { valid: false, error: `Minimum ${field.minLength} characters required` }
+        return { valid: false, error: `Minimum ${field.minLength} characters required` };
       }
       if (field.maxLength && String(value).length > field.maxLength) {
-        return { valid: false, error: `Maximum ${field.maxLength} characters allowed` }
+        return { valid: false, error: `Maximum ${field.maxLength} characters allowed` };
       }
       if (field.pattern && !new RegExp(field.pattern).test(String(value))) {
-        return { valid: false, error: 'Invalid format' }
+        return { valid: false, error: 'Invalid format' };
       }
-      break
+      break;
 
     case 'email':
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value))) {
-        return { valid: false, error: 'Invalid email address' }
+        return { valid: false, error: 'Invalid email address' };
       }
-      break
+      break;
 
     case 'number': {
-      const numValue = Number(value)
+      const numValue = Number(value);
       if (isNaN(numValue)) {
-        return { valid: false, error: 'Must be a valid number' }
+        return { valid: false, error: 'Must be a valid number' };
       }
       if (field.min !== undefined && numValue < field.min) {
-        return { valid: false, error: `Minimum value is ${field.min}` }
+        return { valid: false, error: `Minimum value is ${field.min}` };
       }
       if (field.max !== undefined && numValue > field.max) {
-        return { valid: false, error: `Maximum value is ${field.max}` }
+        return { valid: false, error: `Maximum value is ${field.max}` };
       }
-      break
+      break;
     }
 
     case 'date':
       if (field.minDate && value < field.minDate) {
-        return { valid: false, error: `Date must be after ${field.minDate}` }
+        return { valid: false, error: `Date must be after ${field.minDate}` };
       }
       if (field.maxDate && value > field.maxDate) {
-        return { valid: false, error: `Date must be before ${field.maxDate}` }
+        return { valid: false, error: `Date must be before ${field.maxDate}` };
       }
-      break
+      break;
 
     case 'select':
     case 'radio':
       // Validate that value is one of the options
       if (field.options && field.options.length > 0) {
-        const validValues = field.options.map((opt) => opt.value)
+        const validValues = field.options.map((opt) => opt.value);
         if (!validValues.includes(String(value))) {
-          return { valid: false, error: 'Please select a valid option' }
+          return { valid: false, error: 'Please select a valid option' };
         }
       }
-      break
+      break;
   }
 
   // valueFormat validation (v4.3.0) — runs after type-specific checks
   if (field.valueFormat && value !== undefined && value !== null && value !== '') {
-    const vals = Array.isArray(value) ? value : [String(value)]
+    const vals = Array.isArray(value) ? value : [String(value)];
     for (const v of vals) {
       if (!new RegExp(field.valueFormat).test(v)) {
-        return { valid: false, error: field.valueFormatHint || `Invalid format (expected: ${field.valueFormat})` }
+        return {
+          valid: false,
+          error: field.valueFormatHint || `Invalid format (expected: ${field.valueFormat})`,
+        };
       }
     }
   }
 
-  return { valid: true }
+  return { valid: true };
 }
 
 /**
@@ -942,17 +1016,17 @@ export function validateFormData(
   data: Record<string, any>,
   fields: FormFieldParams[]
 ): { valid: boolean; errors: Record<string, string> } {
-  const errors: Record<string, string> = {}
+  const errors: Record<string, string> = {};
 
   for (const field of fields) {
-    const result = validateFieldValue(data[field.name], field)
+    const result = validateFieldValue(data[field.name], field);
     if (!result.valid && result.error) {
-      errors[field.name] = result.error
+      errors[field.name] = result.error;
     }
   }
 
   return {
     valid: Object.keys(errors).length === 0,
     errors,
-  }
+  };
 }
