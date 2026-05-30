@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.10.0] - 2026-05-31
+
+### Security — map popups/tooltips are text-safe by default (XSS hardening)
+
+Leaflet renders bound tooltip/popup strings as **HTML**, so `marker.tooltip`,
+`marker.popup` and a GeoJSON `popup.template` were an **XSS vector** when the
+payload is untrusted — the default for an LLM/connector-driven public package
+(audit `docs/briefs/AUDIT-2026-05-30-visual-renderers-g6-ontology.md`, P1.2).
+
+`<MapRenderer>` now treats that content as **plain text by default**:
+
+- `marker.tooltip` / `marker.popup` are HTML-escaped before binding.
+- a GeoJSON `popup.template` (raw HTML) is **ignored** on the default path;
+  the safe auto-generated popup (`titleField` / `fields`, values already
+  escaped) is used instead.
+- substituted `{{prop}}` values in a template are escaped even on the
+  trusted path (they are data, not markup).
+
+A **host** that renders `<MapRenderer>` with trusted data can restore rich
+HTML popups via the new `allowHtmlPopups` prop. This is deliberately a
+host-level prop, **not** a payload field — a malicious payload could just set
+its own flag. The `<UIResourceRenderer>` path never sets it, so every
+payload-driven map is text-safe.
+
+**Behavior change:** if you previously relied on HTML inside
+`marker.tooltip` / `marker.popup` / `popup.template`, pass `allowHtmlPopups`
+to `<MapRenderer>` (or migrate that markup into the structured
+`titleField` / `fields` popup config). Maps that pass plain-text popups —
+the common case — are visually unchanged.
+
+### Tests
+
+- `MapRenderer.security.test.ts` — 14 cases via new exported pure helpers
+  `popupSafeText` and `buildPopupContent`: escapes by default, passes raw
+  HTML only when opted in, template gated on the untrusted path, auto-popup
+  always escapes values.
+
 ## [6.9.0] - 2026-05-31
 
 ### Added — renderer fallback ladder (no silent blanks)

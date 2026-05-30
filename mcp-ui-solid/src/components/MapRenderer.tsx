@@ -41,6 +41,25 @@ export interface MapRendererProps {
    * @see ExpandableWrapperProps.toolbarVariant
    */
   toolbarVariant?: 'hover' | 'always-visible';
+
+  /**
+   * Trust marker / popup content as raw HTML (v6.10.0, audit P1.2).
+   *
+   * Leaflet renders bound tooltip/popup strings as HTML, so `marker.tooltip`,
+   * `marker.popup` and a GeoJSON `popup.template` are XSS vectors when the
+   * payload is untrusted (the default for an LLM/connector-driven public
+   * package). **Default `false`** → those are escaped as plain text, and
+   * `popup.template` is ignored in favour of the safe auto-generated popup.
+   *
+   * This is a **host-level** trust decision, deliberately NOT a payload field
+   * (a malicious payload could just set its own flag). The
+   * `<UIResourceRenderer>` path never sets it, so payload-driven maps are
+   * always text-safe. A host rendering `<MapRenderer>` directly with trusted
+   * data may set `allowHtmlPopups` to restore rich HTML popups. The
+   * auto-generated popup (`titleField` / `fields`) is safe-by-construction
+   * and unaffected either way.
+   */
+  allowHtmlPopups?: boolean;
 }
 
 // ─── Helpers ────────────────────────────────────────────────
@@ -108,16 +127,27 @@ function buildStyleFn(
 
 /**
  * Build popup HTML from a feature's properties using popup config.
+ *
+ * `allowHtml` (audit P1.2) gates the raw-HTML `popup.template`: it is honored
+ * only when the host trusts the payload. On the default (untrusted) path the
+ * template is ignored and we fall through to the auto-generated popup, whose
+ * structure is renderer-authored and whose values are always escaped — safe
+ * by construction. Even in the trusted path, substituted `{{prop}}` values
+ * are escaped (they are data, not markup).
  */
-function buildPopupContent(feature: any, popup: MapPopupConfig | undefined): string | null {
+export function buildPopupContent(
+  feature: any,
+  popup: MapPopupConfig | undefined,
+  allowHtml = false
+): string | null {
   if (!popup || !feature?.properties) return null;
   const props = feature.properties;
 
-  // Custom template
-  if (popup.template) {
+  // Custom template — raw HTML, so trusted-host only.
+  if (allowHtml && popup.template) {
     return popup.template.replace(/\{\{(\w+)\}\}/g, (_, key) => {
       const val = props[key];
-      return val != null ? String(val) : '';
+      return val != null ? escapeHtml(String(val)) : '';
     });
   }
 
@@ -148,6 +178,29 @@ function escapeHtml(str: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+/**
+ * Resolve a marker's tooltip/popup string for binding (audit P1.2). Leaflet
+ * renders bound strings as HTML; `marker.tooltip` / `marker.popup` come from
+ * the (untrusted) payload, so they are escaped to plain text unless the host
+ * has opted into raw HTML via `allowHtmlPopups`. Pure + exported for tests.
+ */
+export function popupSafeText(value: string | undefined, allowHtml = false): string | undefined {
+  if (value == null) return undefined;
+  return allowHtml ? value : escapeHtml(value);
+}
+
+/** Bind a marker's tooltip + popup, escaping by default (see popupSafeText). */
+function bindMarkerContent(
+  m: any,
+  marker: { tooltip?: string; popup?: string },
+  allowHtml: boolean
+): void {
+  const tooltip = popupSafeText(marker.tooltip, allowHtml);
+  if (tooltip) m.bindTooltip(tooltip);
+  const popup = popupSafeText(marker.popup, allowHtml);
+  if (popup) m.bindPopup(popup);
 }
 
 /**
@@ -225,6 +278,9 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
   const [error, setError] = createSignal<string | null>(null);
   const isExpanded = useExpanded();
   const telemetry = useTelemetry();
+  // Host-level trust for raw HTML in marker/popup content (audit P1.2).
+  // Default false → tooltip/popup escaped, GeoJSON `popup.template` ignored.
+  const allowHtml = () => props.allowHtmlPopups === true;
 
   const params = () => props.params || (props.component?.params as MapComponentParams);
 
