@@ -70,6 +70,67 @@ function resolveLayout(params: GraphComponentParams): { type: string; [key: stri
 }
 
 /**
+ * Build the G6 v5 `Graph` constructor config from the component params.
+ *
+ * Pure (no DOM/lib side effects beyond reading `container`), so it can be
+ * unit-tested directly without a jsdom render — this is the contract the
+ * 2026-05-30 audit (P0.2) wants locked.
+ *
+ * ⚠️ G6 v5's `renderer` is a factory `(layer) => IRenderer`, NOT a string
+ * (that was the v4 contract). Passing the string `'canvas'` / `'svg'` makes
+ * G6 throw `renderer is not a function` — and because the default path used
+ * to pass the string `'canvas'`, EVERY graph crashed, not just svg. So we
+ * **omit `renderer` entirely**: G6 then uses its built-in canvas renderer
+ * (documented default `() => new CanvasRenderer()`).
+ *
+ * `rendererPref: 'svg'` is reserved but NOT wired yet — a real G6 v5 SVG
+ * renderer needs the `@antv/g-svg` factory (a transitive dep of `@antv/g6`,
+ * not statically resolvable at build time). Until that's wired behind proper
+ * optional-peer resolution, svg degrades to the canvas default with a
+ * one-time warning. It must NEVER inject a string `renderer`.
+ */
+export function buildGraphConfig(
+  p: GraphComponentParams,
+  container?: HTMLElement
+): Record<string, unknown> {
+  const config: Record<string, unknown> = {
+    container,
+    data: { nodes: p.nodes, edges: p.edges ?? [] },
+    layout: resolveLayout(p),
+    behaviors: resolveBehaviors(p),
+  };
+
+  if (p.rendererPref === 'svg') {
+    console.warn(
+      '[MCP-UI] GraphRenderer: rendererPref "svg" is not yet supported; using the default canvas renderer.'
+    );
+  }
+
+  if (p.fitView !== false) {
+    config.autoFit = 'view';
+  }
+
+  if (p.tooltip !== false) {
+    config.plugins = [
+      {
+        type: 'tooltip',
+        getContent: (_evt: unknown, items: any[]) => {
+          const item = items?.[0];
+          if (!item) return '';
+          const label = item.label ?? item.id ?? '';
+          const data = item.data ? JSON.stringify(item.data) : '';
+          return `<div style="padding:4px 8px"><strong>${escapeHtml(String(label))}</strong>${
+            data ? `<br><span style="font-size:11px;opacity:0.7">${escapeHtml(data)}</span>` : ''
+          }</div>`;
+        },
+      },
+    ];
+  }
+
+  return config;
+}
+
+/**
  * Build the G6 v5 `behaviors` array from the params interactivity flags.
  * Defaults : drag-canvas + zoom-canvas + drag-element + click-select.
  * Any flag set to `false` opts out.

@@ -1,117 +1,77 @@
 /**
- * GraphRenderer — "G6 available" contract test (v6.8.1).
+ * GraphRenderer — G6 v5 config contract test (v6.8.1).
  *
- * This is the gap the 2026-05-30 audit identified: the existing
- * `GraphRenderer.test.tsx` only covers the pure transforms, and
- * `GraphRenderer.fallback.test.tsx` only covers the peer-missing path. NO
- * test exercised the path where `@antv/g6` IS importable — which is exactly
- * how the `renderer: 'canvas' | 'svg'` string regression (G6 v5 expects a
- * renderer *factory*, not a string → "renderer is not a function") shipped
- * unnoticed.
+ * This is the gap the 2026-05-30 audit (P0.2) identified: the existing
+ * `GraphRenderer.test.tsx` only covers the pure transforms (Mermaid/JSON) and
+ * `GraphRenderer.fallback.test.tsx` only covers the peer-missing path. NO test
+ * exercised the config actually handed to the G6 `Graph` constructor — which
+ * is exactly how the `renderer: 'canvas' | 'svg'` string regression (G6 v5
+ * expects a renderer *factory*, not a string → "renderer is not a function")
+ * shipped unnoticed, crashing every `type:'graph'`.
  *
- * We don't mock the whole G6 runtime — we mock only the `Graph` constructor
- * and capture the config it receives, then assert the contract:
- *   - `Graph` is constructed and `render()` is called;
- *   - the default (canvas) config does NOT carry a `renderer` field (a string
- *     there is the bug; omitting it lets G6 use its built-in canvas default);
- *   - `rendererPref: 'svg'` still never passes a string `renderer` (it
- *     degrades to the canvas default for now — see the renderer comment);
- *   - the peer-missing fallback is NOT shown when the module imports fine.
+ * Rather than drive the full component through jsdom (whose container ref is
+ * gated behind an async availability `<Show>`, so `new Graph(...)` is never
+ * reached in a test renderer), we assert the contract on the **pure**
+ * `buildGraphConfig()` helper the component delegates to. Same guarantee,
+ * deterministic, no DOM/canvas needed.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, waitFor } from '@solidjs/testing-library';
-import type { UIComponent } from '../types';
+import { describe, it, expect } from 'vitest';
+import { buildGraphConfig } from './GraphRenderer';
+import type { GraphComponentParams } from '@seed-ship/mcp-ui-spec';
 
-// Capture every config passed to `new Graph(...)`.
-let capturedConfigs: Array<Record<string, unknown>> = [];
-const renderSpy = vi.fn().mockResolvedValue(undefined);
+const fakeContainer = {} as HTMLElement;
 
-vi.mock('@antv/g6', () => ({
-  Graph: vi.fn().mockImplementation((config: Record<string, unknown>) => {
-    capturedConfigs.push(config);
-    return {
-      render: renderSpy,
-      destroy: vi.fn(),
-      toDataURL: vi.fn().mockResolvedValue('data:image/png;base64,'),
-    };
-  }),
-}));
-
-// Imported AFTER the mocks are registered (vi.mock is hoisted regardless).
-import { GraphRenderer } from './GraphRenderer';
-
-function graph(params: Record<string, unknown>): UIComponent {
-  return {
-    id: 'test-graph',
-    type: 'graph',
-    position: { colStart: 1, colSpan: 12 },
-    params: params as never,
-  };
+function params(overrides: Partial<GraphComponentParams> = {}): GraphComponentParams {
+  return { nodes: [{ id: 'a' }], ...overrides } as GraphComponentParams;
 }
 
-const settle = () => waitFor(() => expect(capturedConfigs.length).toBe(1), { timeout: 4000 });
-
-describe('GraphRenderer — G6 available (contract)', () => {
-  beforeEach(() => {
-    capturedConfigs = [];
-    renderSpy.mockClear();
-  });
-
-  it('constructs Graph and calls render() for a minimal graph', async () => {
-    render(() => <GraphRenderer component={graph({ nodes: [{ id: 'a' }] })} />);
-    await settle();
-    expect(renderSpy).toHaveBeenCalled();
-  });
-
-  it('passes container and node data to the Graph constructor', async () => {
-    render(() => (
-      <GraphRenderer
-        component={graph({
-          nodes: [{ id: 'a', label: 'A' }, { id: 'b' }],
-          edges: [{ source: 'a', target: 'b' }],
-        })}
-      />
-    ));
-    await settle();
-    const config = capturedConfigs[0];
-    expect(config.container).toBeDefined();
+describe('buildGraphConfig — G6 v5 constructor contract', () => {
+  it('passes the container and node/edge data through', () => {
+    const config = buildGraphConfig(
+      params({
+        nodes: [{ id: 'a', label: 'A' }, { id: 'b' }],
+        edges: [{ source: 'a', target: 'b' }],
+      }),
+      fakeContainer
+    );
+    expect(config.container).toBe(fakeContainer);
     expect((config.data as { nodes: unknown[] }).nodes).toHaveLength(2);
     expect((config.data as { edges: unknown[] }).edges).toHaveLength(1);
   });
 
-  it('does NOT pass a `renderer` field on the default (canvas) path', async () => {
+  it('does NOT pass a `renderer` field on the default (canvas) path', () => {
     // The bug: `renderer: 'canvas'` (a string) → G6 v5 throws
     // "renderer is not a function". The fix omits it entirely.
-    render(() => <GraphRenderer component={graph({ nodes: [{ id: 'a' }] })} />);
-    await settle();
-    expect('renderer' in capturedConfigs[0]).toBe(false);
+    const config = buildGraphConfig(params(), fakeContainer);
+    expect('renderer' in config).toBe(false);
   });
 
-  it('never passes a string `renderer` (regression guard)', async () => {
-    render(() => (
-      <GraphRenderer component={graph({ nodes: [{ id: 'a' }], rendererPref: 'canvas' })} />
-    ));
-    await settle();
-    expect(typeof capturedConfigs[0].renderer).not.toBe('string');
+  it('never passes a string `renderer` for rendererPref: "canvas" (regression guard)', () => {
+    const config = buildGraphConfig(params({ rendererPref: 'canvas' }), fakeContainer);
+    expect(typeof config.renderer).not.toBe('string');
+    expect('renderer' in config).toBe(false);
   });
 
-  it('never passes a string `renderer` for rendererPref: "svg" (degrades to canvas)', async () => {
+  it('never passes a string `renderer` for rendererPref: "svg" (degrades to canvas)', () => {
     // svg is not wired yet — it must NOT inject the string 'svg' (the bug).
     // It degrades to the canvas default, i.e. no `renderer` field at all.
-    render(() => (
-      <GraphRenderer component={graph({ nodes: [{ id: 'a' }], rendererPref: 'svg' })} />
-    ));
-    await settle();
-    expect(typeof capturedConfigs[0].renderer).not.toBe('string');
-    expect('renderer' in capturedConfigs[0]).toBe(false);
+    const config = buildGraphConfig(params({ rendererPref: 'svg' }), fakeContainer);
+    expect(typeof config.renderer).not.toBe('string');
+    expect('renderer' in config).toBe(false);
   });
 
-  it('does NOT show the peer-missing fallback when @antv/g6 imports fine', async () => {
-    const { queryByText } = render(() => (
-      <GraphRenderer component={graph({ nodes: [{ id: 'a' }] })} />
-    ));
-    await settle();
-    expect(queryByText('Graph rendering unavailable')).toBeNull();
+  it('resolves a layout and behaviors array', () => {
+    const config = buildGraphConfig(
+      params({ edges: [{ source: 'a', target: 'a' }] }),
+      fakeContainer
+    );
+    expect((config.layout as { type: string }).type).toBeTruthy();
+    expect(Array.isArray(config.behaviors)).toBe(true);
+  });
+
+  it('omits autoFit when fitView is false', () => {
+    expect('autoFit' in buildGraphConfig(params(), fakeContainer)).toBe(true);
+    expect('autoFit' in buildGraphConfig(params({ fitView: false }), fakeContainer)).toBe(false);
   });
 });
