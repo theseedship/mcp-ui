@@ -212,7 +212,7 @@ describe('component-specific validation', () => {
         fitBounds: true,
       })
     );
-    expect(result.errors?.some((e) => e.code === 'INVALID_MAP')).toBe(false);
+    expect(result.errors?.some((e) => e.code === 'INVALID_MAP')).toBeFalsy();
   });
 
   it('accepts map with named layers but no center/markers', () => {
@@ -221,14 +221,14 @@ describe('component-specific validation', () => {
         layers: [{ name: 'Communes', geojson: { type: 'FeatureCollection', features: [] } }],
       })
     );
-    expect(result.errors?.some((e) => e.code === 'INVALID_MAP')).toBe(false);
+    expect(result.errors?.some((e) => e.code === 'INVALID_MAP')).toBeFalsy();
   });
 
   it('accepts map with a pmtiles source but no center/markers', () => {
     const result = validateComponent(
       makeComponent('map', { pmtiles: { url: 'https://cdn.example.com/x.pmtiles' } })
     );
-    expect(result.errors?.some((e) => e.code === 'INVALID_MAP')).toBe(false);
+    expect(result.errors?.some((e) => e.code === 'INVALID_MAP')).toBeFalsy();
   });
 
   it('still rejects an empty map (no center/markers/geojson/layers/pmtiles)', () => {
