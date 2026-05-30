@@ -192,7 +192,7 @@ export function popupSafeText(value: string | undefined, allowHtml = false): str
 }
 
 /** Bind a marker's tooltip + popup, escaping by default (see popupSafeText). */
-function bindMarkerContent(
+export function bindMarkerContent(
   m: any,
   marker: { tooltip?: string; popup?: string },
   allowHtml: boolean
@@ -276,6 +276,10 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
   let mapInstance: any = null;
   const [isLeafletLoaded, setIsLeafletLoaded] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
+  // PMTiles is an optional overlay on top of the base map. When it fails we
+  // keep the base map but surface a visible notice (audit P1.3) instead of a
+  // silent console.warn that leaves the user with an unexplained empty layer.
+  const [pmtilesError, setPmtilesError] = createSignal<string | null>(null);
   const isExpanded = useExpanded();
   const telemetry = useTelemetry();
   // Host-level trust for raw HTML in marker/popup content (audit P1.2).
@@ -390,8 +394,7 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
             });
             p?.markers?.forEach((marker) => {
               const m = L.marker(marker.position);
-              if (marker.tooltip) m.bindTooltip(marker.tooltip);
-              if (marker.popup) m.bindPopup(marker.popup);
+              bindMarkerContent(m, marker, allowHtml());
               clusterGroup.addLayer(m);
               markers.push(m);
             });
@@ -399,16 +402,14 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
           } catch {
             p?.markers?.forEach((marker) => {
               const m = L.marker(marker.position).addTo(mapInstance);
-              if (marker.tooltip) m.bindTooltip(marker.tooltip);
-              if (marker.popup) m.bindPopup(marker.popup);
+              bindMarkerContent(m, marker, allowHtml());
               markers.push(m);
             });
           }
         } else {
           p?.markers?.forEach((marker) => {
             const m = L.marker(marker.position).addTo(mapInstance);
-            if (marker.tooltip) m.bindTooltip(marker.tooltip);
-            if (marker.popup) m.bindPopup(marker.popup);
+            bindMarkerContent(m, marker, allowHtml());
             markers.push(m);
           });
         }
@@ -452,6 +453,7 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
         }
 
         // ─── PMTiles (v3.1.0) ────────────────────────
+        setPmtilesError(null);
         if (p?.pmtiles) {
           try {
             // @ts-ignore — optional peer dependency, may not be installed
@@ -495,7 +497,23 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
 
             pmLayer.addTo(mapInstance);
           } catch (e) {
-            console.warn('[MCP-UI] Failed to load protomaps-leaflet for PMTiles:', e);
+            // P1.3 — do NOT fail silently. Keep the base map, but surface a
+            // visible notice and report a renderer error via telemetry. The
+            // most common cause is the optional `protomaps-leaflet` peer not
+            // being installed.
+            const detail = e instanceof Error ? e.message : String(e);
+            const message =
+              'PMTiles layer unavailable — the optional "protomaps-leaflet" ' +
+              'peer dependency failed to load or render.';
+            console.warn('[MCP-UI] ' + message, e);
+            setPmtilesError(message);
+            telemetry?.dispatch({
+              type: 'render:error',
+              errorMessage: `${message} (${detail})`,
+              id: props.component?.id ?? '',
+              componentType: 'map',
+              ts: Date.now(),
+            });
           }
         }
 
@@ -557,6 +575,16 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
           </div>
         </Show>
         <Show when={!error()}>
+          {/* P1.3 — visible notice when the PMTiles overlay fails but the
+                        base map is still usable. */}
+          <Show when={pmtilesError()}>
+            <div
+              role="alert"
+              class="m-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-700/50 dark:bg-amber-900/20 dark:text-amber-200"
+            >
+              {pmtilesError()} The base map is still shown.
+            </div>
+          </Show>
           <div
             ref={mapContainer}
             style={

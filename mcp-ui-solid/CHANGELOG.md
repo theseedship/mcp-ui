@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.11.0] - 2026-05-31
+
+Map hardening (audit `docs/briefs/AUDIT-2026-05-30-visual-renderers-g6-ontology.md`).
+
+### Fixed — PMTiles no longer fails silently (P1.3)
+
+A failed PMTiles overlay (most often the optional `protomaps-leaflet` peer not
+being installed) previously only emitted a `console.warn`, leaving the user
+with an unexplained empty/incomplete layer. `<MapRenderer>` now:
+
+- keeps the base map usable, and
+- shows a visible **"PMTiles layer unavailable"** notice over it, and
+- reports a `render:error` telemetry event (`componentType: 'map'`).
+
+### Security — marker tooltip/popup escaping is now actually wired (P1.2 follow-up)
+
+v6.10.0 added the `bindMarkerContent` escaping helper but the marker render
+loops still bound `marker.tooltip` / `marker.popup` as **raw HTML**, so the
+"text-safe by default" guarantee only ever applied to the GeoJSON popup path.
+All three marker paths (clustered, cluster-fallback, plain) now route through
+`bindMarkerContent`, so marker tooltips/popups are HTML-escaped by default and
+only rendered as HTML when the host opts in via `allowHtmlPopups` (unchanged
+from v6.10.0). `bindMarkerContent` is now exported and unit-tested.
+
 ## [6.10.0] - 2026-05-31
 
 ### Security — map popups/tooltips are text-safe by default (XSS hardening)
