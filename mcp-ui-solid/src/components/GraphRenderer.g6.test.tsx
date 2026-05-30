@@ -14,8 +14,8 @@
  *   - `Graph` is constructed and `render()` is called;
  *   - the default (canvas) config does NOT carry a `renderer` field (a string
  *     there is the bug; omitting it lets G6 use its built-in canvas default);
- *   - `rendererPref: 'svg'` wires a renderer *factory* (function), never a
- *     string;
+ *   - `rendererPref: 'svg'` still never passes a string `renderer` (it
+ *     degrades to the canvas default for now — see the renderer comment);
  *   - the peer-missing fallback is NOT shown when the module imports fine.
  */
 
@@ -38,12 +38,6 @@ vi.mock('@antv/g6', () => ({
   }),
 }));
 
-// SVG renderer factory module (a g6 dependency) — captured for the svg path.
-const svgRendererCtor = vi.fn();
-vi.mock('@antv/g-svg', () => ({
-  Renderer: svgRendererCtor,
-}));
-
 // Imported AFTER the mocks are registered (vi.mock is hoisted regardless).
 import { GraphRenderer } from './GraphRenderer';
 
@@ -62,7 +56,6 @@ describe('GraphRenderer — G6 available (contract)', () => {
   beforeEach(() => {
     capturedConfigs = [];
     renderSpy.mockClear();
-    svgRendererCtor.mockClear();
   });
 
   it('constructs Graph and calls render() for a minimal graph', async () => {
@@ -103,16 +96,15 @@ describe('GraphRenderer — G6 available (contract)', () => {
     expect(typeof capturedConfigs[0].renderer).not.toBe('string');
   });
 
-  it('wires a renderer FACTORY (function) for rendererPref: "svg"', async () => {
+  it('never passes a string `renderer` for rendererPref: "svg" (degrades to canvas)', async () => {
+    // svg is not wired yet — it must NOT inject the string 'svg' (the bug).
+    // It degrades to the canvas default, i.e. no `renderer` field at all.
     render(() => (
       <GraphRenderer component={graph({ nodes: [{ id: 'a' }], rendererPref: 'svg' })} />
     ));
     await settle();
-    const renderer = capturedConfigs[0].renderer;
-    expect(typeof renderer).toBe('function');
-    // Calling the factory instantiates the SVG renderer (no string anywhere).
-    (renderer as () => unknown)();
-    expect(svgRendererCtor).toHaveBeenCalled();
+    expect(typeof capturedConfigs[0].renderer).not.toBe('string');
+    expect('renderer' in capturedConfigs[0]).toBe(false);
   });
 
   it('does NOT show the peer-missing fallback when @antv/g6 imports fine', async () => {

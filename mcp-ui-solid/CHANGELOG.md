@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.8.1] - 2026-05-30
+
+### Fixed — `type:'graph'` crashed with "renderer is not a function"
+
+`GraphRenderer` passed `renderer: 'canvas' | 'svg'` (a **string**) to the
+G6 v5 `Graph` constructor. In G6 v5 `renderer` is a factory
+`(layer) => IRenderer`, not a string (that was the v4 contract), so G6 threw
+`renderer is not a function` — and because the default path also passed the
+string `'canvas'`, **every** `type:'graph'` component crashed, not just the
+`svg` one. This was an upstream bug in `mcp-ui-solid`, not a missing peer
+dependency in consumer apps.
+
+- Default (canvas): the `renderer` field is now **omitted** — G6 uses its
+  built-in canvas renderer (documented default `() => new CanvasRenderer()`).
+- `rendererPref: 'svg'`: reserved but **not wired yet** — it degrades to the
+  canvas default with a one-time `console.warn` instead of injecting the
+  faulty string. A real G6 v5 SVG renderer needs the `@antv/g-svg` factory
+  (a transitive dep of `@antv/g6`, not statically resolvable at build time);
+  wiring it behind proper optional-peer resolution is a follow-up.
+
+### Tests
+
+- New `GraphRenderer.g6.test.tsx` — the previously-missing "G6 available"
+  contract path (the gap that let this regression ship). Mocks only the
+  `Graph` constructor and asserts: `Graph` is constructed, `render()` is
+  called, the default config carries **no** `renderer` field, and a string
+  `renderer` is never passed (incl. the `svg` path).
+
+Audit: `docs/briefs/AUDIT-2026-05-30-visual-renderers-g6-ontology.md` (P0).
+The brief `BRIEF-graph-component-g6.md` was corrected to match (its example
+and test expectation carried the same faulty string contract).
+
 ## [6.8.0] - 2026-05-22
 
 ### Changed — payload-size limit raised 50KB → 512KB

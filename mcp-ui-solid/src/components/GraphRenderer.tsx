@@ -185,27 +185,26 @@ export const GraphRenderer: Component<GraphRendererProps> = (props) => {
       };
 
       // G6 v5's `renderer` is a factory `(layer) => IRenderer`, NOT a string
-      // (that was the v4 contract). Passing `'canvas'` / `'svg'` makes G6
-      // throw `renderer is not a function` — and because the default path
-      // also passed the string `'canvas'`, EVERY graph crashed, not just the
-      // svg one. So:
-      //   - default (canvas) → omit `renderer`; G6 uses its built-in canvas
-      //     renderer (documented default `() => new CanvasRenderer()`).
-      //   - `rendererPref: 'svg'` → lazy-load the `@antv/g-svg` renderer
-      //     factory. It ships as a dependency of `@antv/g6`, so it resolves
-      //     whenever the peer is installed; if it can't be loaded we warn and
-      //     stay on the default canvas instead of crashing.
+      // (that was the v4 contract). Passing the string `'canvas'` / `'svg'`
+      // makes G6 throw `renderer is not a function` — and because the default
+      // path also passed the string `'canvas'`, EVERY graph crashed, not just
+      // the svg one.
+      //
+      // Fix: omit `renderer` entirely. G6 then uses its built-in canvas
+      // renderer (documented default `() => new CanvasRenderer()`), which is
+      // what we want for every graph.
+      //
+      // `rendererPref: 'svg'` is NOT wired yet: a real G6 v5 SVG renderer
+      // needs the `@antv/g-svg` factory, which is a *transitive* dep of
+      // `@antv/g6` (not a declared peer) and isn't statically resolvable at
+      // build time. Rather than ship a fragile/unresolvable import, we treat
+      // svg as "not yet supported" and fall back to the canvas default with a
+      // one-time warning. Tracked for a follow-up that wires the factory
+      // behind a proper optional-peer resolution. (Never pass a string here.)
       if (p.rendererPref === 'svg') {
-        try {
-          // @ts-ignore — g-svg is a transitive dep of g6, not a declared peer
-          const svgMod = await import(/* @vite-ignore */ '@antv/g-svg');
-          const SVGRenderer = svgMod.Renderer;
-          config.renderer = () => new SVGRenderer();
-        } catch {
-          console.warn(
-            '[MCP-UI] GraphRenderer: SVG renderer (@antv/g-svg) unavailable, falling back to canvas.'
-          );
-        }
+        console.warn(
+          '[MCP-UI] GraphRenderer: rendererPref "svg" is not yet supported; using the default canvas renderer.'
+        );
       }
       if (p.fitView !== false) {
         config.autoFit = 'view';
