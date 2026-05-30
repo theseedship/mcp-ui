@@ -1,0 +1,59 @@
+{
+  "schemaVersion": "connector-dynamic-result/v1",
+  "connectorId": "datagouv",
+  "toolName": "deposium_opendata",
+  "query": "relations entre les entreprises du groupe a Montpellier",
+  "queryHash": "enterprises-mtp-relations",
+  "intent": "enterprise_relations",
+  "renderHints": {
+    "preferredLayout": "graph",
+    "domain": "generic",
+    "confidence": 0.6
+  },
+  "primary": {
+    "id": "ontology-entities-graph",
+    "type": "graph",
+    "position": { "colStart": 1, "colSpan": 12 },
+    "params": {
+      "directed": true,
+      "layout": "force",
+      "nodes": [
+        { "id": "holding", "label": "Holding SA", "group": "company" },
+        { "id": "sub_a", "label": "Filiale A", "group": "company" },
+        { "id": "sub_b", "label": "Filiale B", "group": "company" },
+        { "id": "site_mtp", "label": "Site Montpellier", "group": "establishment" },
+        { "id": "naf_62", "label": "NAF 62.01Z", "group": "activity" }
+      ],
+      "edges": [
+        { "source": "holding", "target": "sub_a", "label": "detient", "weight": 1 },
+        { "source": "holding", "target": "sub_b", "label": "detient", "weight": 0.6 },
+        { "source": "sub_a", "target": "site_mtp", "label": "exploite" },
+        { "source": "sub_a", "target": "naf_62", "label": "activite" }
+      ]
+    }
+  },
+  "supplemental": [
+    {
+      "id": "ontology-entities-table",
+      "type": "table",
+      "position": { "colStart": 1, "colSpan": 12 },
+      "params": {
+        "title": "Entites & relations",
+        "columns": [
+          { "key": "subject", "label": "Entite" },
+          { "key": "predicate", "label": "Relation" },
+          { "key": "object", "label": "Cible" }
+        ],
+        "rows": [
+          { "subject": "Holding SA", "predicate": "detient", "object": "Filiale A" },
+          { "subject": "Holding SA", "predicate": "detient", "object": "Filiale B" },
+          { "subject": "Filiale A", "predicate": "exploite", "object": "Site Montpellier" },
+          { "subject": "Filiale A", "predicate": "activite", "object": "NAF 62.01Z" }
+        ]
+      }
+    }
+  ],
+  "followups": [
+    { "label": "Detail de la Filiale A", "query": "detail filiale A Montpellier" }
+  ]
+}

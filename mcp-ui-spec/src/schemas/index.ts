@@ -1000,6 +1000,7 @@ export const ConnectorPreferredLayoutSchema = z.enum([
   'doughnut',
   'map',
   'metric',
+  'graph',
 ]);
 
 export const ConnectorRenderHintsSchema = z.object({

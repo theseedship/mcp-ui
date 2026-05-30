@@ -12,6 +12,7 @@ import {
   ConnectorDynamicResultV1Schema,
   CONNECTOR_DYNAMIC_RESULT_V1,
   ConnectorFollowupSchema,
+  ConnectorPreferredLayoutSchema,
 } from './schemas/index'
 
 const FIXTURE_DIR = join(__dirname, '..', 'examples', 'connector')
@@ -97,6 +98,39 @@ describe('ConnectorDynamicResultV1 fixtures', () => {
   it('ships at least the 5 documented scenarios', () => {
     // real-estate, dpe, pollution, clinicaltrials, empty/error (non-regression #10)
     expect(fixtures.length).toBeGreaterThanOrEqual(5)
+  })
+
+  // The three documented P2.2 cases: provenance/source, dependencies/process,
+  // ontology-lite / entities-relations.
+  const GRAPH_FIXTURES = [
+    'provenance-graph.json',
+    'process-dependencies-graph.json',
+    'ontology-entities-graph.json',
+  ]
+
+  it('ships the three documented graph-layout fixtures (P2.2)', () => {
+    for (const name of GRAPH_FIXTURES) {
+      expect(fixtures).toContain(name)
+    }
+  })
+
+  for (const name of GRAPH_FIXTURES) {
+    it(`graph fixture ${name} hints a generic node-link graph`, () => {
+      const raw = JSON.parse(readFileSync(join(FIXTURE_DIR, name), 'utf8'))
+      // The connector envelope accepts a `graph` hint...
+      expect(raw.renderHints.preferredLayout).toBe('graph')
+      expect(ConnectorPreferredLayoutSchema.safeParse('graph').success).toBe(true)
+      // ...and the primary stays a generic node-link graph (not a specialised type, cf. P2.3).
+      expect(raw.primary.type).toBe('graph')
+      expect(Array.isArray(raw.primary.params.nodes)).toBe(true)
+      expect(raw.primary.params.nodes.length).toBeGreaterThan(0)
+      expect(Array.isArray(raw.primary.params.edges)).toBe(true)
+    })
+  }
+
+  it('accepts `graph` as a preferredLayout and rejects unknown layouts', () => {
+    expect(ConnectorPreferredLayoutSchema.safeParse('graph').success).toBe(true)
+    expect(ConnectorPreferredLayoutSchema.safeParse('mindmap').success).toBe(false)
   })
 
   for (const file of fixtures) {

@@ -1,0 +1,62 @@
+{
+  "schemaVersion": "connector-dynamic-result/v1",
+  "connectorId": "datagouv",
+  "toolName": "deposium_opendata",
+  "query": "entreprises montpellier informatique",
+  "queryHash": "ent-mtp-it",
+  "intent": "enterprise_lookup",
+  "renderHints": {
+    "preferredLayout": "table",
+    "domain": "employment",
+    "confidence": 0.84
+  },
+  "primary": {
+    "id": "enterprises-montpellier-table",
+    "type": "table",
+    "position": { "colStart": 1, "colSpan": 12 },
+    "params": {
+      "title": "Entreprises informatique — Montpellier",
+      "columns": [
+        { "key": "nom", "label": "Nom", "sortable": true },
+        { "key": "siren", "label": "SIREN" },
+        { "key": "siret", "label": "SIRET" },
+        { "key": "commune", "label": "Commune", "sortable": true },
+        { "key": "activite", "label": "Activite" },
+        { "key": "nb_etablissements", "label": "Etablissements", "sortable": true }
+      ],
+      "rows": [
+        {
+          "nom": "ACME Informatique",
+          "siren": "349119123",
+          "siret": "34911912300012",
+          "commune": "MONTPELLIER",
+          "activite": "62.01Z",
+          "nb_etablissements": 3
+        },
+        {
+          "nom": "Studio Logiciel Sud",
+          "siren": "331406413",
+          "siret": "33140641300018",
+          "commune": "MONTPELLIER",
+          "activite": "62.02A",
+          "nb_etablissements": 1
+        }
+      ],
+      "exportable": true
+    }
+  },
+  "actions": [
+    {
+      "label": "Agreger par activite",
+      "action": "tool-call",
+      "toolName": "deposium_opendata",
+      "params": {
+        "operation": "run_scenario",
+        "scenario": "opendata.entreprises.lookup",
+        "query": "compare entreprises informatique montpellier par activite",
+        "sourceScenario": "opendata.entreprises.lookup"
+      },
+      "variant": "secondary"
+    }
+  ]
+}

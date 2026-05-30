@@ -1,0 +1,56 @@
+{
+  "schemaVersion": "connector-dynamic-result/v1",
+  "connectorId": "datagouv",
+  "toolName": "deposium_opendata",
+  "query": "d'ou vient le chiffre de population de Lyon",
+  "queryHash": "pop-lyon-provenance",
+  "intent": "population_provenance",
+  "renderHints": {
+    "preferredLayout": "graph",
+    "domain": "generic",
+    "confidence": 0.7
+  },
+  "primary": {
+    "id": "provenance-graph",
+    "type": "graph",
+    "position": { "colStart": 1, "colSpan": 12 },
+    "params": {
+      "directed": true,
+      "layout": "dagre",
+      "nodes": [
+        { "id": "claim", "label": "Population Lyon = 522 250", "group": "claim" },
+        { "id": "evidence", "label": "Recensement 2021", "group": "evidence" },
+        { "id": "dataset", "label": "INSEE - populations legales", "group": "source" },
+        { "id": "page", "label": "insee.fr/statistiques/...", "group": "source" }
+      ],
+      "edges": [
+        { "source": "claim", "target": "evidence", "label": "appuye par" },
+        { "source": "evidence", "target": "dataset", "label": "extrait de" },
+        { "source": "dataset", "target": "page", "label": "publie sur" }
+      ]
+    }
+  },
+  "supplemental": [
+    {
+      "id": "provenance-table",
+      "type": "table",
+      "position": { "colStart": 1, "colSpan": 12 },
+      "params": {
+        "title": "Chaine de provenance",
+        "columns": [
+          { "key": "from", "label": "De" },
+          { "key": "rel", "label": "Relation" },
+          { "key": "to", "label": "Vers" }
+        ],
+        "rows": [
+          { "from": "Population Lyon = 522 250", "rel": "appuye par", "to": "Recensement 2021" },
+          { "from": "Recensement 2021", "rel": "extrait de", "to": "INSEE - populations legales" },
+          { "from": "INSEE - populations legales", "rel": "publie sur", "to": "insee.fr/statistiques/..." }
+        ]
+      }
+    }
+  ],
+  "followups": [
+    { "label": "Evolution de la population de Lyon", "query": "evolution population Lyon" }
+  ]
+}

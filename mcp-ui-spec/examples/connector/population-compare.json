@@ -1,0 +1,66 @@
+{
+  "schemaVersion": "connector-dynamic-result/v1",
+  "connectorId": "datagouv",
+  "toolName": "deposium_opendata",
+  "query": "compare population montpellier toulouse paris",
+  "queryHash": "pop-compare-mtp-tls-par",
+  "intent": "population_compare",
+  "renderHints": {
+    "preferredLayout": "bar",
+    "domain": "generic",
+    "confidence": 0.9
+  },
+  "primary": {
+    "id": "population-compare-chart",
+    "type": "chart",
+    "position": { "colStart": 1, "colSpan": 12 },
+    "params": {
+      "type": "bar",
+      "title": "Population 2023 — comparaison",
+      "data": {
+        "labels": ["Montpellier", "Toulouse", "Paris"],
+        "datasets": [
+          {
+            "label": "Population 2023",
+            "data": [310240, 511684, 2086000],
+            "backgroundColor": ["#2563eb", "#16a34a", "#dc2626"]
+          }
+        ]
+      }
+    }
+  },
+  "supplemental": [
+    {
+      "id": "population-compare-table",
+      "type": "table",
+      "position": { "colStart": 1, "colSpan": 12 },
+      "params": {
+        "title": "Population — donnees source",
+        "columns": [
+          { "key": "LIBGEO", "label": "Ville", "sortable": true },
+          { "key": "CODGEO", "label": "Code INSEE" },
+          { "key": "P23_POP", "label": "Population 2023", "sortable": true }
+        ],
+        "rows": [
+          { "LIBGEO": "Montpellier", "CODGEO": "34172", "P23_POP": 310240 },
+          { "LIBGEO": "Toulouse", "CODGEO": "31555", "P23_POP": 511684 },
+          { "LIBGEO": "Paris", "CODGEO": "75056", "P23_POP": 2086000 }
+        ]
+      }
+    }
+  ],
+  "actions": [
+    {
+      "label": "Voir l'evolution",
+      "action": "tool-call",
+      "toolName": "deposium_opendata",
+      "params": {
+        "operation": "run_scenario",
+        "scenario": "opendata.demographie.trend",
+        "query": "croissance population montpellier toulouse paris",
+        "parentQueryHash": "pop-compare-mtp-tls-par",
+        "sourceScenario": "opendata.demographie.compare"
+      }
+    }
+  ]
+}

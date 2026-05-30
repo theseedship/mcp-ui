@@ -375,8 +375,13 @@ const result = ConnectorDynamicResultV1Schema.parse(payload);
 - `actions` (reuses the `action-group` action shape), `followups`,
   `renderHints` (`preferredLayout` / `domain` / `confidence`).
 
+`preferredLayout` accepts `table`, `cards`, `bar`, `line`, `doughnut`, `map`,
+`metric`, and `graph` (since v5.4.0). A `graph` hint asks the host adapter to
+render a generic node-link graph for relational results.
+
 Reference payloads live in [`examples/connector/`](./examples/connector/) —
-real-estate, DPE, pollution, clinical-trials, and an empty/error state.
+real-estate, DPE, pollution, clinical-trials, an empty/error state, and three
+`graph`-layout examples (provenance, process dependencies, ontology entities).
 
 The renderer-side assembler is `connectorResultToUILayout()` from
 `@seed-ship/mcp-ui-solid/adapters`.
@@ -530,7 +535,7 @@ The renderer-side adapters — `macroRunToScratchpadState()` and
 
 This package follows [Semantic Versioning](https://semver.org/). See [CHANGELOG.md](./CHANGELOG.md) for release notes.
 
-**Current Version:** 5.3.0
+**Current Version:** 5.4.0
 
 ## License
 

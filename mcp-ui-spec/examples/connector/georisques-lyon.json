@@ -1,0 +1,57 @@
+{
+  "schemaVersion": "connector-dynamic-result/v1",
+  "connectorId": "datagouv",
+  "toolName": "deposium_opendata",
+  "query": "georisques lyon",
+  "queryHash": "geo-lyon",
+  "intent": "georisques_lookup",
+  "renderHints": {
+    "preferredLayout": "cards",
+    "domain": "pollution",
+    "confidence": 0.87
+  },
+  "primary": {
+    "id": "georisques-lyon-table",
+    "type": "table",
+    "position": { "colStart": 1, "colSpan": 12 },
+    "params": {
+      "title": "Risques GeoRisques — Lyon",
+      "columns": [
+        { "key": "commune", "label": "Commune", "sortable": true },
+        { "key": "code_insee", "label": "Code INSEE" },
+        { "key": "risque", "label": "Risque", "sortable": true },
+        { "key": "zone_sismicite", "label": "Zone sismicite" }
+      ],
+      "rows": [
+        {
+          "commune": "Lyon",
+          "code_insee": "69123",
+          "risque": "Inondation",
+          "zone_sismicite": "2"
+        },
+        {
+          "commune": "Lyon",
+          "code_insee": "69123",
+          "risque": "Mouvement de terrain",
+          "zone_sismicite": "2"
+        }
+      ],
+      "exportable": true
+    }
+  },
+  "actions": [
+    {
+      "label": "Ajouter population exposee",
+      "action": "tool-call",
+      "toolName": "deposium_opendata",
+      "params": {
+        "operation": "run_scenario",
+        "scenario": "opendata.demographie.compare",
+        "query": "population lyon",
+        "parentQueryHash": "geo-lyon",
+        "sourceScenario": "opendata.georisques.lookup"
+      },
+      "variant": "secondary"
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "schemaVersion": "connector-dynamic-result/v1",
+  "connectorId": "datagouv",
+  "toolName": "deposium_opendata",
+  "query": "comment est calcule l'indice DPE agrege",
+  "queryHash": "dpe-pipeline-deps",
+  "intent": "pipeline_dependencies",
+  "renderHints": {
+    "preferredLayout": "graph",
+    "domain": "dpe",
+    "confidence": 0.65
+  },
+  "primary": {
+    "id": "process-dependencies-graph",
+    "type": "graph",
+    "position": { "colStart": 1, "colSpan": 12 },
+    "params": {
+      "directed": true,
+      "layout": "dagre",
+      "nodes": [
+        { "id": "fetch", "label": "Recuperation ADEME", "group": "ingest" },
+        { "id": "clean", "label": "Nettoyage / dedup", "group": "transform" },
+        { "id": "geocode", "label": "Geocodage BAN", "group": "transform" },
+        { "id": "aggregate", "label": "Agregation par commune", "group": "transform" },
+        { "id": "index", "label": "Indice DPE agrege", "group": "output" }
+      ],
+      "edges": [
+        { "source": "fetch", "target": "clean" },
+        { "source": "clean", "target": "geocode" },
+        { "source": "clean", "target": "aggregate" },
+        { "source": "geocode", "target": "aggregate" },
+        { "source": "aggregate", "target": "index" }
+      ]
+    }
+  },
+  "supplemental": [
+    {
+      "id": "process-dependencies-table",
+      "type": "table",
+      "position": { "colStart": 1, "colSpan": 12 },
+      "params": {
+        "title": "Etapes & dependances",
+        "columns": [
+          { "key": "step", "label": "Etape" },
+          { "key": "deps", "label": "Depend de" }
+        ],
+        "rows": [
+          { "step": "Nettoyage / dedup", "deps": "Recuperation ADEME" },
+          { "step": "Geocodage BAN", "deps": "Nettoyage / dedup" },
+          { "step": "Agregation par commune", "deps": "Nettoyage / dedup, Geocodage BAN" },
+          { "step": "Indice DPE agrege", "deps": "Agregation par commune" }
+        ]
+      }
+    }
+  ],
+  "followups": [
+    { "label": "Voir l'indice DPE par commune", "query": "indice DPE par commune" }
+  ]
+}

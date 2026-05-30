@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.4.0] - 2026-05-31
+
+Add `graph` to the connector render-hint layouts (P2.2 of
+`mcp-ui-solid/docs/briefs/AUDIT-2026-05-30-visual-renderers-g6-ontology.md`).
+
+### Added
+
+- `graph` value in `ConnectorPreferredLayoutSchema`. A connector can now hint
+  `renderHints.preferredLayout: 'graph'` so a host adapter renders a node-link
+  graph for relational results.
+- Three example fixtures under `examples/connector/`:
+  - `provenance-graph.json` — provenance / source chain.
+  - `process-dependencies-graph.json` — pipeline / process dependencies.
+  - `ontology-entities-graph.json` — ontology-lite entities / relations.
+
+  Each keeps `primary` a **generic node-link `graph`** component (cf. P2.3 — the
+  type is not specialised) with a `table` supplemental as the canonical fallback.
+
+Additive enum change; existing payloads are unaffected.
+
 ## [5.3.0] - 2026-05-22
 
 MacroRun Phase 2 — agnostic contract for interactive macro / agent-pipeline

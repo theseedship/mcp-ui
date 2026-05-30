@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "connector-dynamic-result/v1",
+  "connectorId": "datagouv",
+  "toolName": "deposium_opendata",
+  "query": "croissance population montpellier toulouse paris",
+  "queryHash": "pop-trend-mtp-tls-par",
+  "intent": "population_trend",
+  "renderHints": {
+    "preferredLayout": "line",
+    "domain": "generic",
+    "confidence": 0.88
+  },
+  "primary": {
+    "id": "population-trend-chart",
+    "type": "chart",
+    "position": { "colStart": 1, "colSpan": 12 },
+    "params": {
+      "type": "line",
+      "title": "Evolution population 2013-2023",
+      "data": {
+        "labels": ["2013", "2018", "2023"],
+        "datasets": [
+          { "label": "Montpellier", "data": [272084, 290053, 310240], "borderColor": "#2563eb" },
+          { "label": "Toulouse", "data": [458298, 486828, 511684], "borderColor": "#16a34a" },
+          { "label": "Paris", "data": [2229621, 2175601, 2086000], "borderColor": "#dc2626" }
+        ]
+      }
+    }
+  },
+  "actions": [
+    {
+      "label": "Ajouter immobilier",
+      "action": "tool-call",
+      "toolName": "deposium_opendata",
+      "params": {
+        "operation": "run_scenario",
+        "scenario": "opendata.immobilier.lookup",
+        "query": "immobilier montpellier toulouse paris",
+        "parentQueryHash": "pop-trend-mtp-tls-par",
+        "sourceScenario": "opendata.demographie.trend"
+      }
+    }
+  ]
+}
