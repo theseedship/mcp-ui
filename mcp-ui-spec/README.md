@@ -535,7 +535,7 @@ The renderer-side adapters — `macroRunToScratchpadState()` and
 
 This package follows [Semantic Versioning](https://semver.org/). See [CHANGELOG.md](./CHANGELOG.md) for release notes.
 
-**Current Version:** 5.4.0
+**Current Version:** 5.5.0
 
 ## License
 

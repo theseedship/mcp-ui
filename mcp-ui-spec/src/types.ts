@@ -2,6 +2,12 @@
  * TypeScript types for component registry specification
  */
 
+// `ComponentType` is inferred from `ComponentTypeSchema` (the single source of
+// truth) and re-exported below, so this legacy types entry point can never
+// drift from the runtime schema again (audit P1.4). A compile-time parity test
+// (`types-parity.test.ts`) enforces the equality.
+import type { ComponentType } from './schemas/index'
+
 export interface ComponentRegistry {
   version: '1.0.0'
   metadata?: RegistryMetadata
@@ -30,15 +36,10 @@ export interface Component {
   deprecationMessage?: string
 }
 
-export type ComponentType =
-  | 'chart'
-  | 'table'
-  | 'metric'
-  | 'text'
-  | 'composite'
-  | 'image'
-  | 'link'
-  | 'action'
+// Re-export the schema-inferred union (see the import note above). Previously
+// this was a hand-maintained 8-member union that had silently drifted from the
+// 21-member `ComponentTypeSchema` (missing `graph`, `map`, `grid`, `form`, …).
+export type { ComponentType }
 
 export interface ComponentSchema {
   type: 'object'

@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.5.0] - 2026-05-31
+
+Fix the legacy `ComponentType` drift (P1.4 of
+`mcp-ui-solid/docs/briefs/AUDIT-2026-05-30-visual-renderers-g6-ontology.md`).
+
+### Fixed
+
+- `src/types.ts` exported a hand-maintained 8-member `ComponentType`
+  (`chart | table | metric | text | composite | image | link | action`) that
+  had silently drifted from the 21-member `ComponentTypeSchema` — TypeScript
+  consumers importing the legacy type believed `graph`, `map`, `grid`, `form`,
+  etc. did not exist.
+- `ComponentType` is now **inferred from `ComponentTypeSchema`** (the single
+  source of truth) and re-exported from `src/types.ts`, so the two can no
+  longer diverge.
+
+### Added
+
+- A compile-time + runtime parity test (`types-parity.test.ts`) that fails the
+  build if `ComponentType` and `ComponentTypeSchema` ever diverge again.
+
+Type-widening only; existing valid code keeps compiling.
+
 ## [5.4.0] - 2026-05-31
 
 Add `graph` to the connector render-hint layouts (P2.2 of
