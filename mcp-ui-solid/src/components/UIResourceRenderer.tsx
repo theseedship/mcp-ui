@@ -1478,6 +1478,14 @@ function ComponentRenderer(props: {
     const mode: ValidationErrorMode = props.errorMode ?? 'block'
     const firstError = validation.errors?.[0]?.message || 'Unknown validation error'
 
+    // P1.6 — an UNKNOWN component type must never produce a silent blank,
+    // whatever the errorMode. The renderer has no branch for it, so even
+    // `silent` would otherwise render nothing. Always surface a visible
+    // "Unsupported component type" notice + a render:error telemetry signal.
+    if (validation.errors?.some((e) => e.code === 'UNKNOWN_COMPONENT_TYPE')) {
+      return <UnsupportedComponentFallback component={props.component} />
+    }
+
     if (mode === 'silent') {
       return null
     }
@@ -1587,6 +1595,27 @@ function ComponentRenderer(props: {
         <GraphRenderer component={props.component} toolbarVariant={props.toolbarVariant} />
       </Show>
     </GenerativeUIErrorBoundary>
+  )
+}
+
+/**
+ * Visible fallback for a component whose `type` is not recognized (audit P1.6).
+ *
+ * An unknown type has no renderer branch, so without this it would render a
+ * **silent blank** — even under `errorMode: 'silent'`. The validation gate
+ * routes unknown types here regardless of mode, so the user always sees an
+ * "Unsupported component type: X" notice. The telemetry signal is emitted by
+ * the gate itself (`validation:failed` with `firstErrorCode:
+ * 'UNKNOWN_COMPONENT_TYPE'`), so this component stays purely presentational.
+ */
+function UnsupportedComponentFallback(props: { component: UIComponent }) {
+  return (
+    <div
+      role="alert"
+      class="w-full rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-700/50 dark:bg-amber-900/20 dark:text-amber-200"
+    >
+      Unsupported component type: <code class="font-mono">{props.component.type}</code>
+    </div>
   )
 }
 

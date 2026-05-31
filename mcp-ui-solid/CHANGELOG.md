@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.15.0] - 2026-05-31
+
+Unknown component types never render a silent blank (audit P1.6).
+
+### Fixed
+
+- An unrecognized component `type` has no renderer branch, so it previously
+  rendered **nothing** — and under `errorMode: 'silent'` it passed the
+  validation gate without even an error card, producing a fully invisible
+  failure. The validation gate now routes any `UNKNOWN_COMPONENT_TYPE` to a
+  visible **"Unsupported component type: X"** notice **regardless of
+  `errorMode`**.
+- The privacy-safe telemetry signal already emitted by the gate
+  (`validation:failed` with `firstErrorCode: 'UNKNOWN_COMPONENT_TYPE'`) lets
+  hosts detect drift; the fallback notice itself stays purely presentational.
+
+Behavior change only for previously-invisible unknown types; valid components
+are unaffected.
+
 ## [6.14.0] - 2026-05-31
 
 Make the external quickchart.io chart fallback an explicit host opt-in
