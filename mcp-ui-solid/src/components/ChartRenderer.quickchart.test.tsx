@@ -2,10 +2,11 @@
  * v6.14.0 — audit P1.7: the quickchart.io fallback must be an explicit host
  * opt-in, never an implicit external network call.
  *
- * jsdom has no `chart.js` peer, so `isChartJSAvailable()` resolves false and
- * the renderer hits the fallback path. We assert that by default NO
- * `quickchart.io` URL is produced (the chart degrades to a data table), and
- * that it only appears once the host sets `allowQuickchartFallback`.
+ * We drive the decision with `renderer: 'iframe'` (an explicit request for the
+ * external image path) — that branch is gated purely on `allowQuickchartFallback`
+ * and is independent of whether the `chart.js` peer happens to be installed in
+ * the test env. Default (no opt-in) → no quickchart URL, degrades to a local
+ * table; with opt-in → the quickchart.io image URL is produced.
  */
 import { describe, it, expect, afterEach } from 'vitest'
 import { render, cleanup, waitFor } from '@solidjs/testing-library'
@@ -21,6 +22,7 @@ const chart: UIComponent = {
   params: {
     type: 'bar',
     title: 'Sensitive revenue',
+    renderer: 'iframe', // explicit external render request
     data: {
       labels: ['Q1', 'Q2'],
       datasets: [{ label: 'Revenue', data: [100, 200] }],
@@ -29,22 +31,23 @@ const chart: UIComponent = {
 }
 
 function quickchartImg(container: HTMLElement): HTMLImageElement | null {
-  return Array.from(container.querySelectorAll('img')).find((img) =>
-    (img.getAttribute('src') ?? '').includes('quickchart.io')
-  ) as HTMLImageElement | null
+  return (
+    (Array.from(container.querySelectorAll('img')).find((img) =>
+      (img.getAttribute('src') ?? '').includes('quickchart.io')
+    ) as HTMLImageElement | undefined) ?? null
+  )
 }
 
 describe('Chart quickchart fallback is opt-in (P1.7)', () => {
-  it('does NOT call quickchart.io by default — degrades to a data table', async () => {
+  it('does NOT call quickchart.io by default — degrades instead', async () => {
     const { container } = render(() => <UIResourceRenderer content={chart} />)
 
-    // Give the async availability check a tick to resolve + render the fallback.
     await waitFor(() => {
-      expect(container.textContent ?? '').toContain('data table')
+      expect(container.textContent ?? '').toContain('Interactive chart unavailable')
     })
 
     expect(quickchartImg(container)).toBeNull()
-    // The degraded table surfaces the underlying data.
+    // The degraded table surfaces the underlying series data.
     expect(container.textContent).toContain('Revenue')
   })
 
@@ -57,7 +60,7 @@ describe('Chart quickchart fallback is opt-in (P1.7)', () => {
       expect(quickchartImg(container)).not.toBeNull()
     })
 
-    const src = quickchartImg(container)!.getAttribute('src') ?? ''
+    const src = quickchartImg(container)?.getAttribute('src') ?? ''
     expect(src).toContain('https://quickchart.io/chart?c=')
   })
 })
