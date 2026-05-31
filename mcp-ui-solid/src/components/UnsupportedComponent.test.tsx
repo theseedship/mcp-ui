@@ -36,7 +36,7 @@ describe('Unsupported component never renders blank (P1.6)', () => {
     expect(container.textContent).toContain('totally-made-up')
   })
 
-  it('emits a render:error telemetry signal for the unsupported type', async () => {
+  it('emits a validation:failed telemetry signal for the unsupported type', async () => {
     const events: Array<{ type: string; errorMessage?: string }> = []
     render(() => (
       <MCPUITelemetryProvider
@@ -47,10 +47,13 @@ describe('Unsupported component never renders blank (P1.6)', () => {
       </MCPUITelemetryProvider>
     ))
 
+    // The validation gate emits `validation:failed` with the precise
+    // `UNKNOWN_COMPONENT_TYPE` code — the privacy-safe drift signal hosts watch.
     await waitFor(() => {
       expect(
         events.some(
-          (e) => e.type === 'render:error' && /Unsupported component type/.test(e.errorMessage ?? '')
+          (e: any) =>
+            e.type === 'validation:failed' && e.firstErrorCode === 'UNKNOWN_COMPONENT_TYPE'
         )
       ).toBe(true)
     })

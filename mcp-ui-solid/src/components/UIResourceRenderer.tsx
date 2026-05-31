@@ -1594,6 +1594,12 @@ function ComponentRenderer(props: {
       <Show when={props.component.type === 'graph'}>
         <GraphRenderer component={props.component} toolbarVariant={props.toolbarVariant} />
       </Show>
+      {/* P1.6 — `footer` is a valid type with a real renderer but had no
+          dispatch branch, so a standalone footer component rendered a silent
+          blank (it was only auto-injected at the layout level). */}
+      <Show when={props.component.type === 'footer'}>
+        <FooterRenderer params={props.component.params as any} />
+      </Show>
     </GenerativeUIErrorBoundary>
   )
 }
