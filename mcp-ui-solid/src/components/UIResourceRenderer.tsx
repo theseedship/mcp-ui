@@ -43,6 +43,8 @@ import { FormRenderer } from './FormRenderer'
 import { ModalRenderer } from './ModalRenderer'
 import { ActionGroupRenderer } from './ActionGroupRenderer'
 import { ChartJSRenderer, isChartJSAvailable } from './ChartJSRenderer'
+import { DegradedFallback } from './DegradedFallback'
+import { chartToDegradedTable } from '../utils/degraded-projections'
 import { ImageGalleryRenderer } from './ImageGalleryRenderer'
 import { VideoRenderer } from './VideoRenderer'
 import { CodeBlockRenderer } from './CodeBlockRenderer'
@@ -145,6 +147,26 @@ export interface UIResourceRendererProps {
   toolbarVariant?: 'hover' | 'always-visible'
 
   /**
+   * Allow the chart renderer to fall back to the **quickchart.io** image API
+   * when the native `chart.js` peer is unavailable (v6.14.0, audit P1.7).
+   *
+   * The quickchart fallback sends the **entire chart config** (labels + data)
+   * to an external service inside an image URL — an implicit network call that
+   * can leak potentially sensitive data and behaves differently offline. For a
+   * public, LLM/connector-driven package the safe default is **off**: when
+   * Chart.js is missing (or `renderer: 'iframe'` is requested) the chart
+   * **degrades to a local data table** and emits a `render:error` telemetry
+   * signal instead of silently calling out.
+   *
+   * This is a **host-level** trust decision, deliberately NOT a payload field
+   * (a payload could otherwise opt itself in). Set it to `true` only when the
+   * data is non-sensitive and an external image render is acceptable.
+   *
+   * @default false
+   */
+  allowQuickchartFallback?: boolean
+
+  /**
    * Per-instance hook fired when this renderer mounts a content key that
    * is already mounted elsewhere in the document (v6.5.0 — closes Demande 2
    * of `BRIEF-MCPUI-2026-05-10.md`).
@@ -177,14 +199,36 @@ function ChartRenderer(props: {
   component: UIComponent
   onError?: (error: RendererError) => void
   toolbarVariant?: 'hover' | 'always-visible'
+  /** Host opt-in for the external quickchart.io fallback (audit P1.7). */
+  allowQuickchartFallback?: boolean
 }) {
   const [useNative, setUseNative] = createSignal(false)
   const [iframeUrl, setIframeUrl] = createSignal<string>()
   const [isLoading, setIsLoading] = createSignal(true)
   const [error, setError] = createSignal<string>()
+  // Set when Chart.js is unavailable AND the host has not opted into the
+  // external quickchart fallback — we then degrade to a local data table
+  // rather than calling out to quickchart.io (audit P1.7).
+  const [degraded, setDegraded] = createSignal(false)
+  const telemetry = useTelemetry()
 
   const params = () => props.component.params as any
   const rendererPref = () => params()?.renderer || 'auto'
+  const allowQuickchart = () => props.allowQuickchartFallback === true
+
+  // Emit a clear, observable signal whenever we decline the external fallback.
+  const signalBlockedFallback = (reason: string) => {
+    setDegraded(true)
+    setIsLoading(false)
+    const message = `Chart degraded to a data table: ${reason}`
+    telemetry?.dispatch({
+      type: 'render:error',
+      errorMessage: message,
+      id: props.component.id ?? '',
+      componentType: 'chart',
+      ts: Date.now(),
+    })
+  }
 
   // Guard: if data or datasets missing, show error instead of crashing Chart.js
   if (!params()?.data?.datasets) {
@@ -200,9 +244,17 @@ function ChartRenderer(props: {
     const pref = rendererPref()
 
     if (pref === 'iframe') {
-      // Force iframe mode
+      // Explicit external render requested. Honor it only when the host has
+      // opted in (audit P1.7) — otherwise degrade to a local table.
       setUseNative(false)
-      buildIframeUrl()
+      if (allowQuickchart()) {
+        buildIframeUrl()
+      } else {
+        signalBlockedFallback(
+          "renderer: 'iframe' requires the external quickchart.io service; " +
+            'set allowQuickchartFallback on the host to enable it.'
+        )
+      }
     } else if (pref === 'native') {
       // Force native mode - will show error if Chart.js not available
       const available = await isChartJSAvailable()
@@ -214,14 +266,19 @@ function ChartRenderer(props: {
         setIsLoading(false)
       }
     } else {
-      // Auto mode - use native if available, otherwise iframe
+      // Auto mode - use native if available. When Chart.js is missing, only
+      // call out to quickchart.io if the host opted in; otherwise degrade to a
+      // local data table instead of an implicit external network call (P1.7).
       const available = await isChartJSAvailable()
       if (available) {
         setUseNative(true)
         setIsLoading(false)
-      } else {
+      } else if (allowQuickchart()) {
         setUseNative(false)
         buildIframeUrl()
+      } else {
+        setUseNative(false)
+        signalBlockedFallback('Chart.js peer is not installed.')
       }
     }
   })
@@ -256,6 +313,19 @@ function ChartRenderer(props: {
       when={useNative()}
       fallback={
         <div class="relative w-full h-full min-h-[300px] bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+          {/* P1.7 — Chart.js missing and quickchart fallback not allowed:
+              show the chart data as a local table instead of an implicit
+              call to quickchart.io. */}
+          <Show when={degraded()}>
+            <div class="p-3">
+              <DegradedFallback
+                message="Interactive chart unavailable — install the chart.js peer dependency, or set allowQuickchartFallback to use the external quickchart.io renderer."
+                caption="Showing the chart data as a table."
+                {...chartToDegradedTable(params() ?? {})}
+              />
+            </div>
+          </Show>
+
           <Show when={isLoading()}>
             <div class="absolute inset-0 flex items-center justify-center">
               <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
@@ -1330,6 +1400,8 @@ function ComponentRenderer(props: {
   onError?: (error: RendererError) => void
   errorMode?: ValidationErrorMode
   toolbarVariant?: 'hover' | 'always-visible'
+  /** Host opt-in for the external quickchart.io chart fallback (audit P1.7). */
+  allowQuickchartFallback?: boolean
 }) {
   // Performance marks — visible in Chrome DevTools "Performance" panel under
   // user timings. Always-on, SSR-safe (see utils/perf.ts).
@@ -1458,7 +1530,7 @@ function ComponentRenderer(props: {
       allowRetry={true}
     >
       <Show when={props.component.type === 'chart'}>
-        <ChartRenderer component={props.component} onError={props.onError} toolbarVariant={props.toolbarVariant} />
+        <ChartRenderer component={props.component} onError={props.onError} toolbarVariant={props.toolbarVariant} allowQuickchartFallback={props.allowQuickchartFallback} />
       </Show>
       <Show when={props.component.type === 'table'}>
         <TableRenderer component={props.component} onError={props.onError} toolbarVariant={props.toolbarVariant} />
@@ -1834,7 +1906,7 @@ export const UIResourceRenderer: Component<UIResourceRendererProps> = (props) =>
 
   // Wrapper function for RenderContext (breaks circular dependency)
   const renderComponent = (component: UIComponent, onError?: (error: RendererError) => void) => (
-    <ComponentRenderer component={component} onError={onError} errorMode={props.errorMode} toolbarVariant={props.toolbarVariant} />
+    <ComponentRenderer component={component} onError={onError} errorMode={props.errorMode} toolbarVariant={props.toolbarVariant} allowQuickchartFallback={props.allowQuickchartFallback} />
   )
 
   return (
@@ -1852,7 +1924,7 @@ export const UIResourceRenderer: Component<UIResourceRendererProps> = (props) =>
                 style={getGridStyleString(component)}
                 data-mcp-ui-component-id={getUiResourceStableKey(component)}
               >
-                <ComponentRenderer component={component} onError={props.onError} errorMode={props.errorMode} toolbarVariant={props.toolbarVariant} />
+                <ComponentRenderer component={component} onError={props.onError} errorMode={props.errorMode} toolbarVariant={props.toolbarVariant} allowQuickchartFallback={props.allowQuickchartFallback} />
               </div>
             )}
           </For>
