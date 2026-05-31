@@ -679,12 +679,25 @@ export const GraphRegistry: ComponentRegistryEntry = {
     },
     required: ['nodes'],
   },
-  // No typed example yet: the registry `ComponentExample` `params` type is a
-  // union of the legacy component params that does not (yet) include graph
-  // (`nodes` / `edges`). The `schema` above fully documents graph params; a
-  // typed example can be added once `GraphComponentParams` joins the
-  // `UIComponent` params union (a separate solid-types task).
-  examples: [],
+  examples: [
+    {
+      query: 'Show how this figure was derived',
+      component: {
+        id: 'example-graph-1',
+        type: 'graph',
+        position: { colStart: 1, colSpan: 12 },
+        params: {
+          directed: true,
+          layout: 'dagre',
+          nodes: [
+            { id: 'claim', label: 'Population = 522 250', group: 'claim' },
+            { id: 'source', label: 'INSEE 2021', group: 'source' },
+          ],
+          edges: [{ source: 'claim', target: 'source', label: 'derived from' }],
+        },
+      },
+    },
+  ],
   limits: DEFAULT_RESOURCE_LIMITS,
 }
 

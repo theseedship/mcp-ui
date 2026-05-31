@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.13.0] - 2026-05-31
+
+`graph` is now first-class in the `UIComponent` params union (audit follow-up
+to P1.4/P1.5).
+
+### Added
+
+- `GraphComponentParams`, `GraphNode`, `GraphEdge` and `GraphLayout` types
+  (mirroring `GraphComponentParamsSchema` in `@seed-ship/mcp-ui-spec`), and
+  `GraphComponentParams` is now part of the `UIComponent` `params` union.
+  Previously a `type: 'graph'` component could not be expressed as a typed
+  `UIComponent` — the union ended at `MapComponentParams`.
+- `GraphRegistry` now ships a **typed** example (it was an empty array in
+  v6.12.0 precisely because the union lacked graph params).
+- `types/graph-types.test.ts` — compile-time + runtime assertion that a graph
+  component with `nodes`/`edges` is assignable to `UIComponent`.
+
+Type-widening only; existing valid code keeps compiling.
+
 ## [6.12.0] - 2026-05-31
 
 Registry/schema parity for `graph` (audit P1.5).

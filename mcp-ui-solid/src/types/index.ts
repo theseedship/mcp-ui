@@ -1022,6 +1022,63 @@ export interface MapPMTilesConfig {
 }
 
 /**
+ * Node-link graph params (v6.13.0 — audit follow-up to P1.4/P1.5).
+ *
+ * Mirrors `GraphComponentParamsSchema` in `@seed-ship/mcp-ui-spec`. The
+ * `<GraphRenderer>` reads these loosely (and the spec schema accepts
+ * passthrough node/edge props), so an index signature keeps the type
+ * permissive — matching the runtime behaviour without over-constraining.
+ */
+export interface GraphNode {
+  /** Stable node id — referenced by edges. */
+  id: string
+  label?: string
+  /** Optional grouping/category key (drives default coloring). */
+  group?: string
+  /** Generic ranking/importance signal (opaque to the lib). */
+  weight?: number
+  /** Passthrough G6 node props (type, size, style, data, …). */
+  [key: string]: unknown
+}
+
+export interface GraphEdge {
+  /** Must match a `GraphNode.id`. */
+  source: string
+  /** Must match a `GraphNode.id`. */
+  target: string
+  label?: string
+  weight?: number
+  /** Passthrough G6 edge props (style, data, …). */
+  [key: string]: unknown
+}
+
+export type GraphLayout = 'force' | 'radial' | 'grid' | 'dagre' | 'circular' | 'concentric'
+
+/**
+ * Generic node-link graph component params. Domain-neutral by design — the
+ * meaning of `weight`/`group` is decided by the consumer.
+ */
+export interface GraphComponentParams {
+  /** Nodes (at least one expected at runtime). */
+  nodes: GraphNode[]
+  edges?: GraphEdge[]
+  layout?: GraphLayout
+  /** Render edges as directed (arrows). */
+  directed?: boolean
+  /**
+   * Rendering hint only — NOT wired; the renderer always uses the G6 canvas
+   * default (cf. audit P0). Kept for forward-compat with the spec.
+   */
+  rendererPref?: 'canvas' | 'svg'
+  height?: number
+  width?: number
+  /** Custom CSS class. */
+  className?: string
+  /** Passthrough for forward-compat graph options. */
+  [key: string]: unknown
+}
+
+/**
  * Grid component parameters (Phase 5.0)
  * Enables nested CSS Grid layouts for template builder
  */
@@ -1079,7 +1136,7 @@ export interface UIComponent {
   /**
    * Component parameters (type-specific)
    */
-  params: ChartComponentParams | TableComponentParams | MetricComponentParams | TextComponentParams | ActionComponentParams | GridComponentParams | FormComponentParams | ModalComponentParams | ActionGroupParams | ImageGalleryParams | VideoComponentParams | CodeComponentParams | MapComponentParams
+  params: ChartComponentParams | TableComponentParams | MetricComponentParams | TextComponentParams | ActionComponentParams | GridComponentParams | FormComponentParams | ModalComponentParams | ActionGroupParams | ImageGalleryParams | VideoComponentParams | CodeComponentParams | MapComponentParams | GraphComponentParams
 
   /**
    * Metadata for observability
