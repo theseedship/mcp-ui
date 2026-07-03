@@ -27,6 +27,8 @@ import {
   FormComponentParamsSchema,
   // v6.0.0 — graph primitive (peer @antv/g6 ^5)
   GraphComponentParamsSchema,
+  // Single source of truth for the component-type enum (kills spec↔solid drift).
+  ComponentTypeSchema,
 } from '@seed-ship/mcp-ui-spec';
 import type {
   UIComponent,
@@ -44,30 +46,14 @@ import type {
 /**
  * All known ComponentType values — used to distinguish known-but-unvalidated
  * types (pass through) from truly unknown strings (reject).
+ *
+ * Derived directly from the spec's `ComponentTypeSchema` (the single source of
+ * truth) rather than hand-maintained, so a new enum member in the spec can
+ * never silently drift out of solid's known-types set again. This is what
+ * restored `composite`: it is in the spec enum but had been dropped from the
+ * former hand-written list, contradicting the pass-through docstrings below.
  */
-const KNOWN_COMPONENT_TYPES: Set<string> = new Set<ComponentType>([
-  'chart',
-  'table',
-  'metric',
-  'text',
-  'grid',
-  'iframe',
-  'image',
-  'link',
-  'action',
-  'footer',
-  'carousel',
-  'artifact',
-  'form',
-  'modal',
-  'action-group',
-  'image-gallery',
-  'video',
-  'code',
-  'map',
-  // v6.0.0
-  'graph',
-]);
+const KNOWN_COMPONENT_TYPES: Set<string> = new Set<string>(ComponentTypeSchema.options);
 
 /**
  * Spec-driven validation dispatch table (B.1 — v5.5.0, expanded in v5.6.0).
@@ -81,7 +67,9 @@ const KNOWN_COMPONENT_TYPES: Set<string> = new Set<ComponentType>([
  *
  * **v5.6.0** : `map` and `form` joined the dispatch after spec@5.0.2 relaxed
  * their schemas (LatLngPoint union for map.center, regex relax for
- * field.name) per deposium audit §L answers. Closed B.1 to **14/17 types**.
+ * field.name) per deposium audit §L answers. As of v6.x this table
+ * spec-validates 15 of the 21 component types; the remainder use imperative
+ * validators (`chart`/`table`) or are pass-through (`grid`/`footer`/`composite`/`modal`).
  *
  * Types deliberately omitted (kept on the imperative path):
  *   - `chart`, `table` — have rich imperative validators with their own

@@ -15,6 +15,7 @@ import {
   DEFAULT_RESOURCE_LIMITS,
 } from './validation';
 import type { UIComponent, ComponentType } from '../types';
+import { ComponentTypeSchema } from '@seed-ship/mcp-ui-spec';
 
 /** Helper to create a minimal valid UIComponent for testing */
 function makeComponent(type: ComponentType, params: Record<string, any> = {}): UIComponent {
@@ -51,6 +52,7 @@ const PASSTHROUGH_TYPES: ComponentType[] = [
   'grid',
   'carousel',
   'footer',
+  'composite', // v6.x — restored to KNOWN_COMPONENT_TYPES via the spec-derived Set
 ];
 
 describe('validateComponent', () => {
@@ -61,6 +63,30 @@ describe('validateComponent', () => {
 
       const unknownTypeError = result.errors?.find((e) => e.code === 'UNKNOWN_COMPONENT_TYPE');
       expect(unknownTypeError).toBeUndefined();
+    });
+  });
+
+  describe('spec↔solid parity (drift guard)', () => {
+    // KNOWN_COMPONENT_TYPES is now derived from ComponentTypeSchema.options (the
+    // single source of truth) instead of a hand-written list, so a spec enum
+    // member can never silently drift out of solid's known-types set again.
+    // `composite` is the regression case: it lives in the spec enum but had
+    // been dropped from the former hand list, contradicting its pass-through
+    // docstring and making a composite component get flagged as unknown.
+    it('composite is a spec component type (single source of truth)', () => {
+      expect(ComponentTypeSchema.options).toContain('composite');
+    });
+
+    it('every passthrough type under test is a real spec component type', () => {
+      for (const type of PASSTHROUGH_TYPES) {
+        expect(ComponentTypeSchema.options).toContain(type);
+      }
+    });
+
+    it('recognizes composite (regression lock: it had drifted out of the known set)', () => {
+      const result = validateComponent(makeComponent('composite'));
+      const unknown = result.errors?.find((e) => e.code === 'UNKNOWN_COMPONENT_TYPE');
+      expect(unknown).toBeUndefined();
     });
   });
 

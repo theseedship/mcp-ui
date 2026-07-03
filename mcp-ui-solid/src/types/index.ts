@@ -6,29 +6,15 @@
  */
 
 /**
- * Component types supported by the renderer
+ * Component types supported by the renderer.
+ *
+ * Re-exported from `@seed-ship/mcp-ui-spec` (`ComponentTypeSchema`) — the spec
+ * is the single source of truth for the enum. Solid used to hand-maintain a
+ * parallel union here, which drifted (it had silently dropped `composite`).
+ * Re-exporting keeps this type and the spec enum in lockstep by construction.
  */
-export type ComponentType =
-  | 'chart'
-  | 'table'
-  | 'metric'
-  | 'text'
-  | 'grid'
-  | 'iframe'
-  | 'image'
-  | 'link'
-  | 'action'
-  | 'footer'
-  | 'carousel'
-  | 'artifact'
-  | 'form'
-  | 'modal'
-  | 'action-group'
-  | 'image-gallery' // Sprint 5
-  | 'video'         // Sprint 5
-  | 'code'          // Sprint 6
-  | 'map'           // Sprint 6
-  | 'graph'         // v6.0.0 — node-link viz (peer @antv/g6)
+import type { ComponentType } from '@seed-ship/mcp-ui-spec'
+export type { ComponentType }
 
 /**
  * Chart types (powered by Quickchart)
