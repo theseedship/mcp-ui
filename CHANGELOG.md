@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > `mcp-ui-solid/CHANGELOG.md`, `mcp-ui-spec/CHANGELOG.md`, and
 > `mcp-ui-cli/CHANGELOG.md`. Major releases bump all three packages in lockstep.
 
+> **Note (2026-07-03):** after `5.2.0` this monorepo-wide log was superseded by
+> the per-package changelogs, which are the source of truth for every release
+> (current: `mcp-ui-solid` 6.16.0, `mcp-ui-spec` 5.5.0, `mcp-ui-cli` 5.0.0). New
+> entries go there; this file is kept for historical monorepo-level context.
+
 ## [5.2.0] - 2026-04-22 (`mcp-ui-solid` only)
 
 ### Added — D1 multi-instance scratchpad store

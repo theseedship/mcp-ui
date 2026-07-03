@@ -30,6 +30,7 @@ import { ExpandableWrapper, useExpanded } from './ExpandableWrapper';
 import { PortalDropdownMenu } from './PortalDropdownMenu';
 import { DegradedFallback } from './DegradedFallback';
 import { graphToDegradedTable } from '../utils/degraded-projections';
+import { escapeHtml } from '../utils/escape-html';
 import { useTelemetry } from '../context/MCPUITelemetryContext';
 
 // Module-scoped lazy import promise — first call triggers the dynamic
@@ -477,25 +478,6 @@ async function downloadDataUrl(dataUrl: string, filename: string): Promise<void>
   const res = await fetch(dataUrl);
   const blob = await res.blob();
   downloadBlob(blob, filename);
-}
-
-function escapeHtml(s: string): string {
-  return s.replace(/[&<>"']/g, (c) => {
-    switch (c) {
-      case '&':
-        return '&amp;';
-      case '<':
-        return '&lt;';
-      case '>':
-        return '&gt;';
-      case '"':
-        return '&quot;';
-      case "'":
-        return '&#39;';
-      default:
-        return c;
-    }
-  });
 }
 
 // Re-export for tests + consumers that want to compose their own export menu

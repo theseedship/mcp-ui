@@ -7,7 +7,7 @@
  *   2. **degraded but useful** view when the native render throws — this
  *      component: a visible notice + a plain data table so the user still
  *      sees the underlying data instead of a blank space;
- *   3. (the caller also emits a `component:error` telemetry event).
+ *   3. (the caller also emits a `render:error` telemetry event).
  *
  * Pure / presentational — no peer deps, no side effects — so a render-path
  * failure in a heavy lib can never cascade into the fallback itself, and it

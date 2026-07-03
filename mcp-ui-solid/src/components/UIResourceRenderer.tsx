@@ -1600,6 +1600,14 @@ function ComponentRenderer(props: {
       <Show when={props.component.type === 'footer'}>
         <FooterRenderer params={props.component.params as any} />
       </Show>
+      {/* `composite` is a UILayout discriminator, not a leaf renderer — a
+          top-level composite is handled as a layout (see `layout()` above). If
+          one arrives as a `components[]` entry or a streamed component it has no
+          leaf branch and now passes the (spec-derived) validation gate, so
+          surface the visible notice instead of a silent blank (audit P1.6). */}
+      <Show when={props.component.type === 'composite'}>
+        <UnsupportedComponentFallback component={props.component} />
+      </Show>
     </GenerativeUIErrorBoundary>
   )
 }
