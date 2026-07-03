@@ -18,6 +18,7 @@ import type {
 import { ExpandableWrapper, useExpanded } from './ExpandableWrapper';
 import { DegradedFallback } from './DegradedFallback';
 import { mapToDegradedTable } from '../utils/degraded-projections';
+import { escapeHtml } from '../utils/escape-html';
 import { useTelemetry } from '../context/MCPUITelemetryContext';
 
 // Lazy load leaflet (it doesn't support SSR well)
@@ -170,14 +171,6 @@ export function buildPopupContent(
   }
 
   return parts.join('<br/>');
-}
-
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
 }
 
 /**
