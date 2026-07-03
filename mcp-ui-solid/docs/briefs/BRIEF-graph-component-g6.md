@@ -527,6 +527,16 @@ panel for entity nodes (hosts have this hook for citations already).
    `maxGraphEdges: 2000`. **Are there real deposium use cases where
    you'd emit > 500 nodes ?** (e.g. SIRENE org dump for a whole
    département). If yes, raise the cap to 1000 or 2000.
+
+   > **RÉSOLU (2026-07-03) — ship uncapped ; pas de `.max()` pour l'instant.**
+   > Les graphs restent rares en prod, et le cap de payload existant (512 KB)
+   > borne déjà la taille en pratique (~quelques milliers de nœuds/arêtes max) —
+   > on ne peut donc pas recevoir un graph « infini ». Le seul risque résiduel
+   > est une perf de rendu G6 côté client sur un très gros graph : ni bug ni
+   > risque de sécurité. `GraphNodeSchema`/`GraphEdgeSchema` restent sans
+   > `.max()`. **Déclencheur pour rouvrir :** un cas réel de gros graph qui rame
+   > → on ajoutera alors un `.max()` avec dégradation vers le fallback existant.
+   > Tranché pour ne plus rouvrir la question.
 4. **§9 #6 default tooltip** : G6 has a `tooltip` plugin that shows
    `node.label` + `node.data` summary on hover. Ship enabled by
    default with a `tooltip: false` opt-out, OR ship disabled with
