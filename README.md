@@ -7,7 +7,19 @@ A collection of TypeScript packages for building generative, streaming user inte
 [![npm version](https://img.shields.io/npm/v/@seed-ship/mcp-ui-solid.svg)](https://www.npmjs.com/package/@seed-ship/mcp-ui-solid)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## What's New in v5.0.0
+## What's New
+
+**Current line — `mcp-ui-solid` 6.x** (post-`5.0.0`, audit-driven visual-renderer
+& streaming hardening; `mcp-ui-spec` 5.5.0). Highlights — see
+[`mcp-ui-solid/CHANGELOG.md`](./mcp-ui-solid/CHANGELOG.md) for the full list:
+
+- **`graph` primitive** — node-link visualization powered by `@antv/g6` (peer-optional), first-class in the `UIComponent` params union.
+- **Renderer fallback ladder** — no silent blanks: a failed heavy renderer degrades to a local data table + visible notice, and an unknown component type shows an explicit "Unsupported component type" notice.
+- **Security hardening** — map popups/tooltips escaped by default (`allowHtmlPopups` is a host opt-in) and the external quickchart.io chart fallback is now an explicit host opt-in (`allowQuickchartFallback`, default off).
+- **Larger payloads** — default payload-size limit raised 50 KB → 512 KB.
+- **Single-source component types** — solid's `ComponentType` is derived from the spec enum (no more manual drift).
+
+### v5.0.0 (synchronized major release)
 
 Synchronized major release — all three packages bumped in lockstep.
 
@@ -48,8 +60,8 @@ This monorepo contains three packages published under `@seed-ship/`:
 
 | Package | Version | Description |
 |---------|---------|-------------|
-| [`@seed-ship/mcp-ui-solid`](./mcp-ui-solid) | 5.0.0 | SolidJS components for rendering MCP-generated UI |
-| [`@seed-ship/mcp-ui-spec`](./mcp-ui-spec) | 5.0.0 | JSON schemas and Zod validators |
+| [`@seed-ship/mcp-ui-solid`](./mcp-ui-solid) | 6.16.0 | SolidJS components for rendering MCP-generated UI |
+| [`@seed-ship/mcp-ui-spec`](./mcp-ui-spec) | 5.5.0 | JSON schemas and Zod validators |
 | [`@seed-ship/mcp-ui-cli`](./mcp-ui-cli) | 5.0.0 | CLI for validation and type generation |
 
 ### @seed-ship/mcp-ui-solid
@@ -373,7 +385,8 @@ See [mcp-ui-solid README](./mcp-ui-solid/README.md#ssr-compatibility) for detail
 - [x] **Phase 9**: Prefilled forms + Progressive Parameter Resolution (source badges, `prefillMode: 'resolve'`, `valueFormat`, auto-submit toast)
 - [x] **Phase 10**: Table UX polish (context-aware pagination, search filter, sticky header, match highlighting)
 - [x] **Phase 11** (v5.0.0): Sprint 52 multi-agent primitives (`clarificationToPromptConfig`, `createMockChatBus`, metadata extension points)
-- [ ] **Phase 12**: Multi-instance scratchpad factory + re-entrant `showChatPrompt` + AbortSignal wiring (v5.1.0)
+- [x] **Phase 12** (v5.2.0): Multi-instance scratchpad factory (`createScratchpadStore`) + re-entrant `showChatPrompt` (`createChatPromptController`) + AbortSignal wiring
+- [x] **v6.x** (post-Phase 12): Visual-renderer & ontology hardening — `graph` (G6), map XSS hardening, quickchart opt-in, renderer fallback ladder (see [`mcp-ui-solid/CHANGELOG.md`](./mcp-ui-solid/CHANGELOG.md))
 - [ ] **Phase 13**: Framework adapters (React, Vue, Svelte)
 
 ## Links
