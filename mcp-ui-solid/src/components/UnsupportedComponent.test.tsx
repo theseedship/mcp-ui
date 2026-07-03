@@ -11,7 +11,7 @@ import { describe, it, expect, afterEach } from 'vitest'
 import { render, cleanup, waitFor } from '@solidjs/testing-library'
 import { UIResourceRenderer } from './UIResourceRenderer'
 import { MCPUITelemetryProvider } from '../context/MCPUITelemetryContext'
-import type { UIComponent } from '../types'
+import type { UIComponent, UILayout } from '../types'
 
 afterEach(cleanup)
 
@@ -57,6 +57,33 @@ describe('Unsupported component never renders blank (P1.6)', () => {
         )
       ).toBe(true)
     })
+  })
+
+  it('shows the notice for a composite nested as a components[] entry (not a silent blank)', async () => {
+    // A top-level composite is handled as a layout; but a composite that arrives
+    // as a leaf inside a layout's components[] has no dispatch branch. Since it
+    // now passes the spec-derived validation gate, it must surface the visible
+    // notice rather than render nothing (audit P1.6, Codex review follow-up).
+    const layoutWithNestedComposite: UILayout = {
+      id: 'L',
+      grid: { columns: 12, gap: '1rem' },
+      components: [
+        {
+          id: 'nested',
+          type: 'composite',
+          position: { colStart: 1, colSpan: 12 },
+          params: {},
+        } as UIComponent,
+      ],
+    }
+    const { container } = render(() => (
+      <UIResourceRenderer content={layoutWithNestedComposite} errorMode="silent" />
+    ))
+
+    await waitFor(() => {
+      expect(container.textContent ?? '').toContain('Unsupported component type')
+    })
+    expect(container.textContent).toContain('composite')
   })
 
   it('renders a standalone footer component (previously a silent blank)', async () => {

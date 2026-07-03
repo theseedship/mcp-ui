@@ -21,6 +21,10 @@ behavioral coverage of the SSE streaming engine.
   and `KNOWN_COMPONENT_TYPES` is derived from `ComponentTypeSchema.options`, so
   the enum has a single source of truth and cannot drift again. A `spec↔solid`
   drift-guard test locks this in.
+- Because `composite` now passes the validation gate, a `composite` nested as a
+  `components[]` entry (or streamed) — which has no leaf render branch — would
+  have rendered a silent blank. `ComponentRenderer` now surfaces the visible
+  "Unsupported component type" notice for it, preserving audit P1.6's guarantee.
 - `MapRenderer` and `GraphRenderer` carried two divergent private `escapeHtml`
   copies — the map one did **not** escape the single quote. Both now import one
   canonical escaper (`utils/escape-html.ts`, escapes `& < > " '`).
