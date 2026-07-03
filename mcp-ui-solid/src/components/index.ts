@@ -27,9 +27,6 @@ export type { GenerativeUIErrorBoundaryProps } from './GenerativeUIErrorBoundary
 export { FooterRenderer } from './FooterRenderer'
 export type { FooterComponentParams } from './FooterRenderer'
 
-export { ActionRenderer } from './ActionRenderer'
-export type { ActionRendererProps } from './ActionRenderer'
-
 export { ArtifactRenderer } from './ArtifactRenderer'
 export type { ArtifactComponentParams } from './ArtifactRenderer'
 
