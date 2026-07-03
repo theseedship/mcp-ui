@@ -5,6 +5,46 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.16.0] - 2026-07-03
+
+Post-audit polish pass (global multi-agent analysis follow-up): spec↔solid
+type-drift fix, XSS-escaper consolidation, dead-code removal, and the first
+behavioral coverage of the SSE streaming engine.
+
+### Fixed
+
+- `composite` is a valid `ComponentTypeSchema` member but had drifted out of
+  solid's hand-maintained `ComponentType` union **and** its
+  `KNOWN_COMPONENT_TYPES` set, so a `composite` component was flagged
+  `UNKNOWN_COMPONENT_TYPE` despite the pass-through docstrings claiming
+  otherwise. `ComponentType` is now re-exported from `@seed-ship/mcp-ui-spec`
+  and `KNOWN_COMPONENT_TYPES` is derived from `ComponentTypeSchema.options`, so
+  the enum has a single source of truth and cannot drift again. A `spec↔solid`
+  drift-guard test locks this in.
+- `MapRenderer` and `GraphRenderer` carried two divergent private `escapeHtml`
+  copies — the map one did **not** escape the single quote. Both now import one
+  canonical escaper (`utils/escape-html.ts`, escapes `& < > " '`).
+
+### Added
+
+- `hooks/useStreamingUI.test.ts` — first behavioral coverage of the 469-line SSE
+  streaming engine: progressive accumulation, out-of-order buffering / reorder,
+  terminal (non-recoverable) error, and recoverable-error reconnect with
+  backoff. (The hook reads an SSE body via `fetch` + `getReader()`, not
+  `EventSource`.)
+
+### Removed
+
+- Dead `components/ActionRenderer.tsx` stub (`ActionSpec = any`, no JSX
+  consumers, never surfaced from the package root barrel). The live
+  `ActionRenderer` is inline in `UIResourceRenderer`.
+
+### Docs
+
+- Fixed a `DegradedFallback` docstring that named a non-existent
+  `component:error` telemetry event (callers emit `render:error`) and a stale
+  `SPEC_VALIDATORS` "14/17 types" count.
+
 ## [6.15.0] - 2026-05-31
 
 Unknown component types never render a silent blank (audit P1.6).
