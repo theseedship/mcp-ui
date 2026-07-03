@@ -27,6 +27,12 @@ export type { GenerativeUIErrorBoundaryProps } from './GenerativeUIErrorBoundary
 export { FooterRenderer } from './FooterRenderer'
 export type { FooterComponentParams } from './FooterRenderer'
 
+// NOTE: kept as a published `./components` subpath export for backward compat.
+// This is a legacy stub superseded by the inline ActionRenderer in
+// UIResourceRenderer; slated for removal in the next MAJOR (not a minor).
+export { ActionRenderer } from './ActionRenderer'
+export type { ActionRendererProps } from './ActionRenderer'
+
 export { ArtifactRenderer } from './ArtifactRenderer'
 export type { ArtifactComponentParams } from './ArtifactRenderer'
 

@@ -33,12 +33,6 @@ behavioral coverage of the SSE streaming engine.
   backoff. (The hook reads an SSE body via `fetch` + `getReader()`, not
   `EventSource`.)
 
-### Removed
-
-- Dead `components/ActionRenderer.tsx` stub (`ActionSpec = any`, no JSX
-  consumers, never surfaced from the package root barrel). The live
-  `ActionRenderer` is inline in `UIResourceRenderer`.
-
 ### Docs
 
 - Fixed a `DegradedFallback` docstring that named a non-existent
