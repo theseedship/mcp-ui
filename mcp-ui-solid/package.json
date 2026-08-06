@@ -172,7 +172,7 @@
   "dependencies": {
     "@seed-ship/mcp-ui-spec": "workspace:^5.3.0",
     "@types/dompurify": "^3.0.5",
-    "dompurify": "^3.4.1",
+    "dompurify": "^3.4.12",
     "marked": "^16.3.0",
     "zod": "^3.22.4"
   },
