@@ -3,9 +3,14 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import { validateAgainstRegistry, getComponentEntry, ComponentRegistry } from './component-registry'
+import {
+  validateAgainstRegistry,
+  getComponentEntry,
+  ComponentRegistry,
+  MapRegistry,
+} from './component-registry'
 import type { ComponentType } from '../types'
-import { ComponentTypeSchema } from '@seed-ship/mcp-ui-spec'
+import { ComponentTypeSchema, MapComponentParamsSchema } from '@seed-ship/mcp-ui-spec'
 
 /** All 20 component types in the registry */
 const ALL_TYPES: ComponentType[] = [
@@ -38,6 +43,32 @@ describe('registry ↔ schema parity (P1.5)', () => {
   it('graph is registered (regression for P1.5)', () => {
     expect(ComponentRegistry.has('graph')).toBe(true)
     expect(getComponentEntry('graph')?.type).toBe('graph')
+  })
+})
+
+describe('MapRegistry ↔ map spec parity (UI-MAP-0a)', () => {
+  const properties = MapRegistry.schema.properties as Record<string, unknown>
+  const center = properties.center as { oneOf: unknown[] }
+  const markers = properties.markers as {
+    items: {
+      properties: Record<string, unknown> & { position: { oneOf: unknown[] } }
+    }
+  }
+  const markerProperties = markers.items.properties
+
+  it('advertises every root field accepted by MapComponentParamsSchema', () => {
+    expect(Object.keys(properties).sort()).toEqual(Object.keys(MapComponentParamsSchema.shape).sort())
+  })
+
+  it('uses the canonical marker names and keeps host trust out of the payload', () => {
+    expect(markerProperties).toHaveProperty('tooltip')
+    expect(markerProperties).not.toHaveProperty('title')
+    expect(properties).not.toHaveProperty('allowHtmlPopups')
+  })
+
+  it('advertises both tuple and object LatLng forms', () => {
+    expect(center.oneOf).toHaveLength(2)
+    expect(markerProperties.position.oneOf).toHaveLength(2)
   })
 })
 

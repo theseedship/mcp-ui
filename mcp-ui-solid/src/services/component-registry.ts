@@ -582,31 +582,173 @@ export const CodeRegistry: ComponentRegistryEntry = {
 /**
  * Map Registry Entry
  */
+const MAP_LAT_LNG_POINT_SCHEMA = {
+  oneOf: [
+    {
+      type: 'array',
+      items: { type: 'number' },
+      minItems: 2,
+      maxItems: 2,
+      description: '[latitude, longitude] tuple',
+    },
+    {
+      type: 'object',
+      properties: {
+        lat: { type: 'number' },
+        lng: { type: 'number' },
+      },
+      required: ['lat', 'lng'],
+      description: '{ lat, lng } object',
+    },
+  ],
+}
+
+const MAP_GEOJSON_SCHEMA = {
+  type: 'object',
+  description: 'GeoJSON FeatureCollection, Feature, or Geometry',
+}
+
+const MAP_GEOJSON_STYLE_SCHEMA = {
+  type: 'object',
+  properties: {
+    fillColor: { type: 'string' },
+    fillOpacity: { type: 'number' },
+    strokeColor: { type: 'string' },
+    strokeWeight: { type: 'number' },
+    strokeOpacity: { type: 'number' },
+    choroplethField: { type: 'string' },
+    choroplethScale: {
+      type: 'array',
+      items: {
+        type: 'array',
+        items: { oneOf: [{ type: 'number' }, { type: 'string' }] },
+        minItems: 2,
+        maxItems: 2,
+      },
+    },
+    choroplethFallback: { type: 'string' },
+  },
+}
+
+const MAP_POPUP_SCHEMA = {
+  type: 'object',
+  properties: {
+    titleField: { type: 'string' },
+    fields: { type: 'array', items: { type: 'string' } },
+    template: {
+      type: 'string',
+      description: 'Trusted-host HTML template; ignored on the default untrusted renderer path',
+    },
+  },
+}
+
 export const MapRegistry: ComponentRegistryEntry = {
   type: 'map',
   name: 'InteractiveMap',
   description:
-    'Render interactive maps with markers using Leaflet. Supports marker clustering, custom tile layers, and auto-fitting bounds. Best for displaying geographic data with up to 1000 markers.',
+    'Render interactive maps on the default OpenStreetMap base layer (using Leaflet internally) from already-resolved markers, GeoJSON, named layers, clustering, or PMTiles. The renderer does not geocode place names.',
   schema: {
     type: 'object',
     properties: {
-      center: { type: 'array', items: { type: 'number' }, minItems: 2, maxItems: 2, description: 'Map center [lat, lng]' },
-      zoom: { type: 'number', description: 'Zoom level (1-18, default: 13)' },
+      center: {
+        ...MAP_LAT_LNG_POINT_SCHEMA,
+        description: 'Initial map center as [lat, lng] or { lat, lng }',
+      },
+      zoom: { type: 'number', description: 'Initial zoom level (default: 13)' },
       markers: {
         type: 'array',
         items: {
           type: 'object',
           properties: {
-            position: { type: 'array', items: { type: 'number' }, minItems: 2, maxItems: 2 },
-            title: { type: 'string' },
+            position: MAP_LAT_LNG_POINT_SCHEMA,
+            tooltip: { type: 'string' },
             popup: { type: 'string' },
           },
           required: ['position'],
         },
       },
       height: { type: 'string', description: 'CSS height (default: 400px)' },
-      fitBounds: { type: 'boolean', description: 'Auto-fit to show all markers' },
-      clustering: { type: 'boolean', description: 'Enable marker clustering for large datasets' },
+      fitBounds: { type: 'boolean', description: 'Auto-fit to rendered markers and features' },
+      zoomControl: { type: 'boolean', description: 'Show Leaflet zoom controls' },
+      scrollWheelZoom: { type: 'boolean', description: 'Allow scroll-wheel zoom' },
+      tileLayer: {
+        type: 'string',
+        description:
+          'Optional base tile URL template (defaults to OpenStreetMap); the host remains responsible for network policy',
+      },
+      attribution: { type: 'string', description: 'Base-map attribution' },
+      className: { type: 'string', description: 'Custom CSS class' },
+      geojson: MAP_GEOJSON_SCHEMA,
+      geojsonStyle: MAP_GEOJSON_STYLE_SCHEMA,
+      popup: MAP_POPUP_SCHEMA,
+      layers: {
+        type: 'array',
+        description: 'Named GeoJSON overlays',
+        items: {
+          type: 'object',
+          properties: {
+            name: { type: 'string' },
+            visible: { type: 'boolean' },
+            geojson: MAP_GEOJSON_SCHEMA,
+            style: MAP_GEOJSON_STYLE_SCHEMA,
+            popup: MAP_POPUP_SCHEMA,
+          },
+          required: ['name', 'geojson'],
+        },
+      },
+      clustering: {
+        oneOf: [
+          { type: 'boolean' },
+          {
+            type: 'object',
+            properties: {
+              maxClusterRadius: { type: 'number' },
+              spiderfyOnMaxZoom: { type: 'boolean' },
+              showCoverageOnHover: { type: 'boolean' },
+              disableClusteringAtZoom: { type: 'number' },
+              animateAddingMarkers: { type: 'boolean' },
+            },
+          },
+        ],
+        description: 'Enable marker clustering or provide cluster options',
+      },
+      pmtiles: {
+        type: 'object',
+        description: 'PMTiles vector-tile overlay (requires the optional protomaps-leaflet peer)',
+        properties: {
+          url: { type: 'string' },
+          attribution: { type: 'string' },
+          paintRules: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                dataLayer: { type: 'string' },
+                symbolizer: { type: 'string', enum: ['polygon', 'line', 'circle'] },
+                color: { type: 'string' },
+                width: { type: 'number' },
+                opacity: { type: 'number' },
+              },
+              required: ['dataLayer', 'symbolizer'],
+            },
+          },
+          labelRules: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                dataLayer: { type: 'string' },
+                textField: { type: 'string' },
+                fontSize: { type: 'number' },
+              },
+              required: ['dataLayer', 'textField'],
+            },
+          },
+          maxZoom: { type: 'number' },
+          minZoom: { type: 'number' },
+        },
+        required: ['url'],
+      },
     },
     required: [],
   },

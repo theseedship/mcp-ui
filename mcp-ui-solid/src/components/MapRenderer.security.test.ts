@@ -8,8 +8,8 @@
  * and not exercisable in jsdom).
  */
 
-import { describe, it, expect } from 'vitest';
-import { popupSafeText, buildPopupContent } from './MapRenderer';
+import { describe, it, expect, vi } from 'vitest';
+import { addGeoJSONLayer, popupSafeText, buildPopupContent } from './MapRenderer';
 
 const XSS = '<img src=x onerror=alert(1)>';
 
@@ -79,5 +79,58 @@ describe('buildPopupContent — GeoJSON popup (P1.2)', () => {
   it('returns null when there is no popup config or no properties', () => {
     expect(buildPopupContent({ properties: { a: 1 } }, undefined)).toBeNull();
     expect(buildPopupContent({}, { titleField: 'a' })).toBeNull();
+  });
+});
+
+describe('addGeoJSONLayer — trusted-host wiring (UI-MAP-0a)', () => {
+  function renderPopup(allowHtml = false) {
+    const bindPopup = vi.fn();
+    const addTo = vi.fn();
+    type GeoJSONOptions = {
+      onEachFeature: (
+        feature: { properties: Record<string, unknown> },
+        featureLayer: { bindPopup: typeof bindPopup }
+      ) => void;
+    };
+    const leaflet = {
+      geoJSON: vi.fn((_geojson: unknown, options: GeoJSONOptions) => {
+        options.onEachFeature(
+          { properties: { name: '<script>evil</script>' } },
+          { bindPopup }
+        );
+        return { addTo };
+      }),
+      circleMarker: vi.fn(),
+    };
+
+    addGeoJSONLayer(
+      {},
+      leaflet,
+      { type: 'FeatureCollection', features: [] },
+      undefined,
+      { template: '<b>{{name}}</b>' },
+      allowHtml
+    );
+
+    return { bindPopup, addTo };
+  }
+
+  it('ignores raw template HTML on the default untrusted path', () => {
+    const { bindPopup, addTo } = renderPopup();
+    const html = bindPopup.mock.calls[0][0] as string;
+
+    expect(html).not.toContain('<b>');
+    expect(html).not.toContain('<script>');
+    expect(html).toContain('&lt;script&gt;');
+    expect(addTo).toHaveBeenCalledOnce();
+  });
+
+  it('honors trusted template structure while escaping substituted values', () => {
+    const { bindPopup } = renderPopup(true);
+    const html = bindPopup.mock.calls[0][0] as string;
+
+    expect(html).toContain('<b>');
+    expect(html).toContain('&lt;script&gt;');
+    expect(html).not.toContain('<script>');
   });
 });

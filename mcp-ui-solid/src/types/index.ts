@@ -13,8 +13,8 @@
  * parallel union here, which drifted (it had silently dropped `composite`).
  * Re-exporting keeps this type and the spec enum in lockstep by construction.
  */
-import type { ComponentType } from '@seed-ship/mcp-ui-spec'
-export type { ComponentType }
+import type { ComponentType, LatLngPoint } from '@seed-ship/mcp-ui-spec'
+export type { ComponentType, LatLngPoint }
 
 /**
  * Chart types (powered by Quickchart)
@@ -779,9 +779,9 @@ export interface CodeComponentParams {
  */
 export interface MapMarker {
   /**
-   * Position as [latitude, longitude] tuple
+   * Position as a [latitude, longitude] tuple or { lat, lng } object
    */
-  position: [number, number]
+  position: LatLngPoint
 
   /**
    * Tooltip text (shown on hover)
@@ -881,9 +881,9 @@ export interface MapLayer {
  */
 export interface MapComponentParams {
   /**
-   * Initial center [lat, lng]
+   * Initial center as [lat, lng] or { lat, lng }
    */
-  center?: [number, number]
+  center?: LatLngPoint
 
   /**
    * Initial zoom level (default: 13)

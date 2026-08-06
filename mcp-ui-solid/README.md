@@ -5,6 +5,18 @@ SolidJS components + chat toolkit for MCP-generated UI. Part of the [MCP UI ecos
 [![npm version](https://img.shields.io/npm/v/@seed-ship/mcp-ui-solid.svg)](https://www.npmjs.com/package/@seed-ship/mcp-ui-solid)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+## What's New in v6.17.0
+
+- **Map type parity** — `center` and marker `position` now use the spec's
+  exported `LatLngPoint` type, accepting both `[lat, lng]` tuples and
+  `{ lat, lng }` objects.
+- **Complete map registry contract** — LLM-facing metadata now covers GeoJSON,
+  named layers, clustering, PMTiles and every display option accepted by the
+  runtime schema. MCP UI renders coordinates; it does not geocode place names.
+- **Trusted GeoJSON popup templates** — the host-only `allowHtmlPopups` opt-in
+  is forwarded to GeoJSON layers. The default remains safe: template markup is
+  ignored and all feature values are HTML-escaped.
+
 ## What's New in v6.6.0
 
 Sprint OpenData / macros — `docs/briefs/ROADMAP-opendata-macro-mcpui.md`.
@@ -263,7 +275,12 @@ import { DataPreviewSection } from '@seed-ship/mcp-ui-solid'
 }} />
 ```
 
-## GeoJSON Maps (v4.0.0)
+## GeoJSON Maps
+
+Map coordinates accept either `[lat, lng]` or `{ lat, lng }`. This package does
+not geocode addresses or place names; resolve them before building the map
+payload. The default base tiles come from OpenStreetMap; Leaflet is the internal
+rendering engine.
 
 ### GeoJSON + Choropleth + Popups
 
@@ -658,7 +675,7 @@ const { state, pinned, close } = useScratchpadState()
 | `metric` | KPI cards with trends and sparklines |
 | `text` | Markdown via marked.js |
 | `code` | Syntax highlighting (highlight.js), line numbers, word wrap |
-| `map` | Leaflet: markers, clustering, GeoJSON, choropleth, popups, multi-layer, PMTiles |
+| `map` | OpenStreetMap base tiles via Leaflet: markers, clustering, GeoJSON, choropleth, popups, multi-layer, PMTiles |
 | `form` | 18 field types, conditional fields, persistence, tool call submit |
 | `modal` | Portal overlay, sizes sm-full, Escape/backdrop close |
 | `image-gallery` | Grid layout, lightbox, keyboard nav |
@@ -719,7 +736,7 @@ import {
 import type {
   DataValidation, HallucinatedNumber, DataValidationOptions,
   VerifiedTextContent, DataPreviewContent, MapSectionContent,
-  MapGeoJSONStyle, MapPopupConfig, MapLayer, MapPMTilesConfig,
+  LatLngPoint, MapGeoJSONStyle, MapPopupConfig, MapLayer, MapPMTilesConfig,
   ChatBus, ChatEvents, ChatCommands,
   ScratchpadState, ScratchpadSection, ScratchpadEvent,
   UIComponent, UILayout, ComponentType,
