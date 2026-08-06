@@ -292,6 +292,7 @@ export type {
   VideoComponentParams,
   // Code & Maps types (Sprint 6 + v3.1.0)
   CodeComponentParams,
+  LatLngPoint,
   MapMarker,
   MapComponentParams,
   MapPopupConfig,

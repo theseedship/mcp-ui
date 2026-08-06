@@ -3,9 +3,28 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import { validateAgainstRegistry, getComponentEntry, ComponentRegistry } from './component-registry'
+import {
+  validateAgainstRegistry,
+  getComponentEntry,
+  ComponentRegistry,
+  MapRegistry,
+} from './component-registry'
 import type { ComponentType } from '../types'
-import { ComponentTypeSchema } from '@seed-ship/mcp-ui-spec'
+import { ComponentTypeSchema, MapComponentParamsSchema } from '@seed-ship/mcp-ui-spec'
+
+interface RegistrySchemaNode {
+  type?: string
+  enum?: string[]
+  oneOf?: RegistrySchemaNode[]
+  anyOf?: RegistrySchemaNode[]
+  properties?: Record<string, RegistrySchemaNode>
+  required?: string[]
+  items?: RegistrySchemaNode | RegistrySchemaNode[]
+  additionalItems?: boolean
+  minItems?: number
+  maxItems?: number
+  minLength?: number
+}
 
 /** All 20 component types in the registry */
 const ALL_TYPES: ComponentType[] = [
@@ -38,6 +57,89 @@ describe('registry ↔ schema parity (P1.5)', () => {
   it('graph is registered (regression for P1.5)', () => {
     expect(ComponentRegistry.has('graph')).toBe(true)
     expect(getComponentEntry('graph')?.type).toBe('graph')
+  })
+})
+
+describe('MapRegistry ↔ map spec parity (UI-MAP-0a)', () => {
+  const properties = MapRegistry.schema.properties as Record<string, RegistrySchemaNode>
+  const center = properties.center as { oneOf: unknown[] }
+  const markers = properties.markers as {
+    items: {
+      properties: Record<string, unknown> & { position: { oneOf: unknown[] } }
+    }
+  }
+  const markerProperties = markers.items.properties
+
+  it('advertises every root field accepted by MapComponentParamsSchema', () => {
+    expect(Object.keys(properties).sort()).toEqual(Object.keys(MapComponentParamsSchema.shape).sort())
+  })
+
+  it('uses the canonical marker names and keeps host trust out of the payload', () => {
+    expect(markerProperties).toHaveProperty('tooltip')
+    expect(markerProperties).not.toHaveProperty('title')
+    expect(properties).not.toHaveProperty('allowHtmlPopups')
+  })
+
+  it('advertises both tuple and object LatLng forms', () => {
+    expect(center.oneOf).toHaveLength(2)
+    expect(markerProperties.position.oneOf).toHaveLength(2)
+  })
+
+  it('advertises only the GeoJSON root shapes accepted by the runtime spec', () => {
+    const branches = properties.geojson.oneOf ?? []
+    const branchesByType = Object.fromEntries(
+      branches.map((branch) => {
+        const types = branch.properties?.type.enum ?? []
+        return [types.length === 1 ? types[0] : 'Geometry', branch]
+      })
+    ) as Record<string, RegistrySchemaNode>
+
+    expect(Object.keys(branchesByType).sort()).toEqual(['Feature', 'FeatureCollection', 'Geometry'])
+    expect(branchesByType.FeatureCollection.required).toEqual(['type', 'features'])
+    expect(branchesByType.Feature.required).toEqual(['type', 'geometry'])
+    expect(branchesByType.Geometry.required).toEqual(['type'])
+    expect(branchesByType.Geometry.properties?.type.enum).toEqual([
+      'Point',
+      'MultiPoint',
+      'LineString',
+      'MultiLineString',
+      'Polygon',
+      'MultiPolygon',
+      'GeometryCollection',
+    ])
+    expect(branchesByType.Geometry.properties?.coordinates.anyOf).toHaveLength(4)
+  })
+
+  it('preserves choropleth tuple order and rejects empty layer names in the advertised schema', () => {
+    const scale = properties.geojsonStyle.properties?.choroplethScale
+    const tuple = scale?.items as RegistrySchemaNode
+    const tupleItems = tuple.items as RegistrySchemaNode[]
+    const layer = properties.layers.items as RegistrySchemaNode
+
+    expect(tupleItems).toEqual([{ type: 'number' }, { type: 'string' }])
+    expect(tuple.additionalItems).toBe(false)
+    expect(tuple.minItems).toBe(2)
+    expect(tuple.maxItems).toBe(2)
+    expect(tuple).not.toHaveProperty('prefixItems')
+    expect(layer.properties?.name.minLength).toBe(1)
+  })
+
+  it.each([
+    ['empty GeoJSON objects', { geojson: {} }],
+    ['reversed choropleth tuples', { geojsonStyle: { choroplethScale: [['red', 0]] } }],
+    [
+      'empty layer names',
+      {
+        layers: [
+          {
+            name: '',
+            geojson: { type: 'FeatureCollection', features: [] },
+          },
+        ],
+      },
+    ],
+  ])('keeps runtime rejection coverage for %s', (_label, params) => {
+    expect(MapComponentParamsSchema.safeParse(params).success).toBe(false)
   })
 })
 

@@ -9,13 +9,14 @@ A collection of TypeScript packages for building generative, streaming user inte
 
 ## What's New
 
-**Current line — `mcp-ui-solid` 6.x** (post-`5.0.0`, audit-driven visual-renderer
+**Current line — `mcp-ui-solid` 6.17.0** (post-`5.0.0`, audit-driven visual-renderer
 & streaming hardening; `mcp-ui-spec` 5.5.0). Highlights — see
 [`mcp-ui-solid/CHANGELOG.md`](./mcp-ui-solid/CHANGELOG.md) for the full list:
 
 - **`graph` primitive** — node-link visualization powered by `@antv/g6` (peer-optional), first-class in the `UIComponent` params union.
 - **Renderer fallback ladder** — no silent blanks: a failed heavy renderer degrades to a local data table + visible notice, and an unknown component type shows an explicit "Unsupported component type" notice.
 - **Security hardening** — map popups/tooltips escaped by default (`allowHtmlPopups` is a host opt-in) and the external quickchart.io chart fallback is now an explicit host opt-in (`allowQuickchartFallback`, default off).
+- **Map contract parity** — public map coordinates accept `[lat, lng]` or `{ lat, lng }`; the component registry now advertises the complete GeoJSON, layer, clustering and PMTiles contract.
 - **Larger payloads** — default payload-size limit raised 50 KB → 512 KB.
 - **Single-source component types** — solid's `ComponentType` is derived from the spec enum (no more manual drift).
 
@@ -60,7 +61,7 @@ This monorepo contains three packages published under `@seed-ship/`:
 
 | Package | Version | Description |
 |---------|---------|-------------|
-| [`@seed-ship/mcp-ui-solid`](./mcp-ui-solid) | 6.16.0 | SolidJS components for rendering MCP-generated UI |
+| [`@seed-ship/mcp-ui-solid`](./mcp-ui-solid) | 6.17.0 | SolidJS components for rendering MCP-generated UI |
 | [`@seed-ship/mcp-ui-spec`](./mcp-ui-spec) | 5.5.0 | JSON schemas and Zod validators |
 | [`@seed-ship/mcp-ui-cli`](./mcp-ui-cli) | 5.0.0 | CLI for validation and type generation |
 
@@ -70,7 +71,7 @@ This monorepo contains three packages published under `@seed-ship/`:
 
 - **19 component renderers** - chart, table, metric, text, code, map, form, modal, image-gallery, video, iframe, image, link, action, action-group, grid, carousel, artifact, footer
 - **Data Verification** - `validateAgainstSource()`, `VerifiedText`, `DataPreviewSection` for anti-hallucination
-- **GeoJSON maps** - Choropleth, popups, multi-layer, PMTiles support
+- **OpenStreetMap + GeoJSON maps** - OSM base map, choropleth, popups, multi-layer, PMTiles support
 - **Chat Bus** (`@experimental`) - Bidirectional event/command bus for agent interactions
 - **ChatPrompt** (`@experimental`) - Structured interactions above chat input (choice, confirm, form)
 - `UIResourceRenderer` + `StreamingUIRenderer` - Static and SSE-based progressive rendering

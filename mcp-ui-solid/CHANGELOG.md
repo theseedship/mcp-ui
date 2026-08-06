@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.17.0] - 2026-08-06
+
+Map contract parity across the spec, Solid public types, LLM-facing registry,
+and GeoJSON popup trust boundary.
+
+### Added
+
+- Re-export the spec's `LatLngPoint` type from the package root and `/types`
+  entry points. `MapComponentParams.center` and `MapMarker.position` now accept
+  both `[lat, lng]` tuples and `{ lat, lng }` objects, matching the runtime
+  schema without breaking existing tuple payloads.
+- Expand `MapRegistry.schema` to every field accepted by
+  `MapComponentParamsSchema`, including GeoJSON styling and popups, named
+  layers, marker clustering and PMTiles. The registry explicitly states that
+  map coordinates must already be resolved; the renderer does not geocode.
+- Add spec-registry parity, public type parity and GeoJSON popup trust-boundary
+  regression tests.
+
+### Fixed / security
+
+- Forward the host-only `allowHtmlPopups` opt-in through top-level and named
+  GeoJSON layers. The default untrusted path remains unchanged: popup template
+  markup is ignored and feature values are escaped. Even on the trusted path,
+  substituted feature values remain escaped.
+
+### Non-breaking
+
+- All type and registry changes are additive. Existing marker-only maps and
+  tuple coordinates continue to work, and no payload can enable trusted HTML.
+
 ## [6.16.0] - 2026-07-03
 
 Post-audit polish pass (global multi-agent analysis follow-up): spec↔solid

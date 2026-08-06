@@ -11,8 +11,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > **Note (2026-07-03):** after `5.2.0` this monorepo-wide log was superseded by
 > the per-package changelogs, which are the source of truth for every release
-> (current: `mcp-ui-solid` 6.16.0, `mcp-ui-spec` 5.5.0, `mcp-ui-cli` 5.0.0). New
+> (current: `mcp-ui-solid` 6.17.0, `mcp-ui-spec` 5.5.0, `mcp-ui-cli` 5.0.0). New
 > entries go there; this file is kept for historical monorepo-level context.
+
+## [6.17.0] - 2026-08-06 (`mcp-ui-solid` only)
+
+### Added
+
+- Public map coordinates now use the spec's `LatLngPoint` contract and accept
+  both `[lat, lng]` tuples and `{ lat, lng }` objects.
+- The LLM-facing map registry now documents every runtime-supported map field,
+  including GeoJSON, named layers, clustering and PMTiles.
+
+### Fixed / security
+
+- Trusted hosts can opt GeoJSON popup templates into rich HTML with
+  `allowHtmlPopups`; the default path still ignores template markup and escapes
+  all feature values.
+
+This is an additive, non-breaking release. MCP UI still expects resolved
+coordinates and does not perform geocoding.
 
 ## [5.2.0] - 2026-04-22 (`mcp-ui-solid` only)
 

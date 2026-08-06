@@ -200,12 +200,13 @@ export function bindMarkerContent(
  * Add a GeoJSON layer to the map with style and popup support.
  * Returns the layer for bounds calculation.
  */
-function addGeoJSONLayer(
+export function addGeoJSONLayer(
   mapInst: any,
   leaflet: any,
   geojson: unknown,
   style?: MapGeoJSONStyle,
-  popup?: MapPopupConfig
+  popup?: MapPopupConfig,
+  allowHtml = false
 ): any {
   const styleFn = buildStyleFn(style);
 
@@ -224,7 +225,7 @@ function addGeoJSONLayer(
       });
     },
     onEachFeature: (feature: any, featureLayer: any) => {
-      const html = buildPopupContent(feature, popup);
+      const html = buildPopupContent(feature, popup, allowHtml);
       if (html) {
         featureLayer.bindPopup(html, { maxWidth: 300 });
       }
@@ -413,7 +414,14 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
 
         // ─── GeoJSON (v3.1.0) ───────────────────────
         if (p?.geojson) {
-          const geoLayer = addGeoJSONLayer(mapInstance, L, p.geojson, p.geojsonStyle, p.popup);
+          const geoLayer = addGeoJSONLayer(
+            mapInstance,
+            L,
+            p.geojson,
+            p.geojsonStyle,
+            p.popup,
+            allowHtml()
+          );
           allBoundsLayers.push(geoLayer);
         }
 
@@ -427,7 +435,8 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
               L,
               layerDef.geojson,
               layerDef.style || p?.geojsonStyle,
-              layerDef.popup || p?.popup
+              layerDef.popup || p?.popup,
+              allowHtml()
             );
 
             overlays[layerDef.name] = geoLayer;
