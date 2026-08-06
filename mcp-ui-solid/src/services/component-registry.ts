@@ -603,8 +603,94 @@ const MAP_LAT_LNG_POINT_SCHEMA = {
   ],
 }
 
-const MAP_GEOJSON_SCHEMA = {
+const MAP_GEOJSON_POSITION_SCHEMA = {
+  type: 'array',
+  items: { type: 'number' },
+  minItems: 2,
+}
+
+const MAP_GEOJSON_COORDINATES_SCHEMA = {
+  anyOf: [
+    MAP_GEOJSON_POSITION_SCHEMA,
+    { type: 'array', items: MAP_GEOJSON_POSITION_SCHEMA },
+    { type: 'array', items: { type: 'array', items: MAP_GEOJSON_POSITION_SCHEMA } },
+    {
+      type: 'array',
+      items: {
+        type: 'array',
+        items: { type: 'array', items: MAP_GEOJSON_POSITION_SCHEMA },
+      },
+    },
+  ],
+}
+
+const MAP_GEOJSON_BBOX_SCHEMA = {
+  type: 'array',
+  items: { type: 'number' },
+}
+
+const MAP_GEOJSON_GEOMETRY_TYPE_SCHEMA = {
+  type: 'string',
+  enum: [
+    'Point',
+    'MultiPoint',
+    'LineString',
+    'MultiLineString',
+    'Polygon',
+    'MultiPolygon',
+    'GeometryCollection',
+  ],
+}
+
+const MAP_GEOJSON_SIMPLE_GEOMETRY_SCHEMA = {
   type: 'object',
+  properties: {
+    type: MAP_GEOJSON_GEOMETRY_TYPE_SCHEMA,
+    coordinates: MAP_GEOJSON_COORDINATES_SCHEMA,
+    bbox: MAP_GEOJSON_BBOX_SCHEMA,
+  },
+  required: ['type'],
+}
+
+const MAP_GEOJSON_GEOMETRY_SCHEMA = {
+  type: 'object',
+  properties: {
+    type: MAP_GEOJSON_GEOMETRY_TYPE_SCHEMA,
+    coordinates: MAP_GEOJSON_COORDINATES_SCHEMA,
+    geometries: { type: 'array', items: MAP_GEOJSON_SIMPLE_GEOMETRY_SCHEMA },
+    bbox: MAP_GEOJSON_BBOX_SCHEMA,
+  },
+  required: ['type'],
+}
+
+const MAP_GEOJSON_FEATURE_SCHEMA = {
+  type: 'object',
+  properties: {
+    type: { type: 'string', enum: ['Feature'] },
+    geometry: { oneOf: [MAP_GEOJSON_GEOMETRY_SCHEMA, { type: 'null' }] },
+    properties: { oneOf: [{ type: 'object' }, { type: 'null' }] },
+    id: { oneOf: [{ type: 'string' }, { type: 'number' }] },
+    bbox: MAP_GEOJSON_BBOX_SCHEMA,
+  },
+  required: ['type', 'geometry'],
+}
+
+const MAP_GEOJSON_FEATURE_COLLECTION_SCHEMA = {
+  type: 'object',
+  properties: {
+    type: { type: 'string', enum: ['FeatureCollection'] },
+    features: { type: 'array', items: MAP_GEOJSON_FEATURE_SCHEMA },
+    bbox: MAP_GEOJSON_BBOX_SCHEMA,
+  },
+  required: ['type', 'features'],
+}
+
+const MAP_GEOJSON_SCHEMA = {
+  oneOf: [
+    MAP_GEOJSON_FEATURE_COLLECTION_SCHEMA,
+    MAP_GEOJSON_FEATURE_SCHEMA,
+    MAP_GEOJSON_GEOMETRY_SCHEMA,
+  ],
   description: 'GeoJSON FeatureCollection, Feature, or Geometry',
 }
 
@@ -621,7 +707,8 @@ const MAP_GEOJSON_STYLE_SCHEMA = {
       type: 'array',
       items: {
         type: 'array',
-        items: { oneOf: [{ type: 'number' }, { type: 'string' }] },
+        items: [{ type: 'number' }, { type: 'string' }],
+        additionalItems: false,
         minItems: 2,
         maxItems: 2,
       },
@@ -687,7 +774,7 @@ export const MapRegistry: ComponentRegistryEntry = {
         items: {
           type: 'object',
           properties: {
-            name: { type: 'string' },
+            name: { type: 'string', minLength: 1 },
             visible: { type: 'boolean' },
             geojson: MAP_GEOJSON_SCHEMA,
             style: MAP_GEOJSON_STYLE_SCHEMA,
