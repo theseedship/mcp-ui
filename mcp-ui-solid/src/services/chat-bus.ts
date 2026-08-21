@@ -6,8 +6,6 @@
  */
 
 import type {
-  ChatEvents,
-  ChatCommands,
   ChatEventEmitter,
   ChatCommandHandler,
   ChatBus,

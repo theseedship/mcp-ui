@@ -78,7 +78,7 @@ export const ElicitationForm: Component<ElicitationFormProps> = (props) => {
 
   const handleSubmit = (response: ChatPromptResponse): void => {
     if (response.dismissed) {
-      ;(props.onDecline ?? props.onCancel)?.()
+      (props.onDecline ?? props.onCancel)?.()
       return
     }
     props.onAccept(extractContent(response, props.event))

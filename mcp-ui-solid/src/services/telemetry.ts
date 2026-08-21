@@ -110,7 +110,7 @@ export function createTelemetryDispatcher(
       const result = sink(batch)
       // Promise rejections are silenced too (fail-open, §M.6.1).
       if (result && typeof (result as Promise<void>).then === 'function') {
-        ;(result as Promise<void>).catch(() => {
+        (result as Promise<void>).catch(() => {
           /* silent */
         })
       }

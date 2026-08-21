@@ -6,7 +6,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, fireEvent, cleanup } from '@solidjs/testing-library'
 import { ChatPrompt } from './ChatPrompt'
-import type { ChatPromptConfig, ChatPromptResponse } from '../types/chat-bus'
+import type { ChatPromptConfig } from '../types/chat-bus'
 
 describe('ChatPrompt', () => {
   beforeEach(() => cleanup())

@@ -47,7 +47,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Lint
-        run: pnpm lint || true  # Don't fail on lint errors for now
+        run: pnpm lint
 
       - name: Build
         run: pnpm build
