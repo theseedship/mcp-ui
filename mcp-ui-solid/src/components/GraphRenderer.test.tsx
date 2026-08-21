@@ -16,14 +16,13 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest'
-import { render, cleanup, waitFor } from '@solidjs/testing-library'
+import { cleanup, waitFor } from '@solidjs/testing-library'
 import {
   graphToMermaid,
   graphToJSON,
   isG6Available,
   GraphRenderer,
 } from './GraphRenderer'
-import { UIResourceRenderer } from './UIResourceRenderer'
 import { validateComponent } from '../services/validation'
 import type { GraphComponentParams } from '@seed-ship/mcp-ui-spec'
 import type { UIComponent } from '../types'

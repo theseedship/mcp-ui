@@ -5,7 +5,7 @@
  * without UNKNOWN_COMPONENT_TYPE errors.
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import {
   validateComponent,
   validateChartComponent,
@@ -26,19 +26,6 @@ function makeComponent(type: ComponentType, params: Record<string, any> = {}): U
     params: params as any,
   };
 }
-
-/** Types that have explicit validation cases in validateComponent */
-const VALIDATED_TYPES: ComponentType[] = [
-  'chart',
-  'table',
-  'metric',
-  'text',
-  'iframe',
-  'image',
-  'link',
-  'action',
-  'artifact',
-];
 
 /** Types that hit the default case (no specific validation) */
 const PASSTHROUGH_TYPES: ComponentType[] = [

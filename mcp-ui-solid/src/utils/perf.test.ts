@@ -47,13 +47,13 @@ describe('performance marks (v5.4.0 — B.4)', () => {
   })
 
   it('mark functions are no-ops when performance is undefined (SSR-safe)', () => {
-    const originalPerf = (globalThis as any).performance
-    ;(globalThis as any).performance = undefined
+    const originalPerf = (globalThis as any).performance;
+    (globalThis as any).performance = undefined
     try {
       expect(() => markRenderStart('ssr')).not.toThrow()
       expect(() => markRenderEnd('ssr')).not.toThrow()
     } finally {
-      ;(globalThis as any).performance = originalPerf
+      (globalThis as any).performance = originalPerf
     }
   })
 })

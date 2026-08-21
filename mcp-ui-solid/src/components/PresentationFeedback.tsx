@@ -170,7 +170,7 @@ export const PresentationFeedback: Component<PresentationFeedbackProps> = (props
       // break the UI (mirrors FeedbackInline).
       const result = props.onSubmit(feedback)
       if (result && typeof (result as Promise<void>).catch === 'function') {
-        ;(result as Promise<void>).catch(() => {
+        (result as Promise<void>).catch(() => {
           /* non-blocking */
         })
       }

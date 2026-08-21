@@ -84,7 +84,7 @@ export const FeedbackInline: Component<FeedbackInlineProps> = (props) => {
       // swallow it — feedback is best-effort by design.
       const result = props.onSubmit(value, props.context)
       if (result && typeof (result as Promise<void>).catch === 'function') {
-        ;(result as Promise<void>).catch(() => {
+        (result as Promise<void>).catch(() => {
           /* non-blocking */
         })
       }

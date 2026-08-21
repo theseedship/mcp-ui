@@ -3,7 +3,7 @@
  * v2.2.5: Consistent icon set, position, and hover behavior across all components
  */
 
-import { Component, For, Show, createSignal } from 'solid-js'
+import { Component, For, createSignal } from 'solid-js'
 
 /** SVG icon paths for toolbar actions */
 const ICONS = {

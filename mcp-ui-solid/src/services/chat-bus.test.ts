@@ -4,7 +4,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { createEventEmitter, createCommandHandler, createChatBus, clarificationToPromptConfig, elicitationToPromptConfig } from './chat-bus'
-import type { ChatEvents, ChatCommands, ClarificationEvent, ElicitationEvent } from '../types/chat-bus'
+import type { ClarificationEvent, ElicitationEvent } from '../types/chat-bus'
 
 describe('createEventEmitter', () => {
   it('emits events to subscribed listeners', () => {

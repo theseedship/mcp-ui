@@ -23,8 +23,6 @@ import type { UIComponent } from '../types';
 import type {
   GraphComponentParams,
   GraphLayout,
-  GraphNode,
-  GraphEdge,
 } from '@seed-ship/mcp-ui-spec';
 import { ExpandableWrapper, useExpanded } from './ExpandableWrapper';
 import { PortalDropdownMenu } from './PortalDropdownMenu';

@@ -46,11 +46,6 @@ function buildAnnotatedSegments(text: string, validation: DataValidation): TextS
     }
   }
 
-  // Build all number positions sorted
-  const allPositions = validation.llmNumbers
-    .map(n => ({ position: n.position, length: n.context.length - 20 })) // approximate original match length
-    .sort((a, b) => a.position - b.position)
-
   // Re-extract number lengths from text for precise splitting
   const numberRegex = /\d[\d\s,.]*\d|\d+/g
   const matches: Array<{ start: number; end: number }> = []

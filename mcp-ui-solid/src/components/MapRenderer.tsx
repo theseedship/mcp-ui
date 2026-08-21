@@ -12,8 +12,6 @@ import type {
   MapClusterOptions,
   MapGeoJSONStyle,
   MapPopupConfig,
-  MapLayer,
-  MapPMTilesConfig,
 } from '../types';
 import { ExpandableWrapper, useExpanded } from './ExpandableWrapper';
 import { DegradedFallback } from './DegradedFallback';
@@ -458,7 +456,6 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
         setPmtilesError(null);
         if (p?.pmtiles) {
           try {
-            // @ts-ignore — optional peer dependency, may not be installed
             const protomaps = await import(/* @vite-ignore */ 'protomaps-leaflet');
             const pmConfig = p.pmtiles;
 

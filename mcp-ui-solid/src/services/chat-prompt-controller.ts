@@ -124,14 +124,6 @@ export function createChatPromptController(): ChatPromptController {
     }
   }
 
-  function clearPending(): void {
-    if (pending) {
-      cleanupAbort(pending)
-      pending = null
-    }
-    setActivePrompt(null)
-  }
-
   function handle(
     config: ChatPromptConfig,
     signal?: AbortSignal
