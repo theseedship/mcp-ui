@@ -1,4 +1,4 @@
-name: Publish to npm
+name: Stage npm release
 
 on:
   workflow_dispatch:
@@ -10,6 +10,11 @@ on:
   push:
     tags:
       - 'v*.*.*'  # Trigger on version tags like v1.0.0
+
+# Never cancel an upload in progress.
+concurrency:
+  group: npm-release
+  cancel-in-progress: false
 
 jobs:
   check-npm-auth:
@@ -35,7 +40,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write  # Required for npm provenance
 
     steps:
       - name: Checkout code
@@ -77,23 +81,33 @@ jobs:
       - name: Type check
         run: pnpm typecheck
 
-      - name: Publish to npm
-        # Iterate explicitly and skip already-published versions. Two tag
-        # pushes in quick succession (e.g. spec patch + solid minor on the
-        # same release wave) used to race : the second workflow would hit
-        # E403 on the first package the other had already published, then
-        # bail out before publishing its own. This loop survives that case.
+      - name: Install npm with staged publishing support
+        run: npm install --global npm@11.15.0 --ignore-scripts
+
+      - name: Stage packages for maintainer approval
+        shell: bash
+        # Pack with pnpm first to resolve workspace: dependencies.
+        # Successful staging is NOT a public release: approval requires 2FA.
         run: |
-          set -e
+          set -euo pipefail
+          echo '## npm staging (manual approval required)' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Approve packages in npmjs.com → Staged Packages, Spec before Solid. Uploads are not public until approved.' >> "$GITHUB_STEP_SUMMARY"
           for dir in mcp-ui-spec mcp-ui-solid mcp-ui-cli; do
             pushd "$dir" > /dev/null
             name=$(node -p "require('./package.json').name")
             version=$(node -p "require('./package.json').version")
             if npm view "$name@$version" version > /dev/null 2>&1; then
               echo "✓ Skip $name@$version (already on npm)"
+              echo "- $name@$version: already public, skipped." >> "$GITHUB_STEP_SUMMARY"
             else
-              echo "→ Publishing $name@$version"
-              pnpm publish --access public --no-git-checks
+              echo "→ Staging $name@$version"
+              pack_dir=$(mktemp -d)
+              pnpm pack --pack-destination "$pack_dir"
+              tarballs=("$pack_dir"/*.tgz)
+              test "${#tarballs[@]}" -eq 1
+              test -f "${tarballs[0]}"
+              npm stage publish "${tarballs[0]}" --access public --tag latest
+              echo "- $name@$version: staged; approve on npmjs.com with 2FA." >> "$GITHUB_STEP_SUMMARY"
             fi
             popd > /dev/null
           done
