@@ -714,6 +714,10 @@ function TableRenderer(props: {
     !hasServerPagination() && !showAll() && clientPageSize() > 0 && filteredRows().length > clientPageSize()
   const [clientPage, setClientPage] = createSignal(tableParams.initialPage ?? 0)
   const clientTotalPages = () => needsClientPagination() ? Math.ceil(filteredRows().length / clientPageSize()) : 1
+  createEffect(() => {
+    const maxPage = Math.max(0, clientTotalPages() - 1)
+    if (clientPage() > maxPage) setClientPage(maxPage)
+  })
   const clientVisibleRows = createMemo(() => {
     if (showAll() || !needsClientPagination()) return filteredRows()
     const start = clientPage() * clientPageSize()

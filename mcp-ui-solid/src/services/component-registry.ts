@@ -240,9 +240,9 @@ export const TableRegistry: ComponentRegistryEntry = {
             type: 'object',
             properties: {
               enabled: { type: 'boolean' },
-              rowHeight: { type: 'number' },
-              overscan: { type: 'number' },
-              threshold: { type: 'number' },
+              rowHeight: { type: 'integer', minimum: 1 },
+              overscan: { type: 'integer', minimum: 0 },
+              threshold: { type: 'integer', minimum: 1 },
             },
           },
         ],
@@ -982,7 +982,7 @@ export const GraphRegistry: ComponentRegistryEntry = {
         items: {
           type: 'object',
           properties: {
-            id: { type: 'string' },
+            id: { type: 'string', minLength: 1 },
             label: { type: 'string' },
             type: { type: 'string' },
             size: {
@@ -1010,8 +1010,8 @@ export const GraphRegistry: ComponentRegistryEntry = {
         items: {
           type: 'object',
           properties: {
-            source: { type: 'string' },
-            target: { type: 'string' },
+            source: { type: 'string', minLength: 1 },
+            target: { type: 'string', minLength: 1 },
             label: { type: 'string' },
             type: { type: 'string' },
             weight: { type: 'number' },
@@ -1043,7 +1043,7 @@ export const GraphRegistry: ComponentRegistryEntry = {
       },
       height: { type: 'string' },
       width: { type: 'string' },
-      rendererPref: { type: 'string', enum: ['canvas', 'svg'] },
+      rendererPref: { type: 'string', enum: ['canvas'] },
       fitView: { type: 'boolean' },
       enableZoom: { type: 'boolean' },
       enableDrag: { type: 'boolean' },

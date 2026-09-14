@@ -480,7 +480,8 @@ export function validateChartComponent(
           typeof value !== 'object' ||
           value === null ||
           vObj.x == null ||
-          typeof vObj.y !== 'number'
+          typeof vObj.y !== 'number' ||
+          (vObj.r !== undefined && (typeof vObj.r !== 'number' || !Number.isFinite(vObj.r) || vObj.r < 0))
         ) {
           errors.push({
             path: `params.data.datasets[${index}].data[${dataIndex}]`,
