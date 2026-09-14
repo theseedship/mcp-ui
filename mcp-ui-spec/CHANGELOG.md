@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Table `searchable`, `searchPlaceholder`, `pageSize`, `chatPageSize` and
   `initialPage` fields, matching existing client renderer controls.
-- Optional nonnegative `r` for chart point data, preserving bubble radii
+- Optional finite, nonnegative `r` for chart point data, preserving bubble radii
   through Zod parsing. Existing numeric and x/y series remain accepted.
 
 ## [5.5.0] - 2026-05-31

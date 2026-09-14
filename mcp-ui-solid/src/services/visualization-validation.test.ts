@@ -3,6 +3,17 @@ import { validateComponent } from './validation'
 import type { UIComponent } from '../types'
 
 describe('visualization rendering boundary', () => {
+  it.each([false, true])('validates each dataset independently (points first: %s)', pointsFirst => {
+    const numeric = { label: 'Numeric', data: [1, 2] }
+    const points = { label: 'Points', data: [{ x: 1, y: 2, r: 3 }] }
+    const component: UIComponent = {
+      id: 'mixed-chart', type: 'chart', position: { colStart: 1, colSpan: 12 },
+      params: { type: 'line', data: { labels: ['A', 'B'], datasets: pointsFirst ? [points, numeric] : [numeric, points] } },
+    }
+    expect(validateComponent(component).valid).toBe(true)
+    points.data[0].r = -1
+    expect(validateComponent(component).valid).toBe(false)
+  })
   for (const key of ['pageSize', 'chatPageSize', 'initialPage']) {
     it.each([-1, 1.5, NaN, Infinity, '10'])(`rejects invalid ${key}: %s`, value => {
       const component = {

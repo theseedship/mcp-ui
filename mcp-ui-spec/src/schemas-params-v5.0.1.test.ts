@@ -23,6 +23,11 @@ import {
 } from './schemas'
 
 describe('ChartComponentParamsSchema (v5.0.1)', () => {
+  it.each([Infinity, -Infinity, NaN, -1])('rejects non-finite or negative bubble radii: %s', r => {
+    expect(ChartComponentParamsSchema.safeParse({
+      type: 'bubble', data: { datasets: [{ label: 'Bubbles', data: [{ x: 1, y: 2, r }] }] },
+    }).success).toBe(false)
+  })
   it('parses a valid bar chart', () => {
     const result = ChartComponentParamsSchema.safeParse({
       type: 'bar',

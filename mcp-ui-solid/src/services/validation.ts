@@ -417,9 +417,12 @@ export function validateChartComponent(
   }
   // Detect point-based charts (scatter/bubble) or object data (time-series line)
   const chartType = params.type || 'bar';
-  const firstDataPoint = params.data.datasets[0]?.data?.[0];
-  const hasObjectData =
-    typeof firstDataPoint === 'object' && firstDataPoint !== null && 'x' in firstDataPoint;
+  const usesPoints = (data: unknown[]) => data.some(value =>
+    typeof value === 'object' && value !== null && 'x' in value
+  );
+  const hasObjectData = params.data.datasets.some(dataset =>
+    Array.isArray(dataset.data) && usesPoints(dataset.data)
+  );
   const isPointChart = chartType === 'scatter' || chartType === 'bubble' || hasObjectData;
 
   // Labels required only for categorical charts (not scatter/bubble/time-series)
@@ -453,11 +456,12 @@ export function validateChartComponent(
   }
 
   // Length mismatch check — only for categorical charts, skip empty datasets
-  if (!isPointChart && Array.isArray(params.data.labels)) {
+  if (chartType !== 'scatter' && chartType !== 'bubble' && Array.isArray(params.data.labels)) {
     const expectedLength = params.data.labels.length;
     for (const [index, dataset] of params.data.datasets.entries()) {
       if (
         Array.isArray(dataset.data) &&
+        !usesPoints(dataset.data) &&
         dataset.data.length > 0 &&
         dataset.data.length !== expectedLength
       ) {
@@ -473,8 +477,9 @@ export function validateChartComponent(
   // Data type validation — numbers for categorical, {x,y} objects for point charts
   for (const [index, dataset] of params.data.datasets.entries()) {
     if (!Array.isArray(dataset.data)) continue;
+    const datasetIsPointChart = chartType === 'scatter' || chartType === 'bubble' || usesPoints(dataset.data);
     for (const [dataIndex, value] of dataset.data.entries()) {
-      if (isPointChart) {
+      if (datasetIsPointChart) {
         const vObj = value as any;
         if (
           typeof value !== 'object' ||

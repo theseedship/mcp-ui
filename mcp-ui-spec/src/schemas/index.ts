@@ -612,7 +612,7 @@ export const ChartDatasetSchema = z.object({
         x: z.union([z.string(), z.number()]),
         y: z.number(),
         /** Bubble radius. Omit for scatter and time-series points. */
-        r: z.number().nonnegative().optional(),
+        r: z.number().finite().nonnegative().optional(),
       })
     ),
   ]),
