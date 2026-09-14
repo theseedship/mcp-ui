@@ -54,6 +54,7 @@ import { ExpandableWrapper, useExpanded } from './ExpandableWrapper'
 import { PortalDropdownMenu } from './PortalDropdownMenu'
 import { RenderProvider } from './RenderContext'
 import { useAction } from '../hooks/useAction'
+import { createResponsiveGrid } from '../hooks/createResponsiveGrid'
 import { marked } from 'marked'
 
 /**
@@ -711,8 +712,12 @@ function TableRenderer(props: {
   const hasServerPagination = () => !!tableParams.pagination
   const needsClientPagination = () =>
     !hasServerPagination() && !showAll() && clientPageSize() > 0 && filteredRows().length > clientPageSize()
-  const [clientPage, setClientPage] = createSignal(tableParams.initialPage ?? 0)
+  const [requestedClientPage, setClientPage] = createSignal(tableParams.initialPage ?? 0)
   const clientTotalPages = () => needsClientPagination() ? Math.ceil(filteredRows().length / clientPageSize()) : 1
+  const clientPage = createMemo(() => Math.max(0, Math.min(requestedClientPage(), clientTotalPages() - 1)))
+  createEffect(() => {
+    if (requestedClientPage() !== clientPage()) setClientPage(clientPage())
+  })
   const clientVisibleRows = createMemo(() => {
     if (showAll() || !needsClientPagination()) return filteredRows()
     const start = clientPage() * clientPageSize()
@@ -939,7 +944,7 @@ function TableRenderer(props: {
     <ExpandableWrapper title={tableParams.title || 'Table'} copyData={getTableCSV()} copyLabel="Copy table (CSV)" toolbarVariant={props.toolbarVariant}>
       <div class={`relative w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden group ${
         isExpanded() ? 'flex-1 min-h-0 flex flex-col' : 'h-full'
-      }`}>
+      } ${tableParams.className || ''}`}>
         <Show when={exportable} fallback={<CopyButton getText={getTableCSV} title="Copy table (CSV)" position="top-right" />}>
           <div class="absolute right-10 top-2 z-10">
             <button
@@ -1866,16 +1871,17 @@ export const UIResourceRenderer: Component<UIResourceRendererProps> = (props) =>
   }
 
   // Convert grid styles to CSS string
+  const responsiveGrid = createResponsiveGrid()
   const gridContainerStyle = () => {
     const layoutData = layout()
-    return `grid-template-columns: repeat(${layoutData.grid.columns}, 1fr); gap: ${layoutData.grid.gap}`
+    return `display: grid; grid-template-columns: repeat(${responsiveGrid.stacked() ? 1 : layoutData.grid.columns}, minmax(0, 1fr)); gap: ${layoutData.grid.gap}`
   }
 
   // Convert component grid styles to CSS string
   const getGridStyleString = (component: UIComponent) => {
     // Defensive check for position field - default to full width
-    if (!component.position) {
-      return 'grid-column: 1 / span 12; grid-row: auto'
+    if (responsiveGrid.stacked() || !component.position) {
+      return 'grid-column: 1 / -1; grid-row: auto'
     }
     const { colStart, colSpan, rowStart, rowSpan = 1 } = component.position
     return `grid-column: ${colStart} / span ${colSpan}; grid-row: ${rowStart ? `${rowStart} / span ${rowSpan}` : 'auto'}`
@@ -1921,8 +1927,6 @@ export const UIResourceRenderer: Component<UIResourceRendererProps> = (props) =>
     }
   })
 
-  const layoutData = layout()
-
   // ── Identity + duplicate-mount detection (v6.5.0) ─────────────
   // `isLayoutContent` distinguishes a real composite/layout payload from
   // the synthetic single-component wrapping above. Drives whether the
@@ -1960,10 +1964,11 @@ export const UIResourceRenderer: Component<UIResourceRendererProps> = (props) =>
           ? { 'data-mcp-ui-layout-id': outerKey() }
           : { 'data-mcp-ui-component-id': outerKey() })}
       >
-        <div class="grid gap-4" style={gridContainerStyle()}>
-          <For each={layoutData.components}>
+        <div ref={responsiveGrid.ref} class="grid gap-4" style={gridContainerStyle()} data-mcp-ui-grid data-mcp-ui-stacked={responsiveGrid.stacked()}>
+          <For each={layout().components}>
             {(component) => (
               <div
+                class="min-w-0"
                 style={getGridStyleString(component)}
                 data-mcp-ui-component-id={getUiResourceStableKey(component)}
               >

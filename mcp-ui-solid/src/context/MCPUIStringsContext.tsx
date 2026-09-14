@@ -39,14 +39,14 @@
  * ```
  */
 
-import { createContext, useContext, type JSX } from 'solid-js'
+import { createContext, mergeProps, useContext, type JSX } from 'solid-js'
 
 /**
  * The library's own chrome strings. Flat map, no interpolation.
  *
- * Marked exhaustive as of v6.6.0 ; new chrome strings added by later
- * renderers extend this interface (the `MCPUIStringsProvider` merge keeps
- * older consumers working — any unset key falls back to the EN default).
+ * The original chrome keys remain required. Later additions are optional
+ * so existing typed dictionaries remain valid across minor releases.
+ * `useMCPUIStrings` resolves omitted keys to their English defaults.
  */
 export interface MCPUIStrings {
   // ── ExpandableWrapper toolbar ──────────────────────────────
@@ -72,13 +72,27 @@ export interface MCPUIStrings {
   // ── Generic chrome ────────────────────────────────────────
   /** Label of the streaming retry button. */
   retry: string
+
+  // ── Chart data access ─────────────────────────────────────
+  /** Label of the native chart view button. */
+  chartView?: string
+  /** Label of the exact-data table view button. */
+  chartDataView?: string
+  /** Accessible name of the chart/data view selector. */
+  chartViewSelector?: string
+  /** Caption and accessible name for the chart's data table. */
+  chartDataTable?: string
+  /** Screen-reader description associated with the chart canvas. */
+  chartDataSummary?: string
+  /** Empty state shown when a chart has no data points. */
+  chartNoData?: string
 }
 
 /**
  * English defaults. A published library ships no hardcoded non-English
  * chrome — consumers localize via `<MCPUIStringsProvider>`.
  */
-export const DEFAULT_MCPUI_STRINGS: MCPUIStrings = {
+export const DEFAULT_MCPUI_STRINGS: Required<MCPUIStrings> = {
   expand: 'Expand',
   expandedView: 'Expanded view',
   copyToClipboard: 'Copy to clipboard',
@@ -88,6 +102,12 @@ export const DEFAULT_MCPUI_STRINGS: MCPUIStrings = {
   feedbackPositiveAck: 'Thanks!',
   feedbackNegativeAck: "Noted — we'll improve",
   retry: 'Retry',
+  chartView: 'Chart',
+  chartDataView: 'Data',
+  chartViewSelector: 'Chart or data view',
+  chartDataTable: 'Chart data',
+  chartDataSummary: 'Exact values are available in the data view.',
+  chartNoData: 'No chart data',
 }
 
 export const MCPUIStringsContext = createContext<MCPUIStrings>(DEFAULT_MCPUI_STRINGS)
@@ -97,8 +117,8 @@ export const MCPUIStringsContext = createContext<MCPUIStrings>(DEFAULT_MCPUI_STR
  * `<MCPUIStringsProvider>` is mounted above — every renderer works
  * standalone with English chrome.
  */
-export function useMCPUIStrings(): MCPUIStrings {
-  return useContext(MCPUIStringsContext)
+export function useMCPUIStrings(): Required<MCPUIStrings> {
+  return mergeProps(DEFAULT_MCPUI_STRINGS, useContext(MCPUIStringsContext))
 }
 
 export interface MCPUIStringsProviderProps {
@@ -116,12 +136,11 @@ export interface MCPUIStringsProviderProps {
  * Merges the partial `strings` override over the English defaults.
  */
 export function MCPUIStringsProvider(props: MCPUIStringsProviderProps): JSX.Element {
-  // `props.strings` is read inside the getter so a reactive override
-  // (signal-backed) re-propagates ; for the common static case it is read
-  // once at mount.
-  const value = (): MCPUIStrings => ({ ...DEFAULT_MCPUI_STRINGS, ...props.strings })
+  // The function source keeps replacement `strings` objects reactive while
+  // mergeProps fills any omitted key without taking a one-time snapshot.
+  const value = mergeProps(DEFAULT_MCPUI_STRINGS, () => props.strings)
   return (
-    <MCPUIStringsContext.Provider value={value()}>
+    <MCPUIStringsContext.Provider value={value}>
       {props.children}
     </MCPUIStringsContext.Provider>
   )

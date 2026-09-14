@@ -11,10 +11,13 @@
 
 import { describe, it, expect, beforeEach } from 'vitest'
 import { render, cleanup, fireEvent } from '@solidjs/testing-library'
+import { createSignal } from 'solid-js'
 import {
+  MCPUIStringsContext,
   MCPUIStringsProvider,
   useMCPUIStrings,
   DEFAULT_MCPUI_STRINGS,
+  type MCPUIStrings,
 } from './MCPUIStringsContext'
 import { FeedbackInline } from '../components/FeedbackInline'
 import { ExpandableWrapper } from '../components/ExpandableWrapper'
@@ -27,6 +30,8 @@ describe('MCPUIStringsContext (v6.6.0)', () => {
     expect(DEFAULT_MCPUI_STRINGS.feedbackUseful).toBe('Useful')
     expect(DEFAULT_MCPUI_STRINGS.feedbackPositiveAck).toBe('Thanks!')
     expect(DEFAULT_MCPUI_STRINGS.retry).toBe('Retry')
+    expect(DEFAULT_MCPUI_STRINGS.chartView).toBe('Chart')
+    expect(DEFAULT_MCPUI_STRINGS.chartDataView).toBe('Data')
   })
 
   it('useMCPUIStrings returns the EN defaults with no provider mounted', () => {
@@ -56,6 +61,61 @@ describe('MCPUIStringsContext (v6.6.0)', () => {
     // Untouched keys fall back to EN
     expect(captured!.retry).toBe('Retry')
     expect(captured!.closeExpandedView).toBe('Close expanded view')
+  })
+
+  it('accepts a legacy typed dictionary and resolves chart defaults through the direct context', () => {
+    const legacyStrings: MCPUIStrings = {
+      expand: 'Legacy expand',
+      expandedView: 'Legacy expanded view',
+      copyToClipboard: 'Legacy copy',
+      closeExpandedView: 'Legacy close',
+      feedbackUseful: 'Legacy useful',
+      feedbackNotUseful: 'Legacy not useful',
+      feedbackPositiveAck: 'Legacy positive',
+      feedbackNegativeAck: 'Legacy negative',
+      retry: 'Legacy retry',
+    }
+    let captured: ReturnType<typeof useMCPUIStrings> | undefined
+    const Probe = () => {
+      captured = useMCPUIStrings()
+      return <span>probe</span>
+    }
+
+    render(() => (
+      <MCPUIStringsContext.Provider value={legacyStrings}>
+        <Probe />
+      </MCPUIStringsContext.Provider>
+    ))
+
+    expect(captured!.expand).toBe('Legacy expand')
+    expect(captured!.chartView).toBe('Chart')
+    expect(captured!.chartDataView).toBe('Data')
+    expect(captured!.chartViewSelector).toBe('Chart or data view')
+  })
+
+  it('keeps replacement provider overrides reactive while resolving omitted defaults', () => {
+    const [overrides, setOverrides] = createSignal<Partial<MCPUIStrings>>({
+      chartView: 'Diagram',
+    })
+    const Probe = () => {
+      const strings = useMCPUIStrings()
+      return (
+        <button type="button" onClick={() => setOverrides({ chartView: 'Graphique' })}>
+          {strings.chartView}|{strings.chartDataView}
+        </button>
+      )
+    }
+
+    const { getByRole } = render(() => (
+      <MCPUIStringsProvider strings={overrides()}>
+        <Probe />
+      </MCPUIStringsProvider>
+    ))
+    const button = getByRole('button')
+
+    expect(button.textContent).toBe('Diagram|Data')
+    fireEvent.click(button)
+    expect(button.textContent).toBe('Graphique|Data')
   })
 
   it('FeedbackInline reads its ack from the provider (FR override)', () => {

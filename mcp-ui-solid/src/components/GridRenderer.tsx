@@ -7,6 +7,7 @@
 import { Component, For, createMemo } from 'solid-js'
 import type { UIComponent, GridPosition } from '../types'
 import { useRenderContext } from './RenderContext'
+import { createResponsiveGrid } from '../hooks/createResponsiveGrid'
 
 /**
  * Parameters for GridRenderer component
@@ -87,6 +88,7 @@ function buildGridTemplateAreas(areas: string[][]): string {
  * Renders a CSS Grid container with nested UIComponents
  */
 export const GridRenderer: Component<GridRendererProps> = (props) => {
+  const responsiveGrid = createResponsiveGrid()
   // Use render context to avoid circular dependency
   const { renderComponent } = useRenderContext()
 
@@ -105,13 +107,13 @@ export const GridRenderer: Component<GridRendererProps> = (props) => {
   // Build grid container style
   const gridContainerStyle = createMemo(() => {
     const p = params()
-    let style = `display: grid; grid-template-columns: repeat(${p.columns}, 1fr); gap: ${p.gap}`
+    let style = `display: grid; grid-template-columns: repeat(${responsiveGrid.stacked() ? 1 : p.columns}, minmax(0, 1fr)); gap: ${p.gap}`
 
     if (p.minRowHeight) {
       style += `; grid-auto-rows: minmax(${p.minRowHeight}, auto)`
     }
 
-    if (p.areas && p.areas.length > 0) {
+    if (!responsiveGrid.stacked() && p.areas && p.areas.length > 0) {
       style += `; grid-template-areas: ${buildGridTemplateAreas(p.areas)}`
     }
 
@@ -124,11 +126,11 @@ export const GridRenderer: Component<GridRendererProps> = (props) => {
       data-component-type="grid"
       data-component-id={props.component.id}
     >
-      <div class="p-4 h-full" style={gridContainerStyle()}>
+      <div ref={responsiveGrid.ref} class="p-4 h-full" style={gridContainerStyle()} data-mcp-ui-grid data-mcp-ui-stacked={responsiveGrid.stacked()}>
         <For each={params().children}>
           {(child) => (
             <div
-              style={getGridItemStyle(child.position, params().areas)}
+              style={responsiveGrid.stacked() ? 'grid-column: 1 / -1; grid-row: auto' : getGridItemStyle(child.position, params().areas)}
               class="min-w-0 h-full"
             >
               {/* Use RenderContext for recursive rendering (avoids circular dependency) */}

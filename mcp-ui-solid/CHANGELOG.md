@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.18.0] - 2026-09-14
+
+### Added
+
+- Pure, opt-in comparison/geography/evidence layout helpers in `/adapters`.
+  Caller-supplied IDs, payloads and provenance are preserved; helpers only
+  arrange components and reject incompatible slot types or duplicate IDs.
+- Native chart/data view switch with keyboard-operable buttons, accessible
+  canvas description, localizable chrome and complete point/bubble data.
+- Container-width reflow for read-only composite and nested grids below 640px;
+  original desktop coordinates return when space permits.
+
+### Fixed
+
+- Align the LLM-facing chart/table/graph catalogue with native renderer/schema
+  capabilities, retaining the legacy `QuickchartRegistry` export.
+- Expose existing table search and client paging options in public types and
+  carry bubble radii through the chart contract.
+- Prevent unpositioned layout children from creating implicit extra columns.
+- Guard asynchronous chart creation against superseded props and unmounts.
+- Bound chart data scrolling and apply chart/table custom classes.
+- Validate pagination controls and bubble radii at the renderer boundary;
+  clamp client pages when data shrinks or an initial page exceeds the row count.
+- Preserve nested grid coordinates throughout editable layouts on small screens.
+
+No new runtime dependency, cross-view filtering, host persistence or backend
+wiring. Existing external-renderer trust settings remain unchanged.
+
 ## [6.17.0] - 2026-08-06
 
 Map contract parity across the spec, Solid public types, LLM-facing registry,

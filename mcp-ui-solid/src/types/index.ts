@@ -17,7 +17,7 @@ import type { ComponentType, LatLngPoint } from '@seed-ship/mcp-ui-spec'
 export type { ComponentType, LatLngPoint }
 
 /**
- * Chart types (powered by Quickchart)
+ * Chart types rendered natively with Chart.js.
  */
 export type ChartType = 'bar' | 'line' | 'pie' | 'doughnut' | 'radar' | 'scatter' | 'bubble' | 'polarArea'
 
@@ -81,7 +81,7 @@ export interface ChartComponentParams {
     labels: string[]
     datasets: Array<{
       label: string
-      data: number[] | Array<{ x: string | number; y: number }>
+      data: number[] | Array<{ x: string | number; y: number; r?: number }>
       backgroundColor?: string | string[]
       borderColor?: string | string[]
       borderWidth?: number
@@ -101,8 +101,9 @@ export interface ChartComponentParams {
   /**
    * Force renderer type (Sprint 4)
    * - 'native': Use Chart.js directly (requires chart.js peer dependency)
-   * - 'iframe': Use Quickchart.io iframe (default fallback)
-   * - 'auto': Use native if Chart.js is available, otherwise iframe (default)
+   * - 'iframe': Request the external QuickChart renderer (requires host opt-in)
+   * - 'auto': Use native Chart.js when available; otherwise degrade locally
+   *   unless the host explicitly enables the external fallback (default)
    */
   renderer?: 'native' | 'iframe' | 'auto'
   /**
@@ -112,6 +113,7 @@ export interface ChartComponentParams {
   /**
    * Time-series axis configuration (v3.1.0).
    * When set, x-axis labels are parsed as dates.
+   * The host must install and register a compatible Chart.js date adapter.
    */
   timeAxis?: {
     /** Date format for parsing labels (Chart.js adapter format, e.g. 'yyyy-MM-dd') */
@@ -190,6 +192,16 @@ export interface TableComponentParams {
     pageSize: number
     totalRows: number
   }
+  /** Show the accent-insensitive client-side search field (default: true). */
+  searchable?: boolean
+  /** Placeholder displayed in the client-side search field. */
+  searchPlaceholder?: string
+  /** Rows per page in expanded mode (default: 25). Set 0 to disable paging. */
+  pageSize?: number
+  /** Rows per page in chat mode (default: min(10, pageSize)). Set 0 to disable paging. */
+  chatPageSize?: number
+  /** Initial zero-based page for client-side paging. */
+  initialPage?: number
   /**
    * Enable table virtualization for large datasets (Sprint Ultimate U.3)
    * - true: Enable with default options
@@ -1019,7 +1031,11 @@ export interface GraphNode {
   /** Stable node id — referenced by edges. */
   id: string
   label?: string
-  /** Optional grouping/category key (drives default coloring). */
+  type?: string
+  size?: number | [number, number]
+  style?: Record<string, unknown>
+  data?: Record<string, unknown>
+  /** @deprecated Compatibility field outside the canonical graph spec. */
   group?: string
   /** Generic ranking/importance signal (opaque to the lib). */
   weight?: number
@@ -1033,31 +1049,56 @@ export interface GraphEdge {
   /** Must match a `GraphNode.id`. */
   target: string
   label?: string
+  type?: string
   weight?: number
+  style?: Record<string, unknown>
+  data?: Record<string, unknown>
   /** Passthrough G6 edge props (style, data, …). */
   [key: string]: unknown
 }
 
-export type GraphLayout = 'force' | 'radial' | 'grid' | 'dagre' | 'circular' | 'concentric'
+/** Canonical layout names shared with `GraphLayoutNameSchema`. */
+export type GraphLayoutName =
+  | 'force'
+  | 'dagre'
+  | 'mindmap'
+  | 'tree'
+  | 'circular'
+  | 'grid'
+  | 'concentric'
+
+export type GraphLayout =
+  | GraphLayoutName
+  | { type: GraphLayoutName; options?: Record<string, unknown> }
+  /** @deprecated `radial` predates the public spec; retained for source compatibility. */
+  | 'radial'
 
 /**
  * Generic node-link graph component params. Domain-neutral by design — the
  * meaning of `weight`/`group` is decided by the consumer.
  */
 export interface GraphComponentParams {
+  title?: string
   /** Nodes (at least one expected at runtime). */
   nodes: GraphNode[]
   edges?: GraphEdge[]
   layout?: GraphLayout
-  /** Render edges as directed (arrows). */
+  /** @deprecated Accepted for source compatibility but not used by the renderer. */
   directed?: boolean
   /**
    * Rendering hint only — NOT wired; the renderer always uses the G6 canvas
    * default (cf. audit P0). Kept for forward-compat with the spec.
    */
   rendererPref?: 'canvas' | 'svg'
-  height?: number
-  width?: number
+  /** CSS length in the canonical spec; numeric values remain for source compatibility. */
+  height?: string | number
+  /** CSS length in the canonical spec; numeric values remain for source compatibility. */
+  width?: string | number
+  fitView?: boolean
+  enableZoom?: boolean
+  enableDrag?: boolean
+  enableSelect?: boolean
+  tooltip?: boolean
   /** Custom CSS class. */
   className?: string
   /** Passthrough for forward-compat graph options. */

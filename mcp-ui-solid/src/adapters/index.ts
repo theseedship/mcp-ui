@@ -21,3 +21,21 @@ export type {
 } from './connector';
 
 export { macroRunToScratchpadState, macroInterrogationToChatPromptConfig } from './macro-run';
+
+export {
+  createComparisonLayout,
+  createGeographyLayout,
+  createEvidenceLayout,
+} from './presentation';
+export type {
+  ComparisonLayoutInput,
+  GeographyLayoutInput,
+  EvidenceLayoutInput,
+  PresentationComponent,
+  ChartComponent,
+  TableComponent,
+  MapComponent,
+  MetricComponent,
+  TextComponent,
+  LinkComponent,
+} from './presentation';

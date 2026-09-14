@@ -9,8 +9,14 @@ A collection of TypeScript packages for building generative, streaming user inte
 
 ## What's New
 
-**Current line — `mcp-ui-solid` 6.17.0** (post-`5.0.0`, audit-driven visual-renderer
-& streaming hardening; `mcp-ui-spec` 5.5.0). Highlights — see
+**6.18.0 — presentation foundations:** three opt-in composition helpers
+(comparison, geography, evidence), container-responsive read-only grids,
+native chart/data switching, and chart/table/graph catalogue parity.
+See the [integration handoff](./mcp-ui-solid/docs/briefs/VISUALIZATION-FOUNDATION-2026-09-14.md).
+This work does not add automatic MCP selection or shared host filters.
+
+**Current line — `mcp-ui-solid` 6.18.0** (post-`5.0.0`, audit-driven visual-renderer
+& streaming hardening; `mcp-ui-spec` 5.6.0). Highlights — see
 [`mcp-ui-solid/CHANGELOG.md`](./mcp-ui-solid/CHANGELOG.md) for the full list:
 
 - **`graph` primitive** — node-link visualization powered by `@antv/g6` (peer-optional), first-class in the `UIComponent` params union.
@@ -61,15 +67,15 @@ This monorepo contains three packages published under `@seed-ship/`:
 
 | Package | Version | Description |
 |---------|---------|-------------|
-| [`@seed-ship/mcp-ui-solid`](./mcp-ui-solid) | 6.17.0 | SolidJS components for rendering MCP-generated UI |
-| [`@seed-ship/mcp-ui-spec`](./mcp-ui-spec) | 5.5.0 | JSON schemas and Zod validators |
+| [`@seed-ship/mcp-ui-solid`](./mcp-ui-solid) | 6.18.0 | SolidJS components for rendering MCP-generated UI |
+| [`@seed-ship/mcp-ui-spec`](./mcp-ui-spec) | 5.6.0 | JSON schemas and Zod validators |
 | [`@seed-ship/mcp-ui-cli`](./mcp-ui-cli) | 5.0.0 | CLI for validation and type generation |
 
 ### @seed-ship/mcp-ui-solid
 
 **SolidJS components + chat toolkit for MCP-generated UI**
 
-- **19 component renderers** - chart, table, metric, text, code, map, form, modal, image-gallery, video, iframe, image, link, action, action-group, grid, carousel, artifact, footer
+- **20 component renderers** - chart, table, metric, text, code, map, graph, form, modal, image-gallery, video, iframe, image, link, action, action-group, grid, carousel, artifact, footer
 - **Data Verification** - `validateAgainstSource()`, `VerifiedText`, `DataPreviewSection` for anti-hallucination
 - **OpenStreetMap + GeoJSON maps** - OSM base map, choropleth, popups, multi-layer, PMTiles support
 - **Chat Bus** (`@experimental`) - Bidirectional event/command bus for agent interactions
@@ -78,7 +84,7 @@ This monorepo contains three packages published under `@seed-ship/`:
 - `ExpandableWrapper` - Fullscreen expand for tables, charts, code (DOM reparenting)
 - `ComponentToolbar` - Unified toolbar with copy, download, expand, wordwrap actions
 - **Tiered iframe sandbox** - `allow-same-origin` only for trusted domains
-- **Complete validation** - All 19 types validated, scatter/bubble/time-series chart support
+- **Complete validation** - All 20 renderer types validated, scatter/bubble/time-series chart support
 - TypeScript-first, SSR-compatible (SolidStart, Astro)
 
 ```bash

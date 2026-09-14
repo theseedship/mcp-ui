@@ -2,12 +2,36 @@ name: Publish to npm
 
 on:
   workflow_dispatch:
+    inputs:
+      check_auth_only:
+        description: 'Check npm authentication without building or publishing'
+        type: boolean
+        default: false
   push:
     tags:
       - 'v*.*.*'  # Trigger on version tags like v1.0.0
 
 jobs:
+  check-npm-auth:
+    if: github.event_name == 'workflow_dispatch' && inputs.check_auth_only
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      # No checkout or dependency installation: only authenticate to npm.
+      - name: Setup Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false
+      - name: Check npm authentication
+        run: npm whoami --registry=https://registry.npmjs.org
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
   publish:
+    if: github.event_name != 'workflow_dispatch' || !inputs.check_auth_only
     runs-on: ubuntu-latest
     permissions:
       contents: read

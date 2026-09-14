@@ -1,6 +1,6 @@
 /**
  * Component Registry Service
- * Phase 0: Static registry with Quickchart and Table definitions
+ * Phase 0: Static registry with Chart and Table definitions
  * Phase 1: Dynamic registry populated from /api/mcp/tools/list
  *
  * Provides component schemas for LLM prompt engineering
@@ -10,20 +10,23 @@ import type { ComponentRegistryEntry, ComponentType } from '../types'
 import { DEFAULT_RESOURCE_LIMITS } from './validation'
 
 /**
- * Quickchart Component Registry Entry
- * Based on Quickchart API documentation
+ * Chart Component Registry Entry
+ *
+ * The historical export name is retained for source compatibility. The
+ * renderer is local-first: Chart.js is the native implementation, while the
+ * external QuickChart fallback is a host-level opt-in.
  */
 export const QuickchartRegistry: ComponentRegistryEntry = {
   type: 'chart',
-  name: 'Quickchart',
+  name: 'Chart.js',
   description:
-    'Render charts using Quickchart.io API. Supports bar, line, pie, doughnut, radar, and scatter charts. Best for visualizing numerical data with 2-10 data series and up to 1000 data points.',
+    'Render charts locally with Chart.js. Supports bar, line, pie, doughnut, radar, scatter, bubble, and polarArea charts, including point and time-series data. An external QuickChart fallback is available only when the host explicitly opts in.',
   schema: {
     type: 'object',
     properties: {
       type: {
         type: 'string',
-        enum: ['bar', 'line', 'pie', 'doughnut', 'radar', 'scatter'],
+        enum: ['bar', 'line', 'pie', 'doughnut', 'radar', 'scatter', 'bubble', 'polarArea'],
         description: 'Chart type',
       },
       title: {
@@ -45,8 +48,22 @@ export const QuickchartRegistry: ComponentRegistryEntry = {
               properties: {
                 label: { type: 'string' },
                 data: {
-                  type: 'array',
-                  items: { type: 'number' },
+                  // Empty arrays match both branches; mirror Zod's inclusive union.
+                  anyOf: [
+                    { type: 'array', items: { type: 'number' } },
+                    {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          x: { oneOf: [{ type: 'string' }, { type: 'number' }] },
+                          y: { type: 'number' },
+                          r: { type: 'number', minimum: 0 },
+                        },
+                        required: ['x', 'y'],
+                      },
+                    },
+                  ],
                 },
                 backgroundColor: {
                   oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }],
@@ -55,6 +72,8 @@ export const QuickchartRegistry: ComponentRegistryEntry = {
                   oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }],
                 },
                 borderWidth: { type: 'number' },
+                fill: { oneOf: [{ type: 'boolean' }, { type: 'string' }] },
+                tension: { type: 'number' },
               },
               required: ['label', 'data'],
             },
@@ -64,8 +83,35 @@ export const QuickchartRegistry: ComponentRegistryEntry = {
       },
       options: {
         type: 'object',
-        description: 'Chart.js options for customization',
+        description: 'Supported Chart.js options for customization',
+        properties: {
+          responsive: { type: 'boolean' },
+          maintainAspectRatio: { type: 'boolean' },
+          tension: { type: 'number' },
+          scales: {},
+          plugins: {},
+        },
       },
+      renderer: {
+        type: 'string',
+        enum: ['native', 'iframe', 'auto'],
+        description: 'Renderer preference; external iframe use still requires host opt-in',
+      },
+      exportable: { type: 'boolean', description: 'Show the PNG export action' },
+      timeAxis: {
+        type: 'object',
+        description:
+          'Time-series x-axis configuration; the host must install and register a compatible Chart.js date adapter',
+        properties: {
+          parser: { type: 'string' },
+          unit: { type: 'string', enum: ['day', 'week', 'month', 'quarter', 'year'] },
+          tooltipFormat: { type: 'string' },
+          min: { type: 'string' },
+          max: { type: 'string' },
+        },
+      },
+      height: { type: 'string', description: 'Chart container height as a CSS value' },
+      className: { type: 'string' },
     },
     required: ['type', 'data'],
   },
@@ -128,7 +174,7 @@ export const TableRegistry: ComponentRegistryEntry = {
   type: 'table',
   name: 'DataTable',
   description:
-    'Render tabular data with sortable columns and pagination. Best for displaying structured records with up to 100 rows. Supports column width customization and cell formatting.',
+    'Render tabular data with sortable columns, client-side search, context-aware paging, virtualization, and export controls. Best for structured records with up to 100 rows per payload.',
   schema: {
     type: 'object',
     properties: {
@@ -160,11 +206,67 @@ export const TableRegistry: ComponentRegistryEntry = {
       },
       pagination: {
         type: 'object',
+        description: 'Legacy server-pagination metadata',
         properties: {
           currentPage: { type: 'number' },
           pageSize: { type: 'number' },
           totalRows: { type: 'number' },
         },
+      },
+      searchable: {
+        type: 'boolean',
+        description: 'Show the client-side search field (default: true)',
+      },
+      searchPlaceholder: { type: 'string', description: 'Search field placeholder' },
+      pageSize: {
+        type: 'integer',
+        minimum: 0,
+        description: 'Rows per page in expanded mode (default: 25; 0 disables client paging)',
+      },
+      chatPageSize: {
+        type: 'integer',
+        minimum: 0,
+        description: 'Rows per page in chat mode (default: min(10, pageSize); 0 disables client paging)',
+      },
+      initialPage: {
+        type: 'integer',
+        minimum: 0,
+        description: 'Initial zero-based client page',
+      },
+      virtualize: {
+        oneOf: [
+          { type: 'boolean' },
+          {
+            type: 'object',
+            properties: {
+              enabled: { type: 'boolean' },
+              rowHeight: { type: 'integer', minimum: 1 },
+              overscan: { type: 'integer', minimum: 0 },
+              threshold: { type: 'integer', minimum: 1 },
+            },
+          },
+        ],
+      },
+      exportable: {
+        oneOf: [
+          { type: 'boolean' },
+          {
+            type: 'object',
+            properties: {
+              formats: {
+                type: 'array',
+                items: { type: 'string', enum: ['csv', 'tsv', 'json'] },
+              },
+              filename: { type: 'string' },
+            },
+          },
+        ],
+      },
+      className: { type: 'string' },
+      citationMap: { type: 'object', description: 'Citation metadata keyed by marker id' },
+      maxHeight: {
+        oneOf: [{ type: 'string' }, { type: 'number' }],
+        description: "Inline table height cap; use 'auto' to disable it",
       },
     },
     required: ['columns', 'rows'],
@@ -868,19 +970,36 @@ export const GraphRegistry: ComponentRegistryEntry = {
   type: 'graph',
   name: 'NodeLinkGraph',
   description:
-    'Render a node-link graph (entities and their relationships) with @antv/g6. Best for provenance/source chains, dependency or process graphs, and ontology-lite entity/relation views. Degrades to an edge table when the graph engine is unavailable.',
+    'Render a node-link graph (entities and their relationships) with the optional @antv/g6 peer. Best for provenance/source chains, dependency or process graphs, and ontology-lite entity/relation views.',
   schema: {
     type: 'object',
     properties: {
+      title: { type: 'string' },
       nodes: {
         type: 'array',
         description: 'Graph nodes (at least one required)',
+        minItems: 1,
         items: {
           type: 'object',
           properties: {
-            id: { type: 'string' },
+            id: { type: 'string', minLength: 1 },
             label: { type: 'string' },
-            group: { type: 'string' },
+            type: { type: 'string' },
+            size: {
+              oneOf: [
+                { type: 'number' },
+                {
+                  type: 'array',
+                  items: [{ type: 'number' }, { type: 'number' }],
+                  additionalItems: false,
+                  minItems: 2,
+                  maxItems: 2,
+                },
+              ],
+            },
+            weight: { type: 'number' },
+            style: { type: 'object' },
+            data: { type: 'object' },
           },
           required: ['id'],
         },
@@ -891,20 +1010,46 @@ export const GraphRegistry: ComponentRegistryEntry = {
         items: {
           type: 'object',
           properties: {
-            source: { type: 'string' },
-            target: { type: 'string' },
+            source: { type: 'string', minLength: 1 },
+            target: { type: 'string', minLength: 1 },
             label: { type: 'string' },
+            type: { type: 'string' },
             weight: { type: 'number' },
+            style: { type: 'object' },
+            data: { type: 'object' },
           },
           required: ['source', 'target'],
         },
       },
       layout: {
-        type: 'string',
-        enum: ['force', 'radial', 'grid', 'dagre', 'circular'],
-        description: 'Layout algorithm (default: force)',
+        oneOf: [
+          {
+            type: 'string',
+            enum: ['force', 'dagre', 'mindmap', 'tree', 'circular', 'grid', 'concentric'],
+          },
+          {
+            type: 'object',
+            properties: {
+              type: {
+                type: 'string',
+                enum: ['force', 'dagre', 'mindmap', 'tree', 'circular', 'grid', 'concentric'],
+              },
+              options: { type: 'object' },
+            },
+            required: ['type'],
+          },
+        ],
+        description: 'Layout shorthand or layout-plus-options object',
       },
-      directed: { type: 'boolean', description: 'Render edges as directed (arrows)' },
+      height: { type: 'string' },
+      width: { type: 'string' },
+      rendererPref: { type: 'string', enum: ['canvas'] },
+      fitView: { type: 'boolean' },
+      enableZoom: { type: 'boolean' },
+      enableDrag: { type: 'boolean' },
+      enableSelect: { type: 'boolean' },
+      tooltip: { type: 'boolean' },
+      className: { type: 'string' },
     },
     required: ['nodes'],
   },
@@ -916,11 +1061,10 @@ export const GraphRegistry: ComponentRegistryEntry = {
         type: 'graph',
         position: { colStart: 1, colSpan: 12 },
         params: {
-          directed: true,
           layout: 'dagre',
           nodes: [
-            { id: 'claim', label: 'Population = 522 250', group: 'claim' },
-            { id: 'source', label: 'INSEE 2021', group: 'source' },
+            { id: 'claim', label: 'Population = 522 250', weight: 2 },
+            { id: 'source', label: 'INSEE 2021', weight: 1 },
           ],
           edges: [{ source: 'claim', target: 'source', label: 'derived from' }],
         },

@@ -23,6 +23,11 @@ import {
 } from './schemas'
 
 describe('ChartComponentParamsSchema (v5.0.1)', () => {
+  it.each([Infinity, -Infinity, NaN, -1])('rejects non-finite or negative bubble radii: %s', r => {
+    expect(ChartComponentParamsSchema.safeParse({
+      type: 'bubble', data: { datasets: [{ label: 'Bubbles', data: [{ x: 1, y: 2, r }] }] },
+    }).success).toBe(false)
+  })
   it('parses a valid bar chart', () => {
     const result = ChartComponentParamsSchema.safeParse({
       type: 'bar',
@@ -45,6 +50,32 @@ describe('ChartComponentParamsSchema (v5.0.1)', () => {
       },
     })
     expect(result.success).toBe(true)
+  })
+
+  it('preserves a non-negative bubble radius', () => {
+    const result = ChartComponentParamsSchema.safeParse({
+      type: 'bubble',
+      data: {
+        labels: [],
+        datasets: [{ label: 'bubbles', data: [{ x: 1, y: 2, r: 8 }] }],
+      },
+    })
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.data.datasets[0].data[0]).toEqual({ x: 1, y: 2, r: 8 })
+    }
+  })
+
+  it('rejects a negative bubble radius', () => {
+    const result = ChartComponentParamsSchema.safeParse({
+      type: 'bubble',
+      data: {
+        labels: [],
+        datasets: [{ label: 'bubbles', data: [{ x: 1, y: 2, r: -1 }] }],
+      },
+    })
+    expect(result.success).toBe(false)
   })
 
   it('rejects unknown chart type', () => {
@@ -94,6 +125,41 @@ describe('TableComponentParamsSchema (v5.0.1)', () => {
       }).success
     ).toBe(true)
   })
+
+  it('preserves client-side search and paging controls', () => {
+    const result = TableComponentParamsSchema.safeParse({
+      columns: [{ key: 'a', label: 'A' }],
+      rows: [{ a: 1 }],
+      searchable: false,
+      searchPlaceholder: 'Filter records',
+      pageSize: 30,
+      chatPageSize: 10,
+      initialPage: 2,
+    })
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data).toMatchObject({
+        searchable: false,
+        searchPlaceholder: 'Filter records',
+        pageSize: 30,
+        chatPageSize: 10,
+        initialPage: 2,
+      })
+    }
+  })
+
+  it.each(['pageSize', 'chatPageSize', 'initialPage'] as const)(
+    'rejects negative %s',
+    (field) => {
+      const result = TableComponentParamsSchema.safeParse({
+        columns: [{ key: 'a', label: 'A' }],
+        rows: [],
+        [field]: -1,
+      })
+      expect(result.success).toBe(false)
+    }
+  )
 
   it('rejects empty columns array', () => {
     const result = TableComponentParamsSchema.safeParse({

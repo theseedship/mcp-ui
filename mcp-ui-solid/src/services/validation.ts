@@ -417,9 +417,12 @@ export function validateChartComponent(
   }
   // Detect point-based charts (scatter/bubble) or object data (time-series line)
   const chartType = params.type || 'bar';
-  const firstDataPoint = params.data.datasets[0]?.data?.[0];
-  const hasObjectData =
-    typeof firstDataPoint === 'object' && firstDataPoint !== null && 'x' in firstDataPoint;
+  const usesPoints = (data: unknown[]) => data.some(value =>
+    typeof value === 'object' && value !== null && 'x' in value
+  );
+  const hasObjectData = params.data.datasets.some(dataset =>
+    Array.isArray(dataset.data) && usesPoints(dataset.data)
+  );
   const isPointChart = chartType === 'scatter' || chartType === 'bubble' || hasObjectData;
 
   // Labels required only for categorical charts (not scatter/bubble/time-series)
@@ -453,11 +456,12 @@ export function validateChartComponent(
   }
 
   // Length mismatch check — only for categorical charts, skip empty datasets
-  if (!isPointChart && Array.isArray(params.data.labels)) {
+  if (chartType !== 'scatter' && chartType !== 'bubble' && Array.isArray(params.data.labels)) {
     const expectedLength = params.data.labels.length;
     for (const [index, dataset] of params.data.datasets.entries()) {
       if (
         Array.isArray(dataset.data) &&
+        !usesPoints(dataset.data) &&
         dataset.data.length > 0 &&
         dataset.data.length !== expectedLength
       ) {
@@ -473,14 +477,16 @@ export function validateChartComponent(
   // Data type validation — numbers for categorical, {x,y} objects for point charts
   for (const [index, dataset] of params.data.datasets.entries()) {
     if (!Array.isArray(dataset.data)) continue;
+    const datasetIsPointChart = chartType === 'scatter' || chartType === 'bubble' || usesPoints(dataset.data);
     for (const [dataIndex, value] of dataset.data.entries()) {
-      if (isPointChart) {
+      if (datasetIsPointChart) {
         const vObj = value as any;
         if (
           typeof value !== 'object' ||
           value === null ||
           vObj.x == null ||
-          typeof vObj.y !== 'number'
+          typeof vObj.y !== 'number' ||
+          (vObj.r !== undefined && (typeof vObj.r !== 'number' || !Number.isFinite(vObj.r) || vObj.r < 0))
         ) {
           errors.push({
             path: `params.data.datasets[${index}].data[${dataIndex}]`,
@@ -514,6 +520,17 @@ export function validateTableComponent(
   limits: ResourceLimits = DEFAULT_RESOURCE_LIMITS
 ): ValidationResult {
   const errors: ValidationResult['errors'] = [];
+
+  for (const key of ['pageSize', 'chatPageSize', 'initialPage'] as const) {
+    const value = params[key];
+    if (value !== undefined && (typeof value !== 'number' || !Number.isInteger(value) || value < 0)) {
+      errors.push({
+        path: `params.${key}`,
+        message: `${key} must be a nonnegative integer`,
+        code: 'INVALID_PAGINATION',
+      });
+    }
+  }
 
   // Validate row count
   if (params.rows.length > limits.maxTableRows) {
