@@ -1,7 +1,13 @@
 # Visualisation — premier lot MCPUI
 
-Statut : implémentation locale, non publiée. Le numéro de version n'est pas
-modifié dans ce lot ; les changements sont décrits dans `Unreleased`.
+Statut : release préparée pour `mcp-ui-solid` 6.18.0 et `mcp-ui-spec` 5.6.0,
+non publiée. Solid déclare la dépendance minimale Spec `^5.6.0`.
+
+La publication existante est déclenchée par un tag `v*.*.*` ou manuellement,
+après validation et fusion. Un simple bump de version ne la déclenche pas.
+Le mode manuel `check_auth_only: true` du workflow « Publish to npm » vérifie
+uniquement `npm whoami`, sans installer le projet ni publier. Il confirme
+l'authentification du token, pas son droit d'écriture sur chaque package.
 
 ## Périmètre livré
 
@@ -54,6 +60,8 @@ n'introduit ni géocodage, ni migration du moteur cartographique.
   une mesure initiale et les événements de redimensionnement fenêtre servent
   de repli. Les coordonnées du mode drag/resize ne sont pas réécrites.
 - Traduire les nouveaux libellés via `MCPUIStringsProvider` si nécessaire.
+  Les nouvelles clés restent facultatives dans `MCPUIStrings` : les anciens
+  dictionnaires bénéficient des valeurs anglaises par défaut.
 - La bascule Data est disponible dans le renderer natif ; le chemin QuickChart
   externe conserve son comportement et son autorisation explicite existants.
 - Les axes temporels Chart.js nécessitent toujours un adaptateur de dates
@@ -76,6 +84,13 @@ Le smoke utilise un habillage CSS minimal ; il valide le fonctionnement du
 renderer, pas le thème complet ni l'intégration live de SolidStart.
 
 ## Suite, hors de ce lot
+
+La pagination serveur présente une incohérence préexistante : le schéma de
+`pagination.currentPage` exige une valeur à partir de 1, alors que le renderer
+l'interprète comme un index à partir de 0. Ce lot ne change pas cette convention
+à la volée. Les intégrations doivent tester explicitement leur pagination
+serveur ; son alignement contrat/runtime nécessite un correctif dédié. Les
+nouveaux contrôles de pagination locale ne résolvent pas cette incohérence.
 
 La sélection d'une commune ne filtre pas encore automatiquement le tableau ou
 le graphique voisin. Un prochain lot devra définir les identifiants d'entités,

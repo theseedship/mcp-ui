@@ -11,8 +11,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > **Note (2026-07-03):** after `5.2.0` this monorepo-wide log was superseded by
 > the per-package changelogs, which are the source of truth for every release
-> (current: `mcp-ui-solid` 6.17.0, `mcp-ui-spec` 5.5.0, `mcp-ui-cli` 5.0.0). New
+> (current: `mcp-ui-solid` 6.18.0, `mcp-ui-spec` 5.6.0, `mcp-ui-cli` 5.0.0). New
 > entries go there; this file is kept for historical monorepo-level context.
+
+## [6.18.0] - 2026-09-14 (`mcp-ui-solid`; `mcp-ui-spec` 5.6.0)
+
+- Three opt-in presentation recipes: comparison, geography and evidence.
+- Container-responsive grids and accessible native chart/data switching.
+- Chart/table/graph catalogue parity, table controls and bubble radius contract.
+- Solid requires Spec `^5.6.0` so consumers receive the matching schemas.
+- An auth-only publication workflow mode verifies npm credentials without publishing.
+
+See the per-package changelogs for details. No new runtime dependency or
+automatic MCP/SolidStart presentation selection is introduced.
 
 ## [6.17.0] - 2026-08-06 (`mcp-ui-solid` only)
 

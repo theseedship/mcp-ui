@@ -5,7 +5,7 @@ SolidJS components + chat toolkit for MCP-generated UI. Part of the [MCP UI ecos
 [![npm version](https://img.shields.io/npm/v/@seed-ship/mcp-ui-solid.svg)](https://www.npmjs.com/package/@seed-ship/mcp-ui-solid)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## Unreleased — presentation foundations
+## What's New in v6.18.0 — presentation foundations
 
 - **Three composition helpers** in `@seed-ship/mcp-ui-solid/adapters`:
   `createComparisonLayout`, `createGeographyLayout`, `createEvidenceLayout`.
