@@ -58,7 +58,9 @@ already public. They become installable only after approval.
   the retry will then skip it. Alternatively, explicitly reject an incorrect
   stage before retrying. The workflow deliberately fails on conflicts rather
   than silently treating an unknown upload as success or replacing it.
-- Release runs are serialized, but pending stages still require the handling
+- Release runs are serialized with `queue: max` (up to 100 pending runs;
+  additional runs are cancelled when full), so a new run does not replace an
+  earlier pending release below that limit. Pending stages still require the handling
   above. Do not repeatedly retry while an earlier upload awaits approval.
 - This workflow targets stable releases (`latest`), not prerelease channels.
 

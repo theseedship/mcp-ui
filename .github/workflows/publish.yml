@@ -11,9 +11,10 @@ on:
     tags:
       - 'v*.*.*'  # Trigger on version tags like v1.0.0
 
-# Never cancel an upload in progress.
+# Keep pending releases instead of replacing the previous pending run.
 concurrency:
   group: npm-release
+  queue: max
   cancel-in-progress: false
 
 jobs:
