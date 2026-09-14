@@ -72,6 +72,20 @@ export interface MCPUIStrings {
   // ── Generic chrome ────────────────────────────────────────
   /** Label of the streaming retry button. */
   retry: string
+
+  // ── Chart data access ─────────────────────────────────────
+  /** Label of the native chart view button. */
+  chartView: string
+  /** Label of the exact-data table view button. */
+  chartDataView: string
+  /** Accessible name of the chart/data view selector. */
+  chartViewSelector: string
+  /** Caption and accessible name for the chart's data table. */
+  chartDataTable: string
+  /** Screen-reader description associated with the chart canvas. */
+  chartDataSummary: string
+  /** Empty state shown when a chart has no data points. */
+  chartNoData: string
 }
 
 /**
@@ -88,6 +102,12 @@ export const DEFAULT_MCPUI_STRINGS: MCPUIStrings = {
   feedbackPositiveAck: 'Thanks!',
   feedbackNegativeAck: "Noted — we'll improve",
   retry: 'Retry',
+  chartView: 'Chart',
+  chartDataView: 'Data',
+  chartViewSelector: 'Chart or data view',
+  chartDataTable: 'Chart data',
+  chartDataSummary: 'Exact values are available in the data view.',
+  chartNoData: 'No chart data',
 }
 
 export const MCPUIStringsContext = createContext<MCPUIStrings>(DEFAULT_MCPUI_STRINGS)

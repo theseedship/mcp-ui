@@ -611,6 +611,8 @@ export const ChartDatasetSchema = z.object({
       z.object({
         x: z.union([z.string(), z.number()]),
         y: z.number(),
+        /** Bubble radius. Omit for scatter and time-series points. */
+        r: z.number().nonnegative().optional(),
       })
     ),
   ]),
@@ -697,6 +699,16 @@ export const TableComponentParamsSchema = z.object({
   columns: z.array(TableColumnSchema).min(1),
   rows: z.array(z.record(z.unknown())),
   pagination: TablePaginationSchema.optional(),
+  /** Show the client-side, accent-insensitive search field (default: true). */
+  searchable: z.boolean().optional(),
+  /** Placeholder used by the client-side search field. */
+  searchPlaceholder: z.string().optional(),
+  /** Expanded-view page size (default: 25). Zero disables client paging. */
+  pageSize: z.number().int().min(0).optional(),
+  /** Chat-view page size (default: min(10, pageSize)). Zero disables paging. */
+  chatPageSize: z.number().int().min(0).optional(),
+  /** Initial zero-based page for client-side paging. */
+  initialPage: z.number().int().min(0).optional(),
   virtualize: z.union([z.boolean(), TableVirtualizeOptionsSchema]).optional(),
   exportable: TableExportableSchema.optional(),
   className: z.string().optional(),

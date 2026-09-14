@@ -8,12 +8,22 @@
  * ```
  */
 
-import { Component, createEffect, onCleanup, createSignal, Show } from 'solid-js';
+import {
+  Component,
+  For,
+  createEffect,
+  createMemo,
+  createUniqueId,
+  onCleanup,
+  createSignal,
+  Show,
+} from 'solid-js';
 import type { UIComponent, ChartComponentParams } from '../types';
 import { ExpandableWrapper, useExpanded } from './ExpandableWrapper';
 import { DegradedFallback } from './DegradedFallback';
-import { chartToDegradedTable } from '../utils/degraded-projections';
+import { chartToDataTable } from './chart-data-table';
 import { useTelemetry } from '../context/MCPUITelemetryContext';
+import { useMCPUIStrings } from '../context/MCPUIStringsContext';
 
 // Lazy load Chart.js to avoid bundling if not used
 let ChartJS: any = null;
@@ -92,12 +102,18 @@ export interface ChartJSRendererProps {
 export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
   const [isLoading, setIsLoading] = createSignal(true);
   const [error, setError] = createSignal<string>();
+  const [activeView, setActiveView] = createSignal<'chart' | 'data'>('chart');
   let canvasRef: HTMLCanvasElement | undefined;
   let chartInstance: any;
+  let renderVersion = 0;
 
   const params = () => props.component.params as ChartComponentParams;
+  const tableData = createMemo(() => chartToDataTable(params()));
   const isExpanded = useExpanded();
   const telemetry = useTelemetry();
+  const strings = useMCPUIStrings();
+  const descriptionId = createUniqueId();
+  const title = () => params().title || strings.chartView;
 
   // v6.1.0 — export visibility :
   //   - undefined / true  → button shown (new default, was opt-in)
@@ -124,12 +140,16 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
 
     // Access params to track dependencies
     const chartParams = params();
+    const version = ++renderVersion;
 
     setIsLoading(true);
     setError(undefined);
 
     try {
       const Chart = await loadChartJS();
+
+      // A newer prop update or an unmount superseded this async render.
+      if (version !== renderVersion || !canvasRef) return;
 
       // Destroy previous instance
       if (chartInstance) {
@@ -180,6 +200,7 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
 
       setIsLoading(false);
     } catch (err) {
+      if (version !== renderVersion) return;
       const error = err instanceof Error ? err : new Error('Chart rendering failed');
       setError(error.message);
       setIsLoading(false);
@@ -196,8 +217,16 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
     }
   });
 
+  // Chart.js may measure a zero-sized canvas while the data view is visible.
+  // Resize once Solid has revealed it again.
+  createEffect(() => {
+    if (activeView() !== 'chart' || !chartInstance) return;
+    queueMicrotask(() => chartInstance?.resize?.());
+  });
+
   // Cleanup on unmount
   onCleanup(() => {
+    renderVersion += 1;
     if (chartInstance) {
       chartInstance.destroy();
       chartInstance = null;
@@ -206,7 +235,7 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
 
   return (
     <ExpandableWrapper
-      title={params().title || 'Chart'}
+      title={title()}
       copyData={copyDataJSON()}
       copyLabel="Copy chart data (JSON)"
       toolbarVariant={props.toolbarVariant}
@@ -216,15 +245,49 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
           isExpanded() ? 'flex-1 min-h-0 flex flex-col' : ''
         }`}
       >
-        <Show when={params().title || exportEnabled()}>
-          <div class="flex items-center justify-between mb-3 flex-shrink-0">
+        <div class="flex items-center justify-between gap-3 mb-3 flex-shrink-0">
+          <div class="min-w-0">
             <Show when={params().title}>
               <h3 class="text-sm font-semibold text-gray-900 dark:text-white">{params().title}</h3>
             </Show>
+          </div>
+          <div class="flex items-center gap-2">
+            <div
+              class="inline-flex rounded-md border border-gray-200 p-0.5 dark:border-gray-600"
+              role="group"
+              aria-label={strings.chartViewSelector}
+            >
+              <button
+                type="button"
+                aria-pressed={activeView() === 'chart'}
+                class={`rounded px-2 py-1 text-xs font-medium transition-colors ${
+                  activeView() === 'chart'
+                    ? 'bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900'
+                    : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+                }`}
+                onClick={() => setActiveView('chart')}
+              >
+                {strings.chartView}
+              </button>
+              <button
+                type="button"
+                aria-pressed={activeView() === 'data'}
+                class={`rounded px-2 py-1 text-xs font-medium transition-colors ${
+                  activeView() === 'data'
+                    ? 'bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900'
+                    : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+                }`}
+                onClick={() => setActiveView('data')}
+              >
+                {strings.chartDataView}
+              </button>
+            </div>
             <Show when={exportEnabled()}>
               <button
+                type="button"
                 onClick={handleExportPNG}
-                class="opacity-0 group-hover:opacity-60 hover:!opacity-100 px-2 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-all shadow-sm"
+                disabled={activeView() !== 'chart' || isLoading() || Boolean(error())}
+                class="opacity-0 group-hover:opacity-60 hover:!opacity-100 disabled:!opacity-30 disabled:cursor-not-allowed px-2 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-all shadow-sm"
                 title="Download PNG"
                 aria-label="Download chart as PNG"
               >
@@ -244,38 +307,93 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
               </button>
             </Show>
           </div>
-        </Show>
+        </div>
 
-        <Show when={isLoading()}>
-          <div class="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-gray-800/80">
-            <div class="flex flex-col items-center gap-2">
-              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-              <span class="text-sm text-gray-500 dark:text-gray-400">Loading chart...</span>
-            </div>
-          </div>
-        </Show>
+        <p id={descriptionId} class="sr-only">
+          {title()}. {strings.chartDataSummary}
+        </p>
 
         {/* Fallback ladder (P2.5): degrade to a series table on render error
             instead of a bare "Chart Error" message. */}
-        <Show when={error()}>
+        <Show when={error() && activeView() === 'chart'}>
           <DegradedFallback
             message={`Chart rendering failed: ${error()}`}
             caption="Showing the chart data as a table — the interactive chart is unavailable."
-            {...chartToDegradedTable(params() ?? {})}
+            {...tableData()}
           />
         </Show>
 
+        <Show when={activeView() === 'data'}>
+          <div class="w-full overflow-auto rounded border border-gray-200 dark:border-gray-700">
+            <table class="w-full border-collapse text-left text-sm">
+              <caption class="sr-only">
+                {title()} — {strings.chartDataTable}
+              </caption>
+              <thead class="bg-gray-50 dark:bg-gray-900/40">
+                <tr>
+                  <For each={tableData().columns}>
+                    {(column) => (
+                      <th scope="col" class="px-3 py-2 font-medium text-gray-900 dark:text-gray-100">
+                        {column}
+                      </th>
+                    )}
+                  </For>
+                </tr>
+              </thead>
+              <tbody>
+                <For each={tableData().rows}>
+                  {(row) => (
+                    <tr class="border-t border-gray-100 dark:border-gray-700">
+                      <For each={tableData().columns}>
+                        {(_column, index) => (
+                          <td class="px-3 py-2 text-gray-700 dark:text-gray-300">
+                            {String(row[index()] ?? '')}
+                          </td>
+                        )}
+                      </For>
+                    </tr>
+                  )}
+                </For>
+                <Show when={tableData().rows.length === 0}>
+                  <tr>
+                    <td
+                      colSpan={Math.max(1, tableData().columns.length)}
+                      class="px-3 py-6 text-center text-gray-500 dark:text-gray-400"
+                    >
+                      {strings.chartNoData}
+                    </td>
+                  </tr>
+                </Show>
+              </tbody>
+            </table>
+          </div>
+        </Show>
+
         <div
-          class={`w-full ${isExpanded() ? 'flex-1 min-h-0' : ''}`}
+          class={`relative w-full ${isExpanded() ? 'flex-1 min-h-0' : ''}`}
           style={
-            error()
+            error() || activeView() === 'data'
               ? { display: 'none' }
               : isExpanded()
                 ? { height: '100%', display: 'block' }
                 : { height: params().height || '250px', display: 'block' }
           }
         >
-          <canvas ref={canvasRef} />
+          <canvas
+            ref={canvasRef}
+            role="img"
+            aria-label={title()}
+            aria-describedby={descriptionId}
+            aria-hidden={activeView() !== 'chart' || Boolean(error())}
+          />
+          <Show when={isLoading() && activeView() === 'chart'}>
+            <div class="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-gray-800/80">
+              <div class="flex flex-col items-center gap-2">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+                <span class="text-sm text-gray-500 dark:text-gray-400">Loading chart...</span>
+              </div>
+            </div>
+          </Show>
         </div>
       </div>
     </ExpandableWrapper>

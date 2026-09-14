@@ -5,6 +5,52 @@ SolidJS components + chat toolkit for MCP-generated UI. Part of the [MCP UI ecos
 [![npm version](https://img.shields.io/npm/v/@seed-ship/mcp-ui-solid.svg)](https://www.npmjs.com/package/@seed-ship/mcp-ui-solid)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+## Unreleased — presentation foundations
+
+- **Three composition helpers** in `@seed-ship/mcp-ui-solid/adapters`:
+  `createComparisonLayout`, `createGeographyLayout`, `createEvidenceLayout`.
+  They arrange supplied components without fetching, aggregating or inventing
+  data. Component IDs, source links and citation maps are preserved.
+- **Container-responsive grids**: read-only layouts and nested grids stack in
+  source order below 640px of container width, including narrow desktop chat
+  panels. Desktop positions return when space is available. Editable drag/resize
+  mode keeps its explicit grid coordinates.
+- **Native chart/data switch**: Chart.js charts expose an accessible Data view,
+  even when rendering succeeds, including point coordinates and bubble radii.
+  New chrome strings can be overridden with `MCPUIStringsProvider`.
+- **Catalogue parity**: eight chart kinds, table search/paging controls, and
+  schema-supported graph layouts. QuickChart remains a host-only opt-in;
+  time axes require a compatible date adapter registered by the host.
+
+```tsx
+import { UIResourceRenderer } from '@seed-ship/mcp-ui-solid'
+import { createComparisonLayout } from '@seed-ship/mcp-ui-solid/adapters'
+
+const layout = createComparisonLayout({
+  id: 'sales-comparison',
+  chart: {
+    id: 'sales-chart', type: 'chart',
+    params: {
+      type: 'bar', title: 'Sales (EUR)',
+      data: { labels: ['Lyon', 'Nantes'], datasets: [{ label: 'Sales (EUR)', data: [120, 80] }] },
+    },
+  },
+  table: {
+    id: 'sales-table', type: 'table',
+    params: {
+      columns: [{ key: 'city', label: 'Territory' }, { key: 'sales', label: 'Sales (EUR)' }],
+      rows: [{ city: 'Lyon', sales: 120 }, { city: 'Nantes', sales: 80 }],
+    },
+  },
+})
+
+const Comparison = () => <UIResourceRenderer content={layout} />
+```
+
+These helpers are explicitly selected by the caller. They do not consume
+`renderHints` automatically, link selections between views, persist preferences,
+or verify factual claims. See the [MCPs / SolidStart handoff](./docs/briefs/VISUALIZATION-FOUNDATION-2026-09-14.md).
+
 ## What's New in v6.17.0
 
 - **Map type parity** — `center` and marker `position` now use the spec's
@@ -666,16 +712,17 @@ onScratchpad: (data) => dispatchScratchpad(data as ScratchpadEvent)
 const { state, pinned, close } = useScratchpadState()
 ```
 
-## Component Renderers (19 types)
+## Component Renderers (20 types)
 
 | Type | Features |
 |------|----------|
-| `chart` | Bar, line, pie, scatter, bubble, polarArea, time-series. Native Chart.js or Quickchart fallback. PNG export. |
+| `chart` | Bar, line, pie, doughnut, radar, scatter, bubble, polarArea. Native Chart.js with Chart/Data switch and PNG export; external QuickChart only on host opt-in. Time axes require a date adapter. |
 | `table` | Sortable, pagination, virtualization (10K+), CSV/TSV/JSON export |
 | `metric` | KPI cards with trends and sparklines |
 | `text` | Markdown via marked.js |
 | `code` | Syntax highlighting (highlight.js), line numbers, word wrap |
 | `map` | OpenStreetMap base tiles via Leaflet: markers, clustering, GeoJSON, choropleth, popups, multi-layer, PMTiles |
+| `graph` | Node-link relationships with optional G6; seven schema-supported layouts and layout options |
 | `form` | 18 field types, conditional fields, persistence, tool call submit |
 | `modal` | Portal overlay, sizes sm-full, Escape/backdrop close |
 | `image-gallery` | Grid layout, lightbox, keyboard nav |
@@ -685,7 +732,7 @@ const { state, pinned, close } = useScratchpadState()
 | `link` | Styled link cards |
 | `action` | Tool call buttons |
 | `action-group` | Grouped actions with layout options |
-| `grid` | Nested 12-column CSS Grid |
+| `grid` | Nested CSS Grid; read-only layouts stack in narrow containers |
 | `carousel` | Content carousel |
 | `artifact` | File download/preview |
 | `footer` | Metadata display |

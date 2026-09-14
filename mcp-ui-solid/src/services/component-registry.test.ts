@@ -1,5 +1,5 @@
 /**
- * Tests for ComponentRegistry — all 19 component types registered
+ * Tests for ComponentRegistry — all 20 component types registered
  */
 
 import { describe, it, expect } from 'vitest'
@@ -7,13 +7,28 @@ import {
   validateAgainstRegistry,
   getComponentEntry,
   ComponentRegistry,
+  QuickchartRegistry,
+  TableRegistry,
   MapRegistry,
+  GraphRegistry,
 } from './component-registry'
 import type { ComponentType } from '../types'
-import { ComponentTypeSchema, MapComponentParamsSchema } from '@seed-ship/mcp-ui-spec'
+import {
+  ChartComponentParamsSchema,
+  ChartTimeAxisSchema,
+  ChartTypeSchema,
+  ComponentTypeSchema,
+  GraphComponentParamsSchema,
+  GraphEdgeSchema,
+  GraphLayoutNameSchema,
+  GraphNodeSchema,
+  MapComponentParamsSchema,
+  TableComponentParamsSchema,
+} from '@seed-ship/mcp-ui-spec'
 
 interface RegistrySchemaNode {
   type?: string
+  description?: string
   enum?: string[]
   oneOf?: RegistrySchemaNode[]
   anyOf?: RegistrySchemaNode[]
@@ -24,6 +39,7 @@ interface RegistrySchemaNode {
   minItems?: number
   maxItems?: number
   minLength?: number
+  minimum?: number
 }
 
 /** All 20 component types in the registry */
@@ -140,6 +156,69 @@ describe('MapRegistry ↔ map spec parity (UI-MAP-0a)', () => {
     ],
   ])('keeps runtime rejection coverage for %s', (_label, params) => {
     expect(MapComponentParamsSchema.safeParse(params).success).toBe(false)
+  })
+})
+
+describe('visualization registry ↔ runtime spec parity', () => {
+  it('keeps the historical QuickchartRegistry export but describes the native renderer', () => {
+    expect(QuickchartRegistry.name).toBe('Chart.js')
+    expect(QuickchartRegistry.description).toContain('locally with Chart.js')
+    expect(QuickchartRegistry.description).toContain('host explicitly opts in')
+  })
+
+  it('advertises the complete chart params surface and all supported chart types', () => {
+    const properties = QuickchartRegistry.schema.properties as Record<string, RegistrySchemaNode>
+    expect(Object.keys(properties).sort()).toEqual(Object.keys(ChartComponentParamsSchema.shape).sort())
+    expect(properties.type.enum).toEqual(ChartTypeSchema.options)
+
+    const dataProperties = properties.data.properties!
+    const dataset = dataProperties.datasets.items as RegistrySchemaNode
+    const datasetProperties = dataset.properties!
+    expect(datasetProperties.data).not.toHaveProperty('oneOf')
+    expect(datasetProperties.data.anyOf).toHaveLength(2)
+    expect(ChartComponentParamsSchema.safeParse({
+      type: 'bar', data: { labels: [], datasets: [{ label: 'Empty series', data: [] }] },
+    }).success).toBe(true)
+    const pointBranch = datasetProperties.data.anyOf?.[1].items as RegistrySchemaNode
+    expect(pointBranch.required).toEqual(['x', 'y'])
+    expect(Object.keys(pointBranch.properties!).sort()).toEqual(['r', 'x', 'y'])
+    expect(pointBranch.properties?.r.minimum).toBe(0)
+
+    expect(Object.keys(properties.timeAxis.properties!).sort()).toEqual(
+      Object.keys(ChartTimeAxisSchema.shape).sort()
+    )
+    expect(properties.timeAxis.properties?.unit.enum).toEqual([
+      'day', 'week', 'month', 'quarter', 'year',
+    ])
+    expect(properties.timeAxis.description).toContain('date adapter')
+  })
+
+  it('advertises the complete table surface including search and client paging controls', () => {
+    const properties = TableRegistry.schema.properties as Record<string, RegistrySchemaNode>
+    expect(Object.keys(properties).sort()).toEqual(Object.keys(TableComponentParamsSchema.shape).sort())
+    expect(properties.searchable.type).toBe('boolean')
+    expect(properties.searchPlaceholder.type).toBe('string')
+    expect(properties.pageSize).toMatchObject({ type: 'integer', minimum: 0 })
+    expect(properties.chatPageSize).toMatchObject({ type: 'integer', minimum: 0 })
+    expect(properties.initialPage).toMatchObject({ type: 'integer', minimum: 0 })
+  })
+
+  it('advertises only the seven canonical graph layouts, including object options', () => {
+    const properties = GraphRegistry.schema.properties as Record<string, RegistrySchemaNode>
+    expect(Object.keys(properties).sort()).toEqual(Object.keys(GraphComponentParamsSchema.shape).sort())
+    expect(properties).not.toHaveProperty('directed')
+
+    const [shorthand, objectForm] = properties.layout.oneOf!
+    expect(shorthand.enum).toEqual(GraphLayoutNameSchema.options)
+    expect(objectForm.properties?.type.enum).toEqual(GraphLayoutNameSchema.options)
+    expect(objectForm.properties).toHaveProperty('options')
+
+    const node = properties.nodes.items as RegistrySchemaNode
+    const edge = properties.edges.items as RegistrySchemaNode
+    expect(Object.keys(node.properties!).sort()).toEqual(Object.keys(GraphNodeSchema.shape).sort())
+    expect(Object.keys(edge.properties!).sort()).toEqual(Object.keys(GraphEdgeSchema.shape).sort())
+    expect(GraphRegistry.description).not.toContain('Degrades to an edge table')
+    expect(GraphRegistry.examples[0].component.params).not.toHaveProperty('directed')
   })
 })
 

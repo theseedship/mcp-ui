@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Table `searchable`, `searchPlaceholder`, `pageSize`, `chatPageSize` and
+  `initialPage` fields, matching existing client renderer controls.
+- Optional nonnegative `r` for chart point data, preserving bubble radii
+  through Zod parsing. Existing numeric and x/y series remain accepted.
+
 ## [5.5.0] - 2026-05-31
 
 Fix the legacy `ComponentType` drift (P1.4 of

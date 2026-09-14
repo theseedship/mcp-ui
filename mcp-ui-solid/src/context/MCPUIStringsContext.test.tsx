@@ -27,6 +27,8 @@ describe('MCPUIStringsContext (v6.6.0)', () => {
     expect(DEFAULT_MCPUI_STRINGS.feedbackUseful).toBe('Useful')
     expect(DEFAULT_MCPUI_STRINGS.feedbackPositiveAck).toBe('Thanks!')
     expect(DEFAULT_MCPUI_STRINGS.retry).toBe('Retry')
+    expect(DEFAULT_MCPUI_STRINGS.chartView).toBe('Chart')
+    expect(DEFAULT_MCPUI_STRINGS.chartDataView).toBe('Data')
   })
 
   it('useMCPUIStrings returns the EN defaults with no provider mounted', () => {
