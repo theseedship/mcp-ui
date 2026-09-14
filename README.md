@@ -63,6 +63,11 @@ See [CHANGELOG.md](./CHANGELOG.md) for the full history including every 4.x rele
 
 ## Packages
 
+Maintainers: GitHub Actions **stages** new npm versions; a successful workflow
+does not make them public. Approve them in npmjs.com **Staged Packages** with
+2FA, Spec before Solid. See [npm release instructions](./.github/NPM_SETUP.md)
+for token setup, tags, and recovery of an interrupted release.
+
 This monorepo contains three packages published under `@seed-ship/`:
 
 | Package | Version | Description |
