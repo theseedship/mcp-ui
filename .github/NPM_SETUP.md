@@ -64,6 +64,10 @@ already public. They become installable only after approval.
   above. Do not repeatedly retry while an earlier upload awaits approval.
 - This workflow targets stable releases (`latest`), not prerelease channels.
 
+The `queue` option is documented in GitHub's
+[concurrency reference](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency#example-queueing-multiple-pending-runs).
+`queue: max` is compatible with `cancel-in-progress: false`, not `true`.
+
 ## Packages
 
 - [@seed-ship/mcp-ui-spec](https://www.npmjs.com/package/@seed-ship/mcp-ui-spec)

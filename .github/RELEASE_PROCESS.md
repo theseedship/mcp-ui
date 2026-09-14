@@ -2,6 +2,10 @@
 
 This document outlines the complete release process for MCP UI packages.
 
+For the current npm token, staging, approval, and retry procedure, follow
+[NPM_SETUP.md](./NPM_SETUP.md). Its instructions supersede the historical
+version/scope examples below. GitHub upload success is not public publication.
+
 ## Release Types
 
 ### Patch Release (1.0.0 → 1.0.1)
@@ -119,10 +123,14 @@ Go to: https://github.com/theseedship/mcp-ui/actions
 
 Watch for:
 1. **CI Workflow** - Builds and tests
-2. **Publish Workflow** - Publishes to npm
+2. **Stage npm release** - Uploads to npm staging; requires maintainer approval
 3. **Release Workflow** - Creates GitHub release
 
 ### 6. Verify Publication
+
+First review and approve the uploaded versions in npmjs.com **Staged Packages**
+with 2FA, Spec before Solid/CLI. Only then verify public availability using the
+actual `@seed-ship/mcp-ui-*` package names and released versions.
 
 Check npm packages:
 - https://www.npmjs.com/package/@mcp-ui/solid/v/1.0.1
