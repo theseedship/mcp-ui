@@ -712,11 +712,11 @@ function TableRenderer(props: {
   const hasServerPagination = () => !!tableParams.pagination
   const needsClientPagination = () =>
     !hasServerPagination() && !showAll() && clientPageSize() > 0 && filteredRows().length > clientPageSize()
-  const [clientPage, setClientPage] = createSignal(tableParams.initialPage ?? 0)
+  const [requestedClientPage, setClientPage] = createSignal(tableParams.initialPage ?? 0)
   const clientTotalPages = () => needsClientPagination() ? Math.ceil(filteredRows().length / clientPageSize()) : 1
+  const clientPage = createMemo(() => Math.max(0, Math.min(requestedClientPage(), clientTotalPages() - 1)))
   createEffect(() => {
-    const maxPage = Math.max(0, clientTotalPages() - 1)
-    if (clientPage() > maxPage) setClientPage(maxPage)
+    if (requestedClientPage() !== clientPage()) setClientPage(clientPage())
   })
   const clientVisibleRows = createMemo(() => {
     if (showAll() || !needsClientPagination()) return filteredRows()
@@ -944,7 +944,7 @@ function TableRenderer(props: {
     <ExpandableWrapper title={tableParams.title || 'Table'} copyData={getTableCSV()} copyLabel="Copy table (CSV)" toolbarVariant={props.toolbarVariant}>
       <div class={`relative w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden group ${
         isExpanded() ? 'flex-1 min-h-0 flex flex-col' : 'h-full'
-      }`}>
+      } ${tableParams.className || ''}`}>
         <Show when={exportable} fallback={<CopyButton getText={getTableCSV} title="Copy table (CSV)" position="top-right" />}>
           <div class="absolute right-10 top-2 z-10">
             <button

@@ -64,6 +64,12 @@ n'introduit ni géocodage, ni migration du moteur cartographique.
   dictionnaires bénéficient des valeurs anglaises par défaut.
 - La bascule Data est disponible dans le renderer natif ; le chemin QuickChart
   externe conserve son comportement et son autorisation explicite existants.
+- La vue Data conserve toutes les valeurs dans une zone défilante bornée.
+  Les classes personnalisées des graphiques et tableaux sont appliquées.
+- La validation du renderer rejette les rayons de bulles invalides et les
+  paramètres de pagination négatifs ou non entiers. Une page initiale trop
+  élevée est ramenée à la dernière page disponible, y compris après réduction
+  du nombre de lignes.
 - Les axes temporels Chart.js nécessitent toujours un adaptateur de dates
   compatible installé et enregistré par l'hôte.
 - Tester les trois compositions avec le thème, la largeur de chat, les sources

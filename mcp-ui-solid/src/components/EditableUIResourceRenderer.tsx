@@ -26,6 +26,7 @@ import { useDragDrop } from '../hooks/useDragDrop'
 import { useResize, ResizeEdge } from '../hooks/useResize'
 import { DraggableGridItem } from './DraggableGridItem'
 import { UIResourceRenderer } from './UIResourceRenderer'
+import { EditableLayoutProvider } from './EditableLayoutContext'
 
 /**
  * Props for EditableUIResourceRenderer
@@ -204,13 +205,14 @@ export const EditableUIResourceRenderer: Component<EditableUIResourceRendererPro
   }
 
   return (
-    <div class={`w-full editable-ui-renderer ${props.class || ''}`}>
-      <div
-        ref={setGridContainerRef}
-        class="grid relative"
-        style={gridContainerStyle()}
-        data-grid-container
-      >
+    <EditableLayoutProvider>
+      <div class={`w-full editable-ui-renderer ${props.class || ''}`}>
+        <div
+          ref={setGridContainerRef}
+          class="grid relative"
+          style={gridContainerStyle()}
+          data-grid-container
+        >
         {/* Grid overlay */}
         <GridOverlay
           columns={props.layout.grid.columns}
@@ -260,8 +262,9 @@ export const EditableUIResourceRenderer: Component<EditableUIResourceRendererPro
             )
           }}
         </For>
+        </div>
       </div>
-    </div>
+    </EditableLayoutProvider>
   )
 }
 

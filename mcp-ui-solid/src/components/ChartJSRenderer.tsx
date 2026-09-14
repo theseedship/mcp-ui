@@ -18,6 +18,7 @@ import {
   createSignal,
   Show,
 } from 'solid-js';
+import type { Accessor, JSX } from 'solid-js';
 import type { UIComponent, ChartComponentParams } from '../types';
 import { ExpandableWrapper, useExpanded } from './ExpandableWrapper';
 import { DegradedFallback } from './DegradedFallback';
@@ -77,6 +78,10 @@ export interface ChartJSRendererProps {
   toolbarVariant?: 'hover' | 'always-visible';
 }
 
+const ContextAwareChartLayout: Component<{
+  render: (isExpanded: Accessor<boolean>) => JSX.Element;
+}> = (props) => props.render(useExpanded());
+
 /**
  * Native Chart.js renderer component
  *
@@ -109,7 +114,6 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
 
   const params = () => props.component.params as ChartComponentParams;
   const tableData = createMemo(() => chartToDataTable(params()));
-  const isExpanded = useExpanded();
   const telemetry = useTelemetry();
   const strings = useMCPUIStrings();
   const descriptionId = createUniqueId();
@@ -240,11 +244,13 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
       copyLabel="Copy chart data (JSON)"
       toolbarVariant={props.toolbarVariant}
     >
-      <div
-        class={`relative w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden p-4 group ${
-          isExpanded() ? 'flex-1 min-h-0 flex flex-col' : ''
-        }`}
-      >
+      <ContextAwareChartLayout
+        render={(isExpanded) => (
+          <div
+            class={`relative w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden p-4 group ${
+              isExpanded() ? 'flex-1 min-h-0 flex flex-col' : ''
+            } ${params().className || ''}`}
+          >
         <div class="flex items-center justify-between gap-3 mb-3 flex-shrink-0">
           <div class="min-w-0">
             <Show when={params().title}>
@@ -324,7 +330,16 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
         </Show>
 
         <Show when={activeView() === 'data'}>
-          <div class="w-full overflow-auto rounded border border-gray-200 dark:border-gray-700">
+          <div
+            class={`w-full overflow-auto rounded border border-gray-200 dark:border-gray-700 ${
+              isExpanded() ? 'flex-1 min-h-0' : ''
+            }`}
+            style={
+              isExpanded()
+                ? undefined
+                : { height: params().height || '250px', 'max-height': '70vh' }
+            }
+          >
             <table class="w-full border-collapse text-left text-sm">
               <caption class="sr-only">
                 {title()} — {strings.chartDataTable}
@@ -395,7 +410,9 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
             </div>
           </Show>
         </div>
-      </div>
+          </div>
+        )}
+      />
     </ExpandableWrapper>
   );
 };

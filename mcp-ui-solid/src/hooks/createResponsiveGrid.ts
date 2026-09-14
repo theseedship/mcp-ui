@@ -1,9 +1,17 @@
 import { createSignal, onCleanup, onMount } from 'solid-js'
+import { useEditableLayoutPositions } from '../components/EditableLayoutContext'
 
 /** Stack read-only layouts in narrow containers, including desktop chat panels. */
 export function createResponsiveGrid(breakpoint = 640) {
   const [stacked, setStacked] = createSignal(false)
+  const preserveEditablePositions = useEditableLayoutPositions()
   let container: HTMLElement | undefined
+
+  const ref = (element: HTMLElement) => { container = element }
+
+  // Editor canvases preserve authored coordinates at every width. This is a
+  // context-only opt-out, so ordinary/read-only renderers retain responsiveness.
+  if (preserveEditablePositions) return { stacked: () => false, ref }
 
   onMount(() => {
     if (!container) return
@@ -29,5 +37,5 @@ export function createResponsiveGrid(breakpoint = 640) {
     }
   })
 
-  return { stacked, ref: (element: HTMLElement) => { container = element } }
+  return { stacked, ref }
 }

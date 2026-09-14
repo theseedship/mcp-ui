@@ -142,6 +142,56 @@ describe('<ChartJSRenderer>', () => {
     await waitFor(() => expect(chartHarness.instances[0].resize).toHaveBeenCalled());
   });
 
+  it('bounds every inline data row to the configured height and fills the expanded viewport', async () => {
+    const labels = Array.from({ length: 40 }, (_, index) => `Row ${index + 1}`);
+    const values = labels.map((_, index) => index + 1);
+    const { getByRole, getByLabelText } = render(() => (
+      <ChartJSRenderer
+        component={chartComponent({
+          height: '18rem',
+          data: { labels, datasets: [{ label: 'Revenue', data: values }] },
+        })}
+      />
+    ));
+
+    await waitFor(() => expect(chartHarness.instances).toHaveLength(1));
+    fireEvent.click(getByRole('button', { name: 'Data' }));
+    const table = getByRole('table', { name: 'Quarterly sales — Chart data' });
+    const viewport = table.parentElement!;
+
+    expect(viewport.style.height).toBe('18rem');
+    expect(viewport.style.maxHeight).toBe('70vh');
+    expect(viewport.classList.contains('overflow-auto')).toBe(true);
+    expect(table.textContent).toContain('Row 40');
+    expect(table.textContent).toContain('40');
+
+    fireEvent.click(getByLabelText('Expand to fullscreen'));
+    await waitFor(() =>
+      expect(document.querySelector('[role="dialog"][aria-label="Quarterly sales"]')).toBeTruthy(),
+    );
+    expect(viewport.style.height).toBe('');
+    expect(viewport.style.maxHeight).toBe('');
+    expect(viewport.classList.contains('flex-1')).toBe(true);
+    expect(viewport.classList.contains('min-h-0')).toBe(true);
+    expect(table.textContent).toContain('Row 40');
+    expect(chartHarness.instances).toHaveLength(1);
+  });
+
+  it('uses the default data height and applies a custom class to the chart wrapper', () => {
+    const { container, getByRole } = render(() => (
+      <ChartJSRenderer component={chartComponent({ className: 'consumer-chart-shell' })} />
+    ));
+
+    fireEvent.click(getByRole('button', { name: 'Data' }));
+    const table = getByRole('table', { name: 'Quarterly sales — Chart data' });
+    const wrapper = container.querySelector('.consumer-chart-shell');
+
+    expect(table.parentElement?.style.height).toBe('250px');
+    expect(wrapper).toBeTruthy();
+    expect(wrapper?.contains(table)).toBe(true);
+    expect(wrapper?.classList.contains('rounded-lg')).toBe(true);
+  });
+
   it('makes the data view available while the native chart is still loading', () => {
     const { getByRole, queryByText } = render(() => (
       <ChartJSRenderer component={chartComponent()} />

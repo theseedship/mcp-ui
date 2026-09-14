@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render } from '@solidjs/testing-library'
 import { createSignal } from 'solid-js'
 import { UIResourceRenderer } from './UIResourceRenderer'
+import { EditableUIResourceRenderer } from './EditableUIResourceRenderer'
 import { GridRenderer } from './GridRenderer'
 import { RenderProvider } from './RenderContext'
 import type { UIComponent, UILayout } from '../types'
@@ -137,5 +138,29 @@ describe('responsive read-only grids', () => {
     expect(grid.dataset.mcpUiStacked).toBe('true')
     unmount()
     expect(removeListener).toHaveBeenCalledWith('resize', expect.any(Function))
+  })
+
+  it('keeps nested editor-grid coordinates below 640px while editing', () => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 420 } as DOMRect)
+    const nested: UIComponent = {
+      id: 'editor-nested', type: 'grid', position: { colStart: 1, colSpan: 12 },
+      params: { columns: 2, children: [textComponent('editor-left', 1, 1), textComponent('editor-right', 2, 1)] },
+    }
+    const editableLayout: UILayout = {
+      id: 'editor-layout', grid: { columns: 12, gap: '1rem' }, components: [nested],
+    }
+    const { container } = render(() => <EditableUIResourceRenderer layout={editableLayout} dragDrop={{ enabled: true }} />)
+    const nestedGrid = container.querySelector<HTMLElement>(
+      '[data-component-type="grid"][data-component-id="editor-nested"] > [data-mcp-ui-grid]'
+    )!
+    expect(nestedGrid.dataset.mcpUiStacked).toBe('false')
+    expect(nestedGrid.style.gridTemplateColumns).toBe('repeat(2, minmax(0, 1fr))')
+    expect((nestedGrid.children[1] as HTMLElement).style.gridColumn).toBe('2 / span 1')
+  })
+
+  it('keeps the disabled editor fallback responsive', () => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 420 } as DOMRect)
+    const { container } = render(() => <EditableUIResourceRenderer layout={layout()} />)
+    expect(container.querySelector<HTMLElement>('[data-mcp-ui-grid]')?.dataset.mcpUiStacked).toBe('true')
   })
 })

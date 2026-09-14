@@ -25,6 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   carry bubble radii through the chart contract.
 - Prevent unpositioned layout children from creating implicit extra columns.
 - Guard asynchronous chart creation against superseded props and unmounts.
+- Bound chart data scrolling and apply chart/table custom classes.
+- Validate pagination controls and bubble radii at the renderer boundary;
+  clamp client pages when data shrinks or an initial page exceeds the row count.
+- Preserve nested grid coordinates throughout editable layouts on small screens.
 
 No new runtime dependency, cross-view filtering, host persistence or backend
 wiring. Existing external-renderer trust settings remain unchanged.

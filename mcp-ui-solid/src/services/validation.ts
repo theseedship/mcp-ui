@@ -516,6 +516,17 @@ export function validateTableComponent(
 ): ValidationResult {
   const errors: ValidationResult['errors'] = [];
 
+  for (const key of ['pageSize', 'chatPageSize', 'initialPage'] as const) {
+    const value = params[key];
+    if (value !== undefined && (typeof value !== 'number' || !Number.isInteger(value) || value < 0)) {
+      errors.push({
+        path: `params.${key}`,
+        message: `${key} must be a nonnegative integer`,
+        code: 'INVALID_PAGINATION',
+      });
+    }
+  }
+
   // Validate row count
   if (params.rows.length > limits.maxTableRows) {
     errors.push({
