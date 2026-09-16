@@ -186,6 +186,9 @@ describe('MCPUIStringsContext (v6.6.0)', () => {
     ))
     const expandBtn = container.querySelector('button[data-mcp-ui-action="expand"]')
     expect(expandBtn?.getAttribute('title')).toBe('Plein écran')
+    // The ACCESSIBLE NAME must be translated too — `title` alone leaves screen
+    // readers on the English default.
+    expect(expandBtn?.getAttribute('aria-label')).toBe('Plein écran')
   })
 
   it('ExpandableWrapper falls back to EN with no provider', () => {
@@ -196,5 +199,6 @@ describe('MCPUIStringsContext (v6.6.0)', () => {
     ))
     const expandBtn = container.querySelector('button[data-mcp-ui-action="expand"]')
     expect(expandBtn?.getAttribute('title')).toBe('Expand')
+    expect(expandBtn?.getAttribute('aria-label')).toBe('Expand')
   })
 })

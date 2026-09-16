@@ -6,6 +6,7 @@
 import { Component, Show, createEffect, onCleanup } from 'solid-js'
 import { Portal } from 'solid-js/web'
 import type { GalleryImage } from '../types'
+import { safeUrl } from '../utils/safe-url'
 
 export interface LightboxOverlayProps {
   /**
@@ -146,7 +147,7 @@ export const LightboxOverlay: Component<LightboxOverlayProps> = (props) => {
 
           {/* Image */}
           <img
-            src={currentImage()?.url}
+            src={safeUrl(currentImage()?.url ?? '', { allowDataImage: true })}
             alt={currentImage()?.alt || ''}
             srcset={currentImage()?.srcset}
             sizes={currentImage()?.sizes}

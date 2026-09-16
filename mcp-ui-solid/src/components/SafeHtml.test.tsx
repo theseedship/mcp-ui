@@ -78,4 +78,38 @@ describe('<SafeHtml>', () => {
     const { container } = render(() => <SafeHtml html={() => ''} />)
     expect(container.firstElementChild?.innerHTML).toBe('')
   })
+
+  it('writes innerHTML a SECOND time from onMount (the hydration fix-up)', () => {
+    // The whole point of the `onMount` call is a write that the `innerHTML`
+    // prop did not perform (Solid's `setProperty` bails out while hydrating).
+    // jsdom cannot reproduce hydration, so this instruments the sink instead:
+    // count every `innerHTML` write of this exact value. The prop render
+    // produces one; `onMount` produces the second.
+    //
+    // The value is chosen so the DOM round-trip does NOT reproduce it
+    // (`<p>a<p>b` re-serializes as `<p>a</p><p>b</p>`), which is what makes
+    // `_applySafeHtml`'s "already matches" early return stay out of the way.
+    // Delete the `onMount(...)` call in SafeHtml.tsx and this test fails with
+    // 1 write instead of 2 — verified locally.
+    const HTML = '<p>a<p>b'
+    const descriptor = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML')!
+    const writes: string[] = []
+
+    Object.defineProperty(Element.prototype, 'innerHTML', {
+      ...descriptor,
+      set(this: Element, value: string) {
+        writes.push(value)
+        descriptor.set!.call(this, value)
+      },
+    })
+
+    try {
+      const { container } = render(() => <SafeHtml html={() => HTML} />)
+      expect(container.querySelectorAll('p').length).toBe(2)
+    } finally {
+      Object.defineProperty(Element.prototype, 'innerHTML', descriptor)
+    }
+
+    expect(writes.filter((w) => w === HTML)).toHaveLength(2)
+  })
 })

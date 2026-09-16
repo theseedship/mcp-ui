@@ -39,8 +39,17 @@ describe('sanitizeHtml — server / no-DOM environment', () => {
   it('emits no markup at all — escaped text only', () => {
     const out = sanitizeHtml(HOSTILE)
     expect(out).not.toContain('<')
-    expect(out).not.toContain('onerror')
+    expect(out).not.toContain('>')
+    // v6.19.0: nothing is stripped any more, so the tag survives as inert,
+    // escaped text. `onerror` appearing as literal characters is expected —
+    // it can never be parsed as an attribute.
+    expect(out).toContain('&lt;img src=x onerror=alert(1)&gt;')
     expect(out).toContain('hello')
+  })
+
+  it('does not delete text that merely looks like a tag (stripTags regression)', () => {
+    // The removed `stripTags()` pre-pass turned this into `values 5`.
+    expect(sanitizeHtml('values < 10 and > 5')).toBe('values &lt; 10 and &gt; 5')
   })
 
   it('escapes the five significant characters instead of dropping them', () => {

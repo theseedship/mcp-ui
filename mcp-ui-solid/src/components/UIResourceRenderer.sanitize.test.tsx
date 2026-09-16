@@ -97,6 +97,102 @@ describe('TextRenderer — markdown path', () => {
   })
 })
 
+describe('TextRenderer — image-markdown branch (v6.19.0 safeUrl)', () => {
+  // `[![alt](image)](link) *credit*` takes a dedicated branch that binds both
+  // URLs straight into `src` / `href` — attributes `sanitizeHtml` never sees.
+  const imageMarkdown = (imageUrl: string, linkUrl: string) =>
+    textComponent({ content: `[![x](${imageUrl})](${linkUrl}) *credit*`, markdown: true })
+
+  it('renders the anchor + img when both URLs are https (regression)', () => {
+    const { container } = render(() => (
+      <UIResourceRenderer
+        content={imageMarkdown('https://ok.test/1.png', 'https://ok.test/page')}
+      />
+    ))
+
+    const a = container.querySelector('a.cursor-zoom-in') as HTMLAnchorElement
+    expect(a).toBeTruthy()
+    expect(a.getAttribute('href')).toBe('https://ok.test/page')
+    expect(a.getAttribute('rel')).toBe('noopener noreferrer')
+    const img = a.querySelector('img') as HTMLImageElement
+    expect(img).toBeTruthy()
+    expect(img.getAttribute('src')).toBe('https://ok.test/1.png')
+    expect(img.getAttribute('alt')).toBe('x')
+    expect(container.textContent).toContain('credit')
+  })
+
+  // `(` / `)` in a URL terminate the markdown capture groups, so the
+  // percent-encoded form is what actually reaches this branch — and it is just
+  // as executable in a browser.
+  const JS_URL = 'javascript:alert%281%29'
+
+  it('drops the anchor when the link URL is javascript: but still shows the image', () => {
+    const { container } = render(() => (
+      <UIResourceRenderer content={imageMarkdown('https://ok.test/1.png', JS_URL)} />
+    ))
+
+    expect(container.innerHTML).not.toContain('javascript:')
+    expect(container.querySelector('a[href^="javascript:"]')).toBeNull()
+    expect(container.querySelector('a.cursor-zoom-in')).toBeNull()
+    const img = container.querySelector('img') as HTMLImageElement
+    expect(img).toBeTruthy()
+    expect(img.getAttribute('src')).toBe('https://ok.test/1.png')
+    expect(img.closest('a')).toBeNull()
+  })
+
+  it('declines the branch entirely when the image URL is a data:text/html payload', () => {
+    const { container } = render(() => (
+      <UIResourceRenderer
+        content={imageMarkdown('data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==', 'https://ok.test/page')}
+      />
+    ))
+
+    // The image branch declined — content fell back to the normal sanitized
+    // markdown path (which is identified by its inline copy button).
+    expect(container.querySelector('button[data-mcp-ui-action="copy"]')).not.toBeNull()
+    expect(container.querySelector('a.cursor-zoom-in')).toBeNull()
+    expect(container.querySelector('script')).toBeNull()
+  })
+
+  it('declines the branch when the image URL is javascript:', () => {
+    const { container } = render(() => (
+      <UIResourceRenderer content={imageMarkdown(JS_URL, 'https://ok.test/page')} />
+    ))
+
+    expect(container.innerHTML).not.toContain('javascript:')
+    expect(container.querySelector('a.cursor-zoom-in')).toBeNull()
+    expect(container.querySelector('button[data-mcp-ui-action="copy"]')).not.toBeNull()
+  })
+
+  it('defence in depth — the unencoded review payload never reaches a live href either', () => {
+    // `javascript:alert(1)` with real parentheses does not even match
+    // `extractImageFromMarkdown` (the `(`/`)` close the capture group), so it
+    // takes the ordinary markdown path, where DOMPurify strips the href.
+    const { container } = render(() => (
+      <UIResourceRenderer
+        content={textComponent({
+          content: '[![x](https://ok.test/1.png)](javascript:alert(1)) *credit*',
+          markdown: true,
+        })}
+      />
+    ))
+
+    expect(container.innerHTML).not.toContain('javascript:')
+    expect(container.querySelector('a[href]')).toBeNull()
+  })
+
+  it('allows an inline base64 image (allowDataImage)', () => {
+    const png = 'data:image/png;base64,iVBORw0KGgo='
+    const { container } = render(() => (
+      <UIResourceRenderer content={imageMarkdown(png, 'https://ok.test/page')} />
+    ))
+
+    const img = container.querySelector('a.cursor-zoom-in img') as HTMLImageElement
+    expect(img).toBeTruthy()
+    expect(img.getAttribute('src')).toBe(png)
+  })
+})
+
 describe('TextRenderer — non-markdown path', () => {
   it('drops raw <script> content (previously bound to innerHTML unfiltered)', () => {
     const { container } = render(() => (

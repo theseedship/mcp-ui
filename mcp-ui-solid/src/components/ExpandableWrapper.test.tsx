@@ -266,4 +266,42 @@ describe('ExpandableWrapper data-mcp-ui-action hooks (v6.19.0)', () => {
     expect(container.querySelector('button[data-mcp-ui-action="copy"]')).not.toBeNull()
     expect(container.querySelector('button[data-mcp-ui-action="close"]')).not.toBeNull()
   })
+
+  it('marks the expand, copy and close buttons as type="button" (v6.19.0)', () => {
+    // Without an explicit type a <button> defaults to type="submit": rendered
+    // inside a host's form, clicking "expand" would submit it.
+    const { container, getByLabelText } = render(() => (
+      <ExpandableWrapper title="Test" copyData="some data">
+        <div>Content</div>
+      </ExpandableWrapper>
+    ))
+
+    const expand = container.querySelector('button[data-mcp-ui-action="expand"]')!
+    expect(expand.getAttribute('type')).toBe('button')
+
+    fireEvent.click(getByLabelText('Expand'))
+
+    expect(container.querySelector('button[data-mcp-ui-action="copy"]')!.getAttribute('type')).toBe('button')
+    expect(container.querySelector('button[data-mcp-ui-action="close"]')!.getAttribute('type')).toBe('button')
+  })
+})
+
+describe('ExpandableWrapper onExpandedChange (v6.19.0)', () => {
+  beforeEach(() => {
+    cleanup()
+  })
+
+  it('reports the expanded state on mount, on open and on close', () => {
+    const seen: boolean[] = []
+    const { container } = render(() => (
+      <ExpandableWrapper title="Test" onExpandedChange={(e) => seen.push(e)}>
+        <div>Content</div>
+      </ExpandableWrapper>
+    ))
+    expect(seen).toEqual([false])
+    fireEvent.click(container.querySelector('button[data-mcp-ui-action="expand"]')!)
+    expect(seen).toEqual([false, true])
+    fireEvent.click(container.querySelector('button[data-mcp-ui-action="close"]')!)
+    expect(seen).toEqual([false, true, false])
+  })
 })

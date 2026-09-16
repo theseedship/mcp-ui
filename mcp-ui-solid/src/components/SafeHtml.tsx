@@ -9,11 +9,20 @@
  *     stay reactive.
  *  2. Repair the hydration hole. `solid-js/web`'s `setProperty(node,
  *     'innerHTML', v)` returns early while hydrating, so the server-rendered
- *     content (escaped plain text, per the SSR contract) would otherwise stay
- *     in the DOM forever. `onMount` runs client-side only, after hydration, and
- *     re-applies `html()` when the live DOM disagrees with it.
+ *     content (escaped plain text, per the SSR contract — block structure is
+ *     lost until this fix-up runs) would otherwise stay in the DOM forever.
+ *     `onMount` runs client-side only, after hydration, and re-applies
+ *     `html()` when the live DOM disagrees with it.
+ *
+ * Every sink carrying untrusted markup goes through this component: `text`
+ * component content, table cells and `ui://` rawHtml resources. One sink is
+ * deliberately outside it — `CodeBlockRenderer` binds highlight.js output (or
+ * `escapeHtml(code)` when highlight.js is missing or throws) straight into its
+ * own `<code innerHTML>`, a string that is markup-safe by construction and
+ * never passes through `sanitizeHtml`.
  *
  * @see ../utils/sanitize-html
+ * @see ./CodeBlockRenderer for the one innerHTML sink outside this component
  */
 
 import { onMount, splitProps, type JSX } from 'solid-js'

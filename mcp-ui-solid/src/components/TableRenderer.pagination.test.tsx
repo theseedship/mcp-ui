@@ -75,7 +75,42 @@ describe('table pagination accessibility', () => {
     expect(container.querySelector('button[aria-label="Page suivante"]')).toBeTruthy()
   })
 
-  // Note: the fullscreen-only page-size <select> (gated on `isExpanded()` from
+  it('exposes stable data-mcp-ui-action hooks on the prev/next buttons (v6.19.0)', () => {
+    const { container } = render(() => <UIResourceRenderer content={pagedTableComponent(30)} />)
+    const prev = container.querySelector('button[data-mcp-ui-action="page-prev"]')
+    const next = container.querySelector('button[data-mcp-ui-action="page-next"]')
+    expect(prev).not.toBeNull()
+    expect(next).not.toBeNull()
+    // The hook is stable; the accessible name is localized and is not.
+    expect(prev!.getAttribute('aria-label')).toBe('Previous page')
+    expect(next!.getAttribute('aria-label')).toBe('Next page')
+    expect(prev!.getAttribute('type')).toBe('button')
+    expect(next!.getAttribute('type')).toBe('button')
+  })
+
+  it('keeps the data hooks when the accessible names are localized', () => {
+    const { container } = render(() => (
+      <MCPUIStringsProvider strings={{ paginationPrevious: 'Page précédente', paginationNext: 'Page suivante' }}>
+        <UIResourceRenderer content={pagedTableComponent(30)} />
+      </MCPUIStringsProvider>
+    ))
+    expect(container.querySelector('button[data-mcp-ui-action="page-prev"]')).not.toBeNull()
+    expect(container.querySelector('button[data-mcp-ui-action="page-next"]')).not.toBeNull()
+  })
+
+  it('drives pagination through the data hooks alone', () => {
+    const { container, getByText } = render(() => (
+      <UIResourceRenderer content={pagedTableComponent(30)} />
+    ))
+    expect(getByText('1 / 3')).toBeTruthy()
+    fireEvent.click(container.querySelector('button[data-mcp-ui-action="page-next"]')!)
+    expect(getByText('2 / 3')).toBeTruthy()
+    fireEvent.click(container.querySelector('button[data-mcp-ui-action="page-prev"]')!)
+    expect(getByText('1 / 3')).toBeTruthy()
+  })
+
+  // Note: the fullscreen-only page-size <select> (it carries
+  // `data-mcp-ui-action="page-size"` since v6.19.0) (gated on `isExpanded()` from
   // `useExpanded()`) could not be reached here — clicking the expand button
   // opens the modal (confirmed via `role="dialog"`), but `TableRenderer`'s own
   // `isExpanded` accessor stays permanently false because it's read via
@@ -84,4 +119,15 @@ describe('table pagination accessibility', () => {
   // establishes around its (lazily-evaluated) `children` — a pre-existing gap
   // unrelated to this change. The `aria-label={strings.paginationPageSize}`
   // on the `<select>` itself is covered by direct source inspection instead.
+})
+
+describe('TableRenderer fullscreen page size (v6.19.0 — self-wrapped expanded state)', () => {
+  it('exposes the page-size select once the table is expanded', () => {
+    const { container } = render(() => <UIResourceRenderer content={pagedTableComponent(30)} />)
+    expect(document.querySelector('select[data-mcp-ui-action="page-size"]')).toBeNull()
+    fireEvent.click(container.querySelector('button[data-mcp-ui-action="expand"]')!)
+    const select = document.querySelector('select[data-mcp-ui-action="page-size"]')
+    expect(select).not.toBeNull()
+    expect(select!.getAttribute('aria-label')).toBe('Rows per page')
+  })
 })

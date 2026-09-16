@@ -9,13 +9,14 @@
 
 import { describe, it, expect } from 'vitest'
 import DOMPurify from 'dompurify'
-import { sanitizeHtml, SANITIZE_PROFILES } from './sanitize-html'
+import { sanitizeHtml, canSanitizeHtml, SANITIZE_PROFILES } from './sanitize-html'
 
 const prose = (html: string) => sanitizeHtml(html, SANITIZE_PROFILES.prose)
 
 describe('sanitizeHtml — jsdom baseline', () => {
   it('runs the real DOMPurify here (guard does not fire)', () => {
     expect(DOMPurify.isSupported).toBe(true)
+    expect(canSanitizeHtml()).toBe(true)
     expect(sanitizeHtml('<b>hi</b>')).toBe('<b>hi</b>')
   })
 
@@ -162,15 +163,101 @@ describe('SANITIZE_PROFILES.cellHtml / cellMarkdown — citation chips', () => {
   })
 })
 
-describe('SANITIZE_PROFILES.resource', () => {
-  it('is DOMPurify defaults — rich markup survives, scripts do not', () => {
-    const out = sanitizeHtml(
-      '<div class="card"><h3>Health</h3><table><tr><td>ok</td></tr></table><script>alert(1)</script></div>',
-      SANITIZE_PROFILES.resource
+describe('SANITIZE_PROFILES.prose — iframe stays forbidden', () => {
+  it('never lets prose embed an iframe (the `iframe` component type is the supported way)', () => {
+    // Deliberate: embedding is done with the `iframe` COMPONENT, which runs
+    // through `getIframeSandbox()` / `validateComponent()`. An iframe smuggled
+    // through markdown or raw `content` would bypass that validation entirely.
+    expect(SANITIZE_PROFILES.prose.FORBID_TAGS).toContain('iframe')
+    const out = prose('<iframe src="https://evil.test"></iframe>text')
+    expect(out).not.toContain('<iframe')
+    expect(out).toContain('text')
+  })
+})
+
+describe('SANITIZE_PROFILES.cellLink — hardened (v6.19.0)', () => {
+  const cellLink = (html: string) => sanitizeHtml(html, SANITIZE_PROFILES.cellLink)
+
+  it('drops a <style> smuggled through an attacker-controlled link label', () => {
+    // The label of `{ url, name }` is LLM/tool data: a name of
+    // `<svg><style>…</style></svg>` used to inject a document-wide stylesheet
+    // because this profile was bare DOMPurify defaults.
+    const out = cellLink(
+      '<a href="https://example.test"><svg><style>body *{visibility:hidden}</style></svg>label</a>'
+    )
+    expect(out).not.toContain('<style')
+    expect(out).not.toContain('visibility:hidden')
+    expect(out).toContain('label')
+  })
+
+  it('drops the inline style attribute', () => {
+    const out = cellLink('<a href="https://example.test" style="position:fixed;inset:0">x</a>')
+    expect(out).not.toContain('style=')
+    expect(out).toContain('href="https://example.test"')
+  })
+
+  it('drops form / iframe / object / embed / textarea / select', () => {
+    for (const tag of ['form', 'iframe', 'object', 'embed', 'textarea', 'select']) {
+      const out = cellLink(`<${tag}>ok</${tag}>`)
+      expect(out).not.toContain(`<${tag}`)
+    }
+  })
+
+  it('still keeps the rewritten anchor intact (regression)', () => {
+    const out = cellLink(
+      '<a href="https://example.test" target="_blank" rel="noopener noreferrer">x</a>'
+    )
+    expect(out).toContain('target="_blank"')
+    expect(out).toContain('rel="noopener noreferrer"')
+    expect(out).toContain('href="https://example.test"')
+  })
+})
+
+describe('SANITIZE_PROFILES.resource — hardened (v6.19.0)', () => {
+  const resource = (html: string) => sanitizeHtml(html, SANITIZE_PROFILES.resource)
+
+  it('keeps rich structural markup and drops scripts (regression)', () => {
+    const out = resource(
+      '<div class="card"><h3>Health</h3><table><tr><td>ok</td></tr></table><script>alert(1)</script></div>'
     )
     expect(out).toContain('<h3>Health</h3>')
     expect(out).toContain('<table>')
     expect(out).toContain('class="card"')
     expect(out).not.toContain('<script')
+  })
+
+  it('drops <style> injected by a ui:// rawHtml resource', () => {
+    const out = resource('<style>body *{visibility:hidden}</style><p>ok</p>')
+    expect(out).not.toContain('<style')
+    expect(out).not.toContain('visibility:hidden')
+    expect(out).toContain('<p>ok</p>')
+  })
+
+  it('drops the inline style attribute', () => {
+    const out = resource('<div style="position:fixed;inset:0;z-index:9999">overlay</div>')
+    expect(out).not.toContain('style=')
+    expect(out).toContain('overlay')
+  })
+
+  it('drops a phishing <form> with its inputs and submit button', () => {
+    const out = resource(
+      '<form action="https://evil.test"><input name="password" type="password"><button>Sign in</button></form>'
+    )
+    expect(out).not.toContain('<form')
+    expect(out).not.toContain('<input')
+    expect(out).not.toContain('<button')
+    expect(out).not.toContain('evil.test')
+  })
+
+  it('drops formaction / form attributes', () => {
+    const out = resource('<div formaction="https://evil.test" form="f">x</div>')
+    expect(out).not.toContain('formaction')
+    expect(out).not.toContain('form=')
+  })
+
+  it('drops iframe / object / embed / textarea / select', () => {
+    for (const tag of ['iframe', 'object', 'embed', 'textarea', 'select']) {
+      expect(resource(`<${tag}>ok</${tag}>`)).not.toContain(`<${tag}`)
+    }
   })
 })

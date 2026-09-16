@@ -1,4 +1,5 @@
 import { Component } from 'solid-js'
+import { safeUrl } from '../utils/safe-url'
 
 export interface ArtifactComponentParams {
     url: string
@@ -40,7 +41,7 @@ export const ArtifactRenderer: Component<{ params: ArtifactComponentParams }> = 
             </div>
 
             <a
-                href={props.params.url}
+                href={safeUrl(props.params.url)}
                 download={props.params.filename}
                 class="px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-md transition-colors flex items-center gap-1"
             >

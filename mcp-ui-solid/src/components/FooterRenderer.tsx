@@ -1,4 +1,5 @@
 import { Component, Show, For } from 'solid-js'
+import { safeUrl } from '../utils/safe-url'
 
 export interface FooterComponentParams {
     poweredBy?: string
@@ -50,7 +51,7 @@ export const FooterRenderer: Component<{ params: FooterComponentParams }> = (pro
                     <For each={props.params.links}>
                         {(link) => (
                             <a
-                                href={link.url}
+                                href={safeUrl(link.url)}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 class="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"

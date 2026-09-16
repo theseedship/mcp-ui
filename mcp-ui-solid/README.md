@@ -7,36 +7,80 @@ SolidJS components + chat toolkit for MCP-generated UI. Part of the [MCP UI ecos
 
 ## What's New in v6.19.0 — sanitization, a11y and packaging
 
-- **Text/table/resource HTML sinks are now sanitized on client *and* server.**
+- **`sanitizeHtml()` is now the single sanitizer for every sink that carries
+  untrusted markup** — `text`, table cells, and `ui://` resources.
   `TextRenderer`'s non-markdown branch previously bound `params.content`
-  straight to `innerHTML`; it is now sanitized like every other HTML sink in
-  the package, through one shared `sanitizeHtml()` entry point. On the
-  server (or wherever DOMPurify cannot run) nothing but escaped plain text is
-  ever emitted; the client re-applies the sanitized rich HTML once mounted.
-  See **SSR Compatibility** below for the full contract.
+  straight to `innerHTML`; both of its branches (markdown and non-markdown)
+  now go through `sanitizeHtml()`. On the server (or wherever DOMPurify
+  cannot run) the sink emits `escapeHtml()`'d text — for `text` components
+  specifically, the **escaped markdown source**, not escaped `marked`
+  output — so block structure (tables, lists, headings) is not present on
+  first paint; `<SafeHtml>`'s `onMount` upgrades it to sanitized rich HTML on
+  the client, and the region reflows at that point. See **SSR Compatibility**
+  below for the full contract. The `code` component's own `<code innerHTML>`
+  sink is a separate, documented exception: it binds highlight.js output or
+  `escapeHtml()`'d source directly in `CodeBlockRenderer`, not through
+  `sanitizeHtml()`.
+- **New `safeUrl()` guard** on every `href`/`src` binding — the `text` component's image-markdown branch, the `image`, `link`, `artifact`, `action` and `footer` renderers, the gallery and the lightbox —
+  (`[![alt](img)](link) *credit*`): `javascript:`, `vbscript:`,
+  `data:text/html`, `data:image/svg+xml`, `file:`, `blob:`, `about:`, `ftp:`
+  and unparseable/control-character URLs are rejected; relative URLs and
+  `http:`/`https:`/`mailto:`/`tel:` (plus `data:image/{png,jpeg,jpg,gif,webp}`
+  for the image itself) are allowed. An unsafe link renders the image with no
+  `<a>` wrapper; an unsafe image URL falls back to the normal sanitized
+  markdown path.
 - **`code` component:** the no-highlight.js fallback now escapes `&` (it
   previously escaped only `<`/`>`), so source containing `&lt;script&gt;`
-  can no longer render as a literal tag.
+  can no longer render as a literal tag. `renderCellValue`'s last-resort JSON
+  fallback for object-shaped cell values is now `escapeHtml()`'d too (a plain
+  debug object now comes back as e.g. `{&quot;a&quot;:1}`).
+- **Table-cell and `ui://` resource sanitize profiles hardened.**
+  `cellLink` now forbids `style`/`form`/`textarea`/`select`/`iframe`/
+  `object`/`embed` and the `style` attribute; `resource` (previously bare
+  DOMPurify defaults) forbids `style`/`form`/`input`/`textarea`/`select`/
+  `button`/`iframe`/`object`/`embed` and the `style`/`formaction`/`form`
+  attributes — closing a link-label stylesheet-injection path and a
+  phishing-form path in `ui://` `rawHtml` content, while headings, tables,
+  lists, links, images and class attributes still survive. `prose` (the
+  `text` component's profile) still forbids `iframe` by design — embed via
+  the `iframe` **component type**, which goes through `getIframeSandbox()` /
+  `validateComponent()`.
+- **`highlightQuery()` is now DOM-based**, walking text nodes in a detached
+  template instead of doing a string splice, so a search match can no longer
+  be marked inside an HTML entity (`&amp;`) or an attribute value
+  (`title="foo"`). Same signature and `<mark>` wrapper as before.
 - **Accessible table pagination and grid regions:** prev/next buttons and the
   fullscreen page-size selector carry `aria-label`s (localizable via
-  `MCPUIStringsProvider`), the page indicator is a live region, and
-  `GridRenderer`'s container is a labeled `role="group"`.
+  `MCPUIStringsProvider`) and stable `data-mcp-ui-action="page-prev" |
+  "page-next" | "page-size"` hooks, the page indicator is a live region, and
+  `GridRenderer`'s container is a labeled `role="group"` (a blank or
+  whitespace-only `title` is now treated as absent and falls back to
+  `params.label` / the localized default).
 - **Stable portal and action hooks:** `data-mcp-ui-portal="menu"` / `"dialog"`
   on the dropdown and fullscreen-modal portal roots, and
   `data-mcp-ui-action="expand" | "copy" | "close"` (or the toolbar icon name)
   on the chrome buttons — for host CSS/tests that must not depend on `role`
   selectors or on `aria-label` text, which is localizable and no longer
   hardcoded English (`"Expand to fullscreen"` → `MCPUIStrings.expand`).
+  `ExpandableWrapper`'s expand/copy/close buttons now all carry
+  `type="button"` (so mounting inside a host `<form>` can't trigger a
+  submit) and, since they previously had only a `title`, now also carry an
+  `aria-label` — host CSS using a `button[aria-label]` selector as a proxy
+  will start matching them.
 - **New `@seed-ship/mcp-ui-solid/adapters/presentation` subpath** — the pure
   `createComparisonLayout` / `createGeographyLayout` / `createEvidenceLayout`
   helpers, built dependency-free (no `solid-js`, `zod` or spec import in the
   output) so a plain-Node MCP server can use them. See **Server-side
   producers** below.
 - **Much smaller npm package:** the published tarball shrank from 39.8 MB /
-  5428 files (`6.18.0`) to ~1.3 MB / 729 files. `dist/` no longer accidentally
-  bundles the whole dependency tree. `solid-js` is now an optional peer, so a
-  server-only consumer of `./validation` or `./adapters/presentation` doesn't
-  need it installed at all.
+  5428 files (`6.18.0`) to 5.6 MB unpacked / 671 files (1.3 MB packed).
+  `dist/` no longer accidentally bundles the whole dependency tree, a
+  declaration-barrel bug that silently typed `UIResourceRenderer`,
+  `StreamingUIRenderer` and other root-level symbols as `any` for consumers
+  is fixed, and `solid-js` is a **required** peer again (`^1.9.0` — pnpm/npm
+  7+ auto-install it, so a Node-only consumer of `./validation` or
+  `./adapters/presentation` just carries an unused `solid-js`; neither
+  subpath's built output actually imports it).
 
 See [`CHANGELOG.md`](./CHANGELOG.md) for the full list, including exactly
 what the `prose` sanitize profile keeps and strips.
@@ -809,7 +853,11 @@ const { state, pinned, close } = useScratchpadState()
 
 ## SSR Compatibility
 
-Fully SSR-compatible with SolidStart, Astro, etc. Add to `app.config.ts`:
+The published `dist/` is a DOM (client) Solid build — importing it directly
+on a server throws "Client-only API called on the server side." SSR is
+supported when the host instead compiles the package **from `src/`** via the
+`solid` export condition (`vite-plugin-solid`) and lists it in
+`ssr.noExternal`, e.g. in SolidStart's `app.config.ts`:
 
 ```typescript
 export default defineConfig({
@@ -822,27 +870,35 @@ export default defineConfig({
 
 ### Sanitization contract (v6.19.0)
 
-Every value this package binds into an `innerHTML` sink (the `text`, `table`
-and `UIResourceHtmlRenderer` HTML branches) goes through one internal
-`sanitizeHtml()` entry point, with one invariant that holds identically on
-server and client: **nothing unsanitized ever reaches an `innerHTML` sink.**
+`sanitizeHtml()` (`src/utils/sanitize-html.ts`) is the single sanitizer for
+every sink that carries untrusted markup — the `text` and `table` HTML
+branches and `UIResourceHtmlRenderer`'s `ui://` `rawHtml` content — with one
+invariant that holds identically on server and client: **nothing
+unsanitized ever reaches an `innerHTML` sink.** The `code` component's own
+`<code innerHTML>` sink is a documented exception outside `sanitizeHtml()`:
+it binds highlight.js output, or `escapeHtml(code)` when highlight.js fails
+to load or throws.
 
 - **Server** (or any environment where DOMPurify cannot run — `isServer`,
   `!DOMPurify.isSupported`, or `DOMPurify.sanitize` not being a function,
-  which is what dompurify 3.4.x actually does with no `window`): tags are
-  stripped cosmetically and the remainder is `escapeHtml()`-ed. The response
-  therefore never contains live markup — worst case it's escaped plain text,
-  never a crash and never raw HTML.
+  which is what dompurify 3.4.x actually does with no `window`): the sink
+  emits `escapeHtml(input)` and nothing else — no tag-stripping. Text that
+  merely *looks* like markup is preserved as inert, visible text (e.g.
+  `values < 10 and > 5` renders as `values &lt; 10 and &gt; 5`, not
+  `values 5`). For `text` components specifically, the server ships the
+  **escaped markdown source**, not escaped `marked` output — so block
+  structure (tables, lists, headings) is absent on first paint and the
+  region **reflows once the client hydrates**.
 - **Client:** the real DOMPurify runs with a profile scoped to the call site
-  (rich `prose` for text content, narrower profiles for table cells).
-  `<SafeHtml>`'s `onMount` then re-applies the sanitized rich HTML if the
-  hydrated DOM still shows the server's escaped text — this is what covers
-  `solid-js/web`'s `setProperty(node, 'innerHTML', v)` early-return during
-  hydration, so a hydrated page doesn't stay stuck showing escaped text.
+  (`prose` for text content, `cellLink` / `cellMarkdown` / `cellHtml` for
+  table cells, `resource` for `ui://` content). `<SafeHtml>`'s `onMount`
+  then re-applies the sanitized rich HTML if the hydrated DOM still shows
+  the server's escaped text — this is what covers `solid-js/web`'s
+  `setProperty(node, 'innerHTML', v)` early-return during hydration, so a
+  hydrated page doesn't stay stuck showing escaped text.
 
 Net effect: an SSR pass never leaks or executes untrusted markup, and the
-client upgrades to the rich version once mounted, without a second render
-pass on the host's part.
+client upgrades to the rich version — with a visible reflow — once mounted.
 
 ## Telemetry
 
@@ -879,11 +935,13 @@ a Solid context, for tests or non-component call sites. Event types:
 ## Server-side producers
 
 `@seed-ship/mcp-ui-solid/adapters/presentation` and `@seed-ship/mcp-ui-solid/validation`
-are both importable from a plain Node service with **no `solid-js`
-installed** — neither pulls in Solid, and `/adapters/presentation`'s built
-output (ESM and CJS) contains zero `import`/`require` statements at all.
-`solid-js` is an optional peer since v6.19.0, so a server-only consumer gets
-no missing-peer warning.
+import nothing from `solid-js` — neither pulls in Solid, and
+`/adapters/presentation`'s built output (ESM and CJS) contains zero
+`import`/`require` statements at all. `solid-js` is a required peer
+(`^1.9.0`), so pnpm (with auto-install-peers) or npm 7+ install it
+automatically regardless of which subpath you use; a Node-only consumer of
+these two subpaths ends up with an unused `solid-js` in `node_modules`
+rather than a missing-peer warning.
 
 CommonJS consumers on TypeScript `moduleResolution: "node"` (which ignores the
 `exports` map) are covered too: every subpath is declared in `typesVersions`,
@@ -892,7 +950,7 @@ so `import type { UILayout } from '@seed-ship/mcp-ui-solid/types-only'` and
 included, without `paths` aliases.
 
 ```ts
-// A Node MCP server or backend service, no solid-js dependency
+// A Node MCP server or backend service — imports nothing from solid-js
 import { createComparisonLayout } from '@seed-ship/mcp-ui-solid/adapters/presentation'
 
 const layout = createComparisonLayout({

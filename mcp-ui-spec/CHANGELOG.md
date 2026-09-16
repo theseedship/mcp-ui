@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- `LICENSE` is now listed in the package's `files` array, so the MIT license
+  text ships inside the npm tarball instead of only living in the repository.
+  This takes effect with the **next** spec release; the already-published
+  `5.6.0` tarball on npm is unchanged.
+
 ## [5.6.0] - 2026-09-14
 
 ### Added

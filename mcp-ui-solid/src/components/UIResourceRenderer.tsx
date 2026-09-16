@@ -5,7 +5,9 @@
 
 import { Component, createSignal, Show, For, createMemo, createEffect, onMount, onCleanup } from 'solid-js'
 import { isServer } from 'solid-js/web'
-import { sanitizeHtml, SANITIZE_PROFILES } from '../utils/sanitize-html'
+import { sanitizeHtml, canSanitizeHtml, SANITIZE_PROFILES } from '../utils/sanitize-html'
+import { escapeHtml } from '../utils/escape-html'
+import { safeUrl } from '../utils/safe-url'
 import { SafeHtml } from './SafeHtml'
 import type { UIComponent, UILayout, RendererError, TableVirtualizeOptions } from '../types'
 import { validateComponent, DEFAULT_RESOURCE_LIMITS, getIframeSandbox } from '../services/validation'
@@ -390,23 +392,74 @@ function ChartRenderer(props: {
 /**
  * Smart cell value renderer that handles markdown links and other formats
  */
+/** Class list carried by every `<mark>` that `highlightQuery` injects. */
+const HIGHLIGHT_MARK_CLASS = 'bg-yellow-200 dark:bg-[#222F49] text-inherit rounded px-0.5'
+
 /**
- * Wrap matches of `query` in <mark> tags within an HTML string.
- * Case-insensitive. Skips content inside HTML tag attributes to avoid corruption.
- * v4.3.8
+ * Wrap matches of `query` in `<mark>` tags within an HTML string.
+ * Case-insensitive. v6.19.0 — DOM-based.
+ *
+ * The previous implementation tokenized the markup with a regex, which put
+ * `<mark>` *inside* HTML entities and attribute text: searching `amp` in a
+ * cell containing `&amp;` spliced a tag through the entity and corrupted it.
+ * Parsing into a detached `<template>` and walking only text nodes makes both
+ * classes of corruption impossible — attribute values are never visited, and
+ * an entity is a single character by the time the walker sees it.
+ *
+ * The input is always post-sanitize markup (see `sanitize-html`), and a
+ * `<template>`'s content is an inert document fragment, so parsing here
+ * neither runs script nor fetches anything.
+ *
+ * No-DOM environments (SSR) return the html unchanged.
  */
 export function highlightQuery(html: string, query: string): string {
   const q = query.trim()
   if (!q) return html
+  if (typeof document === 'undefined') return html
+
   // Escape regex metacharacters
   const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const regex = new RegExp(`(${escaped})`, 'gi')
-  // Process text segments only (skip inside tags)
-  return html.replace(/(<[^>]+>)|([^<]+)/g, (_m, tag, text) => {
-    if (tag) return tag
-    if (!text) return ''
-    return text.replace(regex, '<mark class="bg-yellow-200 dark:bg-[#222F49] text-inherit rounded px-0.5">$1</mark>')
-  })
+  const regex = new RegExp(escaped, 'gi')
+
+  const template = document.createElement('template')
+  template.innerHTML = html
+
+  const walker = document.createTreeWalker(template.content, NodeFilter.SHOW_TEXT)
+  const textNodes: Text[] = []
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    textNodes.push(node as Text)
+  }
+
+  for (const node of textNodes) {
+    const text = node.data
+    regex.lastIndex = 0
+    if (!regex.test(text)) continue
+
+    regex.lastIndex = 0
+    const fragment = document.createDocumentFragment()
+    let cursor = 0
+    let match: RegExpExecArray | null
+    while ((match = regex.exec(text)) !== null) {
+      if (match[0] === '') {
+        regex.lastIndex++
+        continue
+      }
+      if (match.index > cursor) {
+        fragment.appendChild(document.createTextNode(text.slice(cursor, match.index)))
+      }
+      const mark = document.createElement('mark')
+      mark.className = HIGHLIGHT_MARK_CLASS
+      mark.textContent = match[0]
+      fragment.appendChild(mark)
+      cursor = match.index + match[0].length
+    }
+    if (cursor < text.length) {
+      fragment.appendChild(document.createTextNode(text.slice(cursor)))
+    }
+    node.parentNode?.replaceChild(fragment, node)
+  }
+
+  return template.innerHTML
 }
 
 /**
@@ -523,9 +576,12 @@ export function renderCellValue(value: any, citationCtx?: CitationCtx): string {
     if (value.name || value.label || value.title) {
       return sanitizeHtml(String(value.name || value.label || value.title))
     }
-    // Last resort: JSON stringify for debugging (better than [object Object])
+    // Last resort: JSON stringify for debugging (better than [object Object]).
+    // The result is bound into an `innerHTML` sink by the table renderers, so
+    // it must be escaped — `{ details: '<img src=x onerror=alert(1)>' }` used
+    // to execute.
     try {
-      return JSON.stringify(value)
+      return escapeHtml(JSON.stringify(value))
     } catch {
       return '-'
     }
@@ -701,7 +757,14 @@ function TableRenderer(props: {
   })
 
   // ─── Client-side pagination (v4.0.4, context-aware v4.3.4, selector v4.3.7) ─────
-  const isExpanded = useExpanded()
+  // This renderer renders its own `<ExpandableWrapper>` below, so the
+  // wrapper's context provider sits UNDER us: `useExpanded()` here only sees
+  // an outer wrapper (always false when the table is self-wrapped — the
+  // fullscreen page size never applied before v6.19.0). The wrapper reports
+  // its own state through `onExpandedChange`; the outer context still counts.
+  const outerExpanded = useExpanded()
+  const [selfExpanded, setSelfExpanded] = createSignal(false)
+  const isExpanded = () => selfExpanded() || outerExpanded()
   const defaultPageSize = () => tableParams.pageSize ?? 25
   const chatDefault = () => tableParams.chatPageSize ?? Math.min(10, defaultPageSize())
   const [userPageSize, setUserPageSize] = createSignal<number | null>(null) // null = use default
@@ -943,7 +1006,7 @@ function TableRenderer(props: {
   }
 
   return (
-    <ExpandableWrapper title={tableParams.title || 'Table'} copyData={getTableCSV()} copyLabel="Copy table (CSV)" toolbarVariant={props.toolbarVariant}>
+    <ExpandableWrapper title={tableParams.title || 'Table'} copyData={getTableCSV()} copyLabel="Copy table (CSV)" toolbarVariant={props.toolbarVariant} onExpandedChange={setSelfExpanded}>
       <div class={`relative w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden group ${
         isExpanded() ? 'flex-1 min-h-0 flex flex-col' : 'h-full'
       } ${tableParams.className || ''}`}>
@@ -1111,6 +1174,7 @@ function TableRenderer(props: {
                   disabled={clientPage() === 0}
                   onClick={() => setClientPage(p => p - 1)}
                   aria-label={strings.paginationPrevious}
+                  data-mcp-ui-action="page-prev"
                 >
                   <span aria-hidden="true">&#x25C0;</span>
                 </button>
@@ -1121,6 +1185,7 @@ function TableRenderer(props: {
                   disabled={clientPage() >= clientTotalPages() - 1}
                   onClick={() => setClientPage(p => p + 1)}
                   aria-label={strings.paginationNext}
+                  data-mcp-ui-action="page-next"
                 >
                   <span aria-hidden="true">&#x25B6;</span>
                 </button>
@@ -1131,6 +1196,7 @@ function TableRenderer(props: {
                     value={clientPageSize()}
                     onChange={(e) => handlePageSizeChange(Number(e.currentTarget.value))}
                     aria-label={strings.paginationPageSize}
+                    data-mcp-ui-action="page-size"
                   >
                     <For each={pageSizeOptions()}>
                       {(opt) => <option value={opt.value}>{opt.label}</option>}
@@ -1234,10 +1300,19 @@ function extractImageFromMarkdown(content: string): { alt: string; imageUrl: str
 function TextRenderer(props: { component: UIComponent }) {
   const textParams = props.component.params as any
 
-  // Check if this is an image markdown that should be rendered as image component
+  // Check if this is an image markdown that should be rendered as image
+  // component. Both URLs come from LLM-authored markdown and are bound into
+  // `src`/`href`, which `sanitizeHtml` never sees — so they go through the
+  // `safeUrl` allow-list here (v6.19.0). An unusable image URL makes the whole
+  // branch decline, and the content falls back to the normal sanitized
+  // markdown path; an unusable link URL only drops the anchor.
   const imageData = createMemo(() => {
     if (textParams.markdown && textParams.content) {
-      return extractImageFromMarkdown(textParams.content)
+      const extracted = extractImageFromMarkdown(textParams.content)
+      if (!extracted) return null
+      const imageUrl = safeUrl(extracted.imageUrl, { allowDataImage: true })
+      if (!imageUrl) return null
+      return { ...extracted, imageUrl, linkUrl: safeUrl(extracted.linkUrl) }
     }
     return null
   })
@@ -1251,6 +1326,14 @@ function TextRenderer(props: { component: UIComponent }) {
   const htmlContent = createMemo(() => {
     const raw = textParams.content
     if (raw === null || raw === undefined) return ''
+    // No DOMPurify here (server, or a client where it bailed out):
+    // `sanitizeHtml` would escape *`marked` output*, i.e. ship `&lt;p&gt;` and
+    // `&lt;table&gt;` as visible text. Escape the markdown SOURCE instead —
+    // it reads as prose, and `<SafeHtml>`'s onMount upgrades it to the
+    // sanitized rich version once the client takes over.
+    if (!canSanitizeHtml()) {
+      return escapeHtml(String(raw))
+    }
     if (textParams.markdown && !imageData()) {
       return sanitizeHtml(marked.parse(raw, { async: false }) as string, SANITIZE_PROFILES.prose)
     }
@@ -1276,23 +1359,35 @@ function TextRenderer(props: { component: UIComponent }) {
         </div>
       }
     >
-      {(data) => (
+      {(data) => {
+        // Rebuilt per branch on purpose: a JSX element cannot be mounted twice.
+        const image = () => (
+          <img
+            src={data().imageUrl}
+            alt={data().alt}
+            class="max-w-full max-h-[400px] object-contain rounded shadow-sm hover:opacity-90 transition-opacity"
+            loading="lazy"
+          />
+        )
+        return (
         <div class="w-full h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col">
           <div class="flex-1 flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-900 min-h-[200px]">
-            <a href={data().linkUrl} target="_blank" rel="noopener noreferrer" class="cursor-zoom-in">
-              <img
-                src={data().imageUrl}
-                alt={data().alt}
-                class="max-w-full max-h-[400px] object-contain rounded shadow-sm hover:opacity-90 transition-opacity"
-                loading="lazy"
-              />
-            </a>
+            {/* The anchor only exists when the link URL passed `safeUrl` — a
+                `javascript:` link degrades to a plain, unlinked image. */}
+            <Show when={data().linkUrl} fallback={image()}>
+              {(href) => (
+                <a href={href()} target="_blank" rel="noopener noreferrer" class="cursor-zoom-in">
+                  {image()}
+                </a>
+              )}
+            </Show>
           </div>
           <div class="p-3 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
             <p class="text-sm text-gray-600 dark:text-gray-400 text-center italic">{data().credit}</p>
           </div>
         </div>
-      )}
+        )
+      }}
     </Show>
   )
 }
@@ -1331,14 +1426,14 @@ function ImageRenderer(props: { component: UIComponent }) {
     <figure class={`w-full h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col ${params.className || ''}`}>
       <div class="flex-1 flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-900 min-h-[200px]">
         <a
-          href={params.url}
+          href={safeUrl(params.url)}
           target="_blank"
           rel="noopener noreferrer"
           class="cursor-zoom-in focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded"
           aria-label={`View full size: ${params.alt || 'image'}`}
         >
           <img
-            src={params.url}
+            src={safeUrl(params.url, { allowDataImage: true })}
             alt={params.alt || 'Image'}
             class="max-w-full max-h-[500px] object-contain rounded shadow-sm hover:opacity-95 transition-opacity"
             loading="lazy"
@@ -1362,7 +1457,7 @@ function LinkRenderer(props: { component: UIComponent }) {
 
   return (
     <a
-      href={params.url}
+      href={safeUrl(params.url)}
       target="_blank"
       rel="noopener noreferrer"
       aria-label={`${params.label || 'Link'}: ${params.description || params.url} (opens in new tab)`}
@@ -1705,8 +1800,8 @@ function ActionRenderer(props: { component: UIComponent }) {
   if (params.type === 'link' || params.action === 'link') {
     return (
       <a
-        href={params.url || '#'}
-        target={params.url ? '_blank' : undefined}
+        href={safeUrl(params.url) ?? '#'}
+        target={safeUrl(params.url) ? '_blank' : undefined}
         rel="noopener noreferrer"
         aria-label={params.ariaLabel || params.label}
         class={`inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500

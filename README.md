@@ -10,14 +10,21 @@ A collection of TypeScript packages for building generative, streaming user inte
 ## What's New
 
 **6.19.0 (`mcp-ui-solid`) / 5.0.1 (`mcp-ui-cli`) — sanitization, a11y & packaging:**
-every `innerHTML` sink in `mcp-ui-solid` is now sanitized on both server and
-client (closing a raw-`innerHTML` gap in the `text` component's non-markdown
-path), with a documented SSR contract: the server emits escaped text, the
-client upgrades to sanitized rich HTML after hydration. Accessible table
-pagination and labeled grid regions, stable `data-mcp-ui-portal` hooks, a new
+`sanitizeHtml()` is now the single sanitizer for every sink that carries
+untrusted markup (the `text` component, table cells, `ui://` resources),
+closing a raw-markup gap in the `text` component's non-markdown path (the
+`code` component's own `<code innerHTML>` sink binds highlight.js output or
+`escapeHtml()`'d source directly, not through `sanitizeHtml()`). Documented
+SSR contract: on the server the sink emits `escapeHtml()`'d text — for the
+`text` component specifically, the escaped **markdown source** — and block
+structure (tables, lists, headings) appears only after the client upgrades to
+sanitized rich HTML on mount, so the region reflows post-hydration. Accessible
+table pagination (`data-mcp-ui-action="page-prev" | "page-next" | "page-size"`)
+and labeled grid regions, stable `data-mcp-ui-portal` hooks, a new
 dependency-free `@seed-ship/mcp-ui-solid/adapters/presentation` subpath, and a
-much smaller published package (`solid-js` is now an optional peer; the npm
-tarball shrank from 39.8 MB to ~1.3 MB). `mcp-ui-cli` 5.0.1 fixes a
+much smaller published package (the npm tarball shrank from 39.8 MB / 5428
+files to 5.6 MB unpacked / 671 files, 1.3 MB packed; `solid-js` is a required
+peer again — pnpm/npm 7+ auto-install it). `mcp-ui-cli` 5.0.1 fixes a
 `workspace:*` spec pin that could pull a duplicate `@seed-ship/mcp-ui-spec`
 alongside `mcp-ui-solid`. See
 [`mcp-ui-solid/CHANGELOG.md`](./mcp-ui-solid/CHANGELOG.md) and
@@ -384,14 +391,19 @@ pnpm version:patch      # Bump patch version
 
 ## SSR Compatibility
 
-All packages are SSR-compatible. For SolidStart, add to `app.config.ts`:
+`mcp-ui-solid`'s published `dist/` is a DOM (client) Solid build; importing it
+on a server throws "Client-only API called on the server side." SSR is
+supported when the host instead compiles the package from `src/` via the
+`solid` export condition (`vite-plugin-solid`) and lists it in
+`ssr.noExternal`. For SolidStart, add to `app.config.ts`:
 
 ```typescript
 export default defineConfig({
   vite: {
     resolve: {
       conditions: ['solid', 'development', 'browser']
-    }
+    },
+    ssr: { noExternal: ['@seed-ship/mcp-ui-solid'] }
   }
 })
 ```

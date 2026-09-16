@@ -35,6 +35,13 @@ export interface ExpandableWrapperProps {
    *     hides the affordance.
    */
   toolbarVariant?: 'hover' | 'always-visible'
+  /**
+   * Called with the expanded state on mount and whenever it changes (v6.19.0).
+   * Needed by renderers that render their own `<ExpandableWrapper>`: their
+   * `useExpanded()` call sits ABOVE the wrapper's context provider and would
+   * only ever see an outer wrapper.
+   */
+  onExpandedChange?: (expanded: boolean) => void
 }
 
 /**
@@ -59,6 +66,11 @@ export const ExpandableWrapper: Component<ExpandableWrapperProps> = (props) => {
 
   const handleOpen = () => setIsExpanded(true)
   const handleClose = () => setIsExpanded(false)
+
+  // Report the state to the owner (see `onExpandedChange` docs).
+  createEffect(() => {
+    props.onExpandedChange?.(isExpanded())
+  })
 
   // Reparent content DOM between inline and modal slots
   createEffect(() => {
@@ -129,6 +141,7 @@ export const ExpandableWrapper: Component<ExpandableWrapperProps> = (props) => {
 
       {/* Expand button — visibility per `toolbarVariant` (default 'hover') */}
       <button
+        type="button"
         onClick={handleOpen}
         class={`absolute top-2 right-2 z-10 ${
           props.toolbarVariant === 'always-visible'
@@ -173,6 +186,7 @@ export const ExpandableWrapper: Component<ExpandableWrapperProps> = (props) => {
                   {/* Copy button */}
                   <Show when={props.copyData}>
                     <button
+                      type="button"
                       onClick={handleCopy}
                       class="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                       title={props.copyLabel || strings.copyToClipboard}
@@ -195,6 +209,7 @@ export const ExpandableWrapper: Component<ExpandableWrapperProps> = (props) => {
                   </Show>
                   {/* Close button */}
                   <button
+                    type="button"
                     onClick={handleClose}
                     class="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                     aria-label={strings.closeExpandedView}

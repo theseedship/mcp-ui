@@ -167,3 +167,29 @@ describe('renderCellValue — link-like objects are hardened (v6.19.0)', () => {
     expect(out).toContain('>Doc</a>')
   })
 })
+
+describe('renderCellValue — JSON last-resort branch is escaped (v6.19.0)', () => {
+  it('escapes markup smuggled inside an object with no url/name/label/title', () => {
+    // This string is bound into a `<SafeHtml>` innerHTML sink by the table
+    // renderers: it used to arrive as live markup.
+    const out = renderCellValue({ details: '<img src=x onerror=alert(1)>' })
+    expect(out).not.toContain('<img')
+    expect(out).toContain('&lt;img src=x onerror=alert(1)&gt;')
+  })
+
+  it('escapes a nested <script> payload', () => {
+    const out = renderCellValue({ a: { b: '<script>alert(1)</script>' } })
+    expect(out).not.toContain('<script')
+    expect(out).toContain('&lt;script&gt;')
+  })
+
+  it('still shows the JSON shape for ordinary debugging values', () => {
+    expect(renderCellValue({ a: 1, b: 'two' })).toBe('{&quot;a&quot;:1,&quot;b&quot;:&quot;two&quot;}')
+  })
+
+  it('returns "-" when the value cannot be stringified', () => {
+    const circular: Record<string, unknown> = { x: 1 }
+    circular.self = circular
+    expect(renderCellValue(circular)).toBe('-')
+  })
+})

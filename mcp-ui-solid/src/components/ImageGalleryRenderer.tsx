@@ -7,6 +7,7 @@ import { Component, createSignal, For, Show } from 'solid-js'
 import type { UIComponent, ImageGalleryParams } from '../types'
 import { LightboxOverlay } from './LightboxOverlay'
 import { ExpandableWrapper, useExpanded } from './ExpandableWrapper'
+import { safeUrl } from '../utils/safe-url'
 
 export interface ImageGalleryRendererProps {
   /**
@@ -116,7 +117,7 @@ export const ImageGalleryRenderer: Component<ImageGalleryRendererProps> = (props
               aria-label={image.alt || `View image ${index() + 1}`}
             >
               <img
-                src={image.thumbnail || image.url}
+                src={safeUrl(image.thumbnail || image.url, { allowDataImage: true })}
                 alt={image.alt || `Image ${index() + 1}`}
                 srcset={image.srcset}
                 sizes={image.sizes}

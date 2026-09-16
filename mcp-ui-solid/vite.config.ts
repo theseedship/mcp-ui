@@ -35,15 +35,17 @@ export default defineConfig({
       // highlight.js, zod, @seed-ship/mcp-ui-spec, ...) under
       // `dist/node_modules/.pnpm/**` — 39.8 MB / 5428 files published.
       // Anything that is not a relative path, an absolute path, a rollup
-      // virtual module (\0) or a Windows drive path is a package import and
-      // must stay an import in the output. This also covers CSS side-imports
+      // virtual module (\0) or a Windows drive path (`C:\...` or the
+      // forward-slash form `C:/...` that rollup/vite normalize ids to) is a
+      // package import and must stay an import in the output. This also covers
+      // CSS side-imports
       // such as 'leaflet/dist/leaflet.css' and 'highlight.js/styles/github.css',
       // which sit in browser-only `await import()` branches.
       external: (id: string) =>
         !id.startsWith('.') &&
         !id.startsWith('/') &&
         !id.startsWith('\0') &&
-        !/^[A-Za-z]:\\/.test(id),
+        !/^[A-Za-z]:[\\/]/.test(id),
       output: {
         globals: {
           'solid-js': 'SolidJS',

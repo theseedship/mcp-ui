@@ -108,13 +108,18 @@ export const GridRenderer: Component<GridRendererProps> = (props) => {
 
   // Title/label may be carried on the component or its params (neither is
   // part of the typed shape today) — fall back to the localized default.
-  const gridLabel = createMemo(
-    () =>
-      (props.component as { title?: string }).title ??
-      (props.component.params as { title?: string; label?: string }).title ??
-      (props.component.params as { title?: string; label?: string }).label ??
-      strings.gridRegion
-  )
+  //
+  // A blank / whitespace-only string counts as ABSENT (v6.19.0): `??` only
+  // skips null and undefined, so `title: ''` used to win the chain and leave
+  // the grid with an empty, useless accessible name.
+  const gridLabel = createMemo(() => {
+    const p = props.component.params as { title?: string; label?: string } | undefined
+    const candidates = [(props.component as { title?: string }).title, p?.title, p?.label]
+    for (const candidate of candidates) {
+      if (typeof candidate === 'string' && candidate.trim() !== '') return candidate
+    }
+    return strings.gridRegion
+  })
 
   // Build grid container style
   const gridContainerStyle = createMemo(() => {
