@@ -122,7 +122,7 @@ describe('UIResourceRenderer.toolbarVariant — forwarding to ExpandableWrapper 
 
   it('default (toolbarVariant undefined) → expand button uses opacity-0 hover-only classes', () => {
     const { container } = render(() => <UIResourceRenderer content={tableComponent()} />)
-    const btn = container.querySelector('button[aria-label="Expand to fullscreen"]')
+    const btn = container.querySelector('button[data-mcp-ui-action="expand"]')
     expect(btn).toBeTruthy()
     expect(btn!.className).toContain('opacity-0')
     expect(btn!.className).toContain('group-hover:opacity-70')
@@ -133,7 +133,7 @@ describe('UIResourceRenderer.toolbarVariant — forwarding to ExpandableWrapper 
     const { container } = render(() => (
       <UIResourceRenderer content={tableComponent()} toolbarVariant="always-visible" />
     ))
-    const btn = container.querySelector('button[aria-label="Expand to fullscreen"]')
+    const btn = container.querySelector('button[data-mcp-ui-action="expand"]')
     expect(btn).toBeTruthy()
     expect(btn!.className).toContain('opacity-60')
     expect(btn!.className).not.toContain('opacity-0')
@@ -144,7 +144,7 @@ describe('UIResourceRenderer.toolbarVariant — forwarding to ExpandableWrapper 
     const { container } = render(() => (
       <UIResourceRenderer content={tableComponent()} toolbarVariant="hover" />
     ))
-    const btn = container.querySelector('button[aria-label="Expand to fullscreen"]')
+    const btn = container.querySelector('button[data-mcp-ui-action="expand"]')
     expect(btn).toBeTruthy()
     expect(btn!.className).toContain('opacity-0')
     expect(btn!.className).toContain('group-hover:opacity-70')

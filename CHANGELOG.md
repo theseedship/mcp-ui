@@ -11,8 +11,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > **Note (2026-07-03):** after `5.2.0` this monorepo-wide log was superseded by
 > the per-package changelogs, which are the source of truth for every release
-> (current: `mcp-ui-solid` 6.18.0, `mcp-ui-spec` 5.6.0, `mcp-ui-cli` 5.0.0). New
+> (current: `mcp-ui-solid` 6.19.0, `mcp-ui-spec` 5.6.0, `mcp-ui-cli` 5.0.1). New
 > entries go there; this file is kept for historical monorepo-level context.
+
+## [6.19.0] - 2026-09-16 (`mcp-ui-solid`; `mcp-ui-cli` 5.0.1)
+
+- Security: every `innerHTML` sink in `mcp-ui-solid` sanitized on both server
+  and client, closing a raw-markup gap in the `text` component's non-markdown
+  path; documented SSR contract (server emits escaped text, client upgrades
+  to sanitized rich HTML after hydration); `code` block `&`-escaping fix.
+- Accessible table pagination and labeled `GridRenderer` regions; stable
+  `data-mcp-ui-portal` hooks on portal/modal roots.
+- New dependency-free `@seed-ship/mcp-ui-solid/adapters/presentation` subpath;
+  `solid-js` is now an optional peer.
+- Published package size cut from 39.8 MB to ~1.3 MB by fixing an allow-list
+  vs. deny-list bug in the Rollup externals config.
+- `mcp-ui-cli` 5.0.1: pin `@seed-ship/mcp-ui-spec` as `workspace:^5.6.0`
+  instead of `workspace:*`, fixing a duplicate-spec-package install next to
+  `mcp-ui-solid`.
+
+See the per-package changelogs for full details, including exactly what the
+new sanitize profile keeps and strips.
 
 ## [6.18.0] - 2026-09-14 (`mcp-ui-solid`; `mcp-ui-spec` 5.6.0)
 

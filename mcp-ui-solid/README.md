@@ -5,6 +5,42 @@ SolidJS components + chat toolkit for MCP-generated UI. Part of the [MCP UI ecos
 [![npm version](https://img.shields.io/npm/v/@seed-ship/mcp-ui-solid.svg)](https://www.npmjs.com/package/@seed-ship/mcp-ui-solid)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+## What's New in v6.19.0 — sanitization, a11y and packaging
+
+- **Text/table/resource HTML sinks are now sanitized on client *and* server.**
+  `TextRenderer`'s non-markdown branch previously bound `params.content`
+  straight to `innerHTML`; it is now sanitized like every other HTML sink in
+  the package, through one shared `sanitizeHtml()` entry point. On the
+  server (or wherever DOMPurify cannot run) nothing but escaped plain text is
+  ever emitted; the client re-applies the sanitized rich HTML once mounted.
+  See **SSR Compatibility** below for the full contract.
+- **`code` component:** the no-highlight.js fallback now escapes `&` (it
+  previously escaped only `<`/`>`), so source containing `&lt;script&gt;`
+  can no longer render as a literal tag.
+- **Accessible table pagination and grid regions:** prev/next buttons and the
+  fullscreen page-size selector carry `aria-label`s (localizable via
+  `MCPUIStringsProvider`), the page indicator is a live region, and
+  `GridRenderer`'s container is a labeled `role="group"`.
+- **Stable portal and action hooks:** `data-mcp-ui-portal="menu"` / `"dialog"`
+  on the dropdown and fullscreen-modal portal roots, and
+  `data-mcp-ui-action="expand" | "copy" | "close"` (or the toolbar icon name)
+  on the chrome buttons — for host CSS/tests that must not depend on `role`
+  selectors or on `aria-label` text, which is localizable and no longer
+  hardcoded English (`"Expand to fullscreen"` → `MCPUIStrings.expand`).
+- **New `@seed-ship/mcp-ui-solid/adapters/presentation` subpath** — the pure
+  `createComparisonLayout` / `createGeographyLayout` / `createEvidenceLayout`
+  helpers, built dependency-free (no `solid-js`, `zod` or spec import in the
+  output) so a plain-Node MCP server can use them. See **Server-side
+  producers** below.
+- **Much smaller npm package:** the published tarball shrank from 39.8 MB /
+  5428 files (`6.18.0`) to ~1.3 MB / 729 files. `dist/` no longer accidentally
+  bundles the whole dependency tree. `solid-js` is now an optional peer, so a
+  server-only consumer of `./validation` or `./adapters/presentation` doesn't
+  need it installed at all.
+
+See [`CHANGELOG.md`](./CHANGELOG.md) for the full list, including exactly
+what the `prose` sanitize profile keeps and strips.
+
 ## What's New in v6.18.0 — presentation foundations
 
 - **Three composition helpers** in `@seed-ship/mcp-ui-solid/adapters`:
@@ -202,6 +238,40 @@ npm install @seed-ship/mcp-ui-solid
 - `protomaps-leaflet` — PMTiles vector tiles
 - `@duckdb/duckdb-wasm` — DuckDB plugin
 - `@tanstack/solid-virtual` — table virtualization
+
+### Tailwind CSS v4 consumers
+
+This library's JSX uses Tailwind utility classes directly and ships **no
+compiled stylesheet** — `dist/mcp-ui-solid.css` doesn't exist. A Tailwind v4
+host must scan the package's source for classes to generate, by adding an
+`@source` directive to its own CSS entry point:
+
+```css
+/* recommended when the host resolves with the `solid` export condition
+   (vite-plugin-solid) — the package is then consumed from src/ */
+@source "../../node_modules/@seed-ship/mcp-ui-solid/src/**/*.{ts,tsx}";
+
+/* for hosts WITHOUT the `solid` condition (plain bundlers/SSR frameworks
+   that resolve to the built output), scan dist instead */
+@source "../../node_modules/@seed-ship/mcp-ui-solid/dist/**/*.js";
+```
+
+Adjust the relative path to your CSS file's location. This is a supported
+integration contract, not a workaround.
+
+With the `solid` export condition active, the package resolves to `.ts`/`.tsx`
+sources rather than `dist/`. A SolidStart (or any Vite SSR) host that enables
+it must also list the package in `ssr.noExternal` so the server bundle
+transforms those sources instead of trying to `require()` raw JSX:
+
+```typescript
+export default defineConfig({
+  vite: {
+    resolve: { conditions: ['solid', 'development', 'browser'] },
+    ssr: { noExternal: ['@seed-ship/mcp-ui-solid'] },
+  },
+})
+```
 
 ## Quick Start
 
@@ -743,9 +813,102 @@ Fully SSR-compatible with SolidStart, Astro, etc. Add to `app.config.ts`:
 
 ```typescript
 export default defineConfig({
-  vite: { resolve: { conditions: ['solid', 'development', 'browser'] } }
+  vite: {
+    resolve: { conditions: ['solid', 'development', 'browser'] },
+    ssr: { noExternal: ['@seed-ship/mcp-ui-solid'] },
+  },
 })
 ```
+
+### Sanitization contract (v6.19.0)
+
+Every value this package binds into an `innerHTML` sink (the `text`, `table`
+and `UIResourceHtmlRenderer` HTML branches) goes through one internal
+`sanitizeHtml()` entry point, with one invariant that holds identically on
+server and client: **nothing unsanitized ever reaches an `innerHTML` sink.**
+
+- **Server** (or any environment where DOMPurify cannot run — `isServer`,
+  `!DOMPurify.isSupported`, or `DOMPurify.sanitize` not being a function,
+  which is what dompurify 3.4.x actually does with no `window`): tags are
+  stripped cosmetically and the remainder is `escapeHtml()`-ed. The response
+  therefore never contains live markup — worst case it's escaped plain text,
+  never a crash and never raw HTML.
+- **Client:** the real DOMPurify runs with a profile scoped to the call site
+  (rich `prose` for text content, narrower profiles for table cells).
+  `<SafeHtml>`'s `onMount` then re-applies the sanitized rich HTML if the
+  hydrated DOM still shows the server's escaped text — this is what covers
+  `solid-js/web`'s `setProperty(node, 'innerHTML', v)` early-return during
+  hydration, so a hydrated page doesn't stay stuck showing escaped text.
+
+Net effect: an SSR pass never leaks or executes untrusted markup, and the
+client upgrades to the rich version once mounted, without a second render
+pass on the host's part.
+
+## Telemetry
+
+Optional, fail-open event sink for component lifecycle, validation and action
+events — no payload data, only metadata (type / id / componentType / timing),
+so it's safe for centralized logging. `useTelemetry()` returns `null` (and
+dispatch sites no-op) when no `MCPUITelemetryProvider` is mounted, so opting
+in never changes behavior for apps that don't.
+
+```tsx
+import { MCPUITelemetryProvider, useTelemetry } from '@seed-ship/mcp-ui-solid'
+
+function App() {
+  return (
+    <MCPUITelemetryProvider
+      sink={(events) => fetch('/api/ui-telemetry', { method: 'POST', body: JSON.stringify(events) })}
+      options={{ sampleRate: 1.0, bufferMs: 100, bufferMax: 50 }}
+    >
+      <Dashboard />
+    </MCPUITelemetryProvider>
+  )
+}
+```
+
+Events are buffered (`bufferMs` / `bufferMax`, defaults 100ms / 50) and
+flushed as a batch (always an array, even for `bufferMs: 0`); a `sink` throw
+or rejected promise is caught silently and never crashes the renderer.
+`createTelemetryDispatcher(sink, options)` builds the same dispatcher without
+a Solid context, for tests or non-component call sites. Event types:
+`component:mounted`, `component:rendered` (`durationMs`), `component:unmounted`,
+`validation:failed` (`errorCount`, `firstErrorCode`), `render:error`
+(`errorMessage`), `action:dispatched` (`actionName`).
+
+## Server-side producers
+
+`@seed-ship/mcp-ui-solid/adapters/presentation` and `@seed-ship/mcp-ui-solid/validation`
+are both importable from a plain Node service with **no `solid-js`
+installed** — neither pulls in Solid, and `/adapters/presentation`'s built
+output (ESM and CJS) contains zero `import`/`require` statements at all.
+`solid-js` is an optional peer since v6.19.0, so a server-only consumer gets
+no missing-peer warning.
+
+CommonJS consumers on TypeScript `moduleResolution: "node"` (which ignores the
+`exports` map) are covered too: every subpath is declared in `typesVersions`,
+so `import type { UILayout } from '@seed-ship/mcp-ui-solid/types-only'` and
+`require('@seed-ship/mcp-ui-solid/adapters/presentation')` both resolve, types
+included, without `paths` aliases.
+
+```ts
+// A Node MCP server or backend service, no solid-js dependency
+import { createComparisonLayout } from '@seed-ship/mcp-ui-solid/adapters/presentation'
+
+const layout = createComparisonLayout({
+  id: 'sales-comparison',
+  chart: { id: 'sales-chart', type: 'chart', params: { /* ... */ } },
+  table: { id: 'sales-table', type: 'table', params: { /* ... */ } },
+})
+
+// send `layout` to the client, which renders it with <UIResourceRenderer>
+```
+
+`./validation`'s only external import chain is `@seed-ship/mcp-ui-spec` (and
+the `zod` it pulls in) — verified by inspecting `dist/validation.js` /
+`dist/validation.cjs`, and asserted by a test so it stays true. Use it to
+`validateComponent()` / `validateLayout()` payloads server-side before ever
+handing them to a Solid renderer.
 
 ## Exports
 
@@ -753,40 +916,91 @@ export default defineConfig({
 // Components
 import {
   UIResourceRenderer, StreamingUIRenderer, GenerativeUIErrorBoundary,
-  ExpandableWrapper, ComponentToolbar,
-  ChatPrompt, ScratchpadPanel,
+  DraggableGridItem, ResizeHandle, EditableUIResourceRenderer,
+  ExpandableWrapper, useExpanded, ComponentToolbar, FeedbackInline,
+  PresentationFeedback, DEFAULT_PRESENTATION_FEEDBACK_LABELS,
+  ChatPrompt, ElicitationForm, PortalDropdownMenu, ScratchpadPanel,
   VerifiedText, DataPreviewSection,
+  AgentCard, AgentStatusBadge, SplitStepper, AgentHandoff, BriefingDiff,
+  GhostText, GhostTextInput, AutocompleteDropdown, AutocompleteFormField,
+  GraphRenderer, isG6Available, graphToMermaid, graphToJSON,
+  renderCellValue, // v5.7.0 — citation-chip-aware table cell renderer
+  MCPUIStringsProvider, useMCPUIStrings, DEFAULT_MCPUI_STRINGS, // v6.6.0 i18n chrome
 } from '@seed-ship/mcp-ui-solid'
 
-// Data Verification
-import { validateAgainstSource } from '@seed-ship/mcp-ui-solid'
-import { useDataValidator } from '@seed-ship/mcp-ui-solid'
+// Hooks
+import {
+  useStreamingUI, useAction, useToolAction,
+  useConditionalField, evaluateCondition,
+  useModal, useConfirmModal, useFormPersistence,
+  useDragDrop, useResize, useAutocomplete,
+  useDataValidator, // v3.1.0 — data verification
+} from '@seed-ship/mcp-ui-solid'
 
-// Chat Bus
+// Chat Bus (@experimental)
 import {
   ChatBusProvider, useChatBus,
   dispatchScratchpad, useScratchpadState,
+  createScratchpadStore, ScratchpadStoreProvider,
   createChatBus, createEventEmitter, createCommandHandler,
-  clarificationToPromptConfig,  // v4.3.9 — universal ClarificationEvent → ChatPromptConfig bridge
+  clarificationToPromptConfig,  // v4.3.9 — ClarificationEvent → ChatPromptConfig bridge
+  elicitationToPromptConfig,    // v5.2.0 — ElicitationEvent → ChatPromptConfig bridge
+  createChatPromptController, PromptReplacedError, // v5.2.0
+  setServerCapabilities, useServerCapabilities, createServerCapabilitiesStore, // v5.3.0
+  createMockChatBus, // v4.3.9 — testing utilities
 } from '@seed-ship/mcp-ui-solid'
-
-// Testing utilities (v4.3.9)
-import { createMockChatBus } from '@seed-ship/mcp-ui-solid'
 
 // Validation + Security
 import {
-  validateComponent, validateLayout,
-  getIframeSandbox, DEFAULT_IFRAME_DOMAINS, TRUSTED_IFRAME_DOMAINS,
+  validateComponent, validateLayout, validateIframeDomain,
+  getIframeSandbox, DEFAULT_RESOURCE_LIMITS,
+  DEFAULT_IFRAME_DOMAINS, TRUSTED_IFRAME_DOMAINS,
+  ComponentRegistry, mergeScratchpadSections,
+  validateAgainstSource, // v4.0.0 — anti-hallucination
 } from '@seed-ship/mcp-ui-solid'
 
-// Types
+// Adapters — pure layout-composition helpers (v6.18.0+). Root package does
+// NOT re-export these; import from a subpath. Use '/adapters' alongside the
+// connector/macro adapters, or '/adapters/presentation' for the same three
+// helpers built dependency-free (no solid-js/zod/spec import in the output,
+// v6.19.0 — see "Server-side producers" below). Pick one, not both.
+import {
+  createComparisonLayout, createGeographyLayout, createEvidenceLayout,
+} from '@seed-ship/mcp-ui-solid/adapters' // or '/adapters/presentation'
+
+// Telemetry (v5.6.0)
+import {
+  MCPUITelemetryProvider, useTelemetry, createTelemetryDispatcher,
+} from '@seed-ship/mcp-ui-solid'
+
+// Utils
+import {
+  setDebugMode, isDebugEnabled,             // v5.4.0 — runtime debug mode
+  markRenderStart, markRenderEnd, PERF_PREFIX, // v5.4.0 — perf marks
+  getUiResourceStableKey,                   // v6.5.0 — identity stability
+  setDuplicateMountReporter,                // v6.5.0 — opt-in observability
+} from '@seed-ship/mcp-ui-solid'
+
+// Types — component/param types, chat-bus types, and everything above's
+// prop/options/return types. Non-exhaustive; see src/index.ts for the
+// authoritative list.
 import type {
+  UIComponent, UILayout, GridPosition, ComponentType, RendererError,
+  ChartComponentParams, TableComponentParams, MetricComponentParams,
+  TextComponentParams, ActionComponentParams, GridComponentParams,
+  FormComponentParams, ModalComponentParams, ActionGroupParams,
+  ImageGalleryParams, VideoComponentParams, CodeComponentParams,
+  MapComponentParams, LatLngPoint, MapMarker, MapGeoJSONStyle,
+  MapPopupConfig, MapLayer, MapPMTilesConfig,
+  IframePolicy, ValidationOptions,
+  CitationCtx, CitationEntry, DuplicateMountInfo, DuplicateMountReporter,
+  MCPUIStrings, TelemetryEvent, TelemetrySink, TelemetryOptions, TelemetryDispatcher,
   DataValidation, HallucinatedNumber, DataValidationOptions,
   VerifiedTextContent, DataPreviewContent, MapSectionContent,
-  LatLngPoint, MapGeoJSONStyle, MapPopupConfig, MapLayer, MapPMTilesConfig,
-  ChatBus, ChatEvents, ChatCommands,
-  ScratchpadState, ScratchpadSection, ScratchpadEvent,
-  UIComponent, UILayout, ComponentType,
+  ChatBus, ChatEvents, ChatCommands, ScratchpadState, ScratchpadSection,
+  ScratchpadEvent, ElicitationEvent, ClarificationEvent,
+  // ...and all component prop/param types (FeedbackInlineProps, AgentCardContent,
+  // AutocompleteOption, UseStreamingUIOptions, ScratchpadStoreHandle, etc.)
 } from '@seed-ship/mcp-ui-solid'
 ```
 

@@ -165,7 +165,7 @@ describe('<ChartJSRenderer>', () => {
     expect(table.textContent).toContain('Row 40');
     expect(table.textContent).toContain('40');
 
-    fireEvent.click(getByLabelText('Expand to fullscreen'));
+    fireEvent.click(getByLabelText('Expand'));
     await waitFor(() =>
       expect(document.querySelector('[role="dialog"][aria-label="Quarterly sales"]')).toBeTruthy(),
     );

@@ -3,9 +3,10 @@
  * Phase 0: Foundation with iframe sandbox and composite grid support
  */
 
-import DOMPurify from 'dompurify'
 import { Component, createSignal, Show, For, createMemo, createEffect, onMount, onCleanup } from 'solid-js'
 import { isServer } from 'solid-js/web'
+import { sanitizeHtml, SANITIZE_PROFILES } from '../utils/sanitize-html'
+import { SafeHtml } from './SafeHtml'
 import type { UIComponent, UILayout, RendererError, TableVirtualizeOptions } from '../types'
 import { validateComponent, DEFAULT_RESOURCE_LIMITS, getIframeSandbox } from '../services/validation'
 import { GenerativeUIErrorBoundary } from './GenerativeUIErrorBoundary'
@@ -19,6 +20,7 @@ import {
   type DuplicateMountInfo,
 } from '../utils/duplicate-mount-registry'
 import { useTelemetry } from '../context/MCPUITelemetryContext'
+import { useMCPUIStrings } from '../context/MCPUIStringsContext'
 
 /**
  * How `<UIResourceRenderer>` reacts when `validateComponent()` rejects a
@@ -84,6 +86,9 @@ function CopyButton(props: { getText: () => string; title?: string; position?: '
       onClick={handleCopy}
       class={`${positionClasses()} opacity-60 hover:opacity-100 px-2 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-all shadow-sm z-10`}
       title={props.title || 'Copy'}
+      aria-label={props.title || 'Copy'}
+      data-mcp-ui-action="copy"
+      type="button"
     >
       <Show
         when={!copied()}
@@ -506,13 +511,17 @@ export function renderCellValue(value: any, citationCtx?: CitationCtx): string {
     // Check for link-like objects: { url: "...", name/label/title: "..." }
     if (value.url) {
       const label = value.name || value.label || value.title || value.url
-      const sanitizedLabel = DOMPurify.sanitize(String(label))
-      const sanitizedUrl = DOMPurify.sanitize(String(value.url))
-      return `<a href="${sanitizedUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-600 dark:text-blue-400 hover:underline">${sanitizedLabel}</a>`
+      const sanitizedLabel = sanitizeHtml(String(label))
+      const sanitizedUrl = sanitizeHtml(String(value.url))
+      const anchor = `<a href="${sanitizedUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-600 dark:text-blue-400 hover:underline">${sanitizedLabel}</a>`
+      // Re-sanitize the composed anchor: sanitizing the bare `url` string
+      // leaves quotes and `javascript:` untouched, so a crafted value could
+      // otherwise break out of the attribute or smuggle a scriptable href.
+      return sanitizeHtml(anchor, SANITIZE_PROFILES.cellLink)
     }
     // Fallback: extract meaningful text from object properties
     if (value.name || value.label || value.title) {
-      return DOMPurify.sanitize(String(value.name || value.label || value.title))
+      return sanitizeHtml(String(value.name || value.label || value.title))
     }
     // Last resort: JSON stringify for debugging (better than [object Object])
     try {
@@ -549,7 +558,7 @@ export function renderCellValue(value: any, citationCtx?: CitationCtx): string {
       /\[([^\]]+)\]\(([^)]+)\)/g,
       '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-blue-600 dark:text-blue-400 hover:underline">$1</a>'
     )
-    return DOMPurify.sanitize(htmlValue, { ADD_ATTR: ['target', 'rel'] })
+    return sanitizeHtml(htmlValue, SANITIZE_PROFILES.cellLink)
   }
 
   // v5.7.0 — citation transform (opt-in). Replaces `[N]` style markers
@@ -572,11 +581,7 @@ export function renderCellValue(value: any, citationCtx?: CitationCtx): string {
   const hasMarkdown = /[*_`#]/.test(strValue)
   if (hasMarkdown) {
     const parsed = marked.parse(strValue, { async: false }) as string
-    return DOMPurify.sanitize(parsed, {
-      ALLOWED_TAGS: ['a', 'strong', 'em', 'b', 'i', 'code', 'span', 'br', 'button', 'svg', 'path', 'p', 'ul', 'ol', 'li', 'pre', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
-      ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'data-citation-page', 'data-citation-source', 'data-citation-doc', 'data-citation-verified', 'title', 'fill', 'stroke', 'viewBox', 'stroke-linecap', 'stroke-linejoin', 'stroke-width', 'd'],
-      ADD_ATTR: ['target', 'rel'],
-    })
+    return sanitizeHtml(parsed, SANITIZE_PROFILES.cellMarkdown)
   }
 
   // Detect raw HTML in cell values (e.g. <a href="..." data-citation-page="5">text</a>)
@@ -584,15 +589,11 @@ export function renderCellValue(value: any, citationCtx?: CitationCtx): string {
   // OR where the citation transform above injected chip HTML.
   const hasHtml = /<[a-z][\s\S]*>/i.test(strValue)
   if (hasHtml) {
-    return DOMPurify.sanitize(strValue, {
-      ALLOWED_TAGS: ['a', 'strong', 'em', 'b', 'i', 'code', 'span', 'br', 'button', 'svg', 'path'],
-      ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'data-citation-page', 'data-citation-source', 'data-citation-doc', 'data-citation-verified', 'title', 'fill', 'stroke', 'viewBox', 'stroke-linecap', 'stroke-linejoin', 'stroke-width', 'd'],
-      ADD_ATTR: ['target', 'rel'],
-    })
+    return sanitizeHtml(strValue, SANITIZE_PROFILES.cellHtml)
   }
 
   // Plain text — sanitize to prevent XSS via innerHTML
-  return DOMPurify.sanitize(strValue)
+  return sanitizeHtml(strValue)
 }
 
 /**
@@ -606,6 +607,7 @@ function TableRenderer(props: {
 }) {
   const tableParams = props.component.params as any
   let scrollContainerRef: HTMLDivElement | undefined
+  const strings = useMCPUIStrings()
 
   // v5.7.0 — opt-in citation chip rendering inside cells. When `citationMap`
   // is present in params, build a CitationCtx once and thread it through
@@ -889,7 +891,7 @@ function TableRenderer(props: {
             <For each={tableParams.columns}>
               {(column: any) => (
                 <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-200 whitespace-normal break-words leading-relaxed first:pl-6 last:pr-6">
-                  <div innerHTML={highlightQuery(renderCellValue(row[column.key], citationCtx), debouncedQuery())} />
+                  <SafeHtml html={() => highlightQuery(renderCellValue(row[column.key], citationCtx), debouncedQuery())} />
                 </td>
               )}
             </For>
@@ -928,7 +930,7 @@ function TableRenderer(props: {
                 <For each={tableParams.columns}>
                   {(column: any) => (
                     <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-200 whitespace-normal break-words leading-relaxed first:pl-6 last:pr-6">
-                      <div innerHTML={highlightQuery(renderCellValue(row[column.key], citationCtx), debouncedQuery())} />
+                      <SafeHtml html={() => highlightQuery(renderCellValue(row[column.key], citationCtx), debouncedQuery())} />
                     </td>
                   )}
                 </For>
@@ -1104,19 +1106,23 @@ function TableRenderer(props: {
               </span>
               <div class="flex items-center gap-2">
                 <button
+                  type="button"
                   class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   disabled={clientPage() === 0}
                   onClick={() => setClientPage(p => p - 1)}
+                  aria-label={strings.paginationPrevious}
                 >
-                  &#x25C0;
+                  <span aria-hidden="true">&#x25C0;</span>
                 </button>
-                <span>{clientPage() + 1} / {clientTotalPages()}</span>
+                <span aria-live="polite">{clientPage() + 1} / {clientTotalPages()}</span>
                 <button
+                  type="button"
                   class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   disabled={clientPage() >= clientTotalPages() - 1}
                   onClick={() => setClientPage(p => p + 1)}
+                  aria-label={strings.paginationNext}
                 >
-                  &#x25B6;
+                  <span aria-hidden="true">&#x25B6;</span>
                 </button>
                 {/* Page size selector — fullscreen only */}
                 <Show when={isExpanded() && filteredRows().length > 10}>
@@ -1124,6 +1130,7 @@ function TableRenderer(props: {
                     class="ml-2 px-1 py-0.5 text-xs border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300"
                     value={clientPageSize()}
                     onChange={(e) => handlePageSizeChange(Number(e.currentTarget.value))}
+                    aria-label={strings.paginationPageSize}
                   >
                     <For each={pageSizeOptions()}>
                       {(opt) => <option value={opt.value}>{opt.label}</option>}
@@ -1235,12 +1242,19 @@ function TextRenderer(props: { component: UIComponent }) {
     return null
   })
 
-  // Convert markdown to HTML if markdown flag is true (and not an image component)
+  // Convert markdown to HTML if markdown flag is true (and not an image component).
+  //
+  // BOTH branches are sanitized: the result is bound to `innerHTML`, and
+  // `params.content` is LLM-authored — the non-markdown branch used to reach
+  // the sink completely raw. `sanitizeHtml` also makes the SSR pass emit
+  // escaped text instead of live markup.
   const htmlContent = createMemo(() => {
+    const raw = textParams.content
+    if (raw === null || raw === undefined) return ''
     if (textParams.markdown && !imageData()) {
-      return marked.parse(textParams.content, { async: false }) as string
+      return sanitizeHtml(marked.parse(raw, { async: false }) as string, SANITIZE_PROFILES.prose)
     }
-    return textParams.content
+    return sanitizeHtml(String(raw), SANITIZE_PROFILES.prose)
   })
 
   // Get plain text content for copying (strip markdown/HTML)
@@ -1255,9 +1269,9 @@ function TextRenderer(props: { component: UIComponent }) {
       fallback={
         <div class="relative w-full h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 group">
           <CopyButton getText={getTextContent} title="Copy text" position="top-right" />
-          <div
+          <SafeHtml
             class={`prose prose-sm dark:prose-invert max-w-none ${textParams.className || ''}`}
-            innerHTML={htmlContent()}
+            html={htmlContent}
           />
         </div>
       }
@@ -1815,7 +1829,7 @@ function isUIResource(content: any): boolean {
 function UIResourceHtmlRenderer(props: { resource: any }) {
   const htmlContent = () => {
     if (props.resource.content?.htmlString) {
-      return DOMPurify.sanitize(props.resource.content.htmlString)
+      return sanitizeHtml(String(props.resource.content.htmlString), SANITIZE_PROFILES.resource)
     }
     return ''
   }
@@ -1833,9 +1847,9 @@ function UIResourceHtmlRenderer(props: { resource: any }) {
           </h3>
         </div>
       </Show>
-      <div
+      <SafeHtml
         class="p-4 prose prose-sm dark:prose-invert max-w-none"
-        innerHTML={htmlContent()}
+        html={htmlContent}
       />
     </div>
   )

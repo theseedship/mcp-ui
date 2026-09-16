@@ -1,11 +1,33 @@
 {
   "name": "@seed-ship/mcp-ui-solid",
-  "version": "6.18.0",
+  "version": "6.19.0",
   "description": "SolidJS components for rendering MCP-generated UI resources",
   "type": "module",
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "components": ["./dist/components.d.ts"],
+      "hooks": ["./dist/hooks.d.ts"],
+      "types": ["./dist/types.d.ts"],
+      "validation": ["./dist/validation.d.ts"],
+      "types-only": ["./dist/types-export.d.ts"],
+      "adapters": ["./dist/adapters.d.ts"],
+      "adapters/presentation": ["./dist/adapters/presentation.d.ts"],
+      "plugins/duckdb": ["./dist/plugins/duckdb.d.ts"]
+    }
+  },
   "exports": {
     ".": {
       "solid": "./src/index.ts",
@@ -84,6 +106,17 @@
         "default": "./dist/adapters.cjs"
       }
     },
+    "./adapters/presentation": {
+      "solid": "./src/adapters/presentation.ts",
+      "import": {
+        "types": "./dist/adapters/presentation.d.ts",
+        "default": "./dist/adapters/presentation.js"
+      },
+      "require": {
+        "types": "./dist/adapters/presentation.d.cts",
+        "default": "./dist/adapters/presentation.cjs"
+      }
+    },
     "./plugins/duckdb": {
       "solid": "./src/plugins/duckdb.ts",
       "import": {
@@ -101,7 +134,7 @@
     "build": "vite build && pnpm build:types",
     "build:types": "tsc --declaration --emitDeclarationOnly --outDir dist --composite false && pnpm build:types:copy",
     "build:types:copy": "cp dist/components/index.d.ts dist/components.d.ts 2>/dev/null || true && cp dist/hooks/index.d.ts dist/hooks.d.ts 2>/dev/null || true && cp dist/types/index.d.ts dist/types.d.ts 2>/dev/null || true && cp dist/adapters/index.d.ts dist/adapters.d.ts 2>/dev/null || true && pnpm build:types:cts",
-    "build:types:cts": "cp dist/index.d.ts dist/index.d.cts && cp dist/components.d.ts dist/components.d.cts 2>/dev/null || true && cp dist/hooks.d.ts dist/hooks.d.cts 2>/dev/null || true && cp dist/types.d.ts dist/types.d.cts 2>/dev/null || true && cp dist/validation.d.ts dist/validation.d.cts 2>/dev/null || true && cp dist/types-export.d.ts dist/types-export.d.cts 2>/dev/null || true && cp dist/adapters.d.ts dist/adapters.d.cts 2>/dev/null || true",
+    "build:types:cts": "cp dist/index.d.ts dist/index.d.cts && cp dist/components.d.ts dist/components.d.cts 2>/dev/null || true && cp dist/hooks.d.ts dist/hooks.d.cts 2>/dev/null || true && cp dist/types.d.ts dist/types.d.cts 2>/dev/null || true && cp dist/validation.d.ts dist/validation.d.cts 2>/dev/null || true && cp dist/types-export.d.ts dist/types-export.d.cts 2>/dev/null || true && cp dist/adapters.d.ts dist/adapters.d.cts 2>/dev/null || true && cp dist/adapters/presentation.d.ts dist/adapters/presentation.d.cts 2>/dev/null || true",
     "dev": "vite build --watch",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -145,6 +178,9 @@
   },
   "peerDependenciesMeta": {
     "@antv/g6": {
+      "optional": true
+    },
+    "solid-js": {
       "optional": true
     },
     "@duckdb/duckdb-wasm": {

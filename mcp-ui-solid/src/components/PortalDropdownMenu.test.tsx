@@ -110,4 +110,10 @@ describe('PortalDropdownMenu (v6.4.0)', () => {
     fireEvent.mouseDown(item)
     expect(getOpen()).toBe(true)
   })
+
+  it('exposes a stable data-mcp-ui-portal="menu" hook on the portal root', () => {
+    harness(true)
+    const menu = document.body.querySelector('[role="menu"]') as HTMLElement
+    expect(menu.getAttribute('data-mcp-ui-portal')).toBe('menu')
+  })
 })

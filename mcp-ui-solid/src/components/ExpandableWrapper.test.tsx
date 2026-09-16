@@ -38,7 +38,7 @@ describe('ExpandableWrapper', () => {
       </ExpandableWrapper>
     ))
 
-    expect(getByLabelText('Expand to fullscreen')).toBeDefined()
+    expect(getByLabelText('Expand')).toBeDefined()
   })
 
   it('opens modal when expand button is clicked', async () => {
@@ -48,12 +48,24 @@ describe('ExpandableWrapper', () => {
       </ExpandableWrapper>
     ))
 
-    const expandBtn = getByLabelText('Expand to fullscreen')
+    const expandBtn = getByLabelText('Expand')
     fireEvent.click(expandBtn)
 
     // Modal dialog should appear
     const dialog = getByRole('dialog')
     expect(dialog).toBeDefined()
+  })
+
+  it('exposes a stable data-mcp-ui-portal="dialog" hook on the fullscreen overlay root', () => {
+    const { getByLabelText, getByRole } = render(() => (
+      <ExpandableWrapper title="Test Title">
+        <div>Content</div>
+      </ExpandableWrapper>
+    ))
+
+    fireEvent.click(getByLabelText('Expand'))
+    const dialog = getByRole('dialog')
+    expect(dialog.getAttribute('data-mcp-ui-portal')).toBe('dialog')
   })
 
   it('displays title in expanded modal header', async () => {
@@ -63,7 +75,7 @@ describe('ExpandableWrapper', () => {
       </ExpandableWrapper>
     ))
 
-    fireEvent.click(getByLabelText('Expand to fullscreen'))
+    fireEvent.click(getByLabelText('Expand'))
 
     // Title should be visible in the modal header
     expect(getByText('Sales Data')).toBeDefined()
@@ -77,7 +89,7 @@ describe('ExpandableWrapper', () => {
     ))
 
     // Open
-    fireEvent.click(getByLabelText('Expand to fullscreen'))
+    fireEvent.click(getByLabelText('Expand'))
     expect(queryByRole('dialog')).not.toBeNull()
 
     // Close
@@ -94,7 +106,7 @@ describe('ExpandableWrapper', () => {
       </ExpandableWrapper>
     ))
 
-    fireEvent.click(getByLabelText('Expand to fullscreen'))
+    fireEvent.click(getByLabelText('Expand'))
     expect(queryByRole('dialog')).not.toBeNull()
 
     fireEvent.keyDown(document, { key: 'Escape' })
@@ -109,7 +121,7 @@ describe('ExpandableWrapper', () => {
       </ExpandableWrapper>
     ))
 
-    fireEvent.click(getByLabelText('Expand to fullscreen'))
+    fireEvent.click(getByLabelText('Expand'))
 
     expect(getByLabelText('Copy TSV')).toBeDefined()
   })
@@ -121,7 +133,7 @@ describe('ExpandableWrapper', () => {
       </ExpandableWrapper>
     ))
 
-    fireEvent.click(getByLabelText('Expand to fullscreen'))
+    fireEvent.click(getByLabelText('Expand'))
 
     expect(queryByLabelText('Copy to clipboard')).toBeNull()
   })
@@ -137,7 +149,7 @@ describe('ExpandableWrapper', () => {
       </ExpandableWrapper>
     ))
 
-    fireEvent.click(getByLabelText('Expand to fullscreen'))
+    fireEvent.click(getByLabelText('Expand'))
     fireEvent.click(getByLabelText('Copy to clipboard'))
 
     expect(writeText).toHaveBeenCalledWith(testData)
@@ -150,7 +162,7 @@ describe('ExpandableWrapper', () => {
       </ExpandableWrapper>
     ))
 
-    fireEvent.click(getByLabelText('Expand to fullscreen'))
+    fireEvent.click(getByLabelText('Expand'))
 
     // v6.6.0: default heading comes from MCPUIStrings.expandedView (D2).
     // Also unified to a single casing — the pre-v6.6.0 code had
@@ -165,7 +177,7 @@ describe('ExpandableWrapper', () => {
       </ExpandableWrapper>
     ))
 
-    fireEvent.click(getByLabelText('Expand to fullscreen'))
+    fireEvent.click(getByLabelText('Expand'))
 
     const dialog = getByRole('dialog')
     // Content area inside the modal panel should have overflow-auto
@@ -181,7 +193,7 @@ describe('ExpandableWrapper', () => {
       </ExpandableWrapper>
     ))
 
-    fireEvent.click(getByLabelText('Expand to fullscreen'))
+    fireEvent.click(getByLabelText('Expand'))
     const dialog = getByRole('dialog')
     expect(dialog).toBeDefined()
 
@@ -198,7 +210,7 @@ describe('ExpandableWrapper', () => {
       </ExpandableWrapper>
     ))
 
-    fireEvent.click(getByLabelText('Expand to fullscreen'))
+    fireEvent.click(getByLabelText('Expand'))
 
     const dialog = getByRole('dialog')
     // Modal panel should have dark mode background class
@@ -223,10 +235,35 @@ describe('ExpandableWrapper', () => {
 
     const originalOverflow = document.body.style.overflow
 
-    fireEvent.click(getByLabelText('Expand to fullscreen'))
+    fireEvent.click(getByLabelText('Expand'))
     expect(document.body.style.overflow).toBe('hidden')
 
     fireEvent.keyDown(document, { key: 'Escape' })
     expect(document.body.style.overflow).toBe(originalOverflow)
+  })
+})
+
+describe('ExpandableWrapper data-mcp-ui-action hooks (v6.19.0)', () => {
+  beforeEach(() => {
+    cleanup()
+  })
+
+  it('exposes stable data-mcp-ui-action hooks on the expand, copy and close buttons', () => {
+    const { container, getByLabelText } = render(() => (
+      <ExpandableWrapper title="Test" copyData="some data">
+        <div>Content</div>
+      </ExpandableWrapper>
+    ))
+
+    const expand = container.querySelector('button[data-mcp-ui-action="expand"]')
+    expect(expand).not.toBeNull()
+    // The accessible name comes from MCPUIStrings (default "Expand"), not a
+    // hardcoded English literal — hosts must target the data hook, not the text.
+    expect(expand!.getAttribute('aria-label')).toBe('Expand')
+
+    fireEvent.click(getByLabelText('Expand'))
+
+    expect(container.querySelector('button[data-mcp-ui-action="copy"]')).not.toBeNull()
+    expect(container.querySelector('button[data-mcp-ui-action="close"]')).not.toBeNull()
   })
 })

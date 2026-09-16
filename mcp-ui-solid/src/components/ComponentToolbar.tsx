@@ -92,6 +92,8 @@ const ToolbarButton: Component<{ action: ToolbarAction }> = (props) => {
       class={`p-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-all shadow-sm`}
       title={props.action.label}
       aria-label={props.action.label}
+      data-mcp-ui-action={props.action.icon}
+      type="button"
     >
       <svg class={`w-3 h-3 ${colorClass()}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={iconPath()} />

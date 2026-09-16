@@ -8,6 +8,7 @@ import { Component, For, createMemo } from 'solid-js'
 import type { UIComponent, GridPosition } from '../types'
 import { useRenderContext } from './RenderContext'
 import { createResponsiveGrid } from '../hooks/createResponsiveGrid'
+import { useMCPUIStrings } from '../context/MCPUIStringsContext'
 
 /**
  * Parameters for GridRenderer component
@@ -91,6 +92,7 @@ export const GridRenderer: Component<GridRendererProps> = (props) => {
   const responsiveGrid = createResponsiveGrid()
   // Use render context to avoid circular dependency
   const { renderComponent } = useRenderContext()
+  const strings = useMCPUIStrings()
 
   // Extract params with defaults
   const params = createMemo(() => {
@@ -103,6 +105,16 @@ export const GridRenderer: Component<GridRendererProps> = (props) => {
       children: p.children ?? [],
     }
   })
+
+  // Title/label may be carried on the component or its params (neither is
+  // part of the typed shape today) — fall back to the localized default.
+  const gridLabel = createMemo(
+    () =>
+      (props.component as { title?: string }).title ??
+      (props.component.params as { title?: string; label?: string }).title ??
+      (props.component.params as { title?: string; label?: string }).label ??
+      strings.gridRegion
+  )
 
   // Build grid container style
   const gridContainerStyle = createMemo(() => {
@@ -125,6 +137,8 @@ export const GridRenderer: Component<GridRendererProps> = (props) => {
       class="w-full h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden"
       data-component-type="grid"
       data-component-id={props.component.id}
+      role="group"
+      aria-label={gridLabel()}
     >
       <div ref={responsiveGrid.ref} class="p-4 h-full" style={gridContainerStyle()} data-mcp-ui-grid data-mcp-ui-stacked={responsiveGrid.stacked()}>
         <For each={params().children}>

@@ -23,20 +23,27 @@ export default defineConfig({
         validation: resolve(__dirname, 'src/validation.ts'),
         'types-export': resolve(__dirname, 'src/types-export.ts'),
         adapters: resolve(__dirname, 'src/adapters/index.ts'),
+        'adapters/presentation': resolve(__dirname, 'src/adapters/presentation.ts'),
         'plugins/duckdb': resolve(__dirname, 'src/plugins/duckdb.ts'),
       },
       name: 'McpUiSolid',
       formats: ['es', 'cjs'],
     },
     rollupOptions: {
-      external: [
-        'solid-js',
-        'solid-js/web',
-        'solid-js/store',
-        'chart.js',
-        'chart.js/auto',
-        '@duckdb/duckdb-wasm',
-      ],
+      // Externalize EVERY bare specifier. With `preserveModules`, an allow-list
+      // silently inlined the whole dependency tree (@antv/g6, leaflet,
+      // highlight.js, zod, @seed-ship/mcp-ui-spec, ...) under
+      // `dist/node_modules/.pnpm/**` — 39.8 MB / 5428 files published.
+      // Anything that is not a relative path, an absolute path, a rollup
+      // virtual module (\0) or a Windows drive path is a package import and
+      // must stay an import in the output. This also covers CSS side-imports
+      // such as 'leaflet/dist/leaflet.css' and 'highlight.js/styles/github.css',
+      // which sit in browser-only `await import()` branches.
+      external: (id: string) =>
+        !id.startsWith('.') &&
+        !id.startsWith('/') &&
+        !id.startsWith('\0') &&
+        !/^[A-Za-z]:\\/.test(id),
       output: {
         globals: {
           'solid-js': 'SolidJS',

@@ -144,3 +144,26 @@ describe('renderCellValue', () => {
     expect(renderCellValue('undefined')).toBe('-')
   })
 })
+
+describe('renderCellValue — link-like objects are hardened (v6.19.0)', () => {
+  it('cannot break out of href with a quote in the url', () => {
+    const out = renderCellValue({ url: 'https://x.test/a" onmouseover="alert(1)', name: 'n' })
+    expect(out).not.toContain('onmouseover')
+    expect(out).toContain('<a ')
+    expect(out).toContain('>n</a>')
+  })
+
+  it('drops javascript: hrefs', () => {
+    const out = renderCellValue({ url: 'javascript:alert(1)', name: 'n' })
+    expect(out).not.toMatch(/href="javascript:/i)
+    expect(out).toContain('n')
+  })
+
+  it('keeps a normal https link with target and rel', () => {
+    const out = renderCellValue({ url: 'https://example.com/doc', name: 'Doc' })
+    expect(out).toContain('href="https://example.com/doc"')
+    expect(out).toContain('target="_blank"')
+    expect(out).toContain('rel="noopener noreferrer"')
+    expect(out).toContain('>Doc</a>')
+  })
+})

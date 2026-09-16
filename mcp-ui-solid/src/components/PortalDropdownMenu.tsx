@@ -113,6 +113,7 @@ export const PortalDropdownMenu: Component<PortalDropdownMenuProps> = (props) =>
         <div
           ref={menuRef}
           role="menu"
+          data-mcp-ui-portal="menu"
           style={{
             position: 'fixed',
             top: `${position().top}px`,

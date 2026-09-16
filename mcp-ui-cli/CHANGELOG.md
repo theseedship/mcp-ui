@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.0.1] - 2026-09-16
+
+### Fixed
+- Pin `@seed-ship/mcp-ui-spec` as `workspace:^5.6.0` instead of `workspace:*`.
+  `workspace:*` froze the exact version at publish time, so published
+  `@seed-ship/mcp-ui-cli@5.0.0` depended on `@seed-ship/mcp-ui-spec@5.0.0`
+  exactly. Installing the CLI next to `@seed-ship/mcp-ui-solid` (which asks for
+  `^5.6.0`) pulled a second, duplicate copy of the spec package, with two sets
+  of Zod schemas whose `instanceof` checks disagree. The range publishes as
+  `^5.6.0` and now dedupes with the renderer.
+
 ## [5.0.0] - 2026-04-14
 
 ### Major release — synchronized with `@seed-ship/mcp-ui-solid` 5.0.0
