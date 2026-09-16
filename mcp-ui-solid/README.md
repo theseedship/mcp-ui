@@ -5,6 +5,13 @@ SolidJS components + chat toolkit for MCP-generated UI. Part of the [MCP UI ecos
 [![npm version](https://img.shields.io/npm/v/@seed-ship/mcp-ui-solid.svg)](https://www.npmjs.com/package/@seed-ship/mcp-ui-solid)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+## What's New in v6.19.1
+
+- `FeedbackInline`'s thumb buttons now take their `aria-label` from
+  `MCPUIStrings.feedbackUseful` / `feedbackNotUseful` (they were hardcoded
+  English while the tooltips were already localized). Defaults: `"Useful"` /
+  `"Not useful"`. Target them via `data-feedback-inline-rating`, not the text.
+
 ## What's New in v6.19.0 — sanitization, a11y and packaging
 
 - **`sanitizeHtml()` is now the single sanitizer for every sink that carries

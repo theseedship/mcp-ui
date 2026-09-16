@@ -110,7 +110,7 @@ export const FeedbackInline: Component<FeedbackInlineProps> = (props) => {
           onClick={() => handle('positive')}
           class="p-1 rounded hover:bg-green-500/10 text-deposium-slate-500 hover:text-green-500 transition-colors"
           title={strings.feedbackUseful}
-          aria-label="Mark response as useful"
+          aria-label={strings.feedbackUseful}
           data-feedback-inline-rating="positive"
         >
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -127,7 +127,7 @@ export const FeedbackInline: Component<FeedbackInlineProps> = (props) => {
           onClick={() => handle('negative')}
           class="p-1 rounded hover:bg-red-500/10 text-deposium-slate-500 hover:text-red-500 transition-colors"
           title={strings.feedbackNotUseful}
-          aria-label="Mark response as not useful"
+          aria-label={strings.feedbackNotUseful}
           data-feedback-inline-rating="negative"
         >
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

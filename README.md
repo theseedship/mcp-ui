@@ -9,6 +9,8 @@ A collection of TypeScript packages for building generative, streaming user inte
 
 ## What's New
 
+**6.19.1 (`mcp-ui-solid`):** `FeedbackInline` accessible names now follow `MCPUIStringsProvider` (were hardcoded English).
+
 **6.19.0 (`mcp-ui-solid`) / 5.0.1 (`mcp-ui-cli`) — sanitization, a11y & packaging:**
 `sanitizeHtml()` is now the single sanitizer for every sink that carries
 untrusted markup (the `text` component, table cells, `ui://` resources),
