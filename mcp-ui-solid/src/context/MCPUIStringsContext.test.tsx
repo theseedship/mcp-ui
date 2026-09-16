@@ -202,3 +202,26 @@ describe('MCPUIStringsContext (v6.6.0)', () => {
     expect(expandBtn?.getAttribute('aria-label')).toBe('Expand')
   })
 })
+
+describe('FeedbackInline accessible names follow the provider (v6.19.1)', () => {
+  it('uses the English defaults for both title and aria-label without a provider', () => {
+    const { container } = render(() => <FeedbackInline onSubmit={() => {}} />)
+    const up = container.querySelector('button[data-feedback-inline-rating="positive"]')!
+    const down = container.querySelector('button[data-feedback-inline-rating="negative"]')!
+    expect(up.getAttribute('aria-label')).toBe('Useful')
+    expect(up.getAttribute('title')).toBe('Useful')
+    expect(down.getAttribute('aria-label')).toBe('Not useful')
+    expect(down.getAttribute('title')).toBe('Not useful')
+  })
+
+  it('translates the aria-labels, not only the tooltips', () => {
+    const { container } = render(() => (
+      <MCPUIStringsProvider strings={{ feedbackUseful: 'Utile', feedbackNotUseful: 'Pas utile' }}>
+        <FeedbackInline onSubmit={() => {}} />
+      </MCPUIStringsProvider>
+    ))
+    expect(container.querySelector('button[data-feedback-inline-rating="positive"]')!.getAttribute('aria-label')).toBe('Utile')
+    expect(container.querySelector('button[data-feedback-inline-rating="negative"]')!.getAttribute('aria-label')).toBe('Pas utile')
+    expect(container.innerHTML).not.toContain('Mark response as')
+  })
+})
