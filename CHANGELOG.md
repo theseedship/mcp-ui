@@ -11,8 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > **Note (2026-07-03):** after `5.2.0` this monorepo-wide log was superseded by
 > the per-package changelogs, which are the source of truth for every release
-> (current: `mcp-ui-solid` 6.19.0, `mcp-ui-spec` 5.6.0, `mcp-ui-cli` 5.0.1). New
+> (current: `mcp-ui-solid` 6.19.1, `mcp-ui-spec` 5.6.0, `mcp-ui-cli` 5.0.1). New
 > entries go there; this file is kept for historical monorepo-level context.
+
+## [6.19.1] - 2026-09-16 (`mcp-ui-solid`)
+
+- Fixed: `FeedbackInline`'s thumb buttons now take their `aria-label` from
+  `MCPUIStrings.feedbackUseful` / `feedbackNotUseful` instead of hardcoded
+  English. See `mcp-ui-solid/CHANGELOG.md`.
 
 ## [6.19.0] - 2026-09-16 (`mcp-ui-solid`; `mcp-ui-cli` 5.0.1)
 
