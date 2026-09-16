@@ -9,6 +9,7 @@ import { isServer } from 'solid-js/web'
 import type { UIComponent, CodeComponentParams } from '../types'
 import { ExpandableWrapper, useExpanded } from './ExpandableWrapper'
 import { highlightQuery } from './UIResourceRenderer'
+import { escapeHtml } from '../utils/escape-html'
 
 /** Map of `params.language` → file extension for the v6.2.0 download button. */
 const LANGUAGE_EXTENSIONS: Record<string, string> = {
@@ -166,11 +167,14 @@ export const CodeBlockRenderer: Component<CodeBlockRendererProps> = (props) => {
                 }
                 setHighlightedCode(result)
             } catch (e) {
-                setHighlightedCode(code.replace(/</g, '&lt;').replace(/>/g, '&gt;'))
+                setHighlightedCode(escapeHtml(code))
             }
         } else {
-            // Fallback: simple escaping
-            setHighlightedCode(code.replace(/</g, '&lt;').replace(/>/g, '&gt;'))
+            // Fallback: no highlight.js → the raw source goes straight to an
+            // `innerHTML` sink, so it must be fully escaped. The previous
+            // hand-rolled `< >`-only replace left `&` unescaped, which made
+            // code containing `&lt;script&gt;` render as a literal tag.
+            setHighlightedCode(escapeHtml(code))
         }
     })
 

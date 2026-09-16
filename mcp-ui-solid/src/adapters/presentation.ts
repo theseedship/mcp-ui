@@ -4,6 +4,16 @@
  * These helpers arrange caller-supplied components only. They never fetch,
  * aggregate, sort, infer confidence, or manufacture sources: data, params,
  * citations and component metadata remain the caller's responsibility.
+ *
+ * Published as its own runtime-agnostic subpath,
+ * `@seed-ship/mcp-ui-solid/adapters/presentation` (ESM + CJS), so an MCP
+ * server on plain Node can build layouts without pulling in solid-js, zod or
+ * the spec package. `@seed-ship/mcp-ui-solid/adapters` re-exports these next
+ * to the connector/macro adapters, which do have runtime dependencies.
+ *
+ * KEEP THIS MODULE DEPENDENCY-FREE: every import here must be `import type`.
+ * `src/adapters/presentation.subpath.test.ts` asserts the built ESM and CJS
+ * artifacts contain no import/require at all.
  */
 
 import type {

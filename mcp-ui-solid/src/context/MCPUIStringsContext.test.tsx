@@ -32,6 +32,30 @@ describe('MCPUIStringsContext (v6.6.0)', () => {
     expect(DEFAULT_MCPUI_STRINGS.retry).toBe('Retry')
     expect(DEFAULT_MCPUI_STRINGS.chartView).toBe('Chart')
     expect(DEFAULT_MCPUI_STRINGS.chartDataView).toBe('Data')
+    expect(DEFAULT_MCPUI_STRINGS.paginationPrevious).toBe('Previous page')
+    expect(DEFAULT_MCPUI_STRINGS.paginationNext).toBe('Next page')
+    expect(DEFAULT_MCPUI_STRINGS.paginationPageSize).toBe('Rows per page')
+    expect(DEFAULT_MCPUI_STRINGS.gridRegion).toBe('Layout grid')
+  })
+
+  it('provider partial-merges pagination/grid overrides over the EN defaults', () => {
+    let captured: ReturnType<typeof useMCPUIStrings> | undefined
+    const Probe = () => {
+      captured = useMCPUIStrings()
+      return <span>probe</span>
+    }
+    render(() => (
+      <MCPUIStringsProvider
+        strings={{ paginationPrevious: 'Page précédente', gridRegion: 'Grille de mise en page' }}
+      >
+        <Probe />
+      </MCPUIStringsProvider>
+    ))
+    expect(captured!.paginationPrevious).toBe('Page précédente')
+    expect(captured!.gridRegion).toBe('Grille de mise en page')
+    // Untouched keys fall back to EN
+    expect(captured!.paginationNext).toBe('Next page')
+    expect(captured!.paginationPageSize).toBe('Rows per page')
   })
 
   it('useMCPUIStrings returns the EN defaults with no provider mounted', () => {
@@ -160,8 +184,11 @@ describe('MCPUIStringsContext (v6.6.0)', () => {
         </ExpandableWrapper>
       </MCPUIStringsProvider>
     ))
-    const expandBtn = container.querySelector('button[aria-label="Expand to fullscreen"]')
+    const expandBtn = container.querySelector('button[data-mcp-ui-action="expand"]')
     expect(expandBtn?.getAttribute('title')).toBe('Plein écran')
+    // The ACCESSIBLE NAME must be translated too — `title` alone leaves screen
+    // readers on the English default.
+    expect(expandBtn?.getAttribute('aria-label')).toBe('Plein écran')
   })
 
   it('ExpandableWrapper falls back to EN with no provider', () => {
@@ -170,7 +197,8 @@ describe('MCPUIStringsContext (v6.6.0)', () => {
         <div>content</div>
       </ExpandableWrapper>
     ))
-    const expandBtn = container.querySelector('button[aria-label="Expand to fullscreen"]')
+    const expandBtn = container.querySelector('button[data-mcp-ui-action="expand"]')
     expect(expandBtn?.getAttribute('title')).toBe('Expand')
+    expect(expandBtn?.getAttribute('aria-label')).toBe('Expand')
   })
 })

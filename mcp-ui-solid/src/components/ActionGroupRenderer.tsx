@@ -6,6 +6,7 @@
 import { Component, For, Show } from 'solid-js'
 import type { UIComponent, ActionGroupParams, ActionComponentParams } from '../types'
 import { useAction } from '../hooks/useAction'
+import { safeUrl } from '../utils/safe-url'
 
 export interface ActionGroupRendererProps {
   /**
@@ -89,7 +90,7 @@ const ActionButton: Component<{
   if (props.action.type === 'link' || (props.action.action === 'link' && props.action.url)) {
     return (
       <a
-        href={props.action.url || '#'}
+        href={safeUrl(props.action.url ?? '') ?? '#'}
         target="_blank"
         rel="noopener noreferrer"
         class={`inline-flex items-center justify-center gap-2 rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${variantClass()} ${sizeClass()} ${

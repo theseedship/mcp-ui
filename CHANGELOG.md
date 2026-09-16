@@ -11,8 +11,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > **Note (2026-07-03):** after `5.2.0` this monorepo-wide log was superseded by
 > the per-package changelogs, which are the source of truth for every release
-> (current: `mcp-ui-solid` 6.18.0, `mcp-ui-spec` 5.6.0, `mcp-ui-cli` 5.0.0). New
+> (current: `mcp-ui-solid` 6.19.0, `mcp-ui-spec` 5.6.0, `mcp-ui-cli` 5.0.1). New
 > entries go there; this file is kept for historical monorepo-level context.
+
+## [6.19.0] - 2026-09-16 (`mcp-ui-solid`; `mcp-ui-cli` 5.0.1)
+
+- Security: `sanitizeHtml()` is now the single sanitizer for every sink that
+  carries untrusted markup (`text`, table cells, `ui://` resources), closing a
+  raw-markup gap in the `text` component's non-markdown path (the `code`
+  component's own `<code innerHTML>` sink binds highlight.js output or
+  `escapeHtml()`'d source directly); documented SSR contract — the server
+  emits `escapeHtml()`'d text (for `text` components, the escaped markdown
+  source), block structure appears only after the client upgrades to
+  sanitized rich HTML on mount; `code` block `&`-escaping fix.
+- Accessible table pagination and labeled `GridRenderer` regions; stable
+  `data-mcp-ui-portal` and `data-mcp-ui-action="page-prev" | "page-next" |
+  "page-size"` hooks.
+- New dependency-free `@seed-ship/mcp-ui-solid/adapters/presentation` subpath;
+  `solid-js` is a required peer again (pnpm/npm 7+ auto-install it).
+- Published package size cut from 39.8 MB / 5428 files to 5.6 MB unpacked /
+  671 files (1.3 MB packed) by fixing an allow-list vs. deny-list bug in the
+  Rollup externals config, plus a declaration-barrel fix so root-level types
+  (`UIResourceRenderer`, `StreamingUIRenderer`, etc.) are no longer silently
+  `any` for consumers.
+- `mcp-ui-cli` 5.0.1: pin `@seed-ship/mcp-ui-spec` as `workspace:^5.6.0`
+  instead of `workspace:*`, fixing a duplicate-spec-package install next to
+  `mcp-ui-solid`.
+
+See the per-package changelogs for full details, including exactly what the
+new sanitize profile keeps and strips.
 
 ## [6.18.0] - 2026-09-14 (`mcp-ui-solid`; `mcp-ui-spec` 5.6.0)
 

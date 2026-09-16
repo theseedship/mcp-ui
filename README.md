@@ -9,15 +9,37 @@ A collection of TypeScript packages for building generative, streaming user inte
 
 ## What's New
 
+**6.19.0 (`mcp-ui-solid`) / 5.0.1 (`mcp-ui-cli`) — sanitization, a11y & packaging:**
+`sanitizeHtml()` is now the single sanitizer for every sink that carries
+untrusted markup (the `text` component, table cells, `ui://` resources),
+closing a raw-markup gap in the `text` component's non-markdown path (the
+`code` component's own `<code innerHTML>` sink binds highlight.js output or
+`escapeHtml()`'d source directly, not through `sanitizeHtml()`). Documented
+SSR contract: on the server the sink emits `escapeHtml()`'d text — for the
+`text` component specifically, the escaped **markdown source** — and block
+structure (tables, lists, headings) appears only after the client upgrades to
+sanitized rich HTML on mount, so the region reflows post-hydration. Accessible
+table pagination (`data-mcp-ui-action="page-prev" | "page-next" | "page-size"`)
+and labeled grid regions, stable `data-mcp-ui-portal` hooks, a new
+dependency-free `@seed-ship/mcp-ui-solid/adapters/presentation` subpath, and a
+much smaller published package (the npm tarball shrank from 39.8 MB / 5428
+files to 5.6 MB unpacked / 671 files, 1.3 MB packed; `solid-js` is a required
+peer again — pnpm/npm 7+ auto-install it). `mcp-ui-cli` 5.0.1 fixes a
+`workspace:*` spec pin that could pull a duplicate `@seed-ship/mcp-ui-spec`
+alongside `mcp-ui-solid`. See
+[`mcp-ui-solid/CHANGELOG.md`](./mcp-ui-solid/CHANGELOG.md) and
+[`mcp-ui-cli/CHANGELOG.md`](./mcp-ui-cli/CHANGELOG.md) for details.
+
 **6.18.0 — presentation foundations:** three opt-in composition helpers
 (comparison, geography, evidence), container-responsive read-only grids,
 native chart/data switching, and chart/table/graph catalogue parity.
 See the [integration handoff](./mcp-ui-solid/docs/briefs/VISUALIZATION-FOUNDATION-2026-09-14.md).
 This work does not add automatic MCP selection or shared host filters.
 
-**Current line — `mcp-ui-solid` 6.18.0** (post-`5.0.0`, audit-driven visual-renderer
-& streaming hardening; `mcp-ui-spec` 5.6.0). Highlights — see
-[`mcp-ui-solid/CHANGELOG.md`](./mcp-ui-solid/CHANGELOG.md) for the full list:
+**Current line — `mcp-ui-solid` 6.19.0** (post-`5.0.0`, audit-driven visual-renderer
+& streaming hardening; `mcp-ui-spec` 5.6.0). Highlights from 6.18.0 — see
+[`mcp-ui-solid/CHANGELOG.md`](./mcp-ui-solid/CHANGELOG.md) for the full list
+including 6.19.0:
 
 - **`graph` primitive** — node-link visualization powered by `@antv/g6` (peer-optional), first-class in the `UIComponent` params union.
 - **Renderer fallback ladder** — no silent blanks: a failed heavy renderer degrades to a local data table + visible notice, and an unknown component type shows an explicit "Unsupported component type" notice.
@@ -72,9 +94,9 @@ This monorepo contains three packages published under `@seed-ship/`:
 
 | Package | Version | Description |
 |---------|---------|-------------|
-| [`@seed-ship/mcp-ui-solid`](./mcp-ui-solid) | 6.18.0 | SolidJS components for rendering MCP-generated UI |
+| [`@seed-ship/mcp-ui-solid`](./mcp-ui-solid) | 6.19.0 | SolidJS components for rendering MCP-generated UI |
 | [`@seed-ship/mcp-ui-spec`](./mcp-ui-spec) | 5.6.0 | JSON schemas and Zod validators |
-| [`@seed-ship/mcp-ui-cli`](./mcp-ui-cli) | 5.0.0 | CLI for validation and type generation |
+| [`@seed-ship/mcp-ui-cli`](./mcp-ui-cli) | 5.0.1 | CLI for validation and type generation |
 
 ### @seed-ship/mcp-ui-solid
 
@@ -369,14 +391,19 @@ pnpm version:patch      # Bump patch version
 
 ## SSR Compatibility
 
-All packages are SSR-compatible. For SolidStart, add to `app.config.ts`:
+`mcp-ui-solid`'s published `dist/` is a DOM (client) Solid build; importing it
+on a server throws "Client-only API called on the server side." SSR is
+supported when the host instead compiles the package from `src/` via the
+`solid` export condition (`vite-plugin-solid`) and lists it in
+`ssr.noExternal`. For SolidStart, add to `app.config.ts`:
 
 ```typescript
 export default defineConfig({
   vite: {
     resolve: {
       conditions: ['solid', 'development', 'browser']
-    }
+    },
+    ssr: { noExternal: ['@seed-ship/mcp-ui-solid'] }
   }
 })
 ```

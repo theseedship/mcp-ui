@@ -22,7 +22,8 @@
     "dist",
     "schemas",
     "README.md",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "vite build && tsc -p tsconfig.build.json --outDir dist && cp dist/schemas/index.d.ts dist/schemas.d.ts && rm -rf dist/schemas/",

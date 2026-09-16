@@ -5,6 +5,264 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.19.0] - 2026-09-16
+
+### Security
+
+- **`text` component XSS fix.** `TextRenderer` now sanitizes both branches of
+  its `innerHTML` sink: the markdown branch (`marked.parse` → sanitize, as
+  before) *and* the non-markdown `params.content` branch, which previously
+  went straight into `innerHTML` completely raw. On the client both now run
+  through the new `prose` sanitize profile: `<style>`, `<form>`, `<textarea>`,
+  `<select>`, `<button>`, `<iframe>`, `<object>`, `<embed>` and the `style`
+  attribute are stripped; standard prose markup survives (links, emphasis,
+  lists, tables, headings, `<hr>`, `<del>`, `<sup>`/`<sub>`), including
+  markdown task-list checkboxes (`<input type="checkbox" disabled>` — every
+  event handler and `<form>` are still forbidden, so nothing is
+  submittable). `iframe` is forbidden in `prose` **by design** — the
+  supported way to embed is the `iframe` **component type**, which goes
+  through `getIframeSandbox()` / `validateComponent()`; this is now pinned by
+  a test. Missing/`null` `params.content` now renders empty instead of the
+  literal string `"undefined"`.
+- **New `safeUrl()` guard** (`src/utils/safe-url.ts`) on the `text`
+  component's image-markdown branch (`[![alt](img)](link) *credit*`): the
+  branch is taken only when `safeUrl(imageUrl, { allowDataImage: true })` is
+  defined, and the `<a>` wrapper only when `safeUrl(linkUrl)` is defined —
+  otherwise the content falls back to the normal sanitized markdown path (an
+  unsafe link yields the bare `<img>`). Allowed: relative URLs and absolute
+  `http:`/`https:`/`mailto:`/`tel:` URLs, plus (with `allowDataImage`)
+  `data:image/(png|jpeg|jpg|gif|webp);base64,…`. Rejected: `javascript:`,
+  `vbscript:`, `data:text/html`, `data:image/svg+xml`, `file:`, `blob:`,
+  `about:`, `ftp:`, unparseable strings, empty/whitespace-only input, and any
+  string containing control characters; matching is scheme-normalized, so
+  `JAVASCRIPT:` and leading whitespace are also rejected.
+- **`renderCellValue`'s last-resort JSON fallback is now escaped.** An
+  object-shaped cell value with no matching renderer (e.g.
+  `{ details: '<img src=x onerror=alert(1)>' }`) previously stringified
+  straight to `innerHTML`; it now returns `escapeHtml(JSON.stringify(value))`.
+  This is a **public behaviour change** — `renderCellValue` is exported from
+  the package root — so a plain debug object now comes back with HTML
+  entities, e.g. `{&quot;a&quot;:1}`.
+- **`cellLink` / `resource` sanitize profiles hardened.** `cellLink` (link-
+  shaped table cells) is no longer bare DOMPurify defaults: it now sets
+  `FORBID_TAGS: ['style','form','textarea','select','iframe','object','embed']`
+  and `FORBID_ATTR: ['style']` (keeping `ADD_ATTR: ['target','rel']`),
+  closing an `<svg><style>body *{visibility:hidden}</style></svg>` link-label
+  stylesheet-injection path. `resource` (`ui://` `rawHtml` content) was
+  previously `{}` (bare defaults); it now sets
+  `FORBID_TAGS: ['style','form','input','textarea','select','button','iframe','object','embed']`
+  and `FORBID_ATTR: ['style','formaction','form']`, closing a host-page
+  restyling path and a phishing-form path — headings, tables, lists, links,
+  images and class attributes still survive.
+- **`highlightQuery(html, query)` is DOM-based** since v6.19.0: same
+  signature and `<mark class="bg-yellow-200 dark:bg-[#222F49] text-inherit
+  rounded px-0.5">` wrapper, early return for an empty/whitespace query, and
+  `html` returned unchanged when `typeof document === 'undefined'` (SSR). It
+  now parses into a detached `<template>` and walks text nodes only, so a
+  match can no longer be spliced into an HTML entity (`&amp;` searched for
+  `amp`) or an attribute value (`title="foo"`).
+- **`code` component: `&` was not escaped.** The no-highlight.js fallback
+  (`highlight.js` absent, or its own highlight call throws) escaped `<`/`>`
+  but not `&`, so source containing `&lt;script&gt;` rendered as a literal
+  `<script>` tag once double-unescaped by the browser. Both paths now use the
+  shared `escapeHtml()`. `highlight.js` output itself is untouched — it
+  already escapes its own input.
+- **Table cells and `UIResourceHtmlRenderer`** now sanitize through the same
+  shared `sanitizeHtml()` entry point instead of ad hoc inline `DOMPurify.sanitize()`
+  calls. Behaviour for citation chips and cell link/markdown/HTML rendering is
+  unchanged — the exact prior DOMPurify configs were lifted verbatim into
+  named profiles (`cellLink` / `cellMarkdown` / `cellHtml` / `resource`).
+- **SSR contract.** New `sanitizeHtml()` (`src/utils/sanitize-html.ts`) is
+  now the single sanitizer for every sink that carries untrusted markup
+  (`text`, table cells, `ui://` resources) — it is not the only `innerHTML`
+  binding in the package: `CodeBlockRenderer`'s `<code innerHTML>` binds
+  highlight.js output, or `escapeHtml(code)` when highlight.js fails to load
+  or `highlight()` throws, and this sink boundary is now documented in the
+  `sanitize-html.ts` and `SafeHtml.tsx` docblocks. On the server — or any
+  environment where DOMPurify cannot run (`isServer`, `!DOMPurify.isSupported`,
+  or `DOMPurify.sanitize` not being a function, which is the actual behavior
+  of dompurify 3.4.x with no `window`) — the sink returns `escapeHtml(input)`
+  and nothing else; there is no tag-stripping, so text that merely looks like
+  markup is preserved as visible, inert text (`values < 10 and > 5` renders
+  as `values &lt; 10 and &gt; 5`, not `values 5`) — escaped tags remain
+  visible as inert text, so server output can contain the literal characters
+  of e.g. `onerror=`. For `text` components specifically, both the markdown
+  and non-markdown branches ship the **escaped markdown source** on the
+  server, not escaped `marked` output — so block structure (tables, lists,
+  headings) is **not** present on first paint and the region visibly reflows
+  once the client hydrates. On the client it runs real DOMPurify with the
+  caller's profile. The new `<SafeHtml>` component
+  (`src/components/SafeHtml.tsx`) replaces every direct `innerHTML` binding
+  and, in `onMount` (client-only, post-hydration), re-applies the sanitized
+  HTML if the hydrated DOM still shows the server's escaped text — covering
+  `solid-js/web`'s `setProperty(node, 'innerHTML', v)` early-return during
+  hydration. Net effect: the server never ships live markup, and the client
+  upgrades to the rich sanitized version, with a visible reflow, once
+  mounted.
+- `UIResourceRenderer.tsx` no longer imports `dompurify` directly; it is now
+  imported in exactly one module (`utils/sanitize-html.ts`).
+
+- **Link-like table cells (`{ url, name }`) are re-sanitized as a whole.**
+  Sanitizing the bare `url` string leaves quotes and `javascript:` untouched,
+  so a crafted value could break out of the `href` attribute or smuggle a
+  scriptable link. The composed `<a>` now runs through the `cellLink` profile
+  (`javascript:` hrefs dropped, injected attributes stripped).
+
+- **Every `href` / `src` binding is allow-listed.** Beyond the text
+  component's image-markdown branch, `safeUrl()` now guards the `image`
+  (anchor + `<img>`), `link`, `artifact` (download link), `action`
+  (link-style actions, `#` fallback) and `footer` renderers, the image
+  gallery thumbnails and the lightbox image. `javascript:`, `vbscript:`,
+  `data:text/html`, `file:` and `blob:` URLs are dropped (the attribute is
+  simply omitted); `http(s):`, `mailto:`, `tel:`, relative URLs and, for
+  images only, base64 `data:image/*` are kept. `iframe` (domain allow-list +
+  sandbox) and `video` (embed URL built from the provider id) were already
+  filtered.
+
+### Added
+
+- **Accessible table pagination.** The prev/next buttons are `type="button"`
+  with `aria-label` (glyphs moved into `aria-hidden="true"` spans) and carry
+  the new stable hooks `data-mcp-ui-action="page-prev"` / `"page-next"`; the
+  "page X / Y" indicator is `aria-live="polite"`, and the fullscreen-only
+  page-size `<select>` has an `aria-label` and `data-mcp-ui-action="page-size"`.
+  All three labels come from `MCPUIStrings` (`paginationPrevious`,
+  `paginationNext`, `paginationPageSize` — new, optional, EN defaults
+  "Previous page" / "Next page" / "Rows per page") and can be localized via
+  `MCPUIStringsProvider`.
+- **`GridRenderer` landmark semantics.** The grid container now carries
+  `role="group"` and an `aria-label`, falling back through the component's
+  `title`, `params.title`, `params.label`, then the new `MCPUIStrings.gridRegion`
+  default ("Layout grid"). A blank or whitespace-only `title` is now treated
+  as **absent**, so `title: ""` falls through to `params.label` / the
+  localized default instead of yielding an empty `aria-label`.
+- **Stable portal-root hooks.** `PortalDropdownMenu`'s menu root and
+  `ExpandableWrapper`'s fullscreen overlay root now carry
+  `data-mcp-ui-portal="menu"` / `data-mcp-ui-portal="dialog"` respectively, so
+  host apps and tests can target them without relying on `role` selectors or
+  DOM structure.
+- **New `@seed-ship/mcp-ui-solid/adapters/presentation` subpath.** A
+  runtime-agnostic ESM+CJS build of the pure `createComparisonLayout` /
+  `createGeographyLayout` / `createEvidenceLayout` helpers (previously only
+  reachable via `/adapters`, which also carries connector/macro adapters with
+  real runtime dependencies). The built output contains zero `import`/`require`
+  statements, so a plain-Node MCP server can build layouts without pulling in
+  `solid-js`, `zod` or `@seed-ship/mcp-ui-spec`. `@seed-ship/mcp-ui-solid/adapters`
+  continues to re-export the same three helpers.
+
+- **Stable action hooks.** `data-mcp-ui-action="expand" | "copy" | "close"`
+  on `ExpandableWrapper`'s buttons, `data-mcp-ui-action="copy"` on the inline
+  copy button of text/metric/table components,
+  `data-mcp-ui-action={action.icon}` on every `ComponentToolbar` button, and
+  (see the pagination bullet above) `"page-prev" | "page-next" | "page-size"`
+  on the table pagination controls, which — like `ExpandableWrapper`'s three
+  buttons — now newly carry an `aria-label` in addition to `title` (host CSS
+  using `button[aria-label]` as a proxy selector will start matching them
+  that didn't before). Host CSS should target the `data-mcp-ui-action` hooks
+  instead of `aria-label` / `title` text, which is localizable (see Changed).
+  `ExpandableWrapper`'s expand, copy and close buttons now all carry
+  `type="button"` — the pagination buttons already had it. The inline copy
+  button now has an `aria-label` too.
+- **`typesVersions`** for every published subpath (`./components`, `./hooks`,
+  `./types`, `./validation`, `./types-only`, `./adapters`,
+  `./adapters/presentation`, `./plugins/duckdb`), so consumers on TypeScript
+  `moduleResolution: "node"` (which ignores `exports`) resolve subpath types.
+- `LICENSE` is now shipped in the tarball (it was missing — only the monorepo
+  root had one). Same for `@seed-ship/mcp-ui-spec` (next release) and
+  `@seed-ship/mcp-ui-cli` 5.0.1.
+
+- **`ExpandableWrapper` `onExpandedChange?: (expanded: boolean) => void`** —
+  called on mount and on every change. Renderers that render their own
+  wrapper need it because their `useExpanded()` call sits above the wrapper's
+  context provider (see Fixed).
+
+### Changed
+
+- **`solid-js` remains a required peer dependency (`^1.9.0`).** It is not
+  optional: pnpm (with auto-install-peers) or npm 7+ installs it
+  automatically regardless of which subpath is used. `./validation` and
+  `./adapters/presentation` import nothing from `solid-js` in their built
+  output, so a Node-only consumer of either subpath simply carries an
+  unused `solid-js` in `node_modules` rather than getting a missing-peer
+  warning.
+- **Package size.** `npm pack --dry-run` now reports 5.6 MB unpacked / 671
+  files (1.3 MB packed), down from the 39.8 MB unpacked / 5428 files that
+  were actually published as `6.18.0`. Cause: `vite.config.ts`'s Rollup
+  `external` was a 6-entry allow-list, which — combined with
+  `preserveModules` — silently bundled every other dependency (`@antv/g6`,
+  `leaflet`, `highlight.js`, `zod`, `@seed-ship/mcp-ui-spec`, …) into
+  `dist/node_modules/.pnpm/**`. It is now a predicate that externalizes
+  every bare specifier and bundles only relative/absolute paths and Rollup
+  virtual modules — fixed to also recognize a Windows drive-path module id
+  in both its native backslash form (`C:\...`) and the forward-slash form
+  (`C:/...`) that Rollup/Vite normalize to, so it isn't misclassified as a
+  bare specifier and left external. The optional visual-library imports
+  (`@antv/g6`, `@tanstack/solid-virtual`, `chart.js/auto`, `highlight.js`,
+  `leaflet`, `leaflet.markercluster`) and their CSS side-imports remain lazy
+  `import(...)` calls, unaffected.
+- `package.json`'s `files` allow-list (`dist`, `src`, `README.md`,
+  `CHANGELOG.md`, `LICENSE`) now also excludes test sources from the
+  published tarball — `!src/**/*.test.ts`, `!src/**/*.test.tsx`,
+  `!src/test-setup.ts` — dropping 72 src test files (~431 KB) and
+  `src/test-setup.ts` (1.4 KB). (Two build-artifact `test-setup` entries
+  still ship inside `dist/` — `dist/test-setup.d.ts` and its map, ~270 B
+  combined — a separate, smaller follow-up.) `sideEffects` is set to
+  `["**/*.css"]`: every other JS/TS module is declared side-effect free,
+  which holds today because no `src` module imports CSS at the top level or
+  is otherwise relied on for import-for-side-effect.
+- `dist/mcp-ui-solid.css` is **no longer emitted**. It only ever contained
+  vendor CSS (highlight.js themes, Leaflet) pulled in through the lazy
+  `import(...)` calls above, which are now external; it was never referenced
+  by any `exports` entry.
+
+No new required runtime dependency. `dompurify`, `marked`, `zod` and
+`@seed-ship/mcp-ui-spec` remain regular `dependencies` (they are genuine
+runtime requirements of the core render/validation path); `chart.js`,
+`highlight.js`, `leaflet`, `leaflet.markercluster`, `@antv/g6`,
+`@tanstack/solid-virtual`, `@duckdb/duckdb-wasm` and `protomaps-leaflet`
+remain optional peers. `solid-js` is a required peer, as it always has been.
+
+- **`ExpandableWrapper`'s expand button `aria-label` is now localized**
+  (`MCPUIStrings.expand`, default `"Expand"`) instead of the hardcoded English
+  `"Expand to fullscreen"`. Hosts whose CSS or tests matched that literal
+  should switch to `button[data-mcp-ui-action="expand"]`.
+
+### Fixed
+
+- **Declaration-barrel bug (pre-existing, root symbols silently typed `any`).**
+  The types build's `build:types:copy` step used to `cp dist/<dir>/index.d.ts
+  dist/<dir>.d.ts` — a copy that moves the file up one directory, so relative
+  re-exports inside it (e.g. `export { UIResourceRenderer } from
+  './UIResourceRenderer'`) pointed at a `dist/UIResourceRenderer.d.ts` that
+  does not exist. Under `skipLibCheck` (the default for most consumers)
+  TypeScript silently swallowed the unresolved module, and every symbol
+  flowing through those barrels resolved to `any`: confirmed, via a real
+  consumer probe (`moduleResolution: "bundler"` + `skipLibCheck`), for
+  `UIResourceRenderer`, `StreamingUIRenderer` and `GenerativeUIErrorBoundary`
+  imported from the package root, `UIResourceRenderer` from
+  `/components`, `useStreamingUI` from `/hooks`, and `createComparisonLayout`
+  from `/adapters`. (`createChatBus` / `validateLayout` from the root,
+  `createGeographyLayout` from `/adapters/presentation`, and `UILayout` from
+  `/types` and `/types-only` were already typed correctly and stayed
+  correct.) The fix writes a real re-export barrel instead of copying —
+  `export * from './components/index';` for each of `components`, `hooks`,
+  `types` and `adapters`, plus `export { default } from './components/index';`
+  for `components` specifically, since `export *` doesn't carry a default
+  export. Two regression tests (`src/packaging.dts.test.ts`, and a
+  build-free source-level check in
+  `src/adapters/presentation.subpath.test.ts`) now pin the emitted barrel
+  shape and the presentation subpath's `import type`-only contract.
+- **`./plugins/duckdb` CJS types.** `build:types:cts` now also copies
+  `dist/plugins/duckdb.d.ts` to `dist/plugins/duckdb.d.cts`, and the
+  `require.types` export condition points at the `.d.cts` file instead of
+  the ESM `.d.ts` — the ESM file raised `TS1479` for CommonJS consumers.
+- **Fullscreen table page size never applied.** `TableRenderer` renders its
+  own `<ExpandableWrapper>`, so its `useExpanded()` call only ever saw an
+  outer wrapper and stayed `false`: the larger fullscreen `pageSize` (v4.3.4)
+  and the page-size selector (v4.3.7) were unreachable. The table now also
+  listens to the wrapper's `onExpandedChange`; the selector is rendered in
+  fullscreen and pinned by a test.
+
 ## [6.18.0] - 2026-09-14
 
 ### Added

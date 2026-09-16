@@ -86,6 +86,18 @@ export interface MCPUIStrings {
   chartDataSummary?: string
   /** Empty state shown when a chart has no data points. */
   chartNoData?: string
+
+  // ── Table pagination ──────────────────────────────────────
+  /** Accessible name of the pagination "previous page" button. */
+  paginationPrevious?: string
+  /** Accessible name of the pagination "next page" button. */
+  paginationNext?: string
+  /** Accessible name of the pagination page-size `<select>`. */
+  paginationPageSize?: string
+
+  // ── Grid layout ────────────────────────────────────────────
+  /** Fallback `aria-label` for a grid region without a title. */
+  gridRegion?: string
 }
 
 /**
@@ -108,6 +120,10 @@ export const DEFAULT_MCPUI_STRINGS: Required<MCPUIStrings> = {
   chartDataTable: 'Chart data',
   chartDataSummary: 'Exact values are available in the data view.',
   chartNoData: 'No chart data',
+  paginationPrevious: 'Previous page',
+  paginationNext: 'Next page',
+  paginationPageSize: 'Rows per page',
+  gridRegion: 'Layout grid',
 }
 
 export const MCPUIStringsContext = createContext<MCPUIStrings>(DEFAULT_MCPUI_STRINGS)

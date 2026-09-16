@@ -3,9 +3,12 @@
  * Phase 0: Foundation with iframe sandbox and composite grid support
  */
 
-import DOMPurify from 'dompurify'
 import { Component, createSignal, Show, For, createMemo, createEffect, onMount, onCleanup } from 'solid-js'
 import { isServer } from 'solid-js/web'
+import { sanitizeHtml, canSanitizeHtml, SANITIZE_PROFILES } from '../utils/sanitize-html'
+import { escapeHtml } from '../utils/escape-html'
+import { safeUrl } from '../utils/safe-url'
+import { SafeHtml } from './SafeHtml'
 import type { UIComponent, UILayout, RendererError, TableVirtualizeOptions } from '../types'
 import { validateComponent, DEFAULT_RESOURCE_LIMITS, getIframeSandbox } from '../services/validation'
 import { GenerativeUIErrorBoundary } from './GenerativeUIErrorBoundary'
@@ -19,6 +22,7 @@ import {
   type DuplicateMountInfo,
 } from '../utils/duplicate-mount-registry'
 import { useTelemetry } from '../context/MCPUITelemetryContext'
+import { useMCPUIStrings } from '../context/MCPUIStringsContext'
 
 /**
  * How `<UIResourceRenderer>` reacts when `validateComponent()` rejects a
@@ -84,6 +88,9 @@ function CopyButton(props: { getText: () => string; title?: string; position?: '
       onClick={handleCopy}
       class={`${positionClasses()} opacity-60 hover:opacity-100 px-2 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-all shadow-sm z-10`}
       title={props.title || 'Copy'}
+      aria-label={props.title || 'Copy'}
+      data-mcp-ui-action="copy"
+      type="button"
     >
       <Show
         when={!copied()}
@@ -385,23 +392,74 @@ function ChartRenderer(props: {
 /**
  * Smart cell value renderer that handles markdown links and other formats
  */
+/** Class list carried by every `<mark>` that `highlightQuery` injects. */
+const HIGHLIGHT_MARK_CLASS = 'bg-yellow-200 dark:bg-[#222F49] text-inherit rounded px-0.5'
+
 /**
- * Wrap matches of `query` in <mark> tags within an HTML string.
- * Case-insensitive. Skips content inside HTML tag attributes to avoid corruption.
- * v4.3.8
+ * Wrap matches of `query` in `<mark>` tags within an HTML string.
+ * Case-insensitive. v6.19.0 — DOM-based.
+ *
+ * The previous implementation tokenized the markup with a regex, which put
+ * `<mark>` *inside* HTML entities and attribute text: searching `amp` in a
+ * cell containing `&amp;` spliced a tag through the entity and corrupted it.
+ * Parsing into a detached `<template>` and walking only text nodes makes both
+ * classes of corruption impossible — attribute values are never visited, and
+ * an entity is a single character by the time the walker sees it.
+ *
+ * The input is always post-sanitize markup (see `sanitize-html`), and a
+ * `<template>`'s content is an inert document fragment, so parsing here
+ * neither runs script nor fetches anything.
+ *
+ * No-DOM environments (SSR) return the html unchanged.
  */
 export function highlightQuery(html: string, query: string): string {
   const q = query.trim()
   if (!q) return html
+  if (typeof document === 'undefined') return html
+
   // Escape regex metacharacters
   const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const regex = new RegExp(`(${escaped})`, 'gi')
-  // Process text segments only (skip inside tags)
-  return html.replace(/(<[^>]+>)|([^<]+)/g, (_m, tag, text) => {
-    if (tag) return tag
-    if (!text) return ''
-    return text.replace(regex, '<mark class="bg-yellow-200 dark:bg-[#222F49] text-inherit rounded px-0.5">$1</mark>')
-  })
+  const regex = new RegExp(escaped, 'gi')
+
+  const template = document.createElement('template')
+  template.innerHTML = html
+
+  const walker = document.createTreeWalker(template.content, NodeFilter.SHOW_TEXT)
+  const textNodes: Text[] = []
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    textNodes.push(node as Text)
+  }
+
+  for (const node of textNodes) {
+    const text = node.data
+    regex.lastIndex = 0
+    if (!regex.test(text)) continue
+
+    regex.lastIndex = 0
+    const fragment = document.createDocumentFragment()
+    let cursor = 0
+    let match: RegExpExecArray | null
+    while ((match = regex.exec(text)) !== null) {
+      if (match[0] === '') {
+        regex.lastIndex++
+        continue
+      }
+      if (match.index > cursor) {
+        fragment.appendChild(document.createTextNode(text.slice(cursor, match.index)))
+      }
+      const mark = document.createElement('mark')
+      mark.className = HIGHLIGHT_MARK_CLASS
+      mark.textContent = match[0]
+      fragment.appendChild(mark)
+      cursor = match.index + match[0].length
+    }
+    if (cursor < text.length) {
+      fragment.appendChild(document.createTextNode(text.slice(cursor)))
+    }
+    node.parentNode?.replaceChild(fragment, node)
+  }
+
+  return template.innerHTML
 }
 
 /**
@@ -506,17 +564,24 @@ export function renderCellValue(value: any, citationCtx?: CitationCtx): string {
     // Check for link-like objects: { url: "...", name/label/title: "..." }
     if (value.url) {
       const label = value.name || value.label || value.title || value.url
-      const sanitizedLabel = DOMPurify.sanitize(String(label))
-      const sanitizedUrl = DOMPurify.sanitize(String(value.url))
-      return `<a href="${sanitizedUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-600 dark:text-blue-400 hover:underline">${sanitizedLabel}</a>`
+      const sanitizedLabel = sanitizeHtml(String(label))
+      const sanitizedUrl = sanitizeHtml(String(value.url))
+      const anchor = `<a href="${sanitizedUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-600 dark:text-blue-400 hover:underline">${sanitizedLabel}</a>`
+      // Re-sanitize the composed anchor: sanitizing the bare `url` string
+      // leaves quotes and `javascript:` untouched, so a crafted value could
+      // otherwise break out of the attribute or smuggle a scriptable href.
+      return sanitizeHtml(anchor, SANITIZE_PROFILES.cellLink)
     }
     // Fallback: extract meaningful text from object properties
     if (value.name || value.label || value.title) {
-      return DOMPurify.sanitize(String(value.name || value.label || value.title))
+      return sanitizeHtml(String(value.name || value.label || value.title))
     }
-    // Last resort: JSON stringify for debugging (better than [object Object])
+    // Last resort: JSON stringify for debugging (better than [object Object]).
+    // The result is bound into an `innerHTML` sink by the table renderers, so
+    // it must be escaped — `{ details: '<img src=x onerror=alert(1)>' }` used
+    // to execute.
     try {
-      return JSON.stringify(value)
+      return escapeHtml(JSON.stringify(value))
     } catch {
       return '-'
     }
@@ -549,7 +614,7 @@ export function renderCellValue(value: any, citationCtx?: CitationCtx): string {
       /\[([^\]]+)\]\(([^)]+)\)/g,
       '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-blue-600 dark:text-blue-400 hover:underline">$1</a>'
     )
-    return DOMPurify.sanitize(htmlValue, { ADD_ATTR: ['target', 'rel'] })
+    return sanitizeHtml(htmlValue, SANITIZE_PROFILES.cellLink)
   }
 
   // v5.7.0 — citation transform (opt-in). Replaces `[N]` style markers
@@ -572,11 +637,7 @@ export function renderCellValue(value: any, citationCtx?: CitationCtx): string {
   const hasMarkdown = /[*_`#]/.test(strValue)
   if (hasMarkdown) {
     const parsed = marked.parse(strValue, { async: false }) as string
-    return DOMPurify.sanitize(parsed, {
-      ALLOWED_TAGS: ['a', 'strong', 'em', 'b', 'i', 'code', 'span', 'br', 'button', 'svg', 'path', 'p', 'ul', 'ol', 'li', 'pre', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
-      ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'data-citation-page', 'data-citation-source', 'data-citation-doc', 'data-citation-verified', 'title', 'fill', 'stroke', 'viewBox', 'stroke-linecap', 'stroke-linejoin', 'stroke-width', 'd'],
-      ADD_ATTR: ['target', 'rel'],
-    })
+    return sanitizeHtml(parsed, SANITIZE_PROFILES.cellMarkdown)
   }
 
   // Detect raw HTML in cell values (e.g. <a href="..." data-citation-page="5">text</a>)
@@ -584,15 +645,11 @@ export function renderCellValue(value: any, citationCtx?: CitationCtx): string {
   // OR where the citation transform above injected chip HTML.
   const hasHtml = /<[a-z][\s\S]*>/i.test(strValue)
   if (hasHtml) {
-    return DOMPurify.sanitize(strValue, {
-      ALLOWED_TAGS: ['a', 'strong', 'em', 'b', 'i', 'code', 'span', 'br', 'button', 'svg', 'path'],
-      ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'data-citation-page', 'data-citation-source', 'data-citation-doc', 'data-citation-verified', 'title', 'fill', 'stroke', 'viewBox', 'stroke-linecap', 'stroke-linejoin', 'stroke-width', 'd'],
-      ADD_ATTR: ['target', 'rel'],
-    })
+    return sanitizeHtml(strValue, SANITIZE_PROFILES.cellHtml)
   }
 
   // Plain text — sanitize to prevent XSS via innerHTML
-  return DOMPurify.sanitize(strValue)
+  return sanitizeHtml(strValue)
 }
 
 /**
@@ -606,6 +663,7 @@ function TableRenderer(props: {
 }) {
   const tableParams = props.component.params as any
   let scrollContainerRef: HTMLDivElement | undefined
+  const strings = useMCPUIStrings()
 
   // v5.7.0 — opt-in citation chip rendering inside cells. When `citationMap`
   // is present in params, build a CitationCtx once and thread it through
@@ -699,7 +757,14 @@ function TableRenderer(props: {
   })
 
   // ─── Client-side pagination (v4.0.4, context-aware v4.3.4, selector v4.3.7) ─────
-  const isExpanded = useExpanded()
+  // This renderer renders its own `<ExpandableWrapper>` below, so the
+  // wrapper's context provider sits UNDER us: `useExpanded()` here only sees
+  // an outer wrapper (always false when the table is self-wrapped — the
+  // fullscreen page size never applied before v6.19.0). The wrapper reports
+  // its own state through `onExpandedChange`; the outer context still counts.
+  const outerExpanded = useExpanded()
+  const [selfExpanded, setSelfExpanded] = createSignal(false)
+  const isExpanded = () => selfExpanded() || outerExpanded()
   const defaultPageSize = () => tableParams.pageSize ?? 25
   const chatDefault = () => tableParams.chatPageSize ?? Math.min(10, defaultPageSize())
   const [userPageSize, setUserPageSize] = createSignal<number | null>(null) // null = use default
@@ -889,7 +954,7 @@ function TableRenderer(props: {
             <For each={tableParams.columns}>
               {(column: any) => (
                 <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-200 whitespace-normal break-words leading-relaxed first:pl-6 last:pr-6">
-                  <div innerHTML={highlightQuery(renderCellValue(row[column.key], citationCtx), debouncedQuery())} />
+                  <SafeHtml html={() => highlightQuery(renderCellValue(row[column.key], citationCtx), debouncedQuery())} />
                 </td>
               )}
             </For>
@@ -928,7 +993,7 @@ function TableRenderer(props: {
                 <For each={tableParams.columns}>
                   {(column: any) => (
                     <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-200 whitespace-normal break-words leading-relaxed first:pl-6 last:pr-6">
-                      <div innerHTML={highlightQuery(renderCellValue(row[column.key], citationCtx), debouncedQuery())} />
+                      <SafeHtml html={() => highlightQuery(renderCellValue(row[column.key], citationCtx), debouncedQuery())} />
                     </td>
                   )}
                 </For>
@@ -941,7 +1006,7 @@ function TableRenderer(props: {
   }
 
   return (
-    <ExpandableWrapper title={tableParams.title || 'Table'} copyData={getTableCSV()} copyLabel="Copy table (CSV)" toolbarVariant={props.toolbarVariant}>
+    <ExpandableWrapper title={tableParams.title || 'Table'} copyData={getTableCSV()} copyLabel="Copy table (CSV)" toolbarVariant={props.toolbarVariant} onExpandedChange={setSelfExpanded}>
       <div class={`relative w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden group ${
         isExpanded() ? 'flex-1 min-h-0 flex flex-col' : 'h-full'
       } ${tableParams.className || ''}`}>
@@ -1104,19 +1169,25 @@ function TableRenderer(props: {
               </span>
               <div class="flex items-center gap-2">
                 <button
+                  type="button"
                   class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   disabled={clientPage() === 0}
                   onClick={() => setClientPage(p => p - 1)}
+                  aria-label={strings.paginationPrevious}
+                  data-mcp-ui-action="page-prev"
                 >
-                  &#x25C0;
+                  <span aria-hidden="true">&#x25C0;</span>
                 </button>
-                <span>{clientPage() + 1} / {clientTotalPages()}</span>
+                <span aria-live="polite">{clientPage() + 1} / {clientTotalPages()}</span>
                 <button
+                  type="button"
                   class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   disabled={clientPage() >= clientTotalPages() - 1}
                   onClick={() => setClientPage(p => p + 1)}
+                  aria-label={strings.paginationNext}
+                  data-mcp-ui-action="page-next"
                 >
-                  &#x25B6;
+                  <span aria-hidden="true">&#x25B6;</span>
                 </button>
                 {/* Page size selector — fullscreen only */}
                 <Show when={isExpanded() && filteredRows().length > 10}>
@@ -1124,6 +1195,8 @@ function TableRenderer(props: {
                     class="ml-2 px-1 py-0.5 text-xs border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300"
                     value={clientPageSize()}
                     onChange={(e) => handlePageSizeChange(Number(e.currentTarget.value))}
+                    aria-label={strings.paginationPageSize}
+                    data-mcp-ui-action="page-size"
                   >
                     <For each={pageSizeOptions()}>
                       {(opt) => <option value={opt.value}>{opt.label}</option>}
@@ -1227,20 +1300,44 @@ function extractImageFromMarkdown(content: string): { alt: string; imageUrl: str
 function TextRenderer(props: { component: UIComponent }) {
   const textParams = props.component.params as any
 
-  // Check if this is an image markdown that should be rendered as image component
+  // Check if this is an image markdown that should be rendered as image
+  // component. Both URLs come from LLM-authored markdown and are bound into
+  // `src`/`href`, which `sanitizeHtml` never sees — so they go through the
+  // `safeUrl` allow-list here (v6.19.0). An unusable image URL makes the whole
+  // branch decline, and the content falls back to the normal sanitized
+  // markdown path; an unusable link URL only drops the anchor.
   const imageData = createMemo(() => {
     if (textParams.markdown && textParams.content) {
-      return extractImageFromMarkdown(textParams.content)
+      const extracted = extractImageFromMarkdown(textParams.content)
+      if (!extracted) return null
+      const imageUrl = safeUrl(extracted.imageUrl, { allowDataImage: true })
+      if (!imageUrl) return null
+      return { ...extracted, imageUrl, linkUrl: safeUrl(extracted.linkUrl) }
     }
     return null
   })
 
-  // Convert markdown to HTML if markdown flag is true (and not an image component)
+  // Convert markdown to HTML if markdown flag is true (and not an image component).
+  //
+  // BOTH branches are sanitized: the result is bound to `innerHTML`, and
+  // `params.content` is LLM-authored — the non-markdown branch used to reach
+  // the sink completely raw. `sanitizeHtml` also makes the SSR pass emit
+  // escaped text instead of live markup.
   const htmlContent = createMemo(() => {
-    if (textParams.markdown && !imageData()) {
-      return marked.parse(textParams.content, { async: false }) as string
+    const raw = textParams.content
+    if (raw === null || raw === undefined) return ''
+    // No DOMPurify here (server, or a client where it bailed out):
+    // `sanitizeHtml` would escape *`marked` output*, i.e. ship `&lt;p&gt;` and
+    // `&lt;table&gt;` as visible text. Escape the markdown SOURCE instead —
+    // it reads as prose, and `<SafeHtml>`'s onMount upgrades it to the
+    // sanitized rich version once the client takes over.
+    if (!canSanitizeHtml()) {
+      return escapeHtml(String(raw))
     }
-    return textParams.content
+    if (textParams.markdown && !imageData()) {
+      return sanitizeHtml(marked.parse(raw, { async: false }) as string, SANITIZE_PROFILES.prose)
+    }
+    return sanitizeHtml(String(raw), SANITIZE_PROFILES.prose)
   })
 
   // Get plain text content for copying (strip markdown/HTML)
@@ -1255,30 +1352,42 @@ function TextRenderer(props: { component: UIComponent }) {
       fallback={
         <div class="relative w-full h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 group">
           <CopyButton getText={getTextContent} title="Copy text" position="top-right" />
-          <div
+          <SafeHtml
             class={`prose prose-sm dark:prose-invert max-w-none ${textParams.className || ''}`}
-            innerHTML={htmlContent()}
+            html={htmlContent}
           />
         </div>
       }
     >
-      {(data) => (
+      {(data) => {
+        // Rebuilt per branch on purpose: a JSX element cannot be mounted twice.
+        const image = () => (
+          <img
+            src={data().imageUrl}
+            alt={data().alt}
+            class="max-w-full max-h-[400px] object-contain rounded shadow-sm hover:opacity-90 transition-opacity"
+            loading="lazy"
+          />
+        )
+        return (
         <div class="w-full h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col">
           <div class="flex-1 flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-900 min-h-[200px]">
-            <a href={data().linkUrl} target="_blank" rel="noopener noreferrer" class="cursor-zoom-in">
-              <img
-                src={data().imageUrl}
-                alt={data().alt}
-                class="max-w-full max-h-[400px] object-contain rounded shadow-sm hover:opacity-90 transition-opacity"
-                loading="lazy"
-              />
-            </a>
+            {/* The anchor only exists when the link URL passed `safeUrl` — a
+                `javascript:` link degrades to a plain, unlinked image. */}
+            <Show when={data().linkUrl} fallback={image()}>
+              {(href) => (
+                <a href={href()} target="_blank" rel="noopener noreferrer" class="cursor-zoom-in">
+                  {image()}
+                </a>
+              )}
+            </Show>
           </div>
           <div class="p-3 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
             <p class="text-sm text-gray-600 dark:text-gray-400 text-center italic">{data().credit}</p>
           </div>
         </div>
-      )}
+        )
+      }}
     </Show>
   )
 }
@@ -1317,14 +1426,14 @@ function ImageRenderer(props: { component: UIComponent }) {
     <figure class={`w-full h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col ${params.className || ''}`}>
       <div class="flex-1 flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-900 min-h-[200px]">
         <a
-          href={params.url}
+          href={safeUrl(params.url)}
           target="_blank"
           rel="noopener noreferrer"
           class="cursor-zoom-in focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded"
           aria-label={`View full size: ${params.alt || 'image'}`}
         >
           <img
-            src={params.url}
+            src={safeUrl(params.url, { allowDataImage: true })}
             alt={params.alt || 'Image'}
             class="max-w-full max-h-[500px] object-contain rounded shadow-sm hover:opacity-95 transition-opacity"
             loading="lazy"
@@ -1348,7 +1457,7 @@ function LinkRenderer(props: { component: UIComponent }) {
 
   return (
     <a
-      href={params.url}
+      href={safeUrl(params.url)}
       target="_blank"
       rel="noopener noreferrer"
       aria-label={`${params.label || 'Link'}: ${params.description || params.url} (opens in new tab)`}
@@ -1691,8 +1800,8 @@ function ActionRenderer(props: { component: UIComponent }) {
   if (params.type === 'link' || params.action === 'link') {
     return (
       <a
-        href={params.url || '#'}
-        target={params.url ? '_blank' : undefined}
+        href={safeUrl(params.url) ?? '#'}
+        target={safeUrl(params.url) ? '_blank' : undefined}
         rel="noopener noreferrer"
         aria-label={params.ariaLabel || params.label}
         class={`inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500
@@ -1815,7 +1924,7 @@ function isUIResource(content: any): boolean {
 function UIResourceHtmlRenderer(props: { resource: any }) {
   const htmlContent = () => {
     if (props.resource.content?.htmlString) {
-      return DOMPurify.sanitize(props.resource.content.htmlString)
+      return sanitizeHtml(String(props.resource.content.htmlString), SANITIZE_PROFILES.resource)
     }
     return ''
   }
@@ -1833,9 +1942,9 @@ function UIResourceHtmlRenderer(props: { resource: any }) {
           </h3>
         </div>
       </Show>
-      <div
+      <SafeHtml
         class="p-4 prose prose-sm dark:prose-invert max-w-none"
-        innerHTML={htmlContent()}
+        html={htmlContent}
       />
     </div>
   )

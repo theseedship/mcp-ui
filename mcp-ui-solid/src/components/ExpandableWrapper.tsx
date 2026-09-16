@@ -35,6 +35,13 @@ export interface ExpandableWrapperProps {
    *     hides the affordance.
    */
   toolbarVariant?: 'hover' | 'always-visible'
+  /**
+   * Called with the expanded state on mount and whenever it changes (v6.19.0).
+   * Needed by renderers that render their own `<ExpandableWrapper>`: their
+   * `useExpanded()` call sits ABOVE the wrapper's context provider and would
+   * only ever see an outer wrapper.
+   */
+  onExpandedChange?: (expanded: boolean) => void
 }
 
 /**
@@ -59,6 +66,11 @@ export const ExpandableWrapper: Component<ExpandableWrapperProps> = (props) => {
 
   const handleOpen = () => setIsExpanded(true)
   const handleClose = () => setIsExpanded(false)
+
+  // Report the state to the owner (see `onExpandedChange` docs).
+  createEffect(() => {
+    props.onExpandedChange?.(isExpanded())
+  })
 
   // Reparent content DOM between inline and modal slots
   createEffect(() => {
@@ -129,6 +141,7 @@ export const ExpandableWrapper: Component<ExpandableWrapperProps> = (props) => {
 
       {/* Expand button — visibility per `toolbarVariant` (default 'hover') */}
       <button
+        type="button"
         onClick={handleOpen}
         class={`absolute top-2 right-2 z-10 ${
           props.toolbarVariant === 'always-visible'
@@ -136,7 +149,8 @@ export const ExpandableWrapper: Component<ExpandableWrapperProps> = (props) => {
             : 'opacity-0 group-hover:opacity-70 hover:!opacity-100'
         } p-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-all shadow-sm`}
         title={strings.expand}
-        aria-label="Expand to fullscreen"
+        aria-label={strings.expand}
+        data-mcp-ui-action="expand"
       >
         <svg class="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />
@@ -151,6 +165,7 @@ export const ExpandableWrapper: Component<ExpandableWrapperProps> = (props) => {
             style={{ animation: 'expandable-fade-in 0.15s ease-out' }}
             onClick={handleBackdropClick}
             role="dialog"
+            data-mcp-ui-portal="dialog"
             aria-modal="true"
             aria-label={props.title || strings.expandedView}
             tabIndex={-1}
@@ -171,10 +186,12 @@ export const ExpandableWrapper: Component<ExpandableWrapperProps> = (props) => {
                   {/* Copy button */}
                   <Show when={props.copyData}>
                     <button
+                      type="button"
                       onClick={handleCopy}
                       class="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                       title={props.copyLabel || strings.copyToClipboard}
                       aria-label={props.copyLabel || strings.copyToClipboard}
+                      data-mcp-ui-action="copy"
                     >
                       <Show
                         when={!copied()}
@@ -192,9 +209,11 @@ export const ExpandableWrapper: Component<ExpandableWrapperProps> = (props) => {
                   </Show>
                   {/* Close button */}
                   <button
+                    type="button"
                     onClick={handleClose}
                     class="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                     aria-label={strings.closeExpandedView}
+                    data-mcp-ui-action="close"
                   >
                     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />

@@ -8,11 +8,23 @@ import { render, screen, fireEvent } from '@solidjs/testing-library'
 import { CodeBlockRenderer } from './CodeBlockRenderer'
 import type { CodeComponentParams } from '../types'
 
+// Shared switch for the mock below. `vi.hoisted` is the only way to reach a
+// variable from inside a hoisted `vi.mock` factory, and mutating the factory's
+// `vi.fn`s from a test does not work here (the factory result the component
+// imported is not the object a later `import()` in the test hands back).
+const hljsState = vi.hoisted(() => ({ throwOnHighlight: false }))
+
 // Mock highlight.js
 vi.mock('highlight.js', () => ({
     default: {
-        highlight: vi.fn((code, _options) => ({ value: `<span class="hljs-keyword">mocked</span> ${code}` })),
-        highlightAuto: vi.fn((code) => ({ value: `<span class="hljs-keyword">auto</span> ${code}` })),
+        highlight: vi.fn((code, _options) => {
+            if (hljsState.throwOnHighlight) throw new Error('hljs exploded')
+            return { value: `<span class="hljs-keyword">mocked</span> ${code}` }
+        }),
+        highlightAuto: vi.fn((code) => {
+            if (hljsState.throwOnHighlight) throw new Error('hljs exploded')
+            return { value: `<span class="hljs-keyword">auto</span> ${code}` }
+        }),
         getLanguage: vi.fn(() => true),
     }
 }))
@@ -75,6 +87,31 @@ describe('CodeBlockRenderer', () => {
         render(() => <CodeBlockRenderer params={{ ...defaultParams, code: 'line 1\nline 2', startLine: 10 }} />)
         expect(screen.getByText('10')).toBeTruthy()
         expect(screen.getByText('11')).toBeTruthy()
+    })
+
+    it('falls back to the escaped source when highlight() throws (v6.19.0)', async () => {
+        // `<code innerHTML>` is outside `sanitizeHtml` — the escape in this
+        // catch branch is the only thing standing between a throwing
+        // highlighter and live markup in the sink.
+        hljsState.throwOnHighlight = true
+
+        try {
+            const source = '&lt;script&gt;alert(1)&lt;/script&gt; a && b'
+            const { container } = render(() => (
+                <CodeBlockRenderer params={{ code: source, language: 'javascript' }} />
+            ))
+
+            await vi.waitFor(() => {
+                expect(container.querySelector('code')?.textContent).toBe(source)
+            })
+
+            const code = container.querySelector('code')!
+            expect(container.querySelector('script')).toBeNull()
+            expect(code.innerHTML).toContain('&amp;lt;script&amp;gt;')
+            expect(code.innerHTML).not.toContain('<script')
+        } finally {
+            hljsState.throwOnHighlight = false
+        }
     })
 
     it('handles styling class', () => {
