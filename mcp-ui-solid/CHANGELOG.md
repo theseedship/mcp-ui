@@ -309,14 +309,17 @@ render test — see **Tests**.
   `locale` (for example `'not_a_locale'`, which makes `Intl` throw a
   `RangeError`) resolves to `'en-US'`, and a valid one is canonicalized
   (`'fr-fr'` → `'fr-FR'`). The same check is exported as
-  `resolveMCPUILocale(locale)`. A locale change re-renders the counts,
-  citation wording and map popups that depend on it.
+  `resolveMCPUILocale(locale)`. A locale change re-renders the counts and
+  citation wording that depend on it; GeoJSON map popups read it when they
+  open, so the map is not rebuilt.
 
   Time zones are a separate concern from the locale. Date-only
   `DataPreviewSection` cells (`2026-09-17`) are now formatted in UTC, so the
-  server and every viewer show the same calendar date; date-time cells still
-  use the viewer's time zone. The tool-error card timestamp is rendered only
-  after mount, because the server cannot know the viewer's time zone.
+  server and every viewer show the same calendar date. Date-time cells still
+  use the runtime's time zone: the server's in SSR markup, the viewer's in a
+  client render, so a server-rendered cell near midnight can show a different
+  date than the viewer's calendar. The tool-error card timestamp is rendered
+  only after mount, because the server cannot know the viewer's time zone.
 
 - **Five more chrome defaults move from French to English**, matching
   every other key (a published library ships no hardcoded non-English

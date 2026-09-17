@@ -847,6 +847,15 @@ describe('sweep — locale-driven formatting (v6.20.0)', () => {
     expect(artifact.withDefaults.textContent).toContain('512 B')
   })
 
+  it('shows the tool-error timestamp after mount in a client render', () => {
+    const { withDefaults } = renderBoth({}, () => (
+      <UIResourceRenderer
+        content={{ error: true, message: 'Boom', tool: 'search', timestamp: '2026-09-17T10:00:00Z' } as never}
+      />
+    ))
+    expect(withDefaults.textContent).toContain('2026')
+  })
+
   it('falls back to en-US instead of throwing on an invalid locale', () => {
     const { withProvider } = renderBoth({ locale: 'not_a_locale' }, () => (
       <DataPreviewSection

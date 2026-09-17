@@ -212,8 +212,12 @@ export function addGeoJSONLayer(
   style?: MapGeoJSONStyle,
   popup?: MapPopupConfig,
   allowHtml = false,
-  /** BCP-47 tag forwarded to {@link buildPopupContent}. */
-  locale: string = DEFAULT_MCPUI_STRINGS.locale
+  /**
+   * BCP-47 tag forwarded to {@link buildPopupContent}, or a getter. With a
+   * getter, each popup is bound to a function Leaflet evaluates when the popup
+   * opens, so it follows locale changes without rebuilding the layer.
+   */
+  locale: string | (() => string) = DEFAULT_MCPUI_STRINGS.locale
 ): any {
   const styleFn = buildStyleFn(style);
 
@@ -232,9 +236,15 @@ export function addGeoJSONLayer(
       });
     },
     onEachFeature: (feature: any, featureLayer: any) => {
-      const html = buildPopupContent(feature, popup, allowHtml, locale);
+      const currentLocale = () => (typeof locale === 'function' ? locale() : locale);
+      const html = buildPopupContent(feature, popup, allowHtml, currentLocale());
       if (html) {
-        featureLayer.bindPopup(html, { maxWidth: 300 });
+        featureLayer.bindPopup(
+          typeof locale === 'function'
+            ? () => buildPopupContent(feature, popup, allowHtml, currentLocale()) ?? ''
+            : html,
+          { maxWidth: 300 }
+        );
       }
     },
   });
@@ -305,9 +315,6 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
 
   // Initialize Map
   createEffect(async () => {
-    // Read before the first `await` so the effect tracks it: a locale change
-    // re-runs the effect, which rebuilds the GeoJSON layers and their popups.
-    const locale = strings.locale;
     if (isServer) return; // Don't run on server
 
     if (!L) {
@@ -432,7 +439,10 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
             p.geojsonStyle,
             p.popup,
             allowHtml(),
-            locale
+            // A getter, not a value: popups read the current locale when they
+            // open. Tracking the locale here would re-run this effect, which is
+            // not idempotent (layer control, PMTiles layer, view reset).
+            () => strings.locale
           );
           allBoundsLayers.push(geoLayer);
         }
@@ -449,7 +459,7 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
               layerDef.style || p?.geojsonStyle,
               layerDef.popup || p?.popup,
               allowHtml(),
-              locale
+              () => strings.locale
             );
 
             overlays[layerDef.name] = geoLayer;

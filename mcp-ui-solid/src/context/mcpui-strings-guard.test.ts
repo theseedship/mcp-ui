@@ -54,8 +54,12 @@ const findings = scanChrome(SRC_DIR, SCAN_OPTIONS)
  * file, so a staleness check rescans that one file instead of all of `src`
  * (a full rescan per entry exceeded the default test timeout on CI).
  */
-const countInFile = (file: string, options: ScanOptions) =>
-  scanSource(file, readFileSync(join(SRC_DIR, file), 'utf8'), options).length
+const SCANNED_FILES = new Set(listSourceFiles(SRC_DIR))
+const countInFile = (file: string, options: ScanOptions) => {
+  // An entry must point at a file the full scan actually covers.
+  expect(SCANNED_FILES.has(file), `Not a scanned source file: ${file}`).toBe(true)
+  return scanSource(file, readFileSync(join(SRC_DIR, file), 'utf8'), options).length
+}
 const describeFinding = (f: Finding) => `${f.file}:${f.line} [${f.rule} ${f.context}] → ${JSON.stringify(f.text)}`
 
 describe('chrome strings guard (AST scanner)', () => {
