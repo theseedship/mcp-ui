@@ -1336,7 +1336,13 @@ components: the same tag renders the same formatted string on the server and
 after hydration, so there is no server/client markup mismatch. Relying on the
 runtime's implicit locale (an argument-less `toLocaleString()`) is exactly
 the pre-v6.20.0 behavior this key replaces, and it did not have that
-guarantee.
+guarantee. An invalid tag in the provider resolves to `'en-US'` instead of
+making `Intl` throw (`resolveMCPUILocale()` exposes the same check).
+
+The locale does not fix the time zone. Date-only `DataPreviewSection` cells
+are formatted in UTC so every viewer sees the same calendar date. Date-time
+cells use the viewer's time zone, and the tool-error card timestamp is
+rendered only after mount for that reason.
 
 `useStreamingUI()` called directly (without `StreamingUIRenderer`) takes the
 same messages as a `messages` option (`DEFAULT_STREAMING_UI_MESSAGES`).

@@ -1104,8 +1104,40 @@ export const MCPUIStringsContext = createContext<MCPUIStrings>(DEFAULT_MCPUI_STR
  * `<MCPUIStringsProvider>` is mounted above — every renderer works
  * standalone with English chrome.
  */
+const resolvedLocales = new Map<string, string>()
+
+/**
+ * Returns `locale` in canonical BCP-47 form, or `DEFAULT_MCPUI_STRINGS.locale`
+ * (`'en-US'`) when it is missing or not a valid tag. Renderers pass the result
+ * straight to `Intl` / `toLocaleString` / `localeCompare`, which throw a
+ * `RangeError` on an invalid tag such as `'not_a_locale'`.
+ *
+ * @since v6.20.0
+ */
+export function resolveMCPUILocale(locale: unknown): string {
+  const fallback = DEFAULT_MCPUI_STRINGS.locale
+  if (typeof locale !== 'string' || locale.trim() === '') return fallback
+  const cached = resolvedLocales.get(locale)
+  if (cached) return cached
+  let resolved = fallback
+  try {
+    const [canonical] = Intl.getCanonicalLocales(locale)
+    if (canonical) resolved = canonical
+  } catch {
+    resolved = fallback
+  }
+  if (resolvedLocales.size < 64) resolvedLocales.set(locale, resolved)
+  return resolved
+}
+
 export function useMCPUIStrings(): Required<MCPUIStrings> {
-  return mergeProps(DEFAULT_MCPUI_STRINGS, useContext(MCPUIStringsContext))
+  const context = useContext(MCPUIStringsContext)
+  // The last source wins: `locale` is always a valid tag, whatever the provider passed.
+  return mergeProps(DEFAULT_MCPUI_STRINGS, context, {
+    get locale() {
+      return resolveMCPUILocale(context?.locale)
+    },
+  })
 }
 
 export interface MCPUIStringsProviderProps {

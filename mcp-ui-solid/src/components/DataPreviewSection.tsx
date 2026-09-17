@@ -52,7 +52,16 @@ function formatCell(
   if (value == null) return '\u2014'
   if (col.type === 'number') return formatNumber(value, col.format, locale)
   if (col.type === 'date' && typeof value === 'string') {
-    try { return new Date(value).toLocaleDateString(locale) } catch { return value }
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return value
+    // A date-only value (`2026-09-17`) has no time zone: format it in UTC so
+    // every viewer, and the server, shows the same calendar date.
+    const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(value)
+    try {
+      return date.toLocaleDateString(locale, dateOnly ? { timeZone: 'UTC' } : undefined)
+    } catch {
+      return value
+    }
   }
   return String(value)
 }
@@ -313,15 +322,15 @@ export function DataPreviewSection(props: DataPreviewSectionProps) {
               <span>
                 {isPaginated()
                   ? formatMCPUIString(strings.previewShowingRange, {
-                      start: rangeStart(),
-                      end: rangeEnd(),
+                      start: rangeStart().toLocaleString(strings.locale),
+                      end: rangeEnd().toLocaleString(strings.locale),
                       // `strings.locale` formats the count, so the chrome
                       // string and the digits agree (and SSR matches the client).
                       total: sortedRows().length.toLocaleString(strings.locale),
                     })
                   : formatMCPUIString(
                       sortedRows().length === 1 ? strings.previewRowsOne : strings.previewRowsMany,
-                      { count: sortedRows().length }
+                      { count: sortedRows().length.toLocaleString(strings.locale) }
                     )}
                 {c().totalRows && c().totalRows! > sortedRows().length
                   ? formatMCPUIString(strings.previewTotalSuffix, {

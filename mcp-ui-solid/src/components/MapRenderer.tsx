@@ -305,6 +305,9 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
 
   // Initialize Map
   createEffect(async () => {
+    // Read before the first `await` so the effect tracks it: a locale change
+    // re-runs the effect, which rebuilds the GeoJSON layers and their popups.
+    const locale = strings.locale;
     if (isServer) return; // Don't run on server
 
     if (!L) {
@@ -429,7 +432,7 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
             p.geojsonStyle,
             p.popup,
             allowHtml(),
-            strings.locale
+            locale
           );
           allBoundsLayers.push(geoLayer);
         }
@@ -446,7 +449,7 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
               layerDef.style || p?.geojsonStyle,
               layerDef.popup || p?.popup,
               allowHtml(),
-              strings.locale
+              locale
             );
 
             overlays[layerDef.name] = geoLayer;

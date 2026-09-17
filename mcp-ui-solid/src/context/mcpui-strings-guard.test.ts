@@ -30,10 +30,13 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
   isAllowed,
+  isMachineToken,
   listSourceFiles,
   matchesEntry,
   scanChrome,
+  scanSource,
   type Finding,
+  type ScanOptions,
 } from '../../scripts/chrome-scan'
 import {
   ALLOW_LIST,
@@ -46,6 +49,13 @@ import {
 const SRC_DIR = join(fileURLToPath(new URL('.', import.meta.url)), '..')
 
 const findings = scanChrome(SRC_DIR, SCAN_OPTIONS)
+/**
+ * Scoped exclusions and sanctioned tables only filter findings of their own
+ * file, so a staleness check rescans that one file instead of all of `src`
+ * (a full rescan per entry exceeded the default test timeout on CI).
+ */
+const countInFile = (file: string, options: ScanOptions) =>
+  scanSource(file, readFileSync(join(SRC_DIR, file), 'utf8'), options).length
 const describeFinding = (f: Finding) => `${f.file}:${f.line} [${f.rule} ${f.context}] → ${JSON.stringify(f.text)}`
 
 describe('chrome strings guard (AST scanner)', () => {
@@ -82,7 +92,7 @@ describe('chrome strings guard (AST scanner)', () => {
 
   it('has no stale scoped exclusion (each still suppresses a finding)', () => {
     for (const scope of SCOPED_EXCLUSIONS) {
-      const without = scanChrome(SRC_DIR, {
+      const without = countInFile(scope.file, {
         ...SCAN_OPTIONS,
         scopedExclusions: SCOPED_EXCLUSIONS.filter((s) => s !== scope),
       })
@@ -94,9 +104,9 @@ describe('chrome strings guard (AST scanner)', () => {
         ).toBe(true)
       }
       expect(
-        without.length,
+        without,
         `Stale scoped exclusion: ${scope.file} (${scope.functions.join(', ')})`
-      ).toBeGreaterThan(findings.length)
+      ).toBeGreaterThan(countInFile(scope.file, SCAN_OPTIONS))
     }
   })
 
@@ -107,11 +117,13 @@ describe('chrome strings guard (AST scanner)', () => {
         new RegExp(`^export const ${table.name}\\b`, 'm').test(source),
         `${table.name} must be exported from ${table.file} so hosts can spread it`
       ).toBe(true)
-      const without = scanChrome(SRC_DIR, {
+      const without = countInFile(table.file, {
         ...SCAN_OPTIONS,
         sanctionedTables: SANCTIONED_TABLES.filter((t) => t !== table),
       })
-      expect(without.length, `Stale sanctioned table: ${table.name}`).toBeGreaterThan(findings.length)
+      expect(without, `Stale sanctioned table: ${table.name}`).toBeGreaterThan(
+        countInFile(table.file, SCAN_OPTIONS)
+      )
     }
   })
 
@@ -273,6 +285,16 @@ describe('chrome scanner — non-vacuity', () => {
       expect(hits.filter((f) => f.text === text).map(describeFinding)).toEqual([])
     })
   }
+
+  it('rejects pathological class-like and camelCase tokens in linear time', () => {
+    // Nested quantifiers made these take seconds (and grow exponentially).
+    const started = Date.now()
+    expect(isMachineToken('a' + '-'.repeat(60) + '!')).toBe(false)
+    expect(isMachineToken('a' + 'A'.repeat(60) + '!')).toBe(false)
+    expect(Date.now() - started).toBeLessThan(500)
+    expect(isMachineToken('hover:bg-blue-600')).toBe(true)
+    expect(isMachineToken('citationUnresolved')).toBe(true)
+  })
 
   it('reports root-relative files and 1-based lines', () => {
     const f = hits.find((h) => h.text === 'Unknown field type:')!

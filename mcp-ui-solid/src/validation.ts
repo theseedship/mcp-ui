@@ -21,7 +21,9 @@ export {
   validateIframeDomain,
   sanitizeString,
   DEFAULT_RESOURCE_LIMITS,
-  // v6.20.0 — English baseline of the end-user form-validation wording.
+  // v6.20.0 — end-user form validation with injectable wording.
+  validateFieldValue,
+  validateFormData,
   DEFAULT_VALIDATION_MESSAGES,
 } from './services/validation'
 export type { FormValidationMessages } from './services/validation'

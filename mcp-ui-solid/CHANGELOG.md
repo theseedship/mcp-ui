@@ -228,8 +228,10 @@ render test — see **Tests**.
     `mustBeChecked`, `minLength`, `maxLength`, `invalidPattern`,
     `invalidEmail`, `invalidNumber`, `minValue`, `maxValue`, `minDate`,
     `maxDate`, `invalidOption`, `invalidFormat`). New exports
-    `FormValidationMessages` and `DEFAULT_VALIDATION_MESSAGES` from the root
-    barrel and `@seed-ship/mcp-ui-solid/validation`. `FormRenderer` feeds
+    `validateFieldValue`, `validateFormData`, `FormValidationMessages` and
+    `DEFAULT_VALIDATION_MESSAGES` from the root barrel and
+    `@seed-ship/mcp-ui-solid/validation` (the two validators were not
+    exported from any entry point before). `FormRenderer` feeds
     this from `useMCPUIStrings()` (the `field*` keys above) — a host does
     not normally call `validateFieldValue` directly for that path. The
     STRUCTURAL validators (`validateComponent`, `validateLayout`, …) keep
@@ -245,7 +247,9 @@ render test — see **Tests**.
     Partial<ChartDataTableLabels>` (`series`, `point`, `label`,
     `seriesName`, `x`, `y`, `r` — the last three are the Chart.js point
     property names the cells mirror, still overridable). New root-barrel
-    exports `DegradedProjectionLabels`, `DEGRADED_PROJECTION_LABELS`,
+    exports `graphToDegradedTable`, `mapToDegradedTable`,
+    `chartToDegradedTable`, `chartToDataTable` (not exported from any entry
+    point before), `DegradedProjectionLabels`, `DEGRADED_PROJECTION_LABELS`,
     `ChartDataTableLabels`, `CHART_DATA_TABLE_LABELS`. The renderers pass
     the `degradedCol*` / `chartTable*` keys from `useMCPUIStrings()`.
 
@@ -300,6 +304,19 @@ render test — see **Tests**.
 
   Restore the previous French formatting with
   `<MCPUIStringsProvider strings={{ locale: 'fr-FR' }}>`.
+
+  `useMCPUIStrings()` always returns a valid tag: an empty or invalid
+  `locale` (for example `'not_a_locale'`, which makes `Intl` throw a
+  `RangeError`) resolves to `'en-US'`, and a valid one is canonicalized
+  (`'fr-fr'` → `'fr-FR'`). The same check is exported as
+  `resolveMCPUILocale(locale)`. A locale change re-renders the counts,
+  citation wording and map popups that depend on it.
+
+  Time zones are a separate concern from the locale. Date-only
+  `DataPreviewSection` cells (`2026-09-17`) are now formatted in UTC, so the
+  server and every viewer show the same calendar date; date-time cells still
+  use the viewer's time zone. The tool-error card timestamp is rendered only
+  after mount, because the server cannot know the viewer's time zone.
 
 - **Five more chrome defaults move from French to English**, matching
   every other key (a published library ships no hardcoded non-English

@@ -277,7 +277,7 @@ const CSS_TOKEN =
 
 /** Tailwind / CSS class token: carries `-`, `:`, `[`, `/` or is a known utility. */
 const CLASS_TOKEN =
-  /^(!?-?[a-z0-9@]+([:\-/.[\]#%()'_,=>&*+][a-z0-9:\-/.[\]#%()'_,=>&*+]*)+|flex|grid|block|inline|hidden|relative|absolute|fixed|sticky|static|border|rounded|shadow|italic|underline|truncate|transition|uppercase|lowercase|capitalize|group|peer|container|prose|antialiased|grow|shrink|invisible|visible|contents|table|outline|ring|filter|blur|resize|select-none|snap|isolate|shadow|dark|not-italic|ordinal|break-all|whitespace-nowrap)$/
+  /^(!?-?[a-z0-9@]+[:\-/.[\]#%()'_,=>&*+][a-z0-9:\-/.[\]#%()'_,=>&*+]*|flex|grid|block|inline|hidden|relative|absolute|fixed|sticky|static|border|rounded|shadow|italic|underline|truncate|transition|uppercase|lowercase|capitalize|group|peer|container|prose|antialiased|grow|shrink|invisible|visible|contents|table|outline|ring|filter|blur|resize|select-none|snap|isolate|shadow|dark|not-italic|ordinal|break-all|whitespace-nowrap)$/
 
 /**
  * Is `text` (interpolations already replaced by spaces) a machine token —
@@ -290,7 +290,7 @@ export function isMachineToken(text: string): boolean {
   if (/^(https?:|mailto:|tel:|data:|blob:|\/\/|\.{0,2}\/)/i.test(t) && !/\s/.test(t)) return true
   if (/^#[\w-]+$/.test(t)) return true // fragment / selector / hex color
   if (/^[a-z]+\/[a-z0-9.+*-]+(;.*)?$/i.test(t) && !/\s/.test(t)) return true // MIME
-  if (/^[a-z][\w]*([A-Z]\w*)+$/.test(t)) return true // camelCase identifier
+  if (/^[a-z]\w*$/.test(t) && /[A-Z]/.test(t)) return true // camelCase identifier
   if (/^[a-z0-9]+([_\-.:/][a-z0-9]+)+$/i.test(t) && !/^[A-Z][a-z]/.test(t)) return true // kebab/snake/dotted/event ids
   if (/^[\w-]+\.(tsx?|jsx?|json|csv|png|svg|css|md|html)$/i.test(t)) return true // file names
   if (/^[a-z_$][\w$]*(\.[\w$]+|\[[^\]\s]*\])+$/.test(t)) return true // property paths `params.data[0]`

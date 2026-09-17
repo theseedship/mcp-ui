@@ -712,8 +712,13 @@ function TableRenderer(props: {
     ? {
         map: tableParams.citationMap,
         render: tableParams.citationRender,
-        unresolvedLabel: strings.citationUnresolved,
-        viewSourceLabel: strings.citationViewSource,
+        // Getters, not snapshots: cells read the provider's current wording.
+        get unresolvedLabel() {
+          return strings.citationUnresolved
+        },
+        get viewSourceLabel() {
+          return strings.citationViewSource
+        },
       }
     : undefined
 
@@ -1919,6 +1924,10 @@ function ActionRenderer(props: { component: UIComponent }) {
  */
 function ErrorCardRenderer(props: { error: any }) {
   const strings = useMCPUIStrings()
+  // The timestamp depends on the viewer's time zone, which the server cannot
+  // know. Render it only after mount so SSR and hydration produce the same markup.
+  const [mounted, setMounted] = createSignal(false)
+  onMount(() => setMounted(true))
   const getErrorText = () => {
     return formatMCPUIString(strings.errorCopyText, {
       tool: props.error.tool || strings.errorUnknownTool,
@@ -1959,7 +1968,7 @@ function ErrorCardRenderer(props: { error: any }) {
               </ul>
             </div>
           </Show>
-          <Show when={props.error.timestamp}>
+          <Show when={mounted() && props.error.timestamp}>
             <p class="text-xs text-red-500 dark:text-red-500 mt-2">
               {new Date(props.error.timestamp).toLocaleString(strings.locale)}
             </p>

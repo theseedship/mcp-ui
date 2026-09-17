@@ -10,6 +10,8 @@
 
 import { describe, it, expect, beforeEach } from 'vitest'
 import { render, cleanup } from '@solidjs/testing-library'
+import { createSignal } from 'solid-js'
+import { MCPUIStringsProvider } from '../context/MCPUIStringsContext'
 import { renderCellValue, UIResourceRenderer } from './UIResourceRenderer'
 import type { CitationCtx } from './UIResourceRenderer'
 import type { UIComponent, TableComponentParams } from '../types'
@@ -159,5 +161,34 @@ describe('<TableRenderer> — citationMap wiring (v5.7.0)', () => {
     const customs = container.querySelectorAll('a.my-chip')
     expect(customs.length).toBe(3)
     expect(container.querySelector('[data-citation-page]')).toBeNull()
+  })
+
+  it('reads the provider wording live: unresolved placeholder and chip tooltip follow a strings change (v6.20.0)', () => {
+    const [fr, setFr] = createSignal(false)
+    const { container } = render(() => (
+      <MCPUIStringsProvider
+        strings={
+          fr()
+            ? { citationUnresolved: '[réf. {id}]', citationViewSource: 'Voir la source - {label}' }
+            : {}
+        }
+      >
+        <UIResourceRenderer
+          content={{
+            id: 'live-table',
+            type: 'table',
+            position: { colStart: 1, colSpan: 12 },
+            params: {
+              columns: [{ key: 'cites', label: 'Citations' }],
+              rows: [{ cites: '[1]' }],
+              citationMap: baseMap,
+            } as TableComponentParams,
+          }}
+        />
+      </MCPUIStringsProvider>
+    ))
+    expect(container.querySelector('button[data-citation-page]')?.getAttribute('title')).toBe('View source - A.pdf - 5')
+    setFr(true)
+    expect(container.querySelector('button[data-citation-page]')?.getAttribute('title')).toBe('Voir la source - A.pdf - 5')
   })
 })

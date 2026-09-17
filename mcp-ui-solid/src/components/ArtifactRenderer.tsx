@@ -27,7 +27,11 @@ export const ArtifactRenderer: Component<{ params: ArtifactComponentParams }> = 
                 maximumFractionDigits: 1,
                 useGrouping: false,
             }).format(n)
-        if (bytes < 1024) return formatMCPUIString(strings.sizeBytes, { size: bytes })
+        if (bytes < 1024) {
+            return formatMCPUIString(strings.sizeBytes, {
+                size: new Intl.NumberFormat(strings.locale, { maximumFractionDigits: 0 }).format(bytes),
+            })
+        }
         if (bytes < 1024 * 1024) return formatMCPUIString(strings.sizeKilobytes, { size: oneDecimal(bytes / 1024) })
         return formatMCPUIString(strings.sizeMegabytes, { size: oneDecimal(bytes / (1024 * 1024)) })
     }

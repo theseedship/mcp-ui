@@ -25,6 +25,7 @@ import { VerifiedText } from '../components/VerifiedText'
 import { VideoRenderer } from '../components/VideoRenderer'
 import { FormFieldRenderer } from '../components/FormFieldRenderer'
 import { DataPreviewSection } from '../components/DataPreviewSection'
+import { ArtifactRenderer } from '../components/ArtifactRenderer'
 import { GenerativeUIErrorBoundary } from '../components/GenerativeUIErrorBoundary'
 import { AgentHandoff } from '../components/AgentHandoff'
 import { AutocompleteDropdown } from '../components/AutocompleteDropdown'
@@ -816,6 +817,45 @@ describe('sweep — StreamingUIRenderer metadata panel', () => {
 // ─────────────────────────────────────────────────────────────
 // 6.20.0
 // ─────────────────────────────────────────────────────────────
+
+describe('sweep — locale-driven formatting (v6.20.0)', () => {
+  it('formats a date-only cell in UTC, so every time zone shows the same calendar date', () => {
+    const { withDefaults } = renderBoth({}, () => (
+      <DataPreviewSection
+        content={
+          {
+            columns: [{ key: 'd', label: 'D', type: 'date' }],
+            rows: [{ d: '2026-01-01' }],
+          } as never
+        }
+      />
+    ))
+    expect(withDefaults.textContent).toContain('1/1/2026')
+  })
+
+  it('formats the non-paginated row count and the artifact byte size with the locale', () => {
+    const rows = Array.from({ length: 1500 }, (_, i) => ({ a: i }))
+    const { withProvider } = renderBoth({ locale: 'de-DE' }, () => (
+      <DataPreviewSection content={{ columns: [{ key: 'a', label: 'A' }], rows, pageSize: 0 } as never} />
+    ))
+    expect(withProvider.textContent).toContain('1.500 rows')
+
+    const artifact = renderBoth({ locale: 'ar-EG' }, () => (
+      <ArtifactRenderer params={{ url: 'https://ok.test/x.txt', filename: 'x.txt', size: 512 } as never} />
+    ))
+    expect(artifact.withProvider.textContent).toContain('٥١٢ B')
+    expect(artifact.withDefaults.textContent).toContain('512 B')
+  })
+
+  it('falls back to en-US instead of throwing on an invalid locale', () => {
+    const { withProvider } = renderBoth({ locale: 'not_a_locale' }, () => (
+      <DataPreviewSection
+        content={{ columns: [{ key: 'a', label: 'A', type: 'number' }], rows: [{ a: 1234.5 }] } as never}
+      />
+    ))
+    expect(withProvider.textContent).toContain('1,234.5')
+  })
+})
 
 describe('sweep — DataPreviewSection pagination', () => {
   // pageSize 2 over 5 rows → paginated (3 pages).
