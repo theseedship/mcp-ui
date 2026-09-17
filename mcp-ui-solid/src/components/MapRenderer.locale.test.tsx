@@ -56,8 +56,13 @@ vi.mock('leaflet', () => {
           },
         }),
       },
-      geoJSON: (_data: unknown, options: { onEachFeature?: (feature: unknown, layer: unknown) => void }) => {
+      geoJSON: (
+        data: { features?: unknown[] },
+        options: { onEachFeature?: (feature: unknown, layer: unknown) => void }
+      ) => {
         leafletCalls.geoJSONOptions.push(options)
+        // Like Leaflet: onEachFeature runs synchronously while the layer is built.
+        for (const feature of data?.features ?? []) options.onEachFeature?.(feature, { bindPopup: () => {} })
         const layer = { addTo: () => layer, getBounds: bounds }
         return layer
       },
@@ -126,6 +131,46 @@ describe('MapRenderer — locale changes (v6.20.0)', () => {
     await new Promise((resolve) => setTimeout(resolve, 30))
 
     expect(content()).toContain('1.234,5')
+    expect({
+      map: leafletCalls.map,
+      layersControl: leafletCalls.layersControl,
+      setView: leafletCalls.setView,
+      geoJSON: leafletCalls.geoJSONOptions.length,
+    }).toEqual(setup)
+  })
+
+  it('a map mounted after Leaflet is loaded does not track the locale either', async () => {
+    // Leaflet is cached by the previous test, so this map's setup effect runs
+    // synchronously: any eager locale read there would subscribe the effect.
+    const [strings, setStrings] = createSignal<Partial<MCPUIStrings>>({ locale: 'en-US' })
+    const mapsBefore = leafletCalls.map
+    const controlsBefore = leafletCalls.layersControl
+    const params = {
+      center: [48.85, 2.35],
+      zoom: 3,
+      popup: { titleField: 'name', fields: ['prix_m2'] },
+      layers: [
+        { name: 'A', geojson: COLLECTION, visible: true },
+        { name: 'B', geojson: COLLECTION, visible: true },
+      ],
+    } as unknown as MapComponentParams
+
+    render(() => (
+      <MCPUIStringsProvider strings={strings()}>
+        <MapRenderer params={params} />
+      </MCPUIStringsProvider>
+    ))
+    await waitFor(() => expect(leafletCalls.layersControl).toBe(controlsBefore + 1))
+    const setup = {
+      map: leafletCalls.map,
+      layersControl: leafletCalls.layersControl,
+      setView: leafletCalls.setView,
+      geoJSON: leafletCalls.geoJSONOptions.length,
+    }
+    expect(setup.map).toBe(mapsBefore + 1)
+
+    setStrings({ locale: 'de-DE' })
+    await new Promise((resolve) => setTimeout(resolve, 30))
     expect({
       map: leafletCalls.map,
       layersControl: leafletCalls.layersControl,

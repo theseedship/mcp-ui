@@ -4,7 +4,7 @@
  * v3.1.0: GeoJSON, choropleth, popups, multi-layer, PMTiles
  */
 
-import { Component, createEffect, onCleanup, createSignal, Show } from 'solid-js';
+import { Component, createEffect, onCleanup, createSignal, Show, untrack } from 'solid-js';
 import { isServer } from 'solid-js/web';
 import type {
   UIComponent,
@@ -236,7 +236,10 @@ export function addGeoJSONLayer(
       });
     },
     onEachFeature: (feature: any, featureLayer: any) => {
-      const currentLocale = () => (typeof locale === 'function' ? locale() : locale);
+      // `untrack`: onEachFeature runs synchronously inside the map setup effect
+      // when Leaflet is already loaded. A tracked read there would subscribe
+      // that non-idempotent effect to the locale.
+      const currentLocale = () => (typeof locale === 'function' ? untrack(locale) : locale);
       const html = buildPopupContent(feature, popup, allowHtml, currentLocale());
       if (html) {
         featureLayer.bindPopup(
