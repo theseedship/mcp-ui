@@ -249,7 +249,6 @@ const FRENCH_SINGLE_WORDS = new Set([
 ])
 
 const LOCALE_METHODS = new Set(['toLocaleString', 'toLocaleDateString', 'toLocaleTimeString'])
-const BCP47 = /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$/
 
 const ENTITIES: Record<string, string> = {
   nbsp: ' ',
@@ -853,8 +852,10 @@ export function scanSource(file: string, text: string, options: ScanOptions = {}
     } else {
       return
     }
+    // Any literal in the locale position is hardcoded, whatever its shape
+    // (`'fr'`, `'en-US-u-nu-arab'`, `'x-private'`, even an invalid tag).
     const hardcoded = (e: ts.Expression | undefined): boolean =>
-      !!e && (ts.isStringLiteral(e) || ts.isNoSubstitutionTemplateLiteral(e)) && BCP47.test(e.text)
+      !!e && (ts.isStringLiteral(e) || ts.isNoSubstitutionTemplateLiteral(e))
     if (hardcoded(localeArg)) {
       push(localeArg!, 'locale', (localeArg as ts.StringLiteral).text, method)
     } else if (localeArg && ts.isArrayLiteralExpression(localeArg) && localeArg.elements.some((e) => hardcoded(e))) {

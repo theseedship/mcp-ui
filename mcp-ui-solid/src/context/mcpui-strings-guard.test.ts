@@ -186,6 +186,8 @@ export function Fixture(props: any) {
       <button aria-label={props.open ? strings.hide : 'Show details'} />
       <span>{props.value.toLocaleString('fr-FR')}</span>
       <span>{String(props.a).localeCompare(String(props.b), 'fr')}</span>
+      <span>{props.value.toLocaleString('en-US-u-nu-arab')}</span>
+      <span>{new Intl.NumberFormat('x-private').format(props.value)}</span>
       <span>{props.total.toLocaleString()}</span>
       <span>{'Chargement en cours'}</span>
       <a href="https://example.com/a" title={\`https://example.com/\${props.id}\`} />
@@ -252,6 +254,8 @@ describe('chrome scanner — non-vacuity', () => {
     ['French without accents', 'Chargement en cours', 'french'],
     ['French in an adapter', 'Voir la carte', 'french'],
     ['toLocaleString("fr-FR")', 'fr-FR', 'locale'],
+    ['locale with a singleton extension', 'en-US-u-nu-arab', 'locale'],
+    ['private-use locale in an Intl constructor', 'x-private', 'locale'],
     ['localeCompare(x, "fr")', 'fr', 'locale'],
     ['argument-less toLocaleString() in a component', 'props.total.toLocaleString()', 'locale'],
     ['clipboard template', 'Error in ${props.tool}: ${props.message}', 'clipboard'],
@@ -295,6 +299,9 @@ describe('chrome scanner — non-vacuity', () => {
     const started = Date.now()
     expect(isMachineToken('a' + '-'.repeat(60) + '!')).toBe(false)
     expect(isMachineToken('a' + 'A'.repeat(60) + '!')).toBe(false)
+    expect(Date.now() - started).toBeLessThan(500)
+    const huge = 'a'.repeat(200_000)
+    expect(isMachineToken(`${huge}:${huge}!`)).toBe(false)
     expect(Date.now() - started).toBeLessThan(500)
     expect(isMachineToken('hover:bg-blue-600')).toBe(true)
     expect(isMachineToken('citationUnresolved')).toBe(true)

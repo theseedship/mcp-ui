@@ -5,7 +5,7 @@
  * @experimental
  */
 
-import { createSignal, createMemo, createEffect, For, Show } from 'solid-js'
+import { createSignal, createMemo, createEffect, For, Show, onMount } from 'solid-js'
 import type { DataPreviewContent, DataPreviewColumn } from '../types/chat-bus'
 import {
   DEFAULT_MCPUI_STRINGS,
@@ -47,7 +47,9 @@ function formatNumber(
 function formatCell(
   value: unknown,
   col: DataPreviewColumn,
-  locale: string = DEFAULT_MCPUI_STRINGS.locale
+  locale: string = DEFAULT_MCPUI_STRINGS.locale,
+  /** False before mount: date-time values stay raw so SSR and hydration match. */
+  zoneAware = true
 ): string {
   if (value == null) return '\u2014'
   if (col.type === 'number') return formatNumber(value, col.format, locale)
@@ -57,6 +59,9 @@ function formatCell(
     // A date-only value (`2026-09-17`) has no time zone: format it in UTC so
     // every viewer, and the server, shows the same calendar date.
     const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(value)
+    // A date-time's calendar date depends on the viewer's time zone, which the
+    // server cannot know: keep the raw value until the component has mounted.
+    if (!dateOnly && !zoneAware) return value
     try {
       return date.toLocaleDateString(locale, dateOnly ? { timeZone: 'UTC' } : undefined)
     } catch {
@@ -154,6 +159,8 @@ export function DataPreviewSection(props: DataPreviewSectionProps) {
   const showPageInfo = () => content()?.showPageInfo !== false
 
   const [page, setPage] = createSignal(content()?.initialPage ?? 0)
+  const [mounted, setMounted] = createSignal(false)
+  onMount(() => setMounted(true))
   const [sortKey, setSortKey] = createSignal<string | null>(null)
   const [sortDir, setSortDir] = createSignal<SortDir>(null)
 
@@ -305,7 +312,7 @@ export function DataPreviewSection(props: DataPreviewSectionProps) {
                             class="px-3 py-2 text-gray-800 dark:text-gray-200"
                             style={{ "text-align": columnAlign(col) }}
                           >
-                            {formatCell(row[col.key], col, strings.locale)}
+                            {formatCell(row[col.key], col, strings.locale, mounted())}
                           </td>
                         )}
                       </For>

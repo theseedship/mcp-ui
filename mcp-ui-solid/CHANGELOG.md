@@ -315,11 +315,10 @@ render test — see **Tests**.
 
   Time zones are a separate concern from the locale. Date-only
   `DataPreviewSection` cells (`2026-09-17`) are now formatted in UTC, so the
-  server and every viewer show the same calendar date. Date-time cells still
-  use the runtime's time zone: the server's in SSR markup, the viewer's in a
-  client render, so a server-rendered cell near midnight can show a different
-  date than the viewer's calendar. The tool-error card timestamp is rendered
-  only after mount, because the server cannot know the viewer's time zone.
+  server and every viewer show the same calendar date. Date-time cells and the
+  tool-error card timestamp are formatted only after mount, in the viewer's
+  time zone, because the server cannot know it: server markup shows the raw
+  date-time value, then the formatted date replaces it.
 
 - **Five more chrome defaults move from French to English**, matching
   every other key (a published library ships no hardcoded non-English

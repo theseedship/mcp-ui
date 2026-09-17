@@ -1341,9 +1341,8 @@ making `Intl` throw (`resolveMCPUILocale()` exposes the same check).
 
 The locale does not fix the time zone. Date-only `DataPreviewSection` cells
 are formatted in UTC so every viewer sees the same calendar date. Date-time
-cells use the runtime's time zone, which is the server's in SSR markup and the
-viewer's in a client render. The tool-error card timestamp is rendered only
-after mount, so it always uses the viewer's time zone.
+cells and the tool-error card timestamp are formatted only after mount, in the
+viewer's time zone: server markup shows the raw date-time value.
 
 `useStreamingUI()` called directly (without `StreamingUIRenderer`) takes the
 same messages as a `messages` option (`DEFAULT_STREAMING_UI_MESSAGES`).

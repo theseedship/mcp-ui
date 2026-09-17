@@ -833,6 +833,16 @@ describe('sweep — locale-driven formatting (v6.20.0)', () => {
     expect(withDefaults.textContent).toContain('1/1/2026')
   })
 
+  it('formats a date-time cell after mount in a client render', () => {
+    const { withDefaults } = renderBoth({}, () => (
+      <DataPreviewSection
+        content={{ columns: [{ key: 'd', label: 'D', type: 'date' }], rows: [{ d: '2026-06-15T12:00:00Z' }] } as never}
+      />
+    ))
+    expect(withDefaults.textContent).toContain('6/15/2026')
+    expect(withDefaults.textContent).not.toContain('2026-06-15T12:00:00Z')
+  })
+
   it('formats the non-paginated row count and the artifact byte size with the locale', () => {
     const rows = Array.from({ length: 1500 }, (_, i) => ({ a: i }))
     const { withProvider } = renderBoth({ locale: 'de-DE' }, () => (
