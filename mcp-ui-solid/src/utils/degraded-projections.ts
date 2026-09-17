@@ -11,6 +11,63 @@
  * map/graph.
  */
 
+import { formatMCPUIString } from './format-string';
+
+/**
+ * Column headers and series names of the degraded tables.
+ *
+ * The projections are pure helpers with no access to `MCPUIStrings`, so the
+ * wording is injected: each function takes an optional trailing `labels`
+ * partial, and the renderers feed it from `useMCPUIStrings()`. Left out, the
+ * English defaults below apply — the pre-v6.20.0 behaviour.
+ *
+ * @since v6.20.0
+ */
+export interface DegradedProjectionLabels {
+  /** Graph edge table — source column. */
+  source: string;
+  /** Graph edge table — target column. */
+  target: string;
+  /** Graph edge / node table — label column. */
+  label: string;
+  /** Graph node table — node id column. */
+  node: string;
+  /** Map table — feature type column. */
+  type: string;
+  /** Map table — latitude column. */
+  lat: string;
+  /** Map table — longitude column. */
+  lng: string;
+  /** Map table — property summary column. */
+  info: string;
+  /** Map table — `Type` cell of a marker row (v6.20.0, 6th pass). */
+  marker: string;
+  /** Map table — `Type` cell of a GeoJSON feature without a geometry type (v6.20.0). */
+  feature: string;
+  /** Chart table — fallback dataset name. Template — `{n}`. */
+  series: string;
+}
+
+/** English defaults for {@link DegradedProjectionLabels}. */
+export const DEGRADED_PROJECTION_LABELS: DegradedProjectionLabels = {
+  source: 'Source',
+  target: 'Target',
+  label: 'Label',
+  node: 'Node',
+  type: 'Type',
+  lat: 'Lat',
+  lng: 'Lng',
+  info: 'Info',
+  marker: 'marker',
+  feature: 'feature',
+  series: 'Series {n}',
+};
+
+const withLabels = (labels?: Partial<DegradedProjectionLabels>): DegradedProjectionLabels => ({
+  ...DEGRADED_PROJECTION_LABELS,
+  ...labels,
+});
+
 export interface DegradedTable {
   columns: string[];
   rows: Array<Array<string | number>>;
@@ -41,11 +98,12 @@ function cell(value: unknown): string {
 export function graphToDegradedTable(params: {
   nodes?: Array<{ id: string; label?: string }>;
   edges?: Array<{ source: string; target: string; label?: string; weight?: number }>;
-}): DegradedTable {
+}, labels?: Partial<DegradedProjectionLabels>): DegradedTable {
+  const l = withLabels(labels);
   const edges = params.edges ?? [];
   if (edges.length > 0) {
     return {
-      columns: ['Source', 'Target', 'Label'],
+      columns: [l.source, l.target, l.label],
       rows: edges.slice(0, MAX_PROJECTED_ROWS).map((e) => {
         const label = [e.weight != null ? String(e.weight) : '', e.label ?? '']
           .filter(Boolean)
@@ -56,7 +114,7 @@ export function graphToDegradedTable(params: {
   }
   const nodes = params.nodes ?? [];
   return {
-    columns: ['Node', 'Label'],
+    columns: [l.node, l.label],
     rows: nodes.slice(0, MAX_PROJECTED_ROWS).map((n) => [cell(n.id), cell(n.label ?? n.id)]),
   };
 }
@@ -91,13 +149,14 @@ export function mapToDegradedTable(params: {
     popup?: string;
   }>;
   geojson?: unknown;
-}): DegradedTable {
+}, labels?: Partial<DegradedProjectionLabels>): DegradedTable {
+  const l = withLabels(labels);
   const rows: Array<Array<string | number>> = [];
 
   for (const m of params.markers ?? []) {
     const lat = Array.isArray(m.position) ? m.position[0] : m.position?.lat;
     const lng = Array.isArray(m.position) ? m.position[1] : m.position?.lng;
-    rows.push(['marker', cell(lat), cell(lng), cell(m.tooltip ?? m.popup ?? '')]);
+    rows.push([l.marker, cell(lat), cell(lng), cell(m.tooltip ?? m.popup ?? '')]);
   }
 
   const fc = params.geojson as { features?: GeoJSONLikeFeature[] } | undefined;
@@ -110,7 +169,7 @@ export function mapToDegradedTable(params: {
       .map((k) => `${k}=${cell(props[k])}`)
       .join(', ');
     rows.push([
-      cell(f.geometry?.type ?? 'feature'),
+      cell(f.geometry?.type ?? l.feature),
       ll ? cell(ll[1]) : '',
       ll ? cell(ll[0]) : '',
       propSummary,
@@ -118,7 +177,7 @@ export function mapToDegradedTable(params: {
   }
 
   return {
-    columns: ['Type', 'Lat', 'Lng', 'Info'],
+    columns: [l.type, l.lat, l.lng, l.info],
     rows: rows.slice(0, MAX_PROJECTED_ROWS),
   };
 }
@@ -135,15 +194,19 @@ export function chartToDegradedTable(params: {
     labels?: Array<string | number>;
     datasets?: Array<{ label?: string; data?: unknown[] }>;
   };
-}): DegradedTable {
+}, labels?: Partial<DegradedProjectionLabels>): DegradedTable {
+  const l = withLabels(labels);
   const datasets = params.data?.datasets ?? [];
-  const labels = params.data?.labels ?? [];
-  const rowCount = Math.max(labels.length, ...datasets.map((d) => d.data?.length ?? 0), 0);
+  const dataLabels = params.data?.labels ?? [];
+  const rowCount = Math.max(dataLabels.length, ...datasets.map((d) => d.data?.length ?? 0), 0);
 
-  const columns = ['', ...datasets.map((d, i) => d.label ?? `Series ${i + 1}`)];
+  const columns = [
+    '',
+    ...datasets.map((d, i) => d.label ?? formatMCPUIString(l.series, { n: i + 1 })),
+  ];
   const rows: Array<Array<string | number>> = [];
   for (let r = 0; r < Math.min(rowCount, MAX_PROJECTED_ROWS); r++) {
-    rows.push([cell(labels[r] ?? r + 1), ...datasets.map((d) => cell(d.data?.[r]))]);
+    rows.push([cell(dataLabels[r] ?? r + 1), ...datasets.map((d) => cell(d.data?.[r]))]);
   }
   return { columns, rows };
 }

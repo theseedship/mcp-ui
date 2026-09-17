@@ -1,5 +1,6 @@
 import { Component } from 'solid-js'
 import { safeUrl } from '../utils/safe-url'
+import { formatMCPUIString, useMCPUIStrings } from '../context/MCPUIStringsContext'
 
 export interface ArtifactComponentParams {
     url: string
@@ -10,6 +11,7 @@ export interface ArtifactComponentParams {
 }
 
 export const ArtifactRenderer: Component<{ params: ArtifactComponentParams }> = (props) => {
+    const strings = useMCPUIStrings()
     const getIcon = () => {
         if (props.params.mimeType?.includes('csv')) return '📊'
         if (props.params.mimeType?.includes('json')) return '{}'
@@ -19,9 +21,15 @@ export const ArtifactRenderer: Component<{ params: ArtifactComponentParams }> = 
 
     const formatSize = (bytes?: number) => {
         if (!bytes) return ''
-        if (bytes < 1024) return `${bytes} B`
-        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+        const oneDecimal = (n: number) =>
+            new Intl.NumberFormat(strings.locale, {
+                minimumFractionDigits: 1,
+                maximumFractionDigits: 1,
+                useGrouping: false,
+            }).format(n)
+        if (bytes < 1024) return formatMCPUIString(strings.sizeBytes, { size: bytes })
+        if (bytes < 1024 * 1024) return formatMCPUIString(strings.sizeKilobytes, { size: oneDecimal(bytes / 1024) })
+        return formatMCPUIString(strings.sizeMegabytes, { size: oneDecimal(bytes / (1024 * 1024)) })
     }
 
     return (
@@ -35,7 +43,7 @@ export const ArtifactRenderer: Component<{ params: ArtifactComponentParams }> = 
                         {props.params.filename}
                     </h4>
                     <p class="text-xs text-gray-500 dark:text-gray-400">
-                        {formatSize(props.params.size)} • {props.params.description || 'Generated artifact'}
+                        {formatSize(props.params.size)} • {props.params.description || strings.artifactDescription}
                     </p>
                 </div>
             </div>
@@ -48,7 +56,7 @@ export const ArtifactRenderer: Component<{ params: ArtifactComponentParams }> = 
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
-                Download
+                {strings.download}
             </a>
         </div>
     )

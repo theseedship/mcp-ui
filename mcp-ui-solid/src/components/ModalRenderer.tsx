@@ -6,6 +6,7 @@
 import { Component, Show, createSignal, createEffect, onCleanup, JSX } from 'solid-js'
 import { Portal } from 'solid-js/web'
 import type { UIComponent, ModalComponentParams } from '../types'
+import { useMCPUIStrings } from '../context/MCPUIStringsContext'
 
 export interface ModalRendererProps {
   /**
@@ -72,6 +73,7 @@ export interface ModalRendererProps {
  * ```
  */
 export const ModalRenderer: Component<ModalRendererProps> = (props) => {
+  const strings = useMCPUIStrings()
   const [isVisible, setIsVisible] = createSignal(false)
 
   const params = () => props.params || (props.component?.params as ModalComponentParams) || {}
@@ -185,7 +187,7 @@ export const ModalRenderer: Component<ModalRendererProps> = (props) => {
                   <button
                     onClick={handleClose}
                     class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                    aria-label="Close modal"
+                    aria-label={strings.modalClose}
                   >
                     <svg
                       class="w-5 h-5"

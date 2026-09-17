@@ -22,7 +22,11 @@ import {
   type DuplicateMountInfo,
 } from '../utils/duplicate-mount-registry'
 import { useTelemetry } from '../context/MCPUITelemetryContext'
-import { useMCPUIStrings } from '../context/MCPUIStringsContext'
+import {
+  DEFAULT_MCPUI_STRINGS,
+  formatMCPUIString,
+  useMCPUIStrings,
+} from '../context/MCPUIStringsContext'
 
 /**
  * How `<UIResourceRenderer>` reacts when `validateComponent()` rejects a
@@ -65,6 +69,7 @@ import { marked } from 'marked'
  * Copy button component with visual feedback
  */
 function CopyButton(props: { getText: () => string; title?: string; position?: 'top-right' | 'bottom-right' }) {
+  const strings = useMCPUIStrings()
   const [copied, setCopied] = createSignal(false)
 
   const handleCopy = async () => {
@@ -87,8 +92,8 @@ function CopyButton(props: { getText: () => string; title?: string; position?: '
     <button
       onClick={handleCopy}
       class={`${positionClasses()} opacity-60 hover:opacity-100 px-2 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-all shadow-sm z-10`}
-      title={props.title || 'Copy'}
-      aria-label={props.title || 'Copy'}
+      title={props.title || strings.copy}
+      aria-label={props.title || strings.copy}
       data-mcp-ui-action="copy"
       type="button"
     >
@@ -210,6 +215,7 @@ function ChartRenderer(props: {
   /** Host opt-in for the external quickchart.io fallback (audit P1.7). */
   allowQuickchartFallback?: boolean
 }) {
+  const strings = useMCPUIStrings()
   const [useNative, setUseNative] = createSignal(false)
   const [iframeUrl, setIframeUrl] = createSignal<string>()
   const [isLoading, setIsLoading] = createSignal(true)
@@ -223,6 +229,11 @@ function ChartRenderer(props: {
   const params = () => props.component.params as any
   const rendererPref = () => params()?.renderer || 'auto'
   const allowQuickchart = () => props.allowQuickchartFallback === true
+  /** `alt` / `aria-label` of the quickchart image — localized chrome. */
+  const chartImageAlt = () =>
+    params()?.title
+      ? formatMCPUIString(strings.chartWithTitleAlt, { title: String(params().title) })
+      : strings.chartVisualizationAlt
 
   // Emit a clear, observable signal whenever we decline the external fallback.
   const signalBlockedFallback = (reason: string) => {
@@ -242,7 +253,7 @@ function ChartRenderer(props: {
   if (!params()?.data?.datasets) {
     return (
       <div class="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-        <p class="text-red-500 dark:text-red-400 text-sm">Invalid chart data: missing data.datasets</p>
+        <p class="text-red-500 dark:text-red-400 text-sm">{strings.chartInvalidData}</p>
       </div>
     )
   }
@@ -270,7 +281,7 @@ function ChartRenderer(props: {
         setUseNative(true)
         setIsLoading(false)
       } else {
-        setError('Chart.js is not available. Install chart.js peer dependency.')
+        setError(strings.chartJsUnavailable)
         setIsLoading(false)
       }
     } else {
@@ -327,9 +338,11 @@ function ChartRenderer(props: {
           <Show when={degraded()}>
             <div class="p-3">
               <DegradedFallback
-                message="Interactive chart unavailable — install the chart.js peer dependency, or set allowQuickchartFallback to use the external quickchart.io renderer."
-                caption="Showing the chart data as a table."
-                {...chartToDegradedTable(params() ?? {})}
+                message={strings.chartIframeUnavailable}
+                caption={strings.chartQuickchartCaption}
+                {...chartToDegradedTable(params() ?? {}, {
+                  series: strings.degradedSeries,
+                })}
               />
             </div>
           </Show>
@@ -343,7 +356,7 @@ function ChartRenderer(props: {
           <Show when={error()}>
             <div class="absolute inset-0 flex items-center justify-center p-4">
               <div class="text-center">
-                <p class="text-red-600 dark:text-red-400 text-sm font-medium">Chart Error</p>
+                <p class="text-red-600 dark:text-red-400 text-sm font-medium">{strings.chartError}</p>
                 <p class="text-gray-600 dark:text-gray-400 text-xs mt-1">{error()}</p>
               </div>
             </div>
@@ -356,13 +369,13 @@ function ChartRenderer(props: {
                   {params()?.title}
                 </h3>
               </Show>
-              <div class="w-full h-full" role="img" aria-label={params()?.title ? `Chart: ${params()?.title}` : 'Chart visualization'}>
+              <div class="w-full h-full" role="img" aria-label={chartImageAlt()}>
                 <img
                   src={iframeUrl()}
-                  alt={params()?.title ? `Chart: ${params()?.title}` : 'Chart visualization'}
+                  alt={chartImageAlt()}
                   class="w-full h-auto max-h-[300px] object-contain"
                   onError={() => {
-                    setError('Failed to load chart')
+                    setError(strings.chartLoadFailed)
                     props.onError?.({
                       type: 'render',
                       message: 'Chart rendering failed',
@@ -491,6 +504,27 @@ export interface CitationCtx {
     id: number,
     mapping: { page: number | string; file?: string; file_id?: number | string } | undefined
   ) => string
+  /**
+   * Template for the visible placeholder kept when `map` is EMPTY and a
+   * marker therefore resolves to nothing — `{id}` is the marker number.
+   *
+   * Optional: `transformCellCitations` falls back to
+   * `DEFAULT_MCPUI_STRINGS.citationUnresolved` (`'[ref. {id}]'`). The
+   * renderers populate it from `strings.citationUnresolved`, so a host with a
+   * `<MCPUIStringsProvider>` gets its own wording; a direct
+   * `renderCellValue(value, ctx)` call may pass it explicitly.
+   *
+   * @since v6.20.0 — the hardcoded placeholder used to be French.
+   */
+  unresolvedLabel?: string
+  /**
+   * Tooltip template of the default citation chip button — `{label}` is the
+   * file name and page. Falls back to `DEFAULT_MCPUI_STRINGS.citationViewSource`;
+   * the renderers populate it from `strings.citationViewSource`.
+   *
+   * @since v6.20.0
+   */
+  viewSourceLabel?: string
 }
 
 /**
@@ -502,7 +536,8 @@ export interface CitationCtx {
 function defaultCitationChip(
   pageNum: number | string,
   fileName: string,
-  verified = true
+  verified = true,
+  viewSourceLabel: string = DEFAULT_MCPUI_STRINGS.citationViewSource
 ): string {
   const safeDocName = encodeURIComponent(fileName || '')
   const label = fileName ? `${fileName} - ${pageNum}` : `${pageNum}`
@@ -516,7 +551,7 @@ function defaultCitationChip(
     ` data-citation-page="${pageNum}"`,
     ` data-citation-doc="${safeDocName}"`,
     ' data-citation-verified="true"',
-    ` title="View source - ${label}">`,
+    ` title="${escapeHtml(formatMCPUIString(viewSourceLabel, { label }))}">`,
     '<svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
     '</button>',
     '</span>',
@@ -543,12 +578,16 @@ function transformCellCitations(text: string, ctx: CitationCtx): string {
       const id = parseInt(idStr, 10)
       const mapping = ctx.map[id] ?? ctx.map[String(id)]
       if (ctx.render) return ctx.render(id, mapping)
-      if (mapping) return defaultCitationChip(mapping.page, mapping.file ?? '', true)
+      if (mapping) return defaultCitationChip(mapping.page, mapping.file ?? '', true, ctx.viewSourceLabel)
       // Unresolved id: when the map is non-empty (consumer claims to know
       // the citations), drop silently — it's likely an LLM hallucination.
       // When the map is empty (consumer didn't supply one), preserve a
       // human-visible placeholder so the marker isn't lost.
-      return Object.keys(ctx.map).length > 0 ? '' : `[réf. ${id}]`
+      return Object.keys(ctx.map).length > 0
+        ? ''
+        : formatMCPUIString(ctx.unresolvedLabel ?? DEFAULT_MCPUI_STRINGS.citationUnresolved, {
+            id,
+          })
     }
   )
 }
@@ -670,7 +709,12 @@ function TableRenderer(props: {
   // every `renderCellValue` call below. Absent → undefined → cells render
   // as before (regression-safe).
   const citationCtx: CitationCtx | undefined = tableParams.citationMap
-    ? { map: tableParams.citationMap, render: tableParams.citationRender }
+    ? {
+        map: tableParams.citationMap,
+        render: tableParams.citationRender,
+        unresolvedLabel: strings.citationUnresolved,
+        viewSourceLabel: strings.citationViewSource,
+      }
     : undefined
 
   // ─── Client-side sorting (v4.0.5) ────────────────────────
@@ -706,7 +750,7 @@ function TableRenderer(props: {
       if (isNum) {
         cmp = (Number(va) || 0) - (Number(vb) || 0)
       } else {
-        cmp = String(va).localeCompare(String(vb), 'fr', { sensitivity: 'base' })
+        cmp = String(va).localeCompare(String(vb), strings.locale, { sensitivity: 'base' })
       }
       return dir === 'desc' ? -cmp : cmp
     })
@@ -729,7 +773,7 @@ function TableRenderer(props: {
   // context where users scan many tables across messages. Backward-compat
   // for anyone who explicitly disabled.
   const isSearchable = () => tableParams.searchable !== false
-  const searchPlaceholder = () => tableParams.searchPlaceholder || 'Rechercher dans le tableau...'
+  const searchPlaceholder = () => tableParams.searchPlaceholder || strings.tableSearchPlaceholder
 
   const handleSearch = (value: string) => {
     setSearchQuery(value)
@@ -800,7 +844,7 @@ function TableRenderer(props: {
     for (const n of [10, 30, 60, 100]) {
       if (n < total) opts.push({ value: n, label: String(n) })
     }
-    opts.push({ value: 0, label: 'All' })
+    opts.push({ value: 0, label: strings.paginationAllRows })
     return opts
   }
 
@@ -1006,18 +1050,18 @@ function TableRenderer(props: {
   }
 
   return (
-    <ExpandableWrapper title={tableParams.title || 'Table'} copyData={getTableCSV()} copyLabel="Copy table (CSV)" toolbarVariant={props.toolbarVariant} onExpandedChange={setSelfExpanded}>
+    <ExpandableWrapper title={tableParams.title || strings.tableTitle} copyData={getTableCSV()} copyLabel={strings.tableCopyCsv} toolbarVariant={props.toolbarVariant} onExpandedChange={setSelfExpanded}>
       <div class={`relative w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden group ${
         isExpanded() ? 'flex-1 min-h-0 flex flex-col' : 'h-full'
       } ${tableParams.className || ''}`}>
-        <Show when={exportable} fallback={<CopyButton getText={getTableCSV} title="Copy table (CSV)" position="top-right" />}>
+        <Show when={exportable} fallback={<CopyButton getText={getTableCSV} title={strings.tableCopyCsv} position="top-right" />}>
           <div class="absolute right-10 top-2 z-10">
             <button
               ref={exportTriggerRef}
               onClick={() => setShowExportMenu(!showExportMenu())}
               class="opacity-60 hover:opacity-100 px-2 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-all shadow-sm"
-              title="Export table"
-              aria-label="Export table"
+              title={strings.tableExport}
+              aria-label={strings.tableExport}
               aria-haspopup="menu"
               aria-expanded={showExportMenu()}
             >
@@ -1032,13 +1076,13 @@ function TableRenderer(props: {
               width={144}
             >
               <Show when={(exportFormats as string[]).includes('tsv')}>
-                <button onClick={() => handleExport('tsv')} class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">Copy TSV</button>
+                <button onClick={() => handleExport('tsv')} class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">{strings.tableCopyTsv}</button>
               </Show>
               <Show when={(exportFormats as string[]).includes('csv')}>
-                <button onClick={() => handleExport('csv')} class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">Download CSV</button>
+                <button onClick={() => handleExport('csv')} class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">{strings.tableDownloadCsv}</button>
               </Show>
               <Show when={(exportFormats as string[]).includes('json')}>
-                <button onClick={() => handleExport('json')} class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">Download JSON</button>
+                <button onClick={() => handleExport('json')} class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">{strings.tableDownloadJson}</button>
               </Show>
             </PortalDropdownMenu>
           </div>
@@ -1048,7 +1092,9 @@ function TableRenderer(props: {
             <h3 id={`${tableId}-title`} class="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex-shrink-0">
               {tableParams.title}
               <Show when={isVirtualizing()}>
-                <span class="ml-2 text-xs font-normal text-gray-400">(virtualized: {tableParams.rows?.length} rows)</span>
+                <span class="ml-2 text-xs font-normal text-gray-400">
+                  {formatMCPUIString(strings.tableVirtualizedRows, { count: tableParams.rows?.length ?? 0 })}
+                </span>
               </Show>
             </h3>
           </Show>
@@ -1069,13 +1115,16 @@ function TableRenderer(props: {
                   type="button"
                   onClick={() => { handleSearch(''); setSearchQuery(''); setDebouncedQuery('') }}
                   class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-sm"
-                  aria-label="Clear search"
+                  aria-label={strings.tableClearSearch}
                 >&times;</button>
               </Show>
             </div>
             <Show when={debouncedQuery() && filteredRows().length !== sortedRows().length}>
               <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                {filteredRows().length} result{filteredRows().length !== 1 ? 's' : ''} on {sortedRows().length}
+                {formatMCPUIString(
+                  filteredRows().length === 1 ? strings.tableSearchResultsOne : strings.tableSearchResultsMany,
+                  { count: filteredRows().length, total: sortedRows().length }
+                )}
               </p>
             </Show>
           </Show>
@@ -1106,7 +1155,7 @@ function TableRenderer(props: {
               })()
             }
             role="region"
-            aria-label={tableParams.title || 'Data table'}
+            aria-label={tableParams.title || strings.tableAriaLabel}
             tabindex="0"
           >
             <table
@@ -1122,7 +1171,7 @@ function TableRenderer(props: {
                         class="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700 first:pl-6 last:pr-6 bg-gray-100 dark:bg-gray-900 cursor-pointer select-none hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
                         style={column.width ? { width: column.width } : {}}
                         on:click={() => handleSort(column.key)}
-                        title={`Sort by ${column.label}`}
+                        title={formatMCPUIString(strings.sortBy, { column: column.label })}
                       >
                         <span class="inline-flex items-center gap-1">
                           {column.label}
@@ -1151,12 +1200,14 @@ function TableRenderer(props: {
           <Show when={tableParams.pagination}>
             <div class="mt-3 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
               <span>
-                Showing {tableParams.pagination.currentPage * tableParams.pagination.pageSize + 1} -{' '}
-                {Math.min(
-                  (tableParams.pagination.currentPage + 1) * tableParams.pagination.pageSize,
-                  tableParams.pagination.totalRows
-                )}{' '}
-                of {tableParams.pagination.totalRows}
+                {formatMCPUIString(strings.tableServerPageRange, {
+                  start: tableParams.pagination.currentPage * tableParams.pagination.pageSize + 1,
+                  end: Math.min(
+                    (tableParams.pagination.currentPage + 1) * tableParams.pagination.pageSize,
+                    tableParams.pagination.totalRows
+                  ),
+                  total: tableParams.pagination.totalRows,
+                })}
               </span>
             </div>
           </Show>
@@ -1165,7 +1216,7 @@ function TableRenderer(props: {
           <Show when={needsClientPagination()}>
             <div class="mt-3 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
               <span>
-                {clientRangeStart()}&ndash;{clientRangeEnd()} / {filteredRows().length.toLocaleString('fr-FR')}
+                {clientRangeStart()}&ndash;{clientRangeEnd()} / {filteredRows().length.toLocaleString(strings.locale)}
               </span>
               <div class="flex items-center gap-2">
                 <button
@@ -1202,7 +1253,7 @@ function TableRenderer(props: {
                       {(opt) => <option value={opt.value}>{opt.label}</option>}
                     </For>
                   </select>
-                  <span class="text-gray-400">/ page</span>
+                  <span class="text-gray-400">{strings.perPageSuffix}</span>
                 </Show>
               </div>
             </div>
@@ -1217,6 +1268,7 @@ function TableRenderer(props: {
  * Render a metric card component
  */
 function MetricRenderer(props: { component: UIComponent }) {
+  const strings = useMCPUIStrings()
   const metricParams = props.component.params as any
 
   // Generate copyable text for metric
@@ -1229,7 +1281,7 @@ function MetricRenderer(props: { component: UIComponent }) {
 
   return (
     <div class="relative w-full h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 group">
-      <CopyButton getText={getMetricText} title="Copy metric" position="top-right" />
+      <CopyButton getText={getMetricText} title={strings.copyMetric} position="top-right" />
       <div class="flex flex-col h-full justify-between">
         <div>
           <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
@@ -1277,14 +1329,17 @@ function MetricRenderer(props: { component: UIComponent }) {
  * Extract image data from markdown image link format
  * Pattern: [![alt](image-url)](link-url)\n*Photo by Author*
  */
-function extractImageFromMarkdown(content: string): { alt: string; imageUrl: string; linkUrl: string; credit: string } | null {
+function extractImageFromMarkdown(
+  content: string,
+  fallbackAlt: string
+): { alt: string; imageUrl: string; linkUrl: string; credit: string } | null {
   // Pattern: [![alt text](image-url)](link-url) followed by optional credit line
   const imagePattern = /\[!\[([^\]]*)\]\(([^)]+)\)\]\(([^)]+)\)\s*\*([^*]+)\*/
   const match = content.match(imagePattern)
 
   if (match) {
     return {
-      alt: match[1] || 'Image',
+      alt: match[1] || fallbackAlt,
       imageUrl: match[2],
       linkUrl: match[3],
       credit: match[4].trim()
@@ -1298,6 +1353,7 @@ function extractImageFromMarkdown(content: string): { alt: string; imageUrl: str
  * Render a text component (with optional markdown)
  */
 function TextRenderer(props: { component: UIComponent }) {
+  const strings = useMCPUIStrings()
   const textParams = props.component.params as any
 
   // Check if this is an image markdown that should be rendered as image
@@ -1308,7 +1364,7 @@ function TextRenderer(props: { component: UIComponent }) {
   // markdown path; an unusable link URL only drops the anchor.
   const imageData = createMemo(() => {
     if (textParams.markdown && textParams.content) {
-      const extracted = extractImageFromMarkdown(textParams.content)
+      const extracted = extractImageFromMarkdown(textParams.content, strings.imageAlt)
       if (!extracted) return null
       const imageUrl = safeUrl(extracted.imageUrl, { allowDataImage: true })
       if (!imageUrl) return null
@@ -1351,7 +1407,7 @@ function TextRenderer(props: { component: UIComponent }) {
       when={imageData()}
       fallback={
         <div class="relative w-full h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 group">
-          <CopyButton getText={getTextContent} title="Copy text" position="top-right" />
+          <CopyButton getText={getTextContent} title={strings.copyText} position="top-right" />
           <SafeHtml
             class={`prose prose-sm dark:prose-invert max-w-none ${textParams.className || ''}`}
             html={htmlContent}
@@ -1396,6 +1452,7 @@ function TextRenderer(props: { component: UIComponent }) {
  * Render an iframe component
  */
 function IframeRenderer(props: { component: UIComponent }) {
+  const strings = useMCPUIStrings()
   const params = props.component.params as any
   return (
     <div class="w-full h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col">
@@ -1406,7 +1463,7 @@ function IframeRenderer(props: { component: UIComponent }) {
       </Show>
       <iframe
         src={params.url}
-        title={params.title || 'Embedded content'}
+        title={params.title || strings.iframeTitle}
         class="w-full border-0 flex-1"
         style={`height: ${params.height || '400px'}; min-height: 300px;`}
         sandbox={getIframeSandbox(params.url)}
@@ -1420,6 +1477,7 @@ function IframeRenderer(props: { component: UIComponent }) {
  * Render an image component
  */
 function ImageRenderer(props: { component: UIComponent }) {
+  const strings = useMCPUIStrings()
   const params = props.component.params as any
 
   return (
@@ -1430,11 +1488,13 @@ function ImageRenderer(props: { component: UIComponent }) {
           target="_blank"
           rel="noopener noreferrer"
           class="cursor-zoom-in focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded"
-          aria-label={`View full size: ${params.alt || 'image'}`}
+          aria-label={formatMCPUIString(strings.imageViewFullSize, {
+            alt: params.alt || strings.imageAltFallback,
+          })}
         >
           <img
             src={safeUrl(params.url, { allowDataImage: true })}
-            alt={params.alt || 'Image'}
+            alt={params.alt || strings.imageAlt}
             class="max-w-full max-h-[500px] object-contain rounded shadow-sm hover:opacity-95 transition-opacity"
             loading="lazy"
           />
@@ -1453,6 +1513,7 @@ function ImageRenderer(props: { component: UIComponent }) {
  * Render a link component
  */
 function LinkRenderer(props: { component: UIComponent }) {
+  const strings = useMCPUIStrings()
   const params = props.component.params as any
 
   return (
@@ -1460,7 +1521,10 @@ function LinkRenderer(props: { component: UIComponent }) {
       href={safeUrl(params.url)}
       target="_blank"
       rel="noopener noreferrer"
-      aria-label={`${params.label || 'Link'}: ${params.description || params.url} (opens in new tab)`}
+      aria-label={formatMCPUIString(strings.linkOpensInNewTab, {
+        label: params.label || strings.linkLabel,
+        description: params.description || params.url,
+      })}
       class={`flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors group h-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${params.className || ''}`}
       onClick={(e) => e.stopPropagation()}
     >
@@ -1525,6 +1589,7 @@ function ComponentRenderer(props: {
   // mounted above; null-checked at every dispatch site so apps that don't
   // opt in see zero behavior change.
   const telemetry = useTelemetry()
+  const strings = useMCPUIStrings()
 
   onMount(() => {
     markRenderEnd(props.component.id)
@@ -1590,7 +1655,7 @@ function ComponentRenderer(props: {
     }
 
     const mode: ValidationErrorMode = props.errorMode ?? 'block'
-    const firstError = validation.errors?.[0]?.message || 'Unknown validation error'
+    const firstError = validation.errors?.[0]?.message || strings.validationUnknownError
 
     // P1.6 — an UNKNOWN component type must never produce a silent blank,
     // whatever the errorMode. The renderer has no branch for it, so even
@@ -1609,7 +1674,7 @@ function ComponentRenderer(props: {
         <div
           class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 text-xs text-yellow-800 dark:text-yellow-200"
           role="alert"
-          aria-label="Component validation warning"
+          aria-label={strings.validationWarning}
           title={firstError}
         >
           <svg
@@ -1627,7 +1692,7 @@ function ComponentRenderer(props: {
             <line x1="12" y1="9" x2="12" y2="13" />
             <line x1="12" y1="17" x2="12.01" y2="17" />
           </svg>
-          <span>Invalid {props.component.type}</span>
+          <span>{formatMCPUIString(strings.invalidComponent, { type: props.component.type })}</span>
         </div>
       )
     }
@@ -1635,7 +1700,7 @@ function ComponentRenderer(props: {
     // mode === 'block' (default, pre-v5.4.0 behavior)
     return (
       <div class="w-full h-full bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-        <p class="text-sm font-medium text-red-900 dark:text-red-100">Validation Error</p>
+        <p class="text-sm font-medium text-red-900 dark:text-red-100">{strings.validationError}</p>
         <p class="text-xs text-red-700 dark:text-red-300 mt-1">
           {firstError}
         </p>
@@ -1737,12 +1802,13 @@ function ComponentRenderer(props: {
  * 'UNKNOWN_COMPONENT_TYPE'`), so this component stays purely presentational.
  */
 function UnsupportedComponentFallback(props: { component: UIComponent }) {
+  const strings = useMCPUIStrings()
   return (
     <div
       role="alert"
       class="w-full rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-700/50 dark:bg-amber-900/20 dark:text-amber-200"
     >
-      Unsupported component type: <code class="font-mono">{props.component.type}</code>
+      {strings.unsupportedComponentType} <code class="font-mono">{props.component.type}</code>
     </div>
   )
 }
@@ -1852,13 +1918,17 @@ function ActionRenderer(props: { component: UIComponent }) {
  * Handles {error: true, message: "...", tool: "...", suggestions: [...]} format
  */
 function ErrorCardRenderer(props: { error: any }) {
+  const strings = useMCPUIStrings()
   const getErrorText = () => {
-    return `Error in ${props.error.tool || 'unknown tool'}: ${props.error.message || 'Unknown error'}`
+    return formatMCPUIString(strings.errorCopyText, {
+      tool: props.error.tool || strings.errorUnknownTool,
+      message: props.error.message || strings.errorUnknown,
+    })
   }
 
   return (
     <div class="relative w-full bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 group">
-      <CopyButton getText={getErrorText} title="Copy error details" position="top-right" />
+      <CopyButton getText={getErrorText} title={strings.copyErrorDetails} position="top-right" />
       <div class="flex items-start gap-3">
         <div class="p-2 bg-red-100 dark:bg-red-900/40 rounded-full shrink-0">
           <svg class="w-5 h-5 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1867,19 +1937,21 @@ function ErrorCardRenderer(props: { error: any }) {
         </div>
         <div class="flex-1 min-w-0">
           <h4 class="text-sm font-semibold text-red-800 dark:text-red-200">
-            Tool Error: {props.error.tool || 'Unknown'}
+            {formatMCPUIString(strings.toolErrorTitle, {
+              tool: props.error.tool || strings.errorUnknownToolName,
+            })}
           </h4>
           <p class="text-sm text-red-700 dark:text-red-300 mt-1">
-            {props.error.message || 'An error occurred during tool execution'}
+            {props.error.message || strings.errorToolExecution}
           </p>
           <Show when={props.error.type}>
             <p class="text-xs text-red-600 dark:text-red-400 mt-1">
-              Type: {props.error.type}
+              {formatMCPUIString(strings.errorTypeLabel, { type: props.error.type })}
             </p>
           </Show>
           <Show when={props.error.suggestions?.length}>
             <div class="mt-3">
-              <p class="text-xs font-medium text-red-700 dark:text-red-300">Suggestions:</p>
+              <p class="text-xs font-medium text-red-700 dark:text-red-300">{strings.errorSuggestions}</p>
               <ul class="mt-1 text-xs text-red-600 dark:text-red-400 list-disc list-inside">
                 <For each={props.error.suggestions}>
                   {(suggestion: string) => <li>{suggestion}</li>}
@@ -1889,7 +1961,7 @@ function ErrorCardRenderer(props: { error: any }) {
           </Show>
           <Show when={props.error.timestamp}>
             <p class="text-xs text-red-500 dark:text-red-500 mt-2">
-              {new Date(props.error.timestamp).toLocaleString()}
+              {new Date(props.error.timestamp).toLocaleString(strings.locale)}
             </p>
           </Show>
         </div>
@@ -1922,6 +1994,7 @@ function isUIResource(content: any): boolean {
  * Handles HTML resources returned by tools like ui_show_dashboard, ui_show_health
  */
 function UIResourceHtmlRenderer(props: { resource: any }) {
+  const strings = useMCPUIStrings()
   const htmlContent = () => {
     if (props.resource.content?.htmlString) {
       return sanitizeHtml(String(props.resource.content.htmlString), SANITIZE_PROFILES.resource)
@@ -1930,7 +2003,7 @@ function UIResourceHtmlRenderer(props: { resource: any }) {
   }
 
   const resourceTitle = () => {
-    return props.resource.metadata?.title || props.resource.uri?.replace('ui://deposium/', '') || 'Resource'
+    return props.resource.metadata?.title || props.resource.uri?.replace('ui://deposium/', '') || strings.resourceTitle
   }
 
   return (

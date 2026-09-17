@@ -6,12 +6,14 @@
  *
  * Modes:
  * - highlight: ✅/⚠️ badges next to numbers (default)
- * - strip: replaces hallucinated numbers with [non vérifié]
+ * - strip: replaces hallucinated numbers with the `verifiedStripLabel`
+ *   chrome string ('[unverified]' by default)
  * - annotate: tooltip on hover with closest source number
  */
 
 import { createMemo, For } from 'solid-js'
 import type { DataValidation, HallucinatedNumber } from '../types/chat-bus'
+import { formatMCPUIString, useMCPUIStrings } from '../context/MCPUIStringsContext'
 
 export interface VerifiedTextProps {
   text: string
@@ -94,6 +96,7 @@ function buildAnnotatedSegments(text: string, validation: DataValidation): TextS
 }
 
 export function VerifiedText(props: VerifiedTextProps) {
+  const strings = useMCPUIStrings()
   const mode = () => props.mode || 'highlight'
 
   const segments = createMemo<TextSegment[]>(() => {
@@ -115,10 +118,10 @@ export function VerifiedText(props: VerifiedTextProps) {
             return (
               <span
                 class="inline-flex items-center gap-0.5 px-0.5 rounded bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300"
-                title="Verified against source data"
+                title={strings.verifiedTitle}
               >
                 {seg.content}
-                <span class="text-xs opacity-70" aria-label="verified">&#x2705;</span>
+                <span class="text-xs opacity-70" aria-label={strings.verifiedAria}>&#x2705;</span>
               </span>
             )
           }
@@ -127,9 +130,12 @@ export function VerifiedText(props: VerifiedTextProps) {
           const h = seg.item!
           const tooltipText = () => {
             if (h.closest != null && h.distance != null) {
-              return `Not found in source data. Closest: ${h.closest} (${Math.round(h.distance * 100)}% off)`
+              return formatMCPUIString(strings.verifiedNotFoundClosest, {
+                closest: h.closest,
+                pct: Math.round(h.distance * 100),
+              })
             }
-            return 'Not found in source data'
+            return strings.verifiedNotFound
           }
 
           if (mode() === 'strip') {
@@ -138,7 +144,7 @@ export function VerifiedText(props: VerifiedTextProps) {
                 class="inline-flex items-center px-1 rounded bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 italic text-xs"
                 title={tooltipText()}
               >
-                [non v&eacute;rifi&eacute;]
+                {strings.verifiedStripLabel}
               </span>
             )
           }
@@ -151,7 +157,7 @@ export function VerifiedText(props: VerifiedTextProps) {
               role={props.onHallucinationClick ? 'button' : undefined}
             >
               {seg.content}
-              <span class="text-xs" aria-label="unverified">&#x26A0;&#xFE0F;</span>
+              <span class="text-xs" aria-label={strings.unverifiedAria}>&#x26A0;&#xFE0F;</span>
             </span>
           )
         }}
@@ -172,8 +178,12 @@ export function VerifiedText(props: VerifiedTextProps) {
             />
           </div>
           <span>
-            {Math.round(props.validation.confidence * 100)}% verified
-            ({props.validation.hallucinated.length} unverified)
+            {formatMCPUIString(strings.verifiedConfidence, {
+              pct: Math.round(props.validation.confidence * 100),
+            })}{' '}
+            {formatMCPUIString(strings.verifiedUnverifiedCount, {
+              count: props.validation.hallucinated.length,
+            })}
           </span>
         </div>
       )}

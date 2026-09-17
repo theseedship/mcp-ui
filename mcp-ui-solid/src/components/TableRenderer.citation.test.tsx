@@ -47,9 +47,15 @@ describe('renderCellValue — citation transform (v5.7.0)', () => {
     expect(html).not.toContain('réf')
   })
 
-  it('unresolved id with EMPTY map → human-visible `[réf. N]` placeholder', () => {
+  it('unresolved id with EMPTY map → human-visible `[ref. N]` placeholder (EN default)', () => {
     const html = renderCellValue('[99]', { map: {} })
+    expect(html).toContain('[ref. 99]')
+  })
+
+  it('unresolved id with EMPTY map → `unresolvedLabel` wins over the default', () => {
+    const html = renderCellValue('[99]', { map: {}, unresolvedLabel: '[réf. {id}]' })
     expect(html).toContain('[réf. 99]')
+    expect(html).not.toContain('[ref. 99]')
   })
 
   it('citationRender override → wins over default chip shape', () => {

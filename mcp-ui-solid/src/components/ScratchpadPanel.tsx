@@ -17,6 +17,7 @@ import { AgentCard, AgentStatusBadge } from './AgentCard'
 import { SplitStepper } from './SplitStepper'
 import { AgentHandoff } from './AgentHandoff'
 import { BriefingDiff } from './BriefingDiff'
+import { formatMCPUIString, useMCPUIStrings } from '../context/MCPUIStringsContext'
 
 export interface ScratchpadPanelProps {
   state: ScratchpadState
@@ -44,16 +45,35 @@ export interface ScratchpadPanelProps {
   maxHeight?: string
 }
 
-const STATUS_BADGES: Record<ScratchpadState['status'], { label: string; class: string }> = {
-  loading: { label: 'Loading...', class: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' },
-  ready: { label: 'Action available', class: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400' },
-  waiting_human: { label: 'Your turn', class: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 animate-pulse' },
-  processing: { label: 'Processing...', class: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
-  complete: { label: 'Complete', class: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' },
-  error: { label: 'Error', class: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' },
+/**
+ * Status badges. The record stays module-level (it is static styling), but
+ * it carries a `labelKey` instead of English: the label is resolved from
+ * `useMCPUIStrings()` at render time, so a host provider localizes it.
+ * Same technique as `SOURCE_BADGES` in `FormFieldRenderer`.
+ */
+type StatusLabelKey =
+  | 'statusLoading'
+  | 'statusActionAvailable'
+  | 'statusYourTurn'
+  | 'statusProcessing'
+  | 'statusComplete'
+  | 'scratchpadError'
+
+const STATUS_BADGES: Record<
+  ScratchpadState['status'],
+  { labelKey: StatusLabelKey; class: string }
+> = {
+  loading: { labelKey: 'statusLoading', class: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' },
+  ready: { labelKey: 'statusActionAvailable', class: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400' },
+  waiting_human: { labelKey: 'statusYourTurn', class: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 animate-pulse' },
+  processing: { labelKey: 'statusProcessing', class: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
+  complete: { labelKey: 'statusComplete', class: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' },
+  // The error badge reuses the existing `scratchpadError` key ('Error').
+  error: { labelKey: 'scratchpadError', class: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' },
 }
 
 export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
+  const strings = useMCPUIStrings()
   const [collapsed, setCollapsed] = createSignal(false)
   const [localPreview, setLocalPreview] = createSignal<ScratchpadState['preview']>(undefined)
   const [loadingAction, setLoadingAction] = createSignal<string | null>(null)
@@ -198,9 +218,9 @@ export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
           </Show>
         </div>
         <div class="flex items-center gap-2">
-          <span class={`px-2 py-0.5 text-xs font-medium rounded-full ${badge().class}`}>{badge().label}</span>
+          <span class={`px-2 py-0.5 text-xs font-medium rounded-full ${badge().class}`}>{strings[badge().labelKey]}</span>
           <Show when={isClosable() && props.onClose}>
-            <button onClick={(e) => { e.stopPropagation(); props.onClose?.() }} class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" aria-label="Close">
+            <button onClick={(e) => { e.stopPropagation(); props.onClose?.() }} class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" aria-label={strings.scratchpadClose}>
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
           </Show>
@@ -275,8 +295,8 @@ export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
               <Show when={preview()!.count === 0} fallback={
                 <>
                   <div class="flex items-center gap-2 mb-2">
-                    <span class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Preview</span>
-                    <span class="px-1.5 py-0.5 text-xs font-bold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded">{preview()!.count.toLocaleString()}</span>
+                    <span class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{strings.scratchpadPreview}</span>
+                    <span class="px-1.5 py-0.5 text-xs font-bold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded">{preview()!.count.toLocaleString(strings.locale)}</span>
                   </div>
                   <p class="text-sm text-gray-700 dark:text-gray-300">{preview()!.summary}</p>
                   <Show when={preview()!.rows && preview()!.rows!.length > 0}>
@@ -291,8 +311,8 @@ export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
               }>
                 <div class="flex flex-col items-center gap-2 py-4 text-center">
                   <span class="text-2xl">&#128269;</span>
-                  <p class="text-sm text-gray-500 dark:text-gray-400">No results for these filters</p>
-                  <button type="button" onClick={() => props.onAction?.('refine_filters')} class="px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors">Modify filters</button>
+                  <p class="text-sm text-gray-500 dark:text-gray-400">{strings.scratchpadNoResults}</p>
+                  <button type="button" onClick={() => props.onAction?.('refine_filters')} class="px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors">{strings.scratchpadModifyFilters}</button>
                 </div>
               </Show>
             </div>
@@ -306,7 +326,9 @@ export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
                 <div class="flex-1">
                   <p class="font-medium">{props.state.error!.message}</p>
                   <Show when={props.state.error!.code}>
-                    <p class="text-xs text-red-500 dark:text-red-500 mt-0.5">Code: {props.state.error!.code}</p>
+                    <p class="text-xs text-red-500 dark:text-red-500 mt-0.5">
+                      {formatMCPUIString(strings.scratchpadErrorCode, { code: props.state.error!.code! })}
+                    </p>
                   </Show>
                 </div>
               </div>
@@ -314,13 +336,13 @@ export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
                 <Show when={props.state.error!.retryable !== false}>
                   <button type="button" onClick={() => props.onRetry?.()}
                     class="px-3 py-1.5 text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors flex items-center gap-1">
-                    &#128260; Retry
+                    &#128260; {strings.retry}
                   </button>
                 </Show>
                 <Show when={props.onClose}>
                   <button type="button" onClick={() => props.onClose?.()}
                     class="px-3 py-1.5 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                    Close
+                    {strings.scratchpadClose}
                   </button>
                 </Show>
               </div>
@@ -336,7 +358,7 @@ export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
                 class="w-full px-4 py-2.5 text-sm font-semibold rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
               >
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                Search
+                {strings.scratchpadSearch}
               </button>
             </div>
           </Show>
@@ -427,6 +449,7 @@ const InteractiveFilterSection: Component<{
   filters: Record<string, string | string[]>
   onFilterChange?: (filters: Record<string, string | string[]>) => void
 }> = (props) => {
+  const strings = useMCPUIStrings()
   const [editingKey, setEditingKey] = createSignal<string | null>(null)
   const [editValue, setEditValue] = createSignal('')
 
@@ -477,7 +500,7 @@ const InteractiveFilterSection: Component<{
                     <span class="text-blue-500 dark:text-blue-400">{def()?.label || key}:</span> {Array.isArray(value()) ? (value() as string[]).join(', ') : String(value())}
                   </button>
                   <Show when={props.onFilterChange}>
-                    <button type="button" onClick={() => removeFilter(key)} class="ml-0.5 hover:text-blue-900 dark:hover:text-blue-100" aria-label={`Remove ${key}`}>&times;</button>
+                    <button type="button" onClick={() => removeFilter(key)} class="ml-0.5 hover:text-blue-900 dark:hover:text-blue-100" aria-label={formatMCPUIString(strings.removeItem, { name: key })}>&times;</button>
                   </Show>
                 </span>
               </Show>
@@ -489,8 +512,8 @@ const InteractiveFilterSection: Component<{
                     <form onSubmit={(e) => { e.preventDefault(); setFilter(key, editValue()) }} class="flex gap-1">
                       <input type="text" value={editValue()} onInput={(e) => setEditValue(e.currentTarget.value)} placeholder={def()?.placeholder || key} autofocus
                         class="flex-1 px-2 py-1 text-sm border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:border-blue-400 outline-none" />
-                      <button type="submit" class="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">OK</button>
-                      <button type="button" onClick={() => setEditingKey(null)} class="px-2 py-1 text-xs text-gray-500 hover:text-gray-700">Cancel</button>
+                      <button type="submit" class="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">{strings.ok}</button>
+                      <button type="button" onClick={() => setEditingKey(null)} class="px-2 py-1 text-xs text-gray-500 hover:text-gray-700">{strings.cancel}</button>
                     </form>
                   }>
                     <div class="max-h-48 overflow-y-auto">
@@ -506,7 +529,7 @@ const InteractiveFilterSection: Component<{
                         )}
                       </For>
                     </div>
-                    <button type="button" onClick={() => setEditingKey(null)} class="mt-1 w-full px-2 py-1 text-xs text-gray-500 hover:text-gray-700 text-center">Cancel</button>
+                    <button type="button" onClick={() => setEditingKey(null)} class="mt-1 w-full px-2 py-1 text-xs text-gray-500 hover:text-gray-700 text-center">{strings.cancel}</button>
                   </Show>
                 </div>
               </Show>
@@ -515,7 +538,7 @@ const InteractiveFilterSection: Component<{
         }}
       </For>
       <Show when={allKeys().length === 0}>
-        <p class="text-xs text-gray-400 italic">No filters</p>
+        <p class="text-xs text-gray-400 italic">{strings.scratchpadNoFilters}</p>
       </Show>
     </div>
   )
@@ -530,13 +553,14 @@ const EmbeddedFormSection: Component<{
   onSubmit?: (sectionId: string, values: Record<string, unknown>) => void
   debugTrace?: boolean
 }> = (props) => {
+  const strings = useMCPUIStrings()
   const [dynamicOptions, setDynamicOptions] = createSignal<Record<string, Array<{ label: string; value: string }>>>({})
 
   const config = () => {
     const c = props.content as any
     return {
       fields: c?.fields || [],
-      submitLabel: c?.submitLabel || 'Submit',
+      submitLabel: c?.submitLabel || strings.submit,
       autoSubmitDelay: c?.autoSubmitDelay as number | undefined,
     }
   }
@@ -689,7 +713,7 @@ const EmbeddedFormSection: Component<{
         </span>
         <span class="text-blue-600 dark:text-blue-300">{countdown()}s...</span>
         <button type="button" onClick={() => { setExpanded(true); cancelCountdown(); setUserInteracted(true) }}
-          class="text-blue-600 dark:text-blue-400 underline text-xs">Modifier</button>
+          class="text-blue-600 dark:text-blue-400 underline text-xs">{strings.scratchpadEdit}</button>
         <button type="button" onClick={() => { cancelCountdown(); setUserInteracted(true) }}
           class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">&times;</button>
       </div>
@@ -698,7 +722,10 @@ const EmbeddedFormSection: Component<{
       {/* Proposal 3: prefill summary */}
       <Show when={prefillSummary().prefilled > 0}>
         <p class="text-xs text-gray-500 dark:text-gray-400">
-          {prefillSummary().prefilled} champ{prefillSummary().prefilled > 1 ? 's' : ''} pré-rempli{prefillSummary().prefilled > 1 ? 's' : ''} sur {prefillSummary().total}
+          {formatMCPUIString(
+            prefillSummary().prefilled === 1 ? strings.formPrefilledOne : strings.formPrefilledMany,
+            { count: prefillSummary().prefilled, total: prefillSummary().total }
+          )}
         </p>
       </Show>
       <For each={config().fields}>
@@ -714,14 +741,17 @@ const EmbeddedFormSection: Component<{
       <Show when={countdown() != null}>
         <div class="flex items-center gap-3 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md text-sm">
           <span class="text-blue-700 dark:text-blue-300">
-            {config().submitLabel} in {countdown()}s...
+            {formatMCPUIString(strings.formSubmitCountdown, {
+              label: config().submitLabel,
+              seconds: countdown()!,
+            })}
           </span>
           <button
             type="button"
             onClick={() => { cancelCountdown(); setUserInteracted(true) }}
             class="text-blue-600 dark:text-blue-400 underline hover:text-blue-800 dark:hover:text-blue-200"
           >
-            Cancel
+            {strings.cancel}
           </button>
         </div>
       </Show>
@@ -758,6 +788,7 @@ const FormDebugTrace: Component<{
   userInteracted: boolean
   rawContent: unknown
 }> = (props) => {
+  const strings = useMCPUIStrings()
   const [open, setOpen] = createSignal(false)
   const [showRaw, setShowRaw] = createSignal(false)
 
@@ -848,7 +879,7 @@ const FormDebugTrace: Component<{
 
           <div class="pt-1 border-t border-gray-200 dark:border-gray-600">
             <button type="button" onClick={() => setShowRaw(!showRaw())} class="text-blue-500 hover:text-blue-700 underline">
-              {showRaw() ? 'Hide' : 'Show'} raw SSE payload
+              {showRaw() ? strings.scratchpadHideRaw : strings.scratchpadShowRaw}
             </button>
             <Show when={showRaw()}>
               <pre class="mt-1 p-2 bg-gray-50 dark:bg-gray-900 rounded max-h-48 overflow-auto text-[10px]">
@@ -869,6 +900,7 @@ const EnrichedStepsSection: Component<{
   onAction?: (action: string, data?: unknown) => void
   onFilterChange?: (filters: Record<string, string | string[]>) => void
 }> = (props) => {
+  const strings = useMCPUIStrings()
   const stepsData = () => {
     const c = props.content as any
     return { steps: c?.steps || [], currentStep: c?.currentStep ?? 0 }
@@ -911,7 +943,7 @@ const EnrichedStepsSection: Component<{
         <div class="flex justify-end">
           <button type="button" onClick={() => props.onAction?.('next_step', { step: stepsData().currentStep })}
             class="px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors flex items-center gap-1">
-            Next <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+            {strings.scratchpadNextStep} <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
           </button>
         </div>
       </Show>
@@ -925,6 +957,7 @@ const ActionSection: Component<{
   content: unknown
   onAction?: (action: string, data?: unknown) => void
 }> = (props) => {
+  const strings = useMCPUIStrings()
   const data = () => {
     const c = props.content as any
     if (Array.isArray(c)) return { actions: c, title: undefined, preview: undefined, validation: undefined }
@@ -942,7 +975,7 @@ const ActionSection: Component<{
         {(preview) => (
           <div class="mb-2 p-2 rounded bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs text-gray-600 dark:text-gray-400">
             <Show when={preview().count != null}>
-              <span class="font-medium text-gray-800 dark:text-gray-200">{preview().count}</span> items
+              <span class="font-medium text-gray-800 dark:text-gray-200">{preview().count}</span> {strings.scratchpadItems}
             </Show>
             <Show when={preview().summary}>
               <span class="ml-1">&mdash; {preview().summary}</span>
@@ -957,10 +990,16 @@ const ActionSection: Component<{
             'text-amber-600 dark:text-amber-400': data().validation.confidence >= 0.5 && data().validation.confidence < 0.8,
             'text-red-600 dark:text-red-400': data().validation.confidence < 0.5,
           }}>
-            {Math.round(data().validation.confidence * 100)}% verified
+            {formatMCPUIString(strings.verifiedConfidence, {
+              pct: Math.round(data().validation.confidence * 100),
+            })}
           </span>
           <Show when={data().validation.hallucinated?.length > 0}>
-            <span class="text-amber-600">({data().validation.hallucinated.length} unverified)</span>
+            <span class="text-amber-600">
+              {formatMCPUIString(strings.verifiedUnverifiedCount, {
+                count: data().validation.hallucinated.length,
+              })}
+            </span>
           </Show>
         </div>
       </Show>
@@ -1039,20 +1078,24 @@ const FeedbackSection: Component<{
   content: unknown
   onAction?: (action: string, data?: unknown) => void
 }> = (props) => {
+  const strings = useMCPUIStrings()
   const [comment, setComment] = createSignal('')
   const [showComment, setShowComment] = createSignal(false)
   const [submitted, setSubmitted] = createSignal<string | null>(null)
+  // The badge shows the chosen option's LABEL (payload or localized default),
+  // never its machine value ('approve' / 'reject' / 'comment').
+  const [submittedLabel, setSubmittedLabel] = createSignal('')
   const data = () => {
     const c = props.content as any
     const options = c?.options || [
-      { value: c?.approve?.value || 'approve', label: c?.approve?.label || 'Yes', icon: '\uD83D\uDC4D', variant: 'primary' },
-      { value: c?.reject?.value || 'reject', label: c?.reject?.label || 'No', icon: '\uD83D\uDC4E' },
+      { value: c?.approve?.value || 'approve', label: c?.approve?.label || strings.yes, icon: '\uD83D\uDC4D', variant: 'primary' },
+      { value: c?.reject?.value || 'reject', label: c?.reject?.label || strings.no, icon: '\uD83D\uDC4E' },
     ]
     return {
       question: c?.question || '',
       options: options as Array<{ value: string; label: string; icon?: string; variant?: string; needsComment?: boolean }>,
       allowFreeText: c?.allowFreeText ?? c?.allowComment ?? false,
-      placeholder: c?.placeholder || c?.commentPlaceholder || 'Add a comment...',
+      placeholder: c?.placeholder || c?.commentPlaceholder || strings.scratchpadCommentPlaceholder,
       // v4.1.0: per-step feedback
       agentId: c?.agentId as string | undefined,
       stepId: c?.stepId as string | undefined,
@@ -1065,6 +1108,7 @@ const FeedbackSection: Component<{
       return
     }
     setSubmitted(option.value)
+    setSubmittedLabel(option.label ?? '')
     const payload = {
       option: option.value,
       comment: comment(),
@@ -1089,7 +1133,7 @@ const FeedbackSection: Component<{
             'text-red-600': submitted() === 'reject',
             'text-blue-600': submitted() !== 'approve' && submitted() !== 'reject',
           }}>
-            {submitted() === 'approve' ? '\u2705' : submitted() === 'reject' ? '\u274C' : '\uD83D\uDCAC'} {submitted()}
+            {submitted() === 'approve' ? '\u2705' : submitted() === 'reject' ? '\u274C' : '\uD83D\uDCAC'} {submittedLabel()}
           </span>
           <Show when={comment()}>
             <span class="italic">&mdash; {comment()}</span>
@@ -1119,8 +1163,8 @@ const FeedbackSection: Component<{
             <input type="text" value={comment()} onInput={(e) => setComment(e.currentTarget.value)}
               placeholder={data().placeholder} autofocus={showComment()}
               class="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:border-blue-400 outline-none" />
-            <button type="button" on:click={() => { setSubmitted('comment'); props.onAction?.('feedback', { option: 'comment', comment: comment(), agentId: data().agentId, stepId: data().stepId }) }}
-              class="px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">Send</button>
+            <button type="button" on:click={() => { setSubmitted('comment'); setSubmittedLabel(''); props.onAction?.('feedback', { option: 'comment', comment: comment(), agentId: data().agentId, stepId: data().stepId }) }}
+              class="px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">{strings.scratchpadSend}</button>
           </div>
         </Show>
       </Show>
@@ -1134,6 +1178,7 @@ const PromptSection: Component<{
   content: unknown
   onAction?: (action: string, data?: unknown) => void
 }> = (props) => {
+  const strings = useMCPUIStrings()
   const data = () => {
     const c = props.content as any
     return {
@@ -1162,13 +1207,13 @@ const PromptSection: Component<{
       </div>
       <Show when={data().plan}>
         <div class="mt-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/10 rounded-lg text-sm text-blue-700 dark:text-blue-300">
-          <span class="font-medium">Plan:</span> {data().plan}
+          <span class="font-medium">{strings.scratchpadPlan}</span> {data().plan}
         </div>
       </Show>
       <Show when={data().editable}>
         <button type="button" onClick={() => props.onAction?.('edit_prompt', data())}
           class="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
-          &#9998; Modify
+          &#9998; {strings.scratchpadModify}
         </button>
       </Show>
     </div>
@@ -1251,10 +1296,11 @@ const ErrorSectionRenderer: Component<{
   content: unknown
   onAction?: (action: string, data?: unknown) => void
 }> = (props) => {
+  const strings = useMCPUIStrings()
   const [showDetails, setShowDetails] = createSignal(false)
   const data = () => {
     const c = props.content as any
-    const d = { message: c?.message || 'Error', severity: c?.severity || 'error', retryAction: c?.retryAction, retryLabel: c?.retryLabel || 'Retry', details: c?.details, timestamp: c?.timestamp }
+    const d = { message: c?.message || strings.scratchpadError, severity: c?.severity || 'error', retryAction: c?.retryAction, retryLabel: c?.retryLabel || strings.retry, details: c?.details, timestamp: c?.timestamp }
     // DX1 Etape 8
     console.info(`%c[MCP-UI] Error section rendered%c severity=${d.severity} retry=${!!d.retryAction}`, 'color: #ef4444; font-weight: bold', 'color: inherit')
     return d
@@ -1272,7 +1318,7 @@ const ErrorSectionRenderer: Component<{
               <button type="button" onClick={() => props.onAction?.(data().retryAction!)} class={`px-2 py-1 text-xs font-medium rounded ${isWarning() ? 'bg-amber-600 text-white hover:bg-amber-700' : 'bg-red-600 text-white hover:bg-red-700'} transition-colors`}>&#128260; {data().retryLabel}</button>
             </Show>
             <Show when={data().details}>
-              <button type="button" onClick={() => setShowDetails(!showDetails())} class="px-2 py-1 text-xs opacity-70 hover:opacity-100">&#9654; Details</button>
+              <button type="button" onClick={() => setShowDetails(!showDetails())} class="px-2 py-1 text-xs opacity-70 hover:opacity-100">&#9654; {strings.scratchpadDetails}</button>
             </Show>
           </div>
           <Show when={showDetails() && data().details}>
@@ -1287,9 +1333,10 @@ const ErrorSectionRenderer: Component<{
 // ─── Source Card Section (F9) ────────────────────────────────
 
 const SourceCardSection: Component<{ content: unknown }> = (props) => {
+  const strings = useMCPUIStrings()
   const data = () => {
     const c = props.content as any
-    return { name: c?.name || 'Source', status: c?.status || 'available', capabilities: c?.capabilities || [], latency_ms: c?.latency_ms, freshness: c?.freshness, row_count: c?.row_count }
+    return { name: c?.name || strings.scratchpadSource, status: c?.status || 'available', capabilities: c?.capabilities || [], latency_ms: c?.latency_ms, freshness: c?.freshness, row_count: c?.row_count }
   }
   const statusIcon = () => ({ queried: '✅', available: '📦', error: '❌' } as Record<string, string>)[data().status] || '📦'
 
@@ -1298,7 +1345,11 @@ const SourceCardSection: Component<{ content: unknown }> = (props) => {
       <div class="flex items-center justify-between mb-1.5">
         <span class="text-sm font-medium text-gray-900 dark:text-white">{statusIcon()} {data().name}</span>
         <Show when={data().row_count !== undefined}>
-          <span class="text-xs font-bold text-blue-600 dark:text-blue-400">{data().row_count?.toLocaleString()} results</span>
+          <span class="text-xs font-bold text-blue-600 dark:text-blue-400">
+            {formatMCPUIString(strings.scratchpadResultCount, {
+              count: data().row_count?.toLocaleString(strings.locale) ?? '',
+            })}
+          </span>
         </Show>
       </div>
       <div class="flex flex-wrap gap-1.5 mb-1">

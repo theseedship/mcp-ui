@@ -24,7 +24,7 @@ import { ExpandableWrapper, useExpanded } from './ExpandableWrapper';
 import { DegradedFallback } from './DegradedFallback';
 import { chartToDataTable } from './chart-data-table';
 import { useTelemetry } from '../context/MCPUITelemetryContext';
-import { useMCPUIStrings } from '../context/MCPUIStringsContext';
+import { formatMCPUIString, useMCPUIStrings } from '../context/MCPUIStringsContext';
 
 // Lazy load Chart.js to avoid bundling if not used
 let ChartJS: any = null;
@@ -113,9 +113,18 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
   let renderVersion = 0;
 
   const params = () => props.component.params as ChartComponentParams;
-  const tableData = createMemo(() => chartToDataTable(params()));
   const telemetry = useTelemetry();
   const strings = useMCPUIStrings();
+  // The accessible data table is a pure projection: its column headers come
+  // from the chrome strings, injected rather than hardcoded in the helper.
+  const tableData = createMemo(() =>
+    chartToDataTable(params(), {
+      series: strings.chartTableSeries,
+      point: strings.chartTablePoint,
+      label: strings.degradedColLabel,
+      seriesName: strings.degradedSeries,
+    })
+  );
   const descriptionId = createUniqueId();
   const title = () => params().title || strings.chartView;
 
@@ -205,7 +214,7 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
       setIsLoading(false);
     } catch (err) {
       if (version !== renderVersion) return;
-      const error = err instanceof Error ? err : new Error('Chart rendering failed');
+      const error = err instanceof Error ? err : new Error(strings.chartRenderError);
       setError(error.message);
       setIsLoading(false);
       // Fallback ladder (P2.5): record the failure so it's observable, then
@@ -241,7 +250,7 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
     <ExpandableWrapper
       title={title()}
       copyData={copyDataJSON()}
-      copyLabel="Copy chart data (JSON)"
+      copyLabel={strings.chartCopy}
       toolbarVariant={props.toolbarVariant}
     >
       <ContextAwareChartLayout
@@ -294,8 +303,8 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
                 onClick={handleExportPNG}
                 disabled={activeView() !== 'chart' || isLoading() || Boolean(error())}
                 class="opacity-0 group-hover:opacity-60 hover:!opacity-100 disabled:!opacity-30 disabled:cursor-not-allowed px-2 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-all shadow-sm"
-                title="Download PNG"
-                aria-label="Download chart as PNG"
+                title={strings.chartDownloadPng}
+                aria-label={strings.chartDownloadPngAria}
               >
                 <svg
                   class="w-3 h-3 text-gray-500 dark:text-gray-400"
@@ -323,8 +332,8 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
             instead of a bare "Chart Error" message. */}
         <Show when={error() && activeView() === 'chart'}>
           <DegradedFallback
-            message={`Chart rendering failed: ${error()}`}
-            caption="Showing the chart data as a table — the interactive chart is unavailable."
+            message={formatMCPUIString(strings.chartRenderFailed, { error: String(error()) })}
+            caption={strings.chartDegradedCaption}
             {...tableData()}
           />
         </Show>
@@ -405,7 +414,7 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
             <div class="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-gray-800/80">
               <div class="flex flex-col items-center gap-2">
                 <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-                <span class="text-sm text-gray-500 dark:text-gray-400">Loading chart...</span>
+                <span class="text-sm text-gray-500 dark:text-gray-400">{strings.chartLoading}</span>
               </div>
             </div>
           </Show>

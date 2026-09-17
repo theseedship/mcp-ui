@@ -10,6 +10,7 @@ import type { FormFieldParams, FieldAutocompleteConfig, AutocompleteContext } fr
 import { useConditionalField } from '../hooks/useConditionalField'
 import { useAutocomplete } from '../hooks/useAutocomplete'
 import { useAutocompleteContextSafe } from '../context/AutocompleteContext'
+import { useMCPUIStrings } from '../context/MCPUIStringsContext'
 import { GhostText } from './GhostText'
 import { AutocompleteDropdown } from './AutocompleteDropdown'
 
@@ -62,6 +63,7 @@ export interface AutocompleteFormFieldProps {
  * AutocompleteFormField Component
  */
 export const AutocompleteFormField: Component<AutocompleteFormFieldProps> = (props) => {
+  const strings = useMCPUIStrings()
   // Check if autocomplete context is available
   const autocompleteCtx = useAutocompleteContextSafe()
 
@@ -205,7 +207,9 @@ export const AutocompleteFormField: Component<AutocompleteFormFieldProps> = (pro
                   inputValue={localValue()}
                   ghostText={autocomplete.ghostText()}
                   visible={autocomplete.isOpen()}
-                  hintText={autocomplete.ghostText() ? 'Tab to accept' : undefined}
+                  hintText={
+                    autocomplete.ghostText() ? strings.autocompleteTabToAccept : undefined
+                  }
                   isLoading={autocomplete.isLoading()}
                 />
               </Show>

@@ -5,6 +5,506 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.20.0] - 2026-09-17
+
+Every user-visible chrome string the library itself renders — button titles,
+`aria-label`s, placeholders, empty states, degraded-fallback captions, form
+validation messages, and more — is now localizable: through `MCPUIStrings`
+for components (`useMCPUIStrings()`), or through an exported `messages` /
+`labels` option with an English default table for the runtime-free adapters,
+services, helpers and hooks that cannot read Solid context. `MCPUIStrings`
+now covers **270 keys** (9 required, carried over from the original v6.6.0
+surface, plus 261 optional — every key added since defaults to English and
+falls back cleanly when omitted). The only strings still hardcoded fall under
+the explicit exclusion policy below (P1–P8). Both are enforced by an
+AST-based guard test over all of `src` and a runtime pseudo-localization
+render test — see **Tests**.
+
+### Added
+
+- **251 new optional `MCPUIStrings` keys** (the released 6.19.1 had 19),
+  bringing the total to 270. Each defaults to the exact English literal it
+  replaced, except the defaults listed under **Changed**. The complete list,
+  with defaults and where each key is used, is the key reference table in
+  the README (*Internationalization (i18n) — `MCPUIStrings`*). Selected
+  groups:
+
+  - **Generic chrome** — `download`: `"Download"` (`ArtifactRenderer`
+    download link), `unknown`: `"unknown"` (`GenerativeUIErrorBoundary`
+    metadata fallback)
+  - **`UIResourceRenderer` table citations** — `citationUnresolved`:
+    `"[ref. {id}]"` (template `{id}`; placeholder for a citation marker no
+    `citationMap` resolves, empty map only — see **Changed**)
+  - **`UIResourceRenderer` error / fallback chrome** — `invalidComponent`:
+    `"Invalid {type}"`, `toolErrorTitle`: `"Tool Error: {tool}"`,
+    `errorTypeLabel`: `"Type: {type}"`, `errorSuggestions`: `"Suggestions:"`,
+    `chartInvalidData`: `"Invalid chart data: missing data.datasets"`,
+    `unsupportedComponentType`: `"Unsupported component type:"`
+  - **`UIResourceRenderer` table (search, pagination, tool-error clipboard)**
+    — `tableVirtualizedRows`: `"(virtualized: {count} rows)"`,
+    `tableSearchResultsOne` / `tableSearchResultsMany`:
+    `"{count} result(s) on {total}"` (was one template with a hardcoded
+    `s`), `tableServerPageRange`: `"Showing {start} - {end} of {total}"`,
+    `errorCopyText`: `"Error in {tool}: {message}"` (text the tool-error
+    card's Copy button puts on the clipboard), `errorUnknownTool`:
+    `"unknown tool"` (tool name inside `errorCopyText` when the error has
+    none)
+  - **`DataPreviewSection`** — `previewPrev`: `"Prev"`, `previewNext`:
+    `"Next"`, `previewPageIndicator`: `"Page {page} / {total}"`,
+    `previewShowingRange`: `"Showing {start}–{end} of {total}"`,
+    `previewRowsOne`: `"{count} row"`, `previewRowsMany`: `"{count} rows"`,
+    `previewTotalSuffix`: `" ({total} total)"`
+  - **`FormFieldRenderer`** — `fieldResolving`: `"Resolving..."`,
+    `fieldAddMorePlaceholder`: `"Add more..."`, `fieldUnknownType`:
+    `"Unknown field type: {type}"`, `fieldSelectedCount`: `"{count}
+    selected"`
+  - **`FormRenderer`** — `formPrefilledOne`: `"{count} field pre-filled out
+    of {total}"`, `formPrefilledMany`: `"{count} fields pre-filled out of
+    {total}"` (shared with `ScratchpadPanel`'s prefill summary — see
+    **Changed**), `formSubmitting`: `"Submitting..."`, `formReset`:
+    `"Reset"`
+  - **`GenerativeUIErrorBoundary`** — `errorBoundaryTitle`: `"Component
+    Failed to Render"`, `errorBoundaryMeta`: `"Type: {type} | ID:
+    {id}..."` (both fall back to `unknown`), `errorBoundaryRetry`: `"Retry
+    Rendering"`
+  - **`ScratchpadPanel`** — `scratchpadSearch`: `"Search"`
+    (`waiting_human` search button), `scratchpadNextStep`: `"Next"`
+    (steps view advance button), `scratchpadPlan`: `"Plan:"`,
+    `scratchpadModify`: `"Modify"` (prompt-section edit button),
+    `scratchpadDetails`: `"Details"` (error-section toggle),
+    `scratchpadItems`: `"items"` (action-section item-count suffix),
+    `statusLoading` / `statusActionAvailable` / `statusYourTurn` /
+    `statusProcessing` / `statusComplete` — status badge, one key per
+    state (the `error` state reuses `scratchpadError`),
+    `scratchpadErrorCode`: `"Code: {code}"`, `scratchpadResultCount`:
+    `"{count} results"` (data-source card row count)
+  - **`VideoRenderer`** — `videoUnsupported`: `"Your browser does not
+    support the video tag."` (`<video>` fallback text)
+  - **`AgentCard` / `AgentStatusBadge`** — `agentStatusIdle`: `"Idle"`,
+    `agentStatusRunning`: `"Running"`, `agentStatusWaiting`: `"Waiting"`,
+    `agentStatusDone`: `"Done"`, `agentStatusError`: `"Error"`
+  - **`AgentHandoff`** — `handoffItems`: `"{count} items"` (fallback;
+    `content.summary` still wins)
+  - **Fallback ladder** (`DegradedFallback`, `ChartJSRenderer`,
+    `GraphRenderer`, `MapRenderer`) — `degradedMoreRows`: `"+{count} more
+    rows not shown."`, `chartDegradedCaption`, `chartRenderFailed`:
+    `"Chart rendering failed: {error}"`, `chartRenderError`,
+    `chartQuickchartCaption`, `graphDegradedCaption`, `graphRenderFailed`,
+    `graphRenderError`, `graphPngUnsupported`, `graphPngExportFailed`,
+    `mapLibraryUnavailable`, `mapDegradedCaption`, `mapRenderFailed`,
+    `mapRenderError`
+  - **Degraded / accessible table headers** — `degradedColType`,
+    `degradedColLat`, `degradedColLng`, `degradedColInfo`,
+    `degradedColSource`, `degradedColTarget`, `degradedColNode`,
+    `degradedColLabel`, `degradedSeries`: `"Series {n}"`, `chartTableSeries`,
+    `chartTablePoint`, plus `degradedMarker`: `"marker"` and
+    `degradedFeature`: `"feature"` — the degraded map table's `Type` cell
+    for a marker row / a GeoJSON feature without a geometry type (mirrored
+    in `DEGRADED_PROJECTION_LABELS`, see below)
+  - **`AutocompleteDropdown` / `AutocompleteFormField`** —
+    `autocompleteHintNavigate`: `" to navigate, "`, `autocompleteHintSelect`:
+    `" to select, "`, `autocompleteHintDismiss`: `" to dismiss"`,
+    `autocompleteTabToAccept`: `"Tab to accept"` (the `<kbd>` key caps
+    themselves stay hardcoded — P1)
+  - **Images and chart fallbacks** — `galleryViewImage`: `"View image
+    {index}"`, `galleryImageAlt`: `"Image {index}"` (a payload `image.alt`
+    still wins for both), `imageAltFallback`: `"image"`,
+    `chartVisualizationAlt`: `"Chart visualization"`, `chartWithTitleAlt`:
+    `"Chart: {title}"`, `chartLoadFailed`: `"Failed to load chart"`
+  - **Table pagination** — `paginationAllRows`: `"All"`
+  - **Form validation** — `fieldRequired`, `fieldMustBeChecked`,
+    `fieldMinLength`, `fieldMaxLength`, `fieldInvalidPattern`,
+    `fieldInvalidEmail`, `fieldInvalidNumber`, `fieldMinValue`,
+    `fieldMaxValue`, `fieldMinDate`, `fieldMaxDate`, `fieldInvalidOption`,
+    `fieldInvalidFormat`: `"Invalid format (expected: {format})"`
+    (`field.valueFormatHint` wins when set) — `FormRenderer` feeds these
+    into `validateFieldValue` / `validateFormData` from `useMCPUIStrings()`
+  - **`BriefingDiff`** — `briefingAdded`: `"+{count} added"`,
+    `briefingRemoved`: `"{count} removed"`, `briefingChanged`: `"{count}
+    changed"`
+  - **`FooterRenderer`** — `footerSources`: `"{count} sources"`
+  - **`StreamingUIRenderer` / `useStreamingUI`** — `streamInitializing`:
+    `"Initializing..."`, `streamConnecting`: `"Connecting to server..."`,
+    `streamLoadingComponent`: `"Loading {type} component..."`,
+    `streamDashboardLoaded`: `"Dashboard loaded"`, `streamErrorProgress`:
+    `"Error: {message}"`, `streamConnectionFailed`: `"Stream connection
+    failed"`, `streamRequestFailed`: `"Stream request failed"`,
+    `streamEmptyResponse`: `"Response body is null"`, `streamServerSide`:
+    `"Streaming UI cannot start on server-side"`, `streamUnknownError`:
+    `"Unknown error"`
+  - **`locale`**: `"en-US"` — see **Changed**
+  - **Unavailable and degraded states shown to end users** —
+    `streamServerSideTitle`: `"Streaming unavailable"` (see **Changed**),
+    `graphUnavailable`: `"Graph rendering unavailable"`,
+    `mapPmtilesUnavailable`: `"PMTiles layer unavailable — the optional
+    \"protomaps-leaflet\" peer dependency failed to load or render."`,
+    `mapBaseMapStillShown`: `"The base map is still shown."`,
+    `chartJsUnavailable`: `"Chart.js is not available. Install chart.js peer
+    dependency."`, `chartIframeUnavailable`: `"Interactive chart unavailable
+    — install the chart.js peer dependency, or set allowQuickchartFallback to
+    use the external quickchart.io renderer."`, `previewInvalidContent`:
+    `"[DataPreviewSection] Invalid content format"`. Their text names a peer
+    or a config flag, but end users see them, so a host can translate them.
+  - **Citation chip tooltip** — `citationViewSource`: `"View source -
+    {label}"` (template `{label}`: file name and page)
+  - **`ArtifactRenderer` file sizes** — `sizeBytes`: `"{size} B"`,
+    `sizeKilobytes`: `"{size} KB"`, `sizeMegabytes`: `"{size} MB"` (the number
+    is formatted with `locale`)
+
+- **`useStreamingUI({ messages })`** — new optional `messages?:
+  Partial<StreamingUIMessages>` on `UseStreamingUIOptions`, with exported
+  `DEFAULT_STREAMING_UI_MESSAGES` and `StreamingUIMessages` (root barrel and
+  `/hooks`). Covers `initializing`, `connecting`, `loadingComponent`,
+  `dashboardLoaded`, `errorProgress`, `connectionFailed`, `requestFailed`,
+  `emptyResponse`, `serverSide`, `unknownError`. `StreamingUIRenderer` feeds
+  it from the `stream*` `MCPUIStrings` keys through getters (a `messages`
+  prop passed directly to the renderer still wins over the context). Every
+  other hook in the library (`useAction`, `useAutocomplete`, `useModal`, …)
+  is unchanged.
+
+- **`CitationCtx.unresolvedLabel?: string`** — new optional field on the
+  exported `CitationCtx` interface (`UIResourceRenderer.tsx`). It supplies
+  the placeholder `transformCellCitations` keeps in a table cell for a
+  citation marker that no `citationMap` resolves (empty map only). Optional,
+  so every existing `renderCellValue(value, citationCtx?)` call site keeps
+  type-checking; the placeholder now defaults to English (`citationUnresolved`)
+  instead of hardcoded French. A second optional field,
+  **`CitationCtx.viewSourceLabel?: string`**, carries the default citation
+  chip's tooltip template (`citationViewSource`); the table renderer fills
+  both from `useMCPUIStrings()`.
+
+- **New export `formatMCPUIString(template, vars)`** (root barrel) —
+  replaces `{name}` placeholders in a template with `vars[name]`; an
+  unrecognized `{placeholder}` is left verbatim rather than throwing or
+  rendering `undefined`. It lives in the dependency-free
+  `src/utils/format-string.ts` (no imports), so the runtime-free adapters
+  use it too, and `MCPUIStringsContext.tsx` re-exports it.
+
+- **New `messages` / `labels` options on the runtime-free adapters,
+  services and helpers** — these modules cannot read
+  `MCPUIStringsProvider` (no `solid-js` import), so their English ships as
+  a TRAILING OPTIONAL parameter with an exported default table; every
+  existing call site keeps type-checking and behaving identically:
+
+  - **`connectorResultToUILayout(result, options?)`**
+    (`src/adapters/connector.ts`) — `options.messages?:
+    Partial<ConnectorAdapterMessages>`. Covers the connector adapter's two
+    degraded-state paragraphs: `degradedNotice` (unreadable payload,
+    template `{versionSuffix}`), `degradedVersionSuffix` (template
+    `{version}`), `versionWarning` (unrecognized schema version, template
+    `{version}`, `{expected}`). New exports `ConnectorAdapterMessages` and
+    `DEFAULT_CONNECTOR_MESSAGES` from `@seed-ship/mcp-ui-solid/adapters`
+    (not the root barrel — no other connector-adapter export is there
+    either):
+
+    ```ts
+    import { connectorResultToUILayout } from '@seed-ship/mcp-ui-solid/adapters'
+
+    connectorResultToUILayout(result, {
+      messages: {
+        versionWarning: '> ⚠ Schéma connecteur non reconnu (`{version}`, attendu `{expected}`).',
+      },
+    })
+    ```
+
+  - **`macroRunToScratchpadState(run, options?)` /
+    `macroInterrogationToChatPromptConfig(q, options?)`**
+    (`src/adapters/macro-run.ts`) — `options.messages?:
+    Partial<MacroRunAdapterMessages>`. The real fields are
+    `agentSectionTitle` (`"Agent"`), `progressSectionTitle` (`"Progress"`),
+    `resultSectionTitle` (`"Result"`), `runAborted` (`"Macro run
+    aborted."`), `runFailed` (`"Macro run failed."`), `confirmDefault`
+    (`"Please confirm to continue."`). New exports
+    `MacroRunAdapterMessages`, `MacroRunAdapterOptions` and
+    `DEFAULT_MACRO_RUN_MESSAGES` from `@seed-ship/mcp-ui-solid/adapters`:
+
+    ```ts
+    macroRunToScratchpadState(run, { messages: { resultSectionTitle: 'Résultat' } })
+    ```
+
+  - **`validateFieldValue(value, field, messages?)` /
+    `validateFormData(data, fields, messages?)`** (`src/services/validation.ts`)
+    — `messages?: Partial<FormValidationMessages>` (13 fields: `required`,
+    `mustBeChecked`, `minLength`, `maxLength`, `invalidPattern`,
+    `invalidEmail`, `invalidNumber`, `minValue`, `maxValue`, `minDate`,
+    `maxDate`, `invalidOption`, `invalidFormat`). New exports
+    `FormValidationMessages` and `DEFAULT_VALIDATION_MESSAGES` from the root
+    barrel and `@seed-ship/mcp-ui-solid/validation`. `FormRenderer` feeds
+    this from `useMCPUIStrings()` (the `field*` keys above) — a host does
+    not normally call `validateFieldValue` directly for that path. The
+    STRUCTURAL validators (`validateComponent`, `validateLayout`, …) keep
+    their English `ValidationError.message` — see the exclusion policy
+    below.
+
+  - **`graphToDegradedTable` / `mapToDegradedTable` /
+    `chartToDegradedTable`** (`src/utils/degraded-projections.ts`) —
+    `labels?: Partial<DegradedProjectionLabels>` (`source`, `target`,
+    `label`, `node`, `type`, `lat`, `lng`, `info`, `marker`, `feature`,
+    `series`). **`chartToDataTable(params, labels?)`**
+    (`src/components/chart-data-table.ts`) — `labels?:
+    Partial<ChartDataTableLabels>` (`series`, `point`, `label`,
+    `seriesName`, `x`, `y`, `r` — the last three are the Chart.js point
+    property names the cells mirror, still overridable). New root-barrel
+    exports `DegradedProjectionLabels`, `DEGRADED_PROJECTION_LABELS`,
+    `ChartDataTableLabels`, `CHART_DATA_TABLE_LABELS`. The renderers pass
+    the `degradedCol*` / `chartTable*` keys from `useMCPUIStrings()`.
+
+    ```ts
+    graphToDegradedTable(graph, { source: 'Origine', target: 'Destination' })
+    ```
+
+- **The chrome-strings guard is now a TypeScript-AST scanner over all of
+  `src`.** `scripts/chrome-scan.ts` (outside `src`, not published; `node
+  scripts/chrome-scan.ts [root] [--json] [--raw]`) parses every non-test
+  source and flags: JSX text; literals reaching a visible attribute, a JSX
+  child or the clipboard through `||` / `??`, each ternary branch, template
+  spans, `formatMCPUIString`, helper returns, `const` variables and signal
+  setters; prose in object properties, `*Label`-style helper returns and
+  arrays; French text (accented characters or stopwords); and hardcoded
+  BCP-47 locale tags or argument-less `toLocaleString()` calls in
+  components. `console.*` / logger / telemetry calls, `onError` payloads and
+  thrown errors are skipped by AST context (see **P7** below) — the scanner
+  never has to allow-list them individually. The repository's exclusions
+  (`ALLOW_LIST`, `SANCTIONED_TABLES`, `SCOPED_EXCLUSIONS`) live in
+  `scripts/chrome-scan.policy.ts` and are enforced by
+  `mcpui-strings-guard.test.ts` — see **Tests**.
+
+- **Runtime pseudo-localization test**, `MCPUIStrings.pseudolocale.test.tsx`
+  — see **Tests**.
+
+### Changed
+
+- **New `locale` key (default `'en-US'`) drives every number, date and
+  collation call the library makes on its own behalf.** `strings.locale` now
+  feeds:
+  - `UIResourceRenderer` — table sort (`localeCompare`, was hardcoded
+    `'fr'`) and the client-side pagination range total (`toLocaleString`,
+    was hardcoded `'fr-FR'`), and the tool-error card timestamp
+    (`toLocaleString`, was called with no argument at all — the runtime's
+    implicit locale, which can differ between SSR and hydration);
+  - `DataPreviewSection` — number / currency / date cell formatting and
+    sort comparison (were `'fr-FR'` / `'fr'`; the `" EUR"` currency suffix
+    itself stays — P4), the page-info row counts (were `'fr-FR'`), and
+    percent cells (were `toFixed(1)` + `"%"`, now `Intl.NumberFormat` with
+    `style: 'percent'` — identical output in `en-US`);
+  - `StreamingUIRenderer` — the metadata panel cost (was `"$"` +
+    `toFixed(4)`, now `Intl.NumberFormat` currency USD with a narrow symbol
+    — identical output in `en-US`);
+  - `ArtifactRenderer` — the file-size number (was `toFixed(1)`);
+  - `ScratchpadPanel` — the filter-preview row count and the data-source
+    card's `row_count` (were argument-less);
+  - `MapRenderer` — `buildPopupContent(feature, popup, allowHtml?, locale?)`
+    and `addGeoJSONLayer(..., allowHtml?, locale?)` gain a new trailing
+    optional `locale` parameter for the numbers in auto-generated popups
+    (was hardcoded `'fr-FR'`).
+
+  Restore the previous French formatting with
+  `<MCPUIStringsProvider strings={{ locale: 'fr-FR' }}>`.
+
+- **Five more chrome defaults move from French to English**, matching
+  every other key (a published library ships no hardcoded non-English
+  chrome):
+  - `tableSearchPlaceholder`: `"Rechercher dans le tableau..."` → `"Search
+    the table..."` (`UIResourceRenderer` table search input; a connector's
+    own `tableParams.searchPlaceholder` still wins when set);
+  - `verifiedStripLabel`: `"[non vérifié]"` → `"[unverified]"`
+    (`VerifiedText` `mode="strip"`);
+  - `scratchpadEdit`: `"Modifier"` → `"Edit"` (`ScratchpadPanel`'s
+    collapsed auto-submit form edit button);
+  - `citationUnresolved`: `"[réf. {id}]"` → `"[ref. {id}]"`, now backed by
+    the new `CitationCtx.unresolvedLabel`;
+  - `formPrefilledOne` / `formPrefilledMany`: `"{count} champ(s)
+    pré-rempli(s) sur {total}"` → `"{count} field(s) pre-filled out of
+    {total}"` (`FormRenderer` and `ScratchpadPanel`'s prefill summary).
+
+  Restore the previous French text for these five, and the connector
+  adapter's degraded-state text (also changed from French to English —
+  `DEFAULT_CONNECTOR_MESSAGES`, below), with:
+
+  ```tsx
+  <MCPUIStringsProvider
+    strings={{
+      locale: 'fr-FR',
+      tableSearchPlaceholder: 'Rechercher dans le tableau...',
+      verifiedStripLabel: '[non vérifié]',
+      scratchpadEdit: 'Modifier',
+      citationUnresolved: '[réf. {id}]',
+      formPrefilledOne: '{count} champ pré-rempli sur {total}',
+      formPrefilledMany: '{count} champs pré-remplis sur {total}',
+    }}
+  >
+    <App />
+  </MCPUIStringsProvider>
+  ```
+
+  ```ts
+  connectorResultToUILayout(result, {
+    messages: {
+      degradedNotice:
+        '### Résultat non rendu\n\nLe résultat du connecteur n\'a pas pu être interprété{versionSuffix}. Cet état explicite remplace une disparition silencieuse du rendu.',
+      degradedVersionSuffix: ' (schéma : `{version}`)',
+      versionWarning:
+        '> ⚠ Schéma connecteur non reconnu (`{version}`, attendu `{expected}`). Le rendu ci-dessous est en mode dégradé.',
+    },
+  })
+  ```
+
+- **`StreamingUIRenderer` no longer shows the machine code `ssr` as its
+  error heading** when streaming is started during server rendering. It
+  renders `streamServerSideTitle` (`"Streaming unavailable"`) instead. The
+  hook's `StreamError.error` keeps the code `'ssr'` for consumers that test
+  it.
+
+- **`ScratchpadPanel`'s feedback badge now shows the option's label**, not
+  its machine value (`approve` / `reject` / `comment`); nothing is shown
+  after the icon for a free-text comment.
+
+- **`MCPActionProvider`'s fallback action error** — when the action
+  executor throws a non-`Error` value, `ActionResult.error` (which
+  `FormRenderer` displays) now reads `errorUnknown` instead of a hardcoded
+  string.
+
+### Exclusion policy
+
+Every user-visible chrome string now reads from `MCPUIStrings` (components)
+or an exported `messages`/`labels` option (runtime-free adapters, services,
+helpers, hooks) — enforced by `mcpui-strings-guard.test.ts`: anything the
+scanner flags must become a key or an option, or be allow-listed here under
+one of P1–P8.
+
+- **P1 — keyboard key caps inside `<kbd>`.** `AutocompleteDropdown`'s
+  `<kbd>Enter</kbd>` and `<kbd>Esc</kbd>` — the physical key reads "Enter"
+  whatever the UI language. The surrounding hint prose IS localized
+  (`autocompleteHintNavigate` / `autocompleteHintSelect` /
+  `autocompleteHintDismiss`).
+- **P2 — legal attribution wording.** `MapRenderer`'s `"OpenStreetMap</a>
+  contributors"` tile attribution — exact wording required by the ODbL. A
+  host overrides the whole notice via `params.attribution` for another
+  language.
+- **P3 — developer diagnostics** that name an npm package, a peer
+  dependency or a config flag; bracketed `[Component] …` messages;
+  debug-only panels behind an explicit debug flag; developer-misuse errors;
+  and the structural payload-schema diagnostics of `services/validation.ts`:
+  - `GraphRenderer`'s install hint under the localized
+    `graphUnavailable` heading: `"Install"` / `"@antv/g6"` / `"peer
+    dependency to render"` / `"type: \"graph\""` / `"components."` — it
+    names the missing optional `@antv/g6` peer, for whoever installs the
+    host.
+  - `RenderContext`'s `'Component "'` / `'" cannot be rendered outside of
+    UIResourceRenderer'` — a developer-misuse error (a renderer used
+    outside `<UIResourceRenderer>`).
+  - `ScratchpadPanel`'s debug overlay (`| ev:`, `| sec:`, `| last:`,
+    behind the `debugOverlay` prop) and its `FormDebugTrace` panel (behind
+    the `debugTrace` prop) — both mirror raw server/event keys verbatim, for
+    developers.
+  - `services/validation.ts`'s structural validators — `mapZodIssuesToErrors`,
+    `validateGridPosition`, `validateChartComponent`, `validateTableComponent`,
+    `validatePayloadSize`, `validateIframeDomain`, `validateComponent`,
+    `validateLayout` — their `ValidationError.message` quotes a payload
+    path (e.g. `params.data.datasets[0]`) and is addressed to whoever
+    produced the payload, not to the end user. The validation CARD chrome
+    around them (`validationError`, `validationWarning`,
+    `validationUnknownError`) IS localized; the end-user form messages of
+    `validateFieldValue` / `validateFormData` ARE localized through
+    `DEFAULT_VALIDATION_MESSAGES`.
+- **P4 — machine tokens**: file-format acronyms, HTTP verbs, unit symbols,
+  ISO currency codes, and chart point property names. `DataPreviewSection`'s
+  `"CSV"` / `"JSON"` export-button glyphs (their `title` attributes,
+  `exportCsvRows` / `exportJsonRows`, ARE localized) and its `" EUR"`
+  currency suffix; `"ms"` after execution times and durations
+  (`FooterRenderer`, `StreamingUIRenderer`, `ScratchpadPanel`); and
+  `chartToDataTable`'s `x` / `y` / `r` column headers (the Chart.js point
+  property names the cells mirror — still overridable through the
+  `labels` parameter).
+- **P5 — pure module functions with a documented render override.** No
+  occurrence remains: the default citation chip's tooltip used to be the
+  only one and is now localized (`citationViewSource`, passed through
+  `CitationCtx.viewSourceLabel`). The item stays in the policy for future
+  helpers.
+- **P6 — components with their own documented `labels`/`messages` prop.**
+  `PresentationFeedback`'s `DEFAULT_PRESENTATION_FEEDBACK_LABELS` — the
+  component documents its own `labels` prop
+  (`<PresentationFeedback labels={{ prompt: '…' }} />`) and does not read
+  `MCPUIStringsProvider`. (`DEFAULT_CONNECTOR_MESSAGES`,
+  `DEFAULT_MACRO_RUN_MESSAGES`, `DEFAULT_VALIDATION_MESSAGES`,
+  `DEGRADED_PROJECTION_LABELS` and `CHART_DATA_TABLE_LABELS` are the same
+  kind of sanctioned default table for a `messages`/`labels` option — see
+  **Added**.)
+- **P7 — strings the library never renders itself.** Hook-level errors
+  returned to the consumer (`useAction`'s `"Max retries (…) exceeded"` /
+  `"Action cancelled by onBefore callback"`, `useAutocomplete`'s `"Unknown
+  error"`); `props.onError` payloads (`"Chart rendering failed"`,
+  `"Component validation failed"`, `"Video failed to load"`); and
+  `console.*` / logger / telemetry-only strings. A consumer that reads them
+  chooses how to display them. One edge case: the SSR stub executor's
+  `"Actions not available server-side"` is an `ActionResult.error` that
+  `FormRenderer` would display, but a form cannot be submitted during
+  server rendering, so it never reaches the DOM in practice.
+- **P8 — LLM-facing schema descriptions, example payloads, comments and
+  JSDoc.** `services/component-registry.ts` in full, and the `plugins/`
+  system prompts — a catalogue of JSON-schema descriptions and example
+  payloads shown to the model; translating it would teach the model to
+  emit non-English payloads.
+
+Also out of scope (not i18n): the auto-footer's `poweredBy: 'Deposium'`
+brand string (pre-existing since v1.2.0). Payload/content strings in
+general (`params.title`, `action.label`, and similar) remain the
+producing MCP server's responsibility — this sweep only touches the
+library's own chrome.
+
+### Tests
+
+- **`mcpui-strings-guard.test.ts` — AST-based chrome scanner.** Runs
+  `scanChrome()` (`scripts/chrome-scan.ts`) over every non-test source under
+  `src` and asserts zero unallowed findings. Separately asserts: every
+  `ALLOW_LIST` entry still matches a real finding (a fixed literal that no
+  longer exists fails the build instead of silently going stale); every
+  `SCOPED_EXCLUSIONS` function still exists in its file; every
+  `SANCTIONED_TABLES` entry is still exported and non-empty; every entry
+  across all three names the policy item (P1–P8) it invokes; and no
+  sanctioned table or scoped-exclusion function lets French text or a
+  hardcoded locale tag through. A second `describe` block carries
+  non-vacuity fixtures — one small source snippet per finding class the
+  scanner understands (JSX text, attribute literal, ternary branch,
+  template span, helper return, signal setter, prose array/object
+  property, arrays rendered item by item through `<For>` or `.map()`,
+  French text including single distinctive words, hardcoded locale) —
+  asserting the scanner flags
+  each one, and a matching "does not flag" fixture per skipped AST context
+  (`console.*`, `onError`, thrown errors).
+- **`MCPUIStrings.pseudolocale.test.tsx` — runtime pseudo-localization.**
+  Mounts the renderers (`UIResourceRenderer` layouts — table, chart, map,
+  graph, form, gallery, video, code, carousel, action, artifact, modal,
+  error and validation states; `DataPreviewSection`; `ScratchpadPanel`
+  sections and statuses; `ChatPrompt`; `FormRenderer`; `StreamingUIRenderer`;
+  `GenerativeUIErrorBoundary`; `VerifiedText`; the agent components;
+  `AutocompleteDropdown`; `GraphRenderer`'s export menu;
+  `EditableUIResourceRenderer`) with a `<MCPUIStringsProvider>` whose
+  strings are `⟦key {placeholders}⟧` markers and with CJK-only payload
+  content, under `locale: 'fr-FR'`. Walks `document.body` including
+  portals and accessible attributes (`aria-label`, `title`, `alt`), and
+  separately asserts the tool-error card's clipboard text. Fails on any
+  Latin chrome text left over. It backs up the scanner's known blind spots:
+  prose stored under machine-looking keys such as `name`, and values passed
+  to another file's component props.
+- **`mcpui-strings-defaults.test.ts`** pins every `DEFAULT_MCPUI_STRINGS`
+  value, so a default cannot drift silently.
+
+### Known follow-ups
+
+- The auto-footer's hardcoded `poweredBy: 'Deposium'` brand string is not
+  i18n and is out of scope for this release (pre-existing since v1.2.0).
+- `DataPreviewSection` appends `" EUR"` to every `currency` cell whatever
+  the data's actual currency (pre-existing; a currency code belongs in the
+  payload, not in the library).
+- `macroRunToScratchpadState` passes a whole `UIComponent` as the content of
+  `data_preview` / `chart` / `map` sections, while those sections expect the
+  component's params (pre-existing since the MacroRun adapters shipped). A
+  table result therefore shows `previewInvalidContent` in the panel.
+- Download filenames (`chart.png`, `table-*.csv`, graph export stems) stay
+  in English — they are files, not DOM text, so the policy treats them as
+  P4 machine tokens.
+
 ## [6.19.1] - 2026-09-16
 
 ### Fixed

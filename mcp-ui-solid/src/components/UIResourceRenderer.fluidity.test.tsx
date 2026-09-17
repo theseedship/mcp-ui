@@ -43,14 +43,14 @@ describe('Table — search input default-on (v6.1.0)', () => {
   it('shows the search input by default on a SMALL table (was hidden before v6.1.0 unless > 10 rows)', () => {
     const rows = Array.from({ length: 3 }, (_, i) => ({ name: `n${i}`, value: i }))
     const { container } = render(() => <UIResourceRenderer content={tableComponent(rows)} />)
-    const input = container.querySelector('input[placeholder*="Recherche"]')
+    const input = container.querySelector('input[placeholder*="Search the table"]')
     expect(input).toBeTruthy()
   })
 
   it('still shows the search input on a LARGE table', () => {
     const rows = Array.from({ length: 50 }, (_, i) => ({ name: `n${i}`, value: i }))
     const { container } = render(() => <UIResourceRenderer content={tableComponent(rows)} />)
-    expect(container.querySelector('input[placeholder*="Recherche"]')).toBeTruthy()
+    expect(container.querySelector('input[placeholder*="Search the table"]')).toBeTruthy()
   })
 
   it('hides the search input when searchable: false is explicit (backward-compat opt-out)', () => {
@@ -58,7 +58,7 @@ describe('Table — search input default-on (v6.1.0)', () => {
     const { container } = render(() => (
       <UIResourceRenderer content={tableComponent(rows, { searchable: false })} />
     ))
-    expect(container.querySelector('input[placeholder*="Recherche"]')).toBeNull()
+    expect(container.querySelector('input[placeholder*="Search the table"]')).toBeNull()
   })
 })
 

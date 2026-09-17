@@ -11,8 +11,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > **Note (2026-07-03):** after `5.2.0` this monorepo-wide log was superseded by
 > the per-package changelogs, which are the source of truth for every release
-> (current: `mcp-ui-solid` 6.19.1, `mcp-ui-spec` 5.6.0, `mcp-ui-cli` 5.0.1). New
+> (current: `mcp-ui-solid` 6.20.0, `mcp-ui-spec` 5.6.0, `mcp-ui-cli` 5.0.1). New
 > entries go there; this file is kept for historical monorepo-level context.
+
+## [6.20.0] - 2026-09-17 (`mcp-ui-solid`)
+
+- Added: every user-visible chrome string now reads from `MCPUIStrings`
+  (components, via `useMCPUIStrings()`) or an exported `messages`/`labels`
+  option (runtime-free adapters, services, helpers), except the exclusion
+  policy P1–P8 in `mcp-ui-solid/CHANGELOG.md` (keyboard key caps, the
+  OpenStreetMap attribution, developer/peer-dependency diagnostics,
+  file-format acronyms and HTTP verbs,
+  components with their own `labels`/`messages` prop, hook-level errors and
+  `console.*`, and LLM-facing registry examples), plus a new exported
+  `formatMCPUIString(template, vars)` helper (in the dependency-free
+  `src/utils/format-string.ts`), new `CitationCtx.unresolvedLabel` and
+  `CitationCtx.viewSourceLabel` fields, a new `messages` option on
+  `connectorResultToUILayout()` for the connector adapter's own degraded-state
+  text, injectable `messages` / `labels` tables on the runtime-free helpers
+  (`macroRunToScratchpadState`, `validateFieldValue` / `validateFormData`, the
+  degraded-table projections, `chartToDataTable` — all trailing optional
+  parameters, so existing calls are unchanged), a `messages` option on
+  `useStreamingUI()` (`DEFAULT_STREAMING_UI_MESSAGES`), a TypeScript-AST
+  chrome scanner over ALL of `src` (`scripts/chrome-scan.ts`, not published)
+  enforced by the guard test, and a runtime pseudo-localization test that
+  fails on any Latin chrome left in the rendered DOM.
+  `MCPUIStrings` now covers 270 keys in total.
+- Changed: new `locale` key (default `'en-US'`) for every library-side
+  number / date formatting and collation call — these sites used `'fr-FR'` /
+  `'fr'` or the runtime's implicit locale before (restore with
+  `strings={{ locale: 'fr-FR' }}`).
+- Fixed: `StreamingUIRenderer` no longer shows the machine code `ssr` as its
+  error heading during server rendering (`streamServerSideTitle`).
+- Changed: five chrome defaults move from French to English for hosts with
+  no `MCPUIStringsProvider` mounted — `tableSearchPlaceholder`
+  (`"Rechercher dans le tableau..."` → `"Search the table..."`),
+  `verifiedStripLabel` (`"[non vérifié]"` → `"[unverified]"`),
+  `scratchpadEdit` (`"Modifier"` → `"Edit"`), `citationUnresolved`
+  (`"[réf. {id}]"` → `"[ref. {id}]"`), and `formPrefilledOne` /
+  `formPrefilledMany` (`"{count} champ(s) pré-rempli(s) sur {total}"` →
+  `"{count} field(s) pre-filled out of {total}"`). Separately, the connector
+  adapter's degraded-state paragraphs also move from French to English
+  (`DEFAULT_CONNECTOR_MESSAGES`, overridable via `messages`). See
+  `mcp-ui-solid/CHANGELOG.md`.
 
 ## [6.19.1] - 2026-09-16 (`mcp-ui-solid`)
 

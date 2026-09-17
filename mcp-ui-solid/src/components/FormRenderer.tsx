@@ -13,6 +13,7 @@ import { validateFormData } from '../services/validation'
 import { evaluateCondition } from '../hooks/useConditionalField'
 import { useFormPersistence } from '../hooks/useFormPersistence'
 import { useTelemetry } from '../context/MCPUITelemetryContext'
+import { formatMCPUIString, useMCPUIStrings } from '../context/MCPUIStringsContext'
 
 export interface FormRendererProps {
   component: UIComponent
@@ -38,6 +39,26 @@ function getFieldDefault(type: FormFieldParams['type']): any {
 }
 
 export const FormRenderer: Component<FormRendererProps> = (props) => {
+  const strings = useMCPUIStrings()
+  /**
+   * The end-user validation wording, read from the chrome strings and
+   * injected into the pure validators (which cannot reach the context).
+   */
+  const validationMessages = () => ({
+    required: strings.fieldRequired,
+    mustBeChecked: strings.fieldMustBeChecked,
+    minLength: strings.fieldMinLength,
+    maxLength: strings.fieldMaxLength,
+    invalidPattern: strings.fieldInvalidPattern,
+    invalidEmail: strings.fieldInvalidEmail,
+    invalidNumber: strings.fieldInvalidNumber,
+    minValue: strings.fieldMinValue,
+    maxValue: strings.fieldMaxValue,
+    minDate: strings.fieldMinDate,
+    maxDate: strings.fieldMaxDate,
+    invalidOption: strings.fieldInvalidOption,
+    invalidFormat: strings.fieldInvalidFormat,
+  })
   const params = () => props.component.params as FormComponentParams
   const [formData, setFormData] = createSignal<Record<string, any>>({})
   const [errors, setErrors] = createSignal<Record<string, string>>({})
@@ -177,7 +198,7 @@ export const FormRenderer: Component<FormRendererProps> = (props) => {
     }
 
     // Validate only visible fields
-    const validationResult = validateFormData(visibleFormData, visibleFields)
+    const validationResult = validateFormData(visibleFormData, visibleFields, validationMessages())
     if (!validationResult.valid) {
       setErrors(validationResult.errors)
       setIsSubmitting(false)
@@ -193,13 +214,14 @@ export const FormRenderer: Component<FormRendererProps> = (props) => {
           formData: visibleFormData,
         })
         if (!result.success) {
-          setErrors({ _form: result.error || 'Submission failed' })
+          setErrors({ _form: result.error || strings.formSubmissionFailed })
           setIsSubmitting(false)
-          props.onError?.({ _form: result.error || 'Submission failed' })
+          props.onError?.({ _form: result.error || strings.formSubmissionFailed })
           return
         }
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Submission failed'
+        const errorMessage =
+          error instanceof Error ? error.message : strings.formSubmissionFailed
         setErrors({ _form: errorMessage })
         setIsSubmitting(false)
         props.onError?.({ _form: errorMessage })
@@ -255,7 +277,10 @@ export const FormRenderer: Component<FormRendererProps> = (props) => {
             const total = params().fields.length
             return (
               <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                {prefilled} champ{prefilled > 1 ? 's' : ''} pré-rempli{prefilled > 1 ? 's' : ''} sur {total}
+                {formatMCPUIString(
+                  prefilled === 1 ? strings.formPrefilledOne : strings.formPrefilledMany,
+                  { count: prefilled, total }
+                )}
               </p>
             )
           })()}
@@ -287,14 +312,17 @@ export const FormRenderer: Component<FormRendererProps> = (props) => {
         <Show when={countdown() != null}>
           <div class="mt-4 flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
             <span class="text-sm text-blue-700 dark:text-blue-300">
-              {params().submitLabel || 'Submit'} in {countdown()}s...
+              {formatMCPUIString(strings.formSubmitCountdown, {
+                label: params().submitLabel || strings.submit,
+                seconds: countdown()!,
+              })}
             </span>
             <button
               type="button"
               onClick={() => { cancelCountdown(); setUserInteracted(true) }}
               class="text-sm text-blue-600 dark:text-blue-400 underline hover:text-blue-800 dark:hover:text-blue-200"
             >
-              Cancel
+              {strings.cancel}
             </button>
           </div>
         </Show>
@@ -308,10 +336,10 @@ export const FormRenderer: Component<FormRendererProps> = (props) => {
             {isSubmitting() ? (
               <span class="flex items-center gap-2">
                 <span class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
-                Submitting...
+                {strings.formSubmitting}
               </span>
             ) : (
-              params().submitLabel || 'Submit'
+              params().submitLabel || strings.submit
             )}
           </button>
           <Show when={params().showReset}>
@@ -321,7 +349,7 @@ export const FormRenderer: Component<FormRendererProps> = (props) => {
               disabled={isSubmitting()}
               class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              Reset
+              {strings.formReset}
             </button>
           </Show>
         </div>

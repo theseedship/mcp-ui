@@ -7,6 +7,7 @@ import { Component, Show, createEffect, onCleanup } from 'solid-js'
 import { Portal } from 'solid-js/web'
 import type { GalleryImage } from '../types'
 import { safeUrl } from '../utils/safe-url'
+import { useMCPUIStrings } from '../context/MCPUIStringsContext'
 
 export interface LightboxOverlayProps {
   /**
@@ -31,6 +32,7 @@ export interface LightboxOverlayProps {
 }
 
 export const LightboxOverlay: Component<LightboxOverlayProps> = (props) => {
+  const strings = useMCPUIStrings()
   const isOpen = () => props.selectedIndex !== null
   const currentImage = () =>
     props.selectedIndex !== null ? props.images[props.selectedIndex] : null
@@ -85,13 +87,13 @@ export const LightboxOverlay: Component<LightboxOverlayProps> = (props) => {
           onClick={props.onClose}
           role="dialog"
           aria-modal="true"
-          aria-label="Image lightbox"
+          aria-label={strings.lightboxLabel}
         >
           {/* Close button */}
           <button
             class="absolute top-4 right-4 text-white/80 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors"
             onClick={props.onClose}
-            aria-label="Close lightbox"
+            aria-label={strings.lightboxClose}
           >
             <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
@@ -111,7 +113,7 @@ export const LightboxOverlay: Component<LightboxOverlayProps> = (props) => {
                 e.stopPropagation()
                 handlePrev()
               }}
-              aria-label="Previous image"
+              aria-label={strings.lightboxPrevious}
             >
               <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path
@@ -132,7 +134,7 @@ export const LightboxOverlay: Component<LightboxOverlayProps> = (props) => {
                 e.stopPropagation()
                 handleNext()
               }}
-              aria-label="Next image"
+              aria-label={strings.lightboxNext}
             >
               <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path

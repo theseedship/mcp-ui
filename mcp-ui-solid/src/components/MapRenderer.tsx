@@ -18,6 +18,11 @@ import { DegradedFallback } from './DegradedFallback';
 import { mapToDegradedTable } from '../utils/degraded-projections';
 import { escapeHtml } from '../utils/escape-html';
 import { useTelemetry } from '../context/MCPUITelemetryContext';
+import {
+  DEFAULT_MCPUI_STRINGS,
+  formatMCPUIString,
+  useMCPUIStrings,
+} from '../context/MCPUIStringsContext';
 
 // Lazy load leaflet (it doesn't support SSR well)
 let L: any = null;
@@ -137,7 +142,9 @@ function buildStyleFn(
 export function buildPopupContent(
   feature: any,
   popup: MapPopupConfig | undefined,
-  allowHtml = false
+  allowHtml = false,
+  /** BCP-47 tag for numeric values (`MCPUIStrings.locale`). Was `'fr-FR'` before 6.20.0. */
+  locale: string = DEFAULT_MCPUI_STRINGS.locale
 ): string | null {
   if (!popup || !feature?.properties) return null;
   const props = feature.properties;
@@ -162,7 +169,7 @@ export function buildPopupContent(
     if (key === popup.titleField) continue;
     const val = props[key];
     if (val == null) continue;
-    const formatted = typeof val === 'number' ? val.toLocaleString('fr-FR') : String(val);
+    const formatted = typeof val === 'number' ? val.toLocaleString(locale) : String(val);
     parts.push(
       `<span style="color:#666;font-size:11px">${escapeHtml(key)}</span>: ${escapeHtml(formatted)}`
     );
@@ -204,7 +211,9 @@ export function addGeoJSONLayer(
   geojson: unknown,
   style?: MapGeoJSONStyle,
   popup?: MapPopupConfig,
-  allowHtml = false
+  allowHtml = false,
+  /** BCP-47 tag forwarded to {@link buildPopupContent}. */
+  locale: string = DEFAULT_MCPUI_STRINGS.locale
 ): any {
   const styleFn = buildStyleFn(style);
 
@@ -223,7 +232,7 @@ export function addGeoJSONLayer(
       });
     },
     onEachFeature: (feature: any, featureLayer: any) => {
-      const html = buildPopupContent(feature, popup, allowHtml);
+      const html = buildPopupContent(feature, popup, allowHtml, locale);
       if (html) {
         featureLayer.bindPopup(html, { maxWidth: 300 });
       }
@@ -264,6 +273,7 @@ function mapToGeoJSON(p: MapComponentParams | undefined): string {
 }
 
 export const MapRenderer: Component<MapRendererProps> = (props) => {
+  const strings = useMCPUIStrings();
   let mapContainer: HTMLDivElement | undefined;
   let mapInstance: any = null;
   const [isLeafletLoaded, setIsLeafletLoaded] = createSignal(false);
@@ -305,7 +315,7 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
         setIsLeafletLoaded(true);
       } catch (e) {
         console.warn('Failed to load leaflet', e);
-        setError('Map library could not be loaded.');
+        setError(strings.mapLibraryUnavailable);
         return;
       }
     } else {
@@ -418,7 +428,8 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
             p.geojson,
             p.geojsonStyle,
             p.popup,
-            allowHtml()
+            allowHtml(),
+            strings.locale
           );
           allBoundsLayers.push(geoLayer);
         }
@@ -434,7 +445,8 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
               layerDef.geojson,
               layerDef.style || p?.geojsonStyle,
               layerDef.popup || p?.popup,
-              allowHtml()
+              allowHtml(),
+              strings.locale
             );
 
             overlays[layerDef.name] = geoLayer;
@@ -501,14 +513,16 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
             // most common cause is the optional `protomaps-leaflet` peer not
             // being installed.
             const detail = e instanceof Error ? e.message : String(e);
-            const message =
+            // English diagnostic for logs and telemetry (P7); the visible
+            // banner reads the localized `mapPmtilesUnavailable` key.
+            const diagnostic =
               'PMTiles layer unavailable — the optional "protomaps-leaflet" ' +
               'peer dependency failed to load or render.';
-            console.warn('[MCP-UI] ' + message, e);
-            setPmtilesError(message);
+            console.warn('[MCP-UI] ' + diagnostic, e);
+            setPmtilesError(strings.mapPmtilesUnavailable);
             telemetry?.dispatch({
               type: 'render:error',
-              errorMessage: `${message} (${detail})`,
+              errorMessage: `${diagnostic} (${detail})`,
               id: props.component?.id ?? '',
               componentType: 'map',
               ts: Date.now(),
@@ -529,7 +543,7 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
       } catch (err) {
         // Fallback ladder (P2.5): a Leaflet drawing failure degrades to
         // the coordinate table below instead of a blank/partial map.
-        const message = err instanceof Error ? err.message : 'Failed to render map';
+        const message = err instanceof Error ? err.message : strings.mapRenderError;
         setError(message);
         telemetry?.dispatch({
           type: 'render:error',
@@ -552,9 +566,9 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
 
   return (
     <ExpandableWrapper
-      title={'Map'}
+      title={strings.mapTitle}
       copyData={mapToGeoJSON(params())}
-      copyLabel="Copy markers as GeoJSON"
+      copyLabel={strings.mapCopy}
       toolbarVariant={props.toolbarVariant}
     >
       <div
@@ -567,9 +581,16 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
                         rather than a bare error string. */}
           <div class="p-3">
             <DegradedFallback
-              message={`Map rendering failed: ${error()}`}
-              caption="Showing the map data as a coordinate table — the interactive map is unavailable."
-              {...mapToDegradedTable(params() ?? {})}
+              message={formatMCPUIString(strings.mapRenderFailed, { error: String(error()) })}
+              caption={strings.mapDegradedCaption}
+              {...mapToDegradedTable(params() ?? {}, {
+                type: strings.degradedColType,
+                lat: strings.degradedColLat,
+                lng: strings.degradedColLng,
+                info: strings.degradedColInfo,
+                marker: strings.degradedMarker,
+                feature: strings.degradedFeature,
+              })}
             />
           </div>
         </Show>
@@ -581,7 +602,7 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
               role="alert"
               class="m-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-700/50 dark:bg-amber-900/20 dark:text-amber-200"
             >
-              {pmtilesError()} The base map is still shown.
+              {pmtilesError()} {strings.mapBaseMapStillShown}
             </div>
           </Show>
           <div

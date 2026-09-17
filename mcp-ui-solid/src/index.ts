@@ -134,6 +134,7 @@ export {
   MCPUIStringsContext,
   useMCPUIStrings,
   DEFAULT_MCPUI_STRINGS,
+  formatMCPUIString,
 } from './context/MCPUIStringsContext'
 export type {
   MCPUIStrings,
@@ -177,6 +178,7 @@ export type { AutocompleteFormFieldProps, AutocompleteFormFieldParams } from './
 // Hooks
 export {
   useStreamingUI,
+  DEFAULT_STREAMING_UI_MESSAGES,
   useAction,
   useToolAction,
   useConditionalField,
@@ -195,6 +197,7 @@ export {
 
 export type {
   UseStreamingUIOptions,
+  StreamingUIMessages,
   StreamingUIState,
   StreamProgress,
   StreamError,
@@ -337,6 +340,16 @@ export {
   mergeScratchpadSections,
   validateAgainstSource,
 } from './services'
+
+// i18n of the pure helpers (v6.20.0) — English baselines a host spreads and
+// overrides when it renders in another language. The helpers themselves take
+// the table as a trailing optional parameter, so nothing else changes.
+export { DEFAULT_VALIDATION_MESSAGES } from './services/validation'
+export type { FormValidationMessages } from './services/validation'
+export { DEGRADED_PROJECTION_LABELS } from './utils/degraded-projections'
+export type { DegradedProjectionLabels } from './utils/degraded-projections'
+export { CHART_DATA_TABLE_LABELS } from './components/chart-data-table'
+export type { ChartDataTableLabels } from './components/chart-data-table'
 
 // Clarification → Prompt helper (v4.3.9)
 export { clarificationToPromptConfig } from './services/chat-bus'

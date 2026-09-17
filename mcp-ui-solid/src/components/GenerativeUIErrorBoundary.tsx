@@ -15,6 +15,7 @@ import { isServer } from 'solid-js/web'
 import { createLogger } from '../utils/logger'
 import type { RendererError, ComponentType } from '../types'
 import { useTelemetry } from '../context/MCPUITelemetryContext'
+import { formatMCPUIString, useMCPUIStrings } from '../context/MCPUIStringsContext'
 
 const logger = createLogger('generative-ui')
 
@@ -63,6 +64,7 @@ function DefaultErrorFallback(props: {
   allowRetry?: boolean
   onRetry?: () => void
 }) {
+  const strings = useMCPUIStrings()
   return (
     <div class="w-full h-full bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
       <div class="flex items-start gap-3">
@@ -83,10 +85,13 @@ function DefaultErrorFallback(props: {
         </div>
         <div class="flex-1 min-w-0">
           <p class="text-sm font-medium text-yellow-900 dark:text-yellow-100">
-            Component Failed to Render
+            {strings.errorBoundaryTitle}
           </p>
           <p class="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
-            Type: {props.componentType || 'unknown'} | ID: {props.componentId?.slice(0, 8) || 'unknown'}...
+            {formatMCPUIString(strings.errorBoundaryMeta, {
+              type: props.componentType || strings.unknown,
+              id: props.componentId?.slice(0, 8) || strings.unknown,
+            })}
           </p>
           <Show when={import.meta.env.DEV}>
             <p class="text-xs text-yellow-600 dark:text-yellow-400 mt-2 font-mono">
@@ -98,7 +103,7 @@ function DefaultErrorFallback(props: {
               onClick={props.onRetry}
               class="mt-3 text-xs font-medium text-yellow-800 dark:text-yellow-200 hover:text-yellow-900 dark:hover:text-yellow-100 underline"
             >
-              Retry Rendering
+              {strings.errorBoundaryRetry}
             </button>
           </Show>
         </div>
