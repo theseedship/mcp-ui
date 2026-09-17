@@ -994,10 +994,20 @@ third constraint: the browser refuses any cross-origin iframe whose own
 document sends no COEP header — which is YouTube, Vimeo, Google Docs, Notion
 and most of the allow-list. The frame stays blank, and the page cannot even
 detect it (a refused cross-origin document fires no `error` event). The fix
-is the boolean HTML attribute `<iframe credentialless>`, which the library
-sets on every **non-trusted** host. Trusted hosts deliberately do not get it:
-they exist in that list because they need their own cookies to authenticate,
-and a cookie-less authenticated embed only renders a login screen.
+is the boolean HTML attribute `<iframe credentialless>`.
+
+By default (`'auto'`) the library sets it only where nothing is lost: the
+`iframe` component pointing at a **non-trusted** host, whose sandbox already
+has no `allow-same-origin` and therefore no cookies or storage. Two cases are
+left alone on purpose:
+
+- **Trusted hosts** are in that list because they need their own cookies to
+  authenticate, and a cookie-less authenticated embed only renders a login
+  screen — a clear block beats a broken frame.
+- **The video embed** carries no sandbox, so a YouTube or Vimeo frame really
+  does hold provider cookies (consent, playback state). A host under COEP
+  unblocks it with `iframeCredentialless: 'always'`, accepting that trade;
+  a host without COEP keeps 6.20.0 behaviour and changes nothing.
 
 `<MCPUIConfigProvider>` is where a host overrides all of this. It is the
 behavioural counterpart of `<MCPUIStringsProvider>`: context-based, entirely
@@ -1008,8 +1018,10 @@ import { MCPUIConfigProvider } from '@seed-ship/mcp-ui-solid'
 
 <MCPUIConfigProvider
   config={{
-    iframeCredentialless: 'auto',              // default
-    customTrustedIframeDomains: ['embed.acme.com'],
+    iframeCredentialless: 'always',            // also unblocks the video embed
+    iframePolicy: 'extend',                    // accept hosts outside the allow-list
+    customIframeDomains: ['embed.acme.com'],   // …these ones
+    customTrustedIframeDomains: ['embed.acme.com'], // …and treat them as trusted
     iframeFallbackLink: 'auto',                // default
   }}
 >
@@ -1019,8 +1031,10 @@ import { MCPUIConfigProvider } from '@seed-ship/mcp-ui-solid'
 
 | Option | Values | Default | What it does |
 |--------|--------|---------|--------------|
-| `iframeCredentialless` | `'auto'` \| `'always'` \| `'never'` | `'auto'` | `'auto'`: set the attribute on every host **not** in `TRUSTED_IFRAME_DOMAINS` (+ `customTrustedIframeDomains`). `'always'`: on every iframe, trusted ones included. `'never'`: on none — the right value for a host that sends no COEP header and does not want its embeds to lose cookies. |
-| `customTrustedIframeDomains` | `string[]` | `[]` | Hosts treated as trusted on top of `TRUSTED_IFRAME_DOMAINS`: no `credentialless`, and `allow-same-origin` in the sandbox. Subdomains of a listed host match. |
+| `iframeCredentialless` | `'auto'` \| `'always'` \| `'never'` | `'auto'` | `'auto'`: the attribute on the `iframe` component when its host is **not** in `TRUSTED_IFRAME_DOMAINS` (+ `customTrustedIframeDomains`) — those frames already run without cookies. The video embed is excluded, since it has none of that sandboxing. `'always'`: every iframe, video and trusted hosts included — what a COEP host wants. `'never'`: none. |
+| `customTrustedIframeDomains` | `string[]` | `[]` | Hosts treated as trusted on top of `TRUSTED_IFRAME_DOMAINS`: no `credentialless`, and `allow-same-origin` in the sandbox. Subdomains of a listed host match. This only reclassifies a host the allow-list already accepts — pair it with `customIframeDomains` for anything else. |
+| `iframePolicy` | `'strict'` \| `'extend'` \| `'allow-all'` | `'strict'` | How `UIResourceRenderer` validates an `iframe` component's host. `'strict'` accepts `DEFAULT_IFRAME_DOMAINS` only; a host outside it is replaced by the validation card before any renderer runs. |
+| `customIframeDomains` | `string[]` | `[]` | Extra hosts the allow-list accepts when `iframePolicy` is `'extend'`. |
 | `iframeFallbackLink` | `'auto'` \| `'always'` \| `'never'` | `'auto'` | Whether an "open in a new tab" link (`strings.iframeOpenInNewTab`) shows under the embed. `'auto'` shows it only when the page is cross-origin isolated. `window.crossOriginIsolated` is read **after mount**, so SSR markup and hydration match. Note that flag needs COOP `same-origin` **and** COEP: a host that sends COEP alone blocks embeds while the flag is false, so it should set `'always'`. |
 
 The attribute is a boolean attribute: absent from the DOM when it does not

@@ -36,6 +36,7 @@
  */
 
 import { createContext, mergeProps, useContext, type JSX } from 'solid-js'
+import type { IframePolicy } from '../types'
 
 /**
  * Host-level rendering policy. Every field has a default — a provider passes
@@ -65,8 +66,26 @@ export interface MCPUIConfig {
    * Extra hosts treated as trusted, on top of `TRUSTED_IFRAME_DOMAINS`:
    * no `credentialless` attribute, and `allow-same-origin` in the sandbox.
    * A subdomain of a listed host matches too.
+   *
+   * This only RECLASSIFIES a host the allow-list already accepts. To render an
+   * iframe whose host is outside `DEFAULT_IFRAME_DOMAINS`, add it to
+   * {@link MCPUIConfig.customIframeDomains} with `iframePolicy: 'extend'`.
    */
   customTrustedIframeDomains: string[]
+
+  /**
+   * How `UIResourceRenderer` validates an `iframe` component's host:
+   * `'strict'` (default) accepts `DEFAULT_IFRAME_DOMAINS` only, `'extend'`
+   * also accepts {@link MCPUIConfig.customIframeDomains}.
+   */
+  iframePolicy: IframePolicy
+
+  /**
+   * Extra hosts the allow-list accepts when `iframePolicy` is `'extend'`.
+   * Without this, a component pointing at an unlisted host is replaced by the
+   * validation card before any renderer runs.
+   */
+  customIframeDomains: string[]
 
   /**
    * When the library renders an "open in a new tab" link under an embed
@@ -92,6 +111,8 @@ export interface MCPUIConfig {
 export const DEFAULT_MCPUI_CONFIG: MCPUIConfig = {
   iframeCredentialless: 'auto',
   customTrustedIframeDomains: [],
+  iframePolicy: 'strict',
+  customIframeDomains: [],
   iframeFallbackLink: 'auto',
 }
 

@@ -188,7 +188,14 @@ export const VideoRenderer: Component<VideoRendererProps> = (props) => {
             // v6.21.0 — youtube-nocookie / player.vimeo are not trusted hosts,
             // so under COEP `credentialless` is what lets them load at all.
             // `attr:` + `true | undefined` — see the note in `IframeRenderer`.
-            attr:credentialless={shouldSetCredentialless(embedUrl()!, config) || undefined}
+            attr:credentialless={
+              // No sandbox here: a YouTube/Vimeo embed keeps its provider
+              // cookies, so `'auto'` leaves it alone and a COEP host opts in
+              // with `iframeCredentialless: 'always'`.
+              shouldSetCredentialless(embedUrl()!, config, {
+                sandboxedWithoutSameOrigin: false,
+              }) || undefined
+            }
             loading="lazy"
           />
         </Show>

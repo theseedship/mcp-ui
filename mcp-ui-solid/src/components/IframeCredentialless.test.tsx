@@ -138,7 +138,11 @@ describe('IframeRenderer — credentialless', () => {
     // Asserted on the helper, not through `<UIResourceRenderer>`: an
     // off-whitelist URL never reaches `IframeRenderer` — `validateComponent`
     // replaces the slot with the validation error card first.
-    expect(shouldSetCredentialless('not a url', DEFAULT_MCPUI_CONFIG)).toBe(true)
+    expect(
+      shouldSetCredentialless('not a url', DEFAULT_MCPUI_CONFIG, {
+        sandboxedWithoutSameOrigin: true,
+      })
+    ).toBe(true)
   })
 
   it('customTrustedIframeDomains reaches BOTH the attribute and the sandbox', () => {
@@ -174,13 +178,25 @@ describe('IframeRenderer — credentialless', () => {
 // ─── VideoRenderer ──────────────────────────────────────────────────────
 
 describe('VideoRenderer — credentialless', () => {
-  it('sets the attribute on the YouTube embed', () => {
+  it("'auto' leaves the YouTube embed alone: it has real cookies to lose", () => {
+    // No sandbox on this iframe, so unlike the generic `iframe` component the
+    // embed keeps its provider cookies (consent, playback state). A host under
+    // COEP opts in with 'always'; a host without COEP sees no change.
     const { container } = render(() => (
       <VideoRenderer params={{ url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' }} />
     ))
     const frame = theIframe(container)
     expect(frame.getAttribute('src')).toContain('youtube-nocookie.com/embed/')
+    expect(frame.hasAttribute('credentialless')).toBe(false)
+  })
+
+  it("iframeCredentialless: 'always' sets it on the YouTube embed", () => {
+    const { container } = renderWithConfig({ iframeCredentialless: 'always' }, () => (
+      <VideoRenderer params={{ url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' }} />
+    ))
+    const frame = theIframe(container)
     expect(frame.hasAttribute('credentialless')).toBe(true)
+    expect(frame.getAttribute('credentialless')).not.toBe('false')
   })
 
   it("iframeCredentialless: 'never' omits it on the YouTube embed", () => {
@@ -188,6 +204,42 @@ describe('VideoRenderer — credentialless', () => {
       <VideoRenderer params={{ url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' }} />
     ))
     expect(theIframe(container).hasAttribute('credentialless')).toBe(false)
+  })
+})
+
+// ─── Host allow-list (iframePolicy / customIframeDomains) ───────────────
+
+describe('host allow-list reaches validation', () => {
+  const OFF_LIST = 'https://embed.acme.test/widget'
+
+  it('a host outside DEFAULT_IFRAME_DOMAINS is rejected before any iframe renders', () => {
+    const { container } = render(() => <UIResourceRenderer content={iframeComponent(OFF_LIST)} />)
+    expect(container.querySelector('iframe')).toBeNull()
+  })
+
+  it("iframePolicy 'extend' + customIframeDomains renders it, and customTrustedIframeDomains classifies it", () => {
+    const { container } = renderWithConfig(
+      {
+        iframePolicy: 'extend',
+        customIframeDomains: ['acme.test'],
+        customTrustedIframeDomains: ['acme.test'],
+      },
+      () => <UIResourceRenderer content={iframeComponent(OFF_LIST)} />
+    )
+    const frame = theIframe(container)
+    expect(frame.getAttribute('src')).toBe(OFF_LIST)
+    expect(frame.hasAttribute('credentialless')).toBe(false)
+    expect(frame.getAttribute('sandbox')).toContain('allow-same-origin')
+  })
+
+  it("iframePolicy 'extend' alone leaves the host untrusted: sandboxed and credentialless", () => {
+    const { container } = renderWithConfig(
+      { iframePolicy: 'extend', customIframeDomains: ['acme.test'] },
+      () => <UIResourceRenderer content={iframeComponent(OFF_LIST)} />
+    )
+    const frame = theIframe(container)
+    expect(frame.getAttribute('sandbox')).not.toContain('allow-same-origin')
+    expect(frame.hasAttribute('credentialless')).toBe(true)
   })
 })
 
@@ -292,14 +344,17 @@ describe('SSR shape', () => {
   it('the credentialless decision does not read any browser global', () => {
     const restore = stubCrossOriginIsolated(true)
     try {
+      const sandboxed = { sandboxedWithoutSameOrigin: true }
       const isolated = shouldSetCredentialless(
         'https://www.youtube.com/embed/x',
-        DEFAULT_MCPUI_CONFIG
+        DEFAULT_MCPUI_CONFIG,
+        sandboxed
       )
       restore()
       const notIsolated = shouldSetCredentialless(
         'https://www.youtube.com/embed/x',
-        DEFAULT_MCPUI_CONFIG
+        DEFAULT_MCPUI_CONFIG,
+        sandboxed
       )
       expect(isolated).toBe(notIsolated)
       expect(isolated).toBe(true)

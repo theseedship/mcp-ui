@@ -19,14 +19,23 @@ import type { MCPUIConfig } from '../context/MCPUIConfigContext'
 /**
  * Does this iframe get the boolean `credentialless` attribute?
  *
- * `'auto'` (the default) says yes for every host that is not trusted — those
- * already run without cookies, since their sandbox has no `allow-same-origin`.
+ * `'auto'` (the default) says yes only when the embed has nothing to lose:
+ * the host is not trusted AND the iframe already runs without cookies because
+ * its `sandbox` has no `allow-same-origin` (`sandboxedWithoutSameOrigin`).
+ * The video embed carries no sandbox, so in `'auto'` it keeps its provider
+ * cookies and a COEP host must opt in with `'always'`.
+ *
  * An unparsable URL is not trusted, so it gets the attribute.
  */
-export function shouldSetCredentialless(url: string, config: MCPUIConfig): boolean {
+export function shouldSetCredentialless(
+  url: string,
+  config: MCPUIConfig,
+  options: { sandboxedWithoutSameOrigin: boolean }
+): boolean {
   const mode = config.iframeCredentialless
   if (mode === 'always') return true
   if (mode === 'never') return false
+  if (!options.sandboxedWithoutSameOrigin) return false
   return !isTrustedIframeDomain(url, {
     customTrustedDomains: config.customTrustedIframeDomains,
   })

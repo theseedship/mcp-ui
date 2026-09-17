@@ -10,7 +10,7 @@ import { escapeHtml } from '../utils/escape-html'
 import { safeUrl } from '../utils/safe-url'
 import { SafeHtml } from './SafeHtml'
 import type { UIComponent, UILayout, RendererError, TableVirtualizeOptions } from '../types'
-import { validateComponent, DEFAULT_RESOURCE_LIMITS, getIframeSandbox } from '../services/validation'
+import { validateComponent, DEFAULT_RESOURCE_LIMITS, getIframeSandbox, isTrustedIframeDomain } from '../services/validation'
 import { GenerativeUIErrorBoundary } from './GenerativeUIErrorBoundary'
 import { markRenderStart, markRenderEnd, PERF_PREFIX } from '../utils/perf'
 import { isDebugEnabled } from '../utils/logger'
@@ -1485,7 +1485,13 @@ function IframeRenderer(props: { component: UIComponent }) {
         // property assignment and never reaches the DOM as an attribute.
         // `true | undefined` keeps it a BOOLEAN attribute — bare in SSR
         // markup, removed (not `="false"`) when it does not apply.
-        attr:credentialless={shouldSetCredentialless(params.url, config) || undefined}
+        attr:credentialless={
+          shouldSetCredentialless(params.url, config, {
+            // This iframe's sandbox never carries `allow-same-origin` for an
+            // untrusted host, so it already runs without cookies.
+            sandboxedWithoutSameOrigin: !isTrustedIframeDomain(params.url, trustOptions()),
+          }) || undefined
+        }
         loading="lazy"
       />
       <IframeFallbackLink url={params.url} class="border-t border-gray-200 dark:border-gray-700" />
@@ -1610,6 +1616,7 @@ function ComponentRenderer(props: {
   // opt in see zero behavior change.
   const telemetry = useTelemetry()
   const strings = useMCPUIStrings()
+  const componentConfig = useMCPUIConfig()
 
   onMount(() => {
     markRenderEnd(props.component.id)
@@ -1651,8 +1658,13 @@ function ComponentRenderer(props: {
     }
   })
 
-  // Validate component before rendering
-  const validation = validateComponent(props.component)
+  // Validate component before rendering. The host's allow-list extension
+  // (v6.21.0) has to reach validation too: an unlisted host is replaced by the
+  // validation card before any renderer runs.
+  const validation = validateComponent(props.component, {
+    iframePolicy: componentConfig.iframePolicy,
+    customIframeDomains: componentConfig.customIframeDomains,
+  })
   if (!validation.valid) {
     props.onError?.({
       type: 'validation',

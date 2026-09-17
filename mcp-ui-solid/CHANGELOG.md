@@ -25,12 +25,18 @@ affected); nested documents need the boolean HTML attribute
 ### What the library now does
 
 Both iframes it renders — `IframeRenderer` (the `iframe` component) and
-`VideoRenderer`'s YouTube / Vimeo embed — carry `credentialless` when their
+`VideoRenderer`'s YouTube / Vimeo embed — can carry `credentialless` when their
 host is **not** in `TRUSTED_IFRAME_DOMAINS`.
 
-- **Untrusted hosts get the attribute.** They already ran without cookies:
-  their sandbox has no `allow-same-origin`. The attribute costs them nothing
-  and is exactly what unblocks them under COEP.
+- **The `iframe` component on an untrusted host gets it by default.** Those
+  frames already ran without cookies, since their sandbox has no
+  `allow-same-origin`. The attribute costs them nothing and is exactly what
+  unblocks them under COEP.
+- **The video embed does NOT get it by default.** It carries no sandbox, so a
+  YouTube or Vimeo frame really does hold provider cookies (consent, playback
+  state, sign-in). Taking them away on every host — including the majority
+  that send no COEP header — would be a silent regression, so `'auto'` leaves
+  it alone and a COEP host opts in with `iframeCredentialless: 'always'`.
 - **Trusted hosts deliberately do NOT get it.** `TRUSTED_IFRAME_DOMAINS`
   (Google Docs/Drive, Notion, Airtable, Figma, Linear, Stripe, Polar, HubSpot,
   Calendly, …) exists precisely because those embeds need their own cookies to
@@ -50,8 +56,10 @@ does not apply, never `credentialless="false"`.
 
   | option | default | meaning |
   | --- | --- | --- |
-  | `iframeCredentialless` | `'auto'` | `'auto'`: attribute on every non-trusted host. `'always'`: on every iframe. `'never'`: on none. |
-  | `customTrustedIframeDomains` | `[]` | extra hosts treated as trusted — no `credentialless`, and `allow-same-origin` in the sandbox. Subdomains match. |
+  | `iframeCredentialless` | `'auto'` | `'auto'`: attribute on the `iframe` component when its host is not trusted (those frames already run without cookies); the video embed, which has no sandbox, is left alone. `'always'`: every iframe, video and trusted hosts included. `'never'`: none. |
+  | `customTrustedIframeDomains` | `[]` | extra hosts treated as trusted — no `credentialless`, and `allow-same-origin` in the sandbox. Subdomains match. Reclassification only: the allow-list must already accept the host. |
+  | `iframePolicy` | `'strict'` | how an `iframe` component's host is validated; `'extend'` also accepts `customIframeDomains`. |
+  | `customIframeDomains` | `[]` | extra hosts the allow-list accepts under `iframePolicy: 'extend'`. Without this, an unlisted host never reaches a renderer. |
   | `iframeFallbackLink` | `'auto'` | when the "open in a new tab" link shows under an embed. `'auto'`: only on a cross-origin-isolated page. |
 
   ```tsx
@@ -60,7 +68,9 @@ does not apply, never `credentialless="false"`.
   // A host that serves COEP: credentialless and embeds its own tool.
   <MCPUIConfigProvider
     config={{
-      iframeCredentialless: 'auto',
+      iframeCredentialless: 'always',
+      iframePolicy: 'extend',
+      customIframeDomains: ['embed.acme.com'],
       customTrustedIframeDomains: ['embed.acme.com'],
       iframeFallbackLink: 'auto',
     }}
