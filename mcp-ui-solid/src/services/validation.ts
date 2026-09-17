@@ -42,6 +42,9 @@ import type {
   ValidationOptions,
   ComponentType,
 } from '../types';
+// Runtime-free template helper: `src/validation.ts` (the SSR-safe subpath)
+// re-exports this module, so it must stay free of any solid-js import.
+import { formatMCPUIString } from '../utils/format-string';
 
 /**
  * All known ComponentType values — used to distinguish known-but-unvalidated
@@ -920,19 +923,84 @@ export function validateLayout(layout: UILayout, options?: ValidationOptions): V
 }
 
 /**
+ * The end-user form-validation wording.
+ *
+ * `validateFieldValue` / `validateFormData` are pure and SSR-safe (they are
+ * re-exported from the `@seed-ship/mcp-ui-solid/validation` subpath), so
+ * they cannot read `MCPUIStrings`. The wording is injected instead: both
+ * take an optional trailing `messages` partial, and `FormRenderer` feeds it
+ * from `useMCPUIStrings()` (keys `fieldRequired`, `fieldMinLength`, …).
+ *
+ * The STRUCTURAL validators (`validateComponent`, `validateLayout`, …) keep
+ * their English `ValidationError.message`: those are payload diagnostics
+ * addressed to whoever produced the payload, not end-user chrome.
+ *
+ * @since v6.20.0
+ */
+export interface FormValidationMessages {
+  /** Template \u2014 `{field}`. */
+  required: string;
+  /** Template \u2014 `{field}`. */
+  mustBeChecked: string;
+  /** Template \u2014 `{min}`. */
+  minLength: string;
+  /** Template \u2014 `{max}`. */
+  maxLength: string;
+  /** Value does not match `field.pattern`. */
+  invalidPattern: string;
+  /** Value is not a valid email address. */
+  invalidEmail: string;
+  /** Value is not a number. */
+  invalidNumber: string;
+  /** Template \u2014 `{min}`. */
+  minValue: string;
+  /** Template \u2014 `{max}`. */
+  maxValue: string;
+  /** Template \u2014 `{min}`. */
+  minDate: string;
+  /** Template \u2014 `{max}`. */
+  maxDate: string;
+  /** Value is not one of `field.options`. */
+  invalidOption: string;
+  /** Template \u2014 `{format}`. `field.valueFormatHint` still wins. */
+  invalidFormat: string;
+}
+
+/** English defaults for {@link FormValidationMessages}. */
+export const DEFAULT_VALIDATION_MESSAGES: FormValidationMessages = {
+  required: '{field} is required',
+  mustBeChecked: '{field} must be checked',
+  minLength: 'Minimum {min} characters required',
+  maxLength: 'Maximum {max} characters allowed',
+  invalidPattern: 'Invalid format',
+  invalidEmail: 'Invalid email address',
+  invalidNumber: 'Must be a valid number',
+  minValue: 'Minimum value is {min}',
+  maxValue: 'Maximum value is {max}',
+  minDate: 'Date must be after {min}',
+  maxDate: 'Date must be before {max}',
+  invalidOption: 'Please select a valid option',
+  invalidFormat: 'Invalid format (expected: {format})',
+};
+
+/**
  * Validate a single form field value against field rules
  */
 export function validateFieldValue(
   value: any,
-  field: FormFieldParams
+  field: FormFieldParams,
+  messages?: Partial<FormValidationMessages>
 ): { valid: boolean; error?: string } {
+  const m: FormValidationMessages = { ...DEFAULT_VALIDATION_MESSAGES, ...messages };
+  const fieldName = field.label || field.name;
+
   // Required check
   if (field.required) {
     if (value === undefined || value === null || value === '') {
-      return { valid: false, error: `${field.label || field.name} is required` };
+      return { valid: false, error: formatMCPUIString(m.required, { field: fieldName }) };
     }
     if (field.type === 'checkbox' && value !== true) {
-      return { valid: false, error: `${field.label || field.name} must be checked` };
+      return { valid: false, error: formatMCPUIString(m.mustBeChecked, { field: fieldName }) };
     }
   }
 
@@ -947,42 +1015,48 @@ export function validateFieldValue(
     case 'textarea':
     case 'password':
       if (field.minLength && String(value).length < field.minLength) {
-        return { valid: false, error: `Minimum ${field.minLength} characters required` };
+        return {
+          valid: false,
+          error: formatMCPUIString(m.minLength, { min: field.minLength }),
+        };
       }
       if (field.maxLength && String(value).length > field.maxLength) {
-        return { valid: false, error: `Maximum ${field.maxLength} characters allowed` };
+        return {
+          valid: false,
+          error: formatMCPUIString(m.maxLength, { max: field.maxLength }),
+        };
       }
       if (field.pattern && !new RegExp(field.pattern).test(String(value))) {
-        return { valid: false, error: 'Invalid format' };
+        return { valid: false, error: m.invalidPattern };
       }
       break;
 
     case 'email':
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value))) {
-        return { valid: false, error: 'Invalid email address' };
+        return { valid: false, error: m.invalidEmail };
       }
       break;
 
     case 'number': {
       const numValue = Number(value);
       if (isNaN(numValue)) {
-        return { valid: false, error: 'Must be a valid number' };
+        return { valid: false, error: m.invalidNumber };
       }
       if (field.min !== undefined && numValue < field.min) {
-        return { valid: false, error: `Minimum value is ${field.min}` };
+        return { valid: false, error: formatMCPUIString(m.minValue, { min: field.min }) };
       }
       if (field.max !== undefined && numValue > field.max) {
-        return { valid: false, error: `Maximum value is ${field.max}` };
+        return { valid: false, error: formatMCPUIString(m.maxValue, { max: field.max }) };
       }
       break;
     }
 
     case 'date':
       if (field.minDate && value < field.minDate) {
-        return { valid: false, error: `Date must be after ${field.minDate}` };
+        return { valid: false, error: formatMCPUIString(m.minDate, { min: field.minDate }) };
       }
       if (field.maxDate && value > field.maxDate) {
-        return { valid: false, error: `Date must be before ${field.maxDate}` };
+        return { valid: false, error: formatMCPUIString(m.maxDate, { max: field.maxDate }) };
       }
       break;
 
@@ -992,7 +1066,7 @@ export function validateFieldValue(
       if (field.options && field.options.length > 0) {
         const validValues = field.options.map((opt) => opt.value);
         if (!validValues.includes(String(value))) {
-          return { valid: false, error: 'Please select a valid option' };
+          return { valid: false, error: m.invalidOption };
         }
       }
       break;
@@ -1005,7 +1079,9 @@ export function validateFieldValue(
       if (!new RegExp(field.valueFormat).test(v)) {
         return {
           valid: false,
-          error: field.valueFormatHint || `Invalid format (expected: ${field.valueFormat})`,
+          error:
+            field.valueFormatHint ||
+            formatMCPUIString(m.invalidFormat, { format: field.valueFormat }),
         };
       }
     }
@@ -1019,12 +1095,13 @@ export function validateFieldValue(
  */
 export function validateFormData(
   data: Record<string, any>,
-  fields: FormFieldParams[]
+  fields: FormFieldParams[],
+  messages?: Partial<FormValidationMessages>
 ): { valid: boolean; errors: Record<string, string> } {
   const errors: Record<string, string> = {};
 
   for (const field of fields) {
-    const result = validateFieldValue(data[field.name], field);
+    const result = validateFieldValue(data[field.name], field, messages);
     if (!result.valid && result.error) {
       errors[field.name] = result.error;
     }

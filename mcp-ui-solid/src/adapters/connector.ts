@@ -29,6 +29,7 @@ import {
   type ConnectorAction,
 } from '@seed-ship/mcp-ui-spec'
 import { z } from 'zod'
+import { formatMCPUIString } from '../utils/format-string'
 
 // ─────────────────────────────────────────────────────────────
 // connectorActionsToActionGroup
@@ -74,11 +75,57 @@ export function connectorActionsToActionGroup(
 // connectorResultToUILayout
 // ─────────────────────────────────────────────────────────────
 
+/**
+ * The visible wording of the two degraded states (R2).
+ *
+ * These paragraphs are rendered as `text` components, so unlike the payload
+ * they are the LIBRARY's own chrome. They cannot go through
+ * `MCPUIStrings` — the adapters are runtime-free and never import
+ * `solid-js` — so a host localizes them through
+ * `ConnectorResultToUILayoutOptions.messages` instead.
+ *
+ * Every field is a template resolved with `formatMCPUIString`.
+ *
+ * @since v6.20.0 — the defaults used to be hardcoded French.
+ */
+export interface ConnectorAdapterMessages {
+  /**
+   * Unreadable payload (tier 3). Template — `{versionSuffix}` is
+   * `degradedVersionSuffix` when the payload carried a string
+   * `schemaVersion`, and `''` otherwise.
+   */
+  degradedNotice: string
+  /** Inserted into `degradedNotice`. Template — `{version}`. */
+  degradedVersionSuffix: string
+  /**
+   * Usable envelope, unknown version (tier 2). Template — `{version}` = the
+   * version read, `{expected}` = `CONNECTOR_DYNAMIC_RESULT_V1`.
+   */
+  versionWarning: string
+}
+
+/** English defaults for {@link ConnectorAdapterMessages}. */
+export const DEFAULT_CONNECTOR_MESSAGES: ConnectorAdapterMessages = {
+  degradedNotice:
+    '### Result not rendered\n\nThe connector result could not be interpreted{versionSuffix}. This explicit state replaces a silent disappearance of the rendering.',
+  degradedVersionSuffix: ' (schema: `{version}`)',
+  versionWarning:
+    '> \u26A0 Unrecognized connector schema (`{version}`, expected `{expected}`). The rendering below is in degraded mode.',
+}
+
 export interface ConnectorResultToUILayoutOptions {
   /** Layout id. Default derived from `connectorId` + `queryHash` / `toolName`. */
   id?: string
   /** Heading for the actions `action-group`. */
   actionsTitle?: string
+  /**
+   * Partial override of the degraded-state wording, merged over
+   * {@link DEFAULT_CONNECTOR_MESSAGES}. Hosts that render in another
+   * language pass their own paragraphs here.
+   *
+   * @since v6.20.0
+   */
+  messages?: Partial<ConnectorAdapterMessages>
 }
 
 /**
@@ -144,6 +191,7 @@ export function connectorResultToUILayout(
   options: ConnectorResultToUILayoutOptions = {}
 ): UILayout {
   const strict = ConnectorDynamicResultV1Schema.safeParse(result)
+  const messages: ConnectorAdapterMessages = { ...DEFAULT_CONNECTOR_MESSAGES, ...options.messages }
 
   // ── Tier 3 : unreadable ───────────────────────────────────
   if (!strict.success) {
@@ -158,9 +206,12 @@ export function connectorResultToUILayout(
         components: [
           degradedTextComponent(
             'connector-degraded-notice',
-            `### Résultat non rendu\n\nLe résultat du connecteur n'a pas pu être interprété${
-              typeof version === 'string' ? ` (schéma : \`${version}\`)` : ''
-            }. Cet état explicite remplace une disparition silencieuse du rendu.`
+            formatMCPUIString(messages.degradedNotice, {
+              versionSuffix:
+                typeof version === 'string'
+                  ? formatMCPUIString(messages.degradedVersionSuffix, { version })
+                  : '',
+            })
           ),
         ],
         grid: { ...DEFAULT_GRID },
@@ -171,7 +222,10 @@ export function connectorResultToUILayout(
     const components: UIComponent[] = [
       degradedTextComponent(
         'connector-version-warning',
-        `> ⚠ Schéma connecteur non reconnu (\`${r.schemaVersion}\`, attendu \`${CONNECTOR_DYNAMIC_RESULT_V1}\`). Le rendu ci-dessous est en mode dégradé.`
+        formatMCPUIString(messages.versionWarning, {
+          version: r.schemaVersion,
+          expected: CONNECTOR_DYNAMIC_RESULT_V1,
+        })
       ),
       ...collectComponents(r),
     ]

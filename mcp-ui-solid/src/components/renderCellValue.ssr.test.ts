@@ -27,6 +27,7 @@ const fakeDocument = { addEventListener: noop, removeEventListener: noop } as un
 }
 
 const { renderCellValue } = await import('./UIResourceRenderer')
+const { DEFAULT_MCPUI_STRINGS } = await import('../context/MCPUIStringsContext')
 
 describe('renderCellValue — server / no-DOM environment', () => {
   it('emits no markup for a link-like object (the branch that composes an anchor)', () => {
@@ -53,5 +54,40 @@ describe('renderCellValue — server / no-DOM environment', () => {
   it('emits no markup for the JSON last-resort branch', () => {
     const out = renderCellValue({ details: '<img src=x onerror=alert(1)>' })
     expect(out).not.toContain('<')
+  })
+})
+
+/**
+ * v6.20.0 — the unresolved-citation placeholder used to be a hardcoded
+ * French `[réf. N]`. It now resolves through `CitationCtx.unresolvedLabel`,
+ * defaulting to `DEFAULT_MCPUI_STRINGS.citationUnresolved` — reachable with
+ * no provider and no Solid context, which is exactly what this
+ * `renderCellValue`-as-a-pure-function contract needs.
+ */
+describe('renderCellValue — unresolved citation placeholder', () => {
+  it('empty map, no override → the English default `[ref. N]`', () => {
+    expect(renderCellValue('[7]', { map: {} })).toContain('[ref. 7]')
+  })
+
+  it('empty map, no override → never the former French literal', () => {
+    expect(renderCellValue('[7]', { map: {} })).not.toContain('réf')
+  })
+
+  it('the default equals DEFAULT_MCPUI_STRINGS.citationUnresolved', () => {
+    expect(DEFAULT_MCPUI_STRINGS.citationUnresolved).toBe('[ref. {id}]')
+  })
+
+  it('`unresolvedLabel` overrides the default and interpolates {id}', () => {
+    expect(renderCellValue('[7]', { map: {}, unresolvedLabel: 'source n°{id}' })).toContain(
+      'source n°7'
+    )
+  })
+
+  it('a NON-empty map still drops an unresolved marker (override is irrelevant)', () => {
+    const out = renderCellValue('[99]', {
+      map: { '1': { page: 2 } },
+      unresolvedLabel: '[ref. {id}]',
+    })
+    expect(out).not.toContain('99')
   })
 })

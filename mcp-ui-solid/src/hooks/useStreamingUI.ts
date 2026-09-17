@@ -24,6 +24,7 @@
 import { createSignal, onCleanup } from 'solid-js'
 import type { UIComponent } from '../types'
 import { createLogger } from '../utils/logger'
+import { formatMCPUIString } from '../utils/format-string'
 
 const logger = createLogger('useStreamingUI')
 
@@ -33,6 +34,50 @@ const isServer = typeof window === 'undefined'
 // ============================================================================
 // Types
 // ============================================================================
+
+/**
+ * Every string `useStreamingUI` puts into `progress().message` and
+ * `error()` — both are rendered by `<StreamingUIRenderer>`.
+ *
+ * @since v6.20.0 — `StreamingUIRenderer` feeds these from `MCPUIStrings`
+ * (`stream*` keys); a host calling the hook directly passes `messages`.
+ */
+export interface StreamingUIMessages {
+  /** Initial progress message. */
+  initializing: string
+  /** Progress message while the request is sent. */
+  connecting: string
+  /** Progress message on `component-start`. Template — `{type}`. */
+  loadingComponent: string
+  /** Progress message on `complete`. */
+  dashboardLoaded: string
+  /** Progress message after an error. Template — `{message}`. */
+  errorProgress: string
+  /** `StreamError.error` when the fetch / read fails. */
+  connectionFailed: string
+  /** `StreamError.message` when the server answers non-OK without a message. */
+  requestFailed: string
+  /** `StreamError.message` when the response has no body. */
+  emptyResponse: string
+  /** `StreamError.message` when streaming starts during SSR. */
+  serverSide: string
+  /** `StreamError.message` when the failure carries no message. */
+  unknownError: string
+}
+
+/** English defaults of {@link StreamingUIMessages}. */
+export const DEFAULT_STREAMING_UI_MESSAGES: StreamingUIMessages = {
+  initializing: 'Initializing...',
+  connecting: 'Connecting to server...',
+  loadingComponent: 'Loading {type} component...',
+  dashboardLoaded: 'Dashboard loaded',
+  errorProgress: 'Error: {message}',
+  connectionFailed: 'Stream connection failed',
+  requestFailed: 'Stream request failed',
+  emptyResponse: 'Response body is null',
+  serverSide: 'Streaming UI cannot start on server-side',
+  unknownError: 'Unknown error',
+}
 
 export interface UseStreamingUIOptions {
   query: string
@@ -47,6 +92,12 @@ export interface UseStreamingUIOptions {
   onComplete?: (metadata: CompleteMetadata) => void
   onError?: (error: StreamError) => void
   onComponentReceived?: (component: UIComponent) => void
+  /**
+   * Localized progress / error messages (v6.20.0). Each key is read when
+   * the message is produced, so an object with getters stays reactive.
+   * Omitted keys fall back to {@link DEFAULT_STREAMING_UI_MESSAGES}.
+   */
+  messages?: Partial<StreamingUIMessages>
 }
 
 export interface StreamingUIState {
@@ -124,6 +175,9 @@ interface ComponentEvent {
 // ============================================================================
 
 export function useStreamingUI(options: UseStreamingUIOptions) {
+  const msg = (key: keyof StreamingUIMessages): string =>
+    options.messages?.[key] ?? DEFAULT_STREAMING_UI_MESSAGES[key]
+
   // State
   const [components, setComponents] = createSignal<UIComponent[]>([])
   const [isLoading, setIsLoading] = createSignal(false)
@@ -132,7 +186,7 @@ export function useStreamingUI(options: UseStreamingUIOptions) {
   const [progress, setProgress] = createSignal<StreamProgress>({
     receivedCount: 0,
     totalCount: null,
-    message: 'Initializing...',
+    message: msg('initializing'),
     timestamp: new Date().toISOString(),
   })
   const [metadata, setMetadata] = createSignal<CompleteMetadata | null>(null)
@@ -194,7 +248,7 @@ export function useStreamingUI(options: UseStreamingUIOptions) {
 
     setProgress((prev) => ({
       ...prev,
-      message: `Loading ${data.type} component...`,
+      message: formatMCPUIString(msg('loadingComponent'), { type: data.type }),
       timestamp: new Date().toISOString(),
     }))
   }
@@ -242,7 +296,7 @@ export function useStreamingUI(options: UseStreamingUIOptions) {
 
     setProgress((prev) => ({
       ...prev,
-      message: 'Dashboard loaded',
+      message: msg('dashboardLoaded'),
       timestamp: new Date().toISOString(),
     }))
 
@@ -264,7 +318,7 @@ export function useStreamingUI(options: UseStreamingUIOptions) {
 
     setProgress((prev) => ({
       ...prev,
-      message: `Error: ${data.message}`,
+      message: formatMCPUIString(msg('errorProgress'), { message: data.message }),
       timestamp: new Date().toISOString(),
     }))
 
@@ -325,7 +379,7 @@ export function useStreamingUI(options: UseStreamingUIOptions) {
       logger.warn('startStreaming called on server-side - skipping')
       setError({
         error: 'ssr',
-        message: 'Streaming UI cannot start on server-side',
+        message: msg('serverSide'),
         recoverable: false,
       })
       setIsLoading(false)
@@ -343,7 +397,7 @@ export function useStreamingUI(options: UseStreamingUIOptions) {
     setProgress({
       receivedCount: 0,
       totalCount: null,
-      message: 'Connecting to server...',
+      message: msg('connecting'),
       timestamp: new Date().toISOString(),
     })
 
@@ -372,11 +426,11 @@ export function useStreamingUI(options: UseStreamingUIOptions) {
       .then(async (response) => {
         if (!response.ok) {
           const errorData = await response.json()
-          throw new Error(errorData.message || 'Stream request failed')
+          throw new Error(errorData.message || msg('requestFailed'))
         }
 
         if (!response.body) {
-          throw new Error('Response body is null')
+          throw new Error(msg('emptyResponse'))
         }
 
         const reader = response.body.getReader()
@@ -423,8 +477,8 @@ export function useStreamingUI(options: UseStreamingUIOptions) {
         })
 
         handleErrorEvent({
-          error: 'Stream connection failed',
-          message: err instanceof Error ? err.message : 'Unknown error',
+          error: msg('connectionFailed'),
+          message: err instanceof Error ? err.message : msg('unknownError'),
           recoverable: true,
         })
       })

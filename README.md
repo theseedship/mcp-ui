@@ -9,6 +9,38 @@ A collection of TypeScript packages for building generative, streaming user inte
 
 ## What's New
 
+**6.20.0 (`mcp-ui-solid`):** Every user-visible chrome string now reads from
+`MCPUIStrings` (components, via `useMCPUIStrings()`) or an exported
+`messages`/`labels` option (runtime-free adapters, services, helpers), except
+the exclusion policy in `mcp-ui-solid/CHANGELOG.md` (P1–P8: keyboard key caps,
+the OpenStreetMap attribution, developer/peer-dependency diagnostics,
+file-format acronyms and HTTP verbs,
+components with their own `labels`/`messages` prop, hook-level errors and
+`console.*`, and LLM-facing registry examples), plus a new exported
+`formatMCPUIString()` helper for hosts that render their own chrome and a
+new `messages` option on `connectorResultToUILayout()` for the connector
+adapter's own degraded-state text. `MCPUIStrings` now covers 270 keys in
+total, and the runtime-free helpers (`macroRunToScratchpadState`,
+`validateFieldValue` / `validateFormData`, the degraded-table projections and
+`chartToDataTable`) take their English as a trailing optional `messages` /
+`labels` parameter with an exported default table. `PresentationFeedback`
+stays localizable through its own documented `labels` prop. Five chrome defaults change from French to English for hosts with
+no `MCPUIStringsProvider` mounted:
+`tableSearchPlaceholder` (`"Rechercher dans le tableau..."` →
+`"Search the table..."`), `verifiedStripLabel` (`"[non vérifié]"` →
+`"[unverified]"`), `scratchpadEdit` (`"Modifier"` → `"Edit"`),
+`citationUnresolved` (`"[réf. {id}]"` → `"[ref. {id}]"`), and
+`formPrefilledOne`/`formPrefilledMany` (`"{count} champ(s) pré-rempli(s) sur
+{total}"` → `"{count} field(s) pre-filled out of {total}"`); the connector
+adapter's degraded-state text also moves from French to English
+(`DEFAULT_CONNECTOR_MESSAGES`, overridable via the new `messages` option).
+Number / date formatting and sorting now follow the new `locale` key
+(default `'en-US'`; previously `'fr-FR'` / `'fr'` or the runtime locale).
+See
+[`mcp-ui-solid/README.md`](./mcp-ui-solid/README.md#internationalization-i18n--mcpuistrings)
+for the full key table and a French example dictionary, and
+[`mcp-ui-solid/CHANGELOG.md`](./mcp-ui-solid/CHANGELOG.md) for details.
+
 **6.19.1 (`mcp-ui-solid`):** `FeedbackInline` accessible names now follow `MCPUIStringsProvider` (were hardcoded English).
 
 **6.19.0 (`mcp-ui-solid`) / 5.0.1 (`mcp-ui-cli`) — sanitization, a11y & packaging:**
@@ -38,7 +70,7 @@ native chart/data switching, and chart/table/graph catalogue parity.
 See the [integration handoff](./mcp-ui-solid/docs/briefs/VISUALIZATION-FOUNDATION-2026-09-14.md).
 This work does not add automatic MCP selection or shared host filters.
 
-**Current line — `mcp-ui-solid` 6.19.0** (post-`5.0.0`, audit-driven visual-renderer
+**Current line — `mcp-ui-solid` 6.20.0** (post-`5.0.0`, audit-driven visual-renderer
 & streaming hardening; `mcp-ui-spec` 5.6.0). Highlights from 6.18.0 — see
 [`mcp-ui-solid/CHANGELOG.md`](./mcp-ui-solid/CHANGELOG.md) for the full list
 including 6.19.0:
@@ -96,7 +128,7 @@ This monorepo contains three packages published under `@seed-ship/`:
 
 | Package | Version | Description |
 |---------|---------|-------------|
-| [`@seed-ship/mcp-ui-solid`](./mcp-ui-solid) | 6.19.0 | SolidJS components for rendering MCP-generated UI |
+| [`@seed-ship/mcp-ui-solid`](./mcp-ui-solid) | 6.20.0 | SolidJS components for rendering MCP-generated UI |
 | [`@seed-ship/mcp-ui-spec`](./mcp-ui-spec) | 5.6.0 | JSON schemas and Zod validators |
 | [`@seed-ship/mcp-ui-cli`](./mcp-ui-cli) | 5.0.1 | CLI for validation and type generation |
 

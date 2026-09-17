@@ -7,6 +7,7 @@
 
 import { Component, For, Show, createMemo, JSX } from 'solid-js'
 import type { AutocompleteOption } from '../types'
+import { useMCPUIStrings } from '../context/MCPUIStringsContext'
 
 /**
  * Props for AutocompleteDropdown
@@ -142,6 +143,7 @@ const DefaultOptionRenderer: Component<{
  * AutocompleteDropdown Component
  */
 export const AutocompleteDropdown: Component<AutocompleteDropdownProps> = (props) => {
+  const strings = useMCPUIStrings()
   const positionStyles = createMemo((): JSX.CSSProperties => {
     if (props.position === 'top') {
       return {
@@ -175,7 +177,7 @@ export const AutocompleteDropdown: Component<AutocompleteDropdownProps> = (props
         class={`mcp-autocomplete-dropdown ${props.class || ''}`}
         style={containerStyles()}
         role="listbox"
-        aria-label="Suggestions"
+        aria-label={strings.autocompleteSuggestions}
       >
         {/* Loading state */}
         <Show when={props.isLoading}>
@@ -201,7 +203,7 @@ export const AutocompleteDropdown: Component<AutocompleteDropdownProps> = (props
                 animation: 'mcp-spin 0.6s linear infinite'
               }}
             />
-            {props.loadingMessage || 'Loading...'}
+            {props.loadingMessage || strings.autocompleteLoading}
           </div>
         </Show>
 
@@ -216,7 +218,7 @@ export const AutocompleteDropdown: Component<AutocompleteDropdownProps> = (props
               'text-align': 'center'
             }}
           >
-            {props.emptyMessage || 'No suggestions found'}
+            {props.emptyMessage || strings.autocompleteEmpty}
           </div>
         </Show>
 
@@ -302,7 +304,7 @@ export const AutocompleteDropdown: Component<AutocompleteDropdownProps> = (props
               'font-family': 'inherit',
               'font-size': '0.7rem'
             }}>↓</kbd>
-            {' to navigate, '}
+            {strings.autocompleteHintNavigate}
             <kbd style={{
               'background-color': '#e5e7eb',
               padding: '1px 4px',
@@ -310,7 +312,7 @@ export const AutocompleteDropdown: Component<AutocompleteDropdownProps> = (props
               'font-family': 'inherit',
               'font-size': '0.7rem'
             }}>Enter</kbd>
-            {' to select, '}
+            {strings.autocompleteHintSelect}
             <kbd style={{
               'background-color': '#e5e7eb',
               padding: '1px 4px',
@@ -318,7 +320,7 @@ export const AutocompleteDropdown: Component<AutocompleteDropdownProps> = (props
               'font-family': 'inherit',
               'font-size': '0.7rem'
             }}>Esc</kbd>
-            {' to dismiss'}
+            {strings.autocompleteHintDismiss}
           </div>
         </Show>
       </div>

@@ -174,7 +174,59 @@ function resultSectionType(componentType: unknown): ScratchpadSection['type'] {
   }
 }
 
-function buildError(run: MacroRunV1): ScratchpadState['error'] | undefined {
+/**
+ * The English wording this adapter produces on its own — section titles and
+ * the fallbacks used when the run (or the interrogation) carries none.
+ *
+ * The adapter is runtime-free by contract: no `solid-js`, no
+ * `MCPUIStringsContext`. Hosts that render in another language pass a
+ * partial override through `MacroRunAdapterOptions.messages`, exactly like
+ * `ConnectorResultToUILayoutOptions.messages`.
+ *
+ * @since v6.20.0
+ */
+export interface MacroRunAdapterMessages {
+  /** Title of the always-present `agent_card` section. */
+  agentSectionTitle: string;
+  /** Title of the `stepper` / `split_stepper` section. */
+  progressSectionTitle: string;
+  /** Title of each result section. */
+  resultSectionTitle: string;
+  /** Error message of an aborted run that carries no `error`. */
+  runAborted: string;
+  /** Error message of a failed run that carries no `error`. */
+  runFailed: string;
+  /** Prompt body of an elicitation with no usable schema and no message. */
+  confirmDefault: string;
+}
+
+/** English defaults for {@link MacroRunAdapterMessages}. */
+export const DEFAULT_MACRO_RUN_MESSAGES: MacroRunAdapterMessages = {
+  agentSectionTitle: 'Agent',
+  progressSectionTitle: 'Progress',
+  resultSectionTitle: 'Result',
+  runAborted: 'Macro run aborted.',
+  runFailed: 'Macro run failed.',
+  confirmDefault: 'Please confirm to continue.',
+};
+
+/** Options shared by the MacroRun adapters. @since v6.20.0 */
+export interface MacroRunAdapterOptions {
+  /**
+   * Partial override of the adapter's own wording, merged over
+   * {@link DEFAULT_MACRO_RUN_MESSAGES}.
+   */
+  messages?: Partial<MacroRunAdapterMessages>;
+}
+
+const withMessages = (
+  options: MacroRunAdapterOptions = {}
+): MacroRunAdapterMessages => ({ ...DEFAULT_MACRO_RUN_MESSAGES, ...options.messages });
+
+function buildError(
+  run: MacroRunV1,
+  messages: MacroRunAdapterMessages
+): ScratchpadState['error'] | undefined {
   if (run.status !== 'failed' && run.status !== 'aborted') return undefined;
   const aborted = run.status === 'aborted';
   if (run.error) {
@@ -187,7 +239,7 @@ function buildError(run: MacroRunV1): ScratchpadState['error'] | undefined {
     return err;
   }
   return {
-    message: aborted ? 'Macro run aborted.' : 'Macro run failed.',
+    message: aborted ? messages.runAborted : messages.runFailed,
     retryable: false,
   };
 }
@@ -209,13 +261,17 @@ function buildError(run: MacroRunV1): ScratchpadState['error'] | undefined {
  *
  * Pure: no fetch, no SSE, no persistence. The host owns all wiring.
  */
-export function macroRunToScratchpadState(run: MacroRunV1): ScratchpadState {
+export function macroRunToScratchpadState(
+  run: MacroRunV1,
+  options: MacroRunAdapterOptions = {}
+): ScratchpadState {
+  const messages = withMessages(options);
   const sections: ScratchpadSection[] = [];
 
   // 1. Agent card — always present.
   sections.push({
     id: 'macro-agent',
-    title: 'Agent',
+    title: messages.agentSectionTitle,
     type: 'agent_card',
     content: buildAgentCard(run),
     editable: false,
@@ -229,7 +285,7 @@ export function macroRunToScratchpadState(run: MacroRunV1): ScratchpadState {
       hasParallel
         ? {
             id: 'macro-split-stepper',
-            title: 'Progress',
+            title: messages.progressSectionTitle,
             type: 'split_stepper',
             content: buildSplitStepperContent(run.steps),
             editable: false,
@@ -237,7 +293,7 @@ export function macroRunToScratchpadState(run: MacroRunV1): ScratchpadState {
           }
         : {
             id: 'macro-stepper',
-            title: 'Progress',
+            title: messages.progressSectionTitle,
             type: 'stepper',
             content: buildStepperContent(run.steps),
             editable: false,
@@ -252,7 +308,7 @@ export function macroRunToScratchpadState(run: MacroRunV1): ScratchpadState {
       id: 'macro-prompt',
       title: run.pendingInterrogation.title,
       type: 'prompt',
-      content: macroInterrogationToChatPromptConfig(run.pendingInterrogation),
+      content: macroInterrogationToChatPromptConfig(run.pendingInterrogation, options),
       editable: false,
       source: 'agent',
     });
@@ -265,7 +321,7 @@ export function macroRunToScratchpadState(run: MacroRunV1): ScratchpadState {
   results.forEach((component, index) => {
     sections.push({
       id: `macro-result-${String(component?.id ?? index)}`,
-      title: 'Result',
+      title: messages.resultSectionTitle,
       type: resultSectionType(component?.type),
       content: component,
       editable: false,
@@ -282,7 +338,7 @@ export function macroRunToScratchpadState(run: MacroRunV1): ScratchpadState {
     status: RUN_STATUS_TO_SCRATCHPAD[run.status],
   };
 
-  const error = buildError(run);
+  const error = buildError(run, messages);
   if (error) state.error = error;
 
   return state;
@@ -311,7 +367,11 @@ function isElicitationSchema(value: unknown): value is ElicitationRequestedSchem
  * {@link macroRunToScratchpadState} (which calls it for an embedded
  * `pendingInterrogation`).
  */
-export function macroInterrogationToChatPromptConfig(q: MacroInterrogationV1): ChatPromptConfig {
+export function macroInterrogationToChatPromptConfig(
+  q: MacroInterrogationV1,
+  options: MacroRunAdapterOptions = {}
+): ChatPromptConfig {
+  const messages = withMessages(options);
   switch (q.kind) {
     case 'choice': {
       const options: ChoiceOption[] = (q.options ?? []).map((o) => {
@@ -355,7 +415,7 @@ export function macroInterrogationToChatPromptConfig(q: MacroInterrogationV1): C
       return {
         type: 'confirm',
         title: q.title,
-        config: { message: q.message ?? 'Please confirm to continue.' },
+        config: { message: q.message ?? messages.confirmDefault },
       };
     }
   }

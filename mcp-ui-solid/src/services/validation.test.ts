@@ -13,7 +13,11 @@ import {
   getIframeSandbox,
   validateIframeDomain,
   DEFAULT_RESOURCE_LIMITS,
+  validateFieldValue,
+  validateFormData,
+  DEFAULT_VALIDATION_MESSAGES,
 } from './validation';
+import type { FormFieldParams } from '../types';
 import type { UIComponent, ComponentType } from '../types';
 import { ComponentTypeSchema } from '@seed-ship/mcp-ui-spec';
 
@@ -532,5 +536,81 @@ describe('validateIframeDomain — security regression (v5.5.1)', () => {
       customDomains: ['my-internal-tool.corp.com'],
     });
     expect(result.valid).toBe(true);
+  });
+});
+
+// ─── Form-validation i18n (v6.20.0) ──────────────────────────
+
+describe('form validation messages are injectable', () => {
+  const field = (overrides: Partial<FormFieldParams> = {}): FormFieldParams =>
+    ({ name: 'city', label: 'City', type: 'text', ...overrides }) as FormFieldParams;
+
+  it('ships English defaults — the validators never hardcode another language', () => {
+    expect(DEFAULT_VALIDATION_MESSAGES.required).toBe('{field} is required');
+    expect(DEFAULT_VALIDATION_MESSAGES.invalidFormat).toBe('Invalid format (expected: {format})');
+    for (const value of Object.values(DEFAULT_VALIDATION_MESSAGES)) {
+      expect(typeof value).toBe('string');
+      expect(value.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('keeps the pre-v6.20.0 English wording when no `messages` is passed', () => {
+    expect(validateFieldValue('', field({ required: true })).error).toBe('City is required');
+    expect(validateFieldValue('ab', field({ minLength: 5 })).error).toBe(
+      'Minimum 5 characters required'
+    );
+    expect(validateFieldValue('nope', field({ type: 'email' })).error).toBe(
+      'Invalid email address'
+    );
+    expect(validateFieldValue('x', field({ valueFormat: '^\\d+$' })).error).toBe(
+      'Invalid format (expected: ^\\d+$)'
+    );
+  });
+
+  it('overrides one message without touching the others', () => {
+    const messages = { required: '{field} est obligatoire' };
+    expect(validateFieldValue('', field({ required: true }), messages).error).toBe(
+      'City est obligatoire'
+    );
+    expect(validateFieldValue('ab', field({ minLength: 5 }), messages).error).toBe(
+      'Minimum 5 characters required'
+    );
+  });
+
+  it('interpolates every template placeholder', () => {
+    expect(
+      validateFieldValue(3, field({ type: 'number', min: 10 }), {
+        minValue: 'Au moins {min}',
+      }).error
+    ).toBe('Au moins 10');
+    expect(
+      validateFieldValue('x'.repeat(9), field({ maxLength: 5 }), {
+        maxLength: 'Au plus {max} caractères',
+      }).error
+    ).toBe('Au plus 5 caractères');
+    expect(
+      validateFieldValue('abc', field({ valueFormat: '^[0-9]+$' }), {
+        invalidFormat: 'Format attendu : {format}',
+      }).error
+    ).toBe('Format attendu : ^[0-9]+$');
+  });
+
+  it('still lets `valueFormatHint` win over the injected template', () => {
+    expect(
+      validateFieldValue('abc', field({ valueFormat: '^[0-9]+$', valueFormatHint: 'Digits only' }), {
+        invalidFormat: 'Format attendu : {format}',
+      }).error
+    ).toBe('Digits only');
+  });
+
+  it('threads the messages through validateFormData', () => {
+    const result = validateFormData({ city: '' }, [field({ required: true })], {
+      required: '{field} est obligatoire',
+    });
+    expect(result.valid).toBe(false);
+    expect(result.errors.city).toBe('City est obligatoire');
+
+    const english = validateFormData({ city: '' }, [field({ required: true })]);
+    expect(english.errors.city).toBe('City is required');
   });
 });

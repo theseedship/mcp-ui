@@ -7,6 +7,7 @@
 import { Component, Show, For, Switch, Match, Accessor, createSignal, createEffect, onCleanup } from 'solid-js'
 import type { FormFieldParams, PrefillSource } from '../types'
 import { useConditionalField } from '../hooks/useConditionalField'
+import { formatMCPUIString, useMCPUIStrings } from '../context/MCPUIStringsContext'
 
 export interface FormFieldRendererProps {
   field: FormFieldParams
@@ -20,15 +21,24 @@ export interface FormFieldRendererProps {
   formData?: Accessor<Record<string, any>>
 }
 
-/** Badge config by prefill source */
-const SOURCE_BADGES: Record<PrefillSource, { icon: string; title: string } | null> = {
-  detected: { icon: '\u2705', title: 'Detected from message' },
-  inferred: { icon: '\uD83D\uDD17', title: 'Inferred from context' },
-  user:     { icon: '\u270F\uFE0F', title: 'Previously provided' },
+/**
+ * Badge config by prefill source. Module-level, so the title cannot be read
+ * from the context here — each badge carries the `MCPUIStrings` key instead
+ * and the rendering component resolves it at render time.
+ */
+const SOURCE_BADGES: Record<
+  PrefillSource,
+  { icon: string; titleKey: 'sourceDetected' | 'sourceInferred' | 'sourcePrevious' } | null
+> = {
+  detected: { icon: '\u2705', titleKey: 'sourceDetected' },
+  inferred: { icon: '\uD83D\uDD17', titleKey: 'sourceInferred' },
+  user:     { icon: '\u270F\uFE0F', titleKey: 'sourcePrevious' },
   default:  null,
 }
 
 export const FormFieldRenderer: Component<FormFieldRendererProps> = (props) => {
+  const strings = useMCPUIStrings()
+
   // Conditional visibility based on showWhen
   const { isVisible } = useConditionalField({
     condition: props.field.showWhen,
@@ -76,14 +86,14 @@ export const FormFieldRenderer: Component<FormFieldRendererProps> = (props) => {
           class={`block text-sm font-medium ${isUnsupported() ? 'text-gray-400 dark:text-gray-500' : isMuted() ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300'}`}
         >
           <Show when={sourceBadge()}>
-            <span class="mr-1" title={sourceBadge()!.title}>{sourceBadge()!.icon}</span>
+            <span class="mr-1" title={strings[sourceBadge()!.titleKey]}>{sourceBadge()!.icon}</span>
           </Show>
           {props.field.label}
           <Show when={props.field.required || status() === 'required'}>
             <span class="text-red-500 ml-1" aria-hidden="true">*</span>
           </Show>
           <Show when={isUnsupported()}>
-            <span class="ml-2 text-[10px] font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 px-1.5 py-0.5 rounded">Not supported</span>
+            <span class="ml-2 text-[10px] font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 px-1.5 py-0.5 rounded">{strings.fieldNotSupported}</span>
           </Show>
           <Show when={status() === 'unknown'}>
             <span class="ml-2 text-[10px] font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 px-1.5 py-0.5 rounded">?</span>
@@ -316,7 +326,7 @@ export const FormFieldRenderer: Component<FormFieldRendererProps> = (props) => {
         <Match when={props.field.type === 'fieldset'}>
           <fieldset class="border border-gray-200 dark:border-gray-600 rounded-lg p-3">
             <legend class="text-xs font-medium text-gray-500 dark:text-gray-400 px-1">{props.field.label}</legend>
-            <p class="text-xs text-gray-400">{props.field.helpText || 'Group container'}</p>
+            <p class="text-xs text-gray-400">{props.field.helpText || strings.fieldGroupContainer}</p>
           </fieldset>
         </Match>
 
@@ -332,7 +342,9 @@ export const FormFieldRenderer: Component<FormFieldRendererProps> = (props) => {
             disabled={props.disabled}
             class={baseInputClass()}
           />
-          <p class="text-xs text-amber-500 mt-0.5">Unknown field type: {props.field.type}</p>
+          <p class="text-xs text-amber-500 mt-0.5">
+            {formatMCPUIString(strings.fieldUnknownType, { type: props.field.type })}
+          </p>
         </Match>
       </Switch>
 
@@ -376,6 +388,7 @@ const MultiSelectField: Component<{
   disabled?: boolean
   baseClass: string
 }> = (props) => {
+  const strings = useMCPUIStrings()
   const [open, setOpen] = createSignal(false)
   const [filter, setFilter] = createSignal('')
 
@@ -416,7 +429,7 @@ const MultiSelectField: Component<{
                   type="button"
                   onClick={() => removeChip(val)}
                   class="hover:text-blue-900 dark:hover:text-blue-100"
-                  aria-label={`Remove ${getLabel(val)}`}
+                  aria-label={formatMCPUIString(strings.removeItem, { name: getLabel(val) })}
                 >
                   &times;
                 </button>
@@ -435,8 +448,8 @@ const MultiSelectField: Component<{
       >
         <span class={props.value.length ? 'text-gray-900 dark:text-white' : 'text-gray-400'}>
           {props.value.length
-            ? `${props.value.length} selected`
-            : props.field.placeholder || 'Select...'}
+            ? formatMCPUIString(strings.fieldSelectedCount, { count: props.value.length })
+            : props.field.placeholder || strings.fieldSelectPlaceholder}
         </span>
         <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
@@ -456,7 +469,7 @@ const MultiSelectField: Component<{
                 type="text"
                 value={filter()}
                 onInput={(e) => setFilter(e.currentTarget.value)}
-                placeholder="Filter..."
+                placeholder={strings.filterPlaceholder}
                 class="w-full px-2 py-1 text-sm border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:border-blue-400 outline-none"
                 autofocus
               />
@@ -478,7 +491,7 @@ const MultiSelectField: Component<{
               )}
             </For>
             <Show when={filteredOptions().length === 0}>
-              <p class="px-3 py-2 text-sm text-gray-400">No matches</p>
+              <p class="px-3 py-2 text-sm text-gray-400">{strings.fieldNoMatches}</p>
             </Show>
           </div>
         </div>
@@ -496,6 +509,7 @@ const AutocompleteField: Component<{
   disabled?: boolean
   baseClass: string
 }> = (props) => {
+  const strings = useMCPUIStrings()
   const [query, setQuery] = createSignal('')
   const [suggestions, setSuggestions] = createSignal<Array<{ label: string; value: string }>>([])
   const [isOpen, setIsOpen] = createSignal(false)
@@ -669,7 +683,7 @@ const AutocompleteField: Component<{
       <Show when={resolving()}>
         <div class="flex items-center gap-1 mb-1 text-xs text-gray-400">
           <span class="animate-spin h-3 w-3 border border-gray-400 border-t-transparent rounded-full" />
-          Resolving...
+          {strings.fieldResolving}
         </div>
       </Show>
 
@@ -684,7 +698,7 @@ const AutocompleteField: Component<{
                   type="button"
                   onClick={() => removeChip(val)}
                   class="hover:text-blue-900 dark:hover:text-blue-100"
-                  aria-label={`Remove ${getLabel(val)}`}
+                  aria-label={formatMCPUIString(strings.removeItem, { name: getLabel(val) })}
                 >
                   &times;
                 </button>
@@ -701,7 +715,7 @@ const AutocompleteField: Component<{
         onFocus={() => { if (suggestions().length) setIsOpen(true) }}
         onBlur={handleBlur}
         placeholder={isMultiple() && selectedValues().length
-          ? 'Add more...'
+          ? strings.fieldAddMorePlaceholder
           : props.field.placeholder}
         disabled={props.disabled || resolving()}
         class={props.baseClass}
@@ -746,6 +760,7 @@ const TagsField: Component<{
   disabled?: boolean
   baseClass: string
 }> = (props) => {
+  const strings = useMCPUIStrings()
   const [input, setInput] = createSignal('')
 
   const addTag = () => {
@@ -778,7 +793,7 @@ const TagsField: Component<{
             {(tag) => (
               <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">
                 {tag}
-                <button type="button" onClick={() => removeTag(tag)} class="hover:text-blue-900 dark:hover:text-blue-100" aria-label={`Remove ${tag}`}>&times;</button>
+                <button type="button" onClick={() => removeTag(tag)} class="hover:text-blue-900 dark:hover:text-blue-100" aria-label={formatMCPUIString(strings.removeItem, { name: tag })}>&times;</button>
               </span>
             )}
           </For>
@@ -790,7 +805,7 @@ const TagsField: Component<{
         onInput={(e) => setInput(e.currentTarget.value)}
         onKeyDown={handleKeyDown}
         onBlur={addTag}
-        placeholder={props.placeholder || 'Type and press Enter...'}
+        placeholder={props.placeholder || strings.fieldTagsPlaceholder}
         disabled={props.disabled}
         class={props.baseClass}
       />

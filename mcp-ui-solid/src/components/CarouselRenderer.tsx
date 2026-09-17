@@ -3,6 +3,7 @@ import { isServer } from 'solid-js/web'
 import { useRenderContext } from './RenderContext'
 import type { UIComponent } from '../types'
 import { ExpandableWrapper, useExpanded } from './ExpandableWrapper'
+import { useMCPUIStrings } from '../context/MCPUIStringsContext'
 
 export interface CarouselRendererProps {
     items: UIComponent[]
@@ -15,6 +16,7 @@ export interface CarouselRendererProps {
 }
 
 export const CarouselRenderer: Component<CarouselRendererProps> = (props) => {
+    const strings = useMCPUIStrings()
     let scrollContainer: HTMLDivElement | undefined
     const [canScrollLeft, setCanScrollLeft] = createSignal(false)
     const [canScrollRight, setCanScrollRight] = createSignal(true)
@@ -42,9 +44,9 @@ export const CarouselRenderer: Component<CarouselRendererProps> = (props) => {
 
     return (
         <ExpandableWrapper
-            title={'Carousel'}
+            title={strings.carouselTitle}
             copyData={JSON.stringify(props.items, null, 2)}
-            copyLabel="Copy items (JSON)"
+            copyLabel={strings.carouselCopy}
             toolbarVariant={props.toolbarVariant}
         >
         <div class={`relative group ${isExpanded() ? 'flex-1 min-h-0 flex flex-col' : ''}`}>

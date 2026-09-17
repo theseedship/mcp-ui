@@ -17,6 +17,7 @@ import { join } from 'node:path'
 import {
   connectorResultToUILayout,
   connectorActionsToActionGroup,
+  DEFAULT_CONNECTOR_MESSAGES,
 } from './connector'
 import { CONNECTOR_DYNAMIC_RESULT_V1 } from '@seed-ship/mcp-ui-spec'
 
@@ -139,6 +140,92 @@ describe('connectorResultToUILayout (v6.6.0)', () => {
 
   it('is pure — same input yields a deep-equal output', () => {
     expect(connectorResultToUILayout(VALID)).toEqual(connectorResultToUILayout(VALID))
+  })
+})
+
+/**
+ * v6.20.0 — the two degraded paragraphs used to be hardcoded FRENCH:
+ *
+ *   '### Résultat non rendu\n\nLe résultat du connecteur n'a pas pu être
+ *    interprété (schéma : `X`). Cet état explicite remplace une disparition
+ *    silencieuse du rendu.'
+ *   '> ⚠ Schéma connecteur non reconnu (`X`, attendu `Y`). Le rendu
+ *    ci-dessous est en mode dégradé.'
+ *
+ * They now default to English and are overridable per call. They are NOT
+ * `MCPUIStrings` keys: the adapters are runtime-free and never import
+ * `solid-js`, so the wording travels through `options.messages`.
+ */
+describe('connector degraded messages (v6.20.0)', () => {
+  const contentOf = (layout: ReturnType<typeof connectorResultToUILayout>, id: string): string =>
+    (layout.components.find((c) => c.id === id)!.params as { content: string }).content
+
+  it('ships English defaults, not the former French literals', () => {
+    expect(DEFAULT_CONNECTOR_MESSAGES.degradedNotice).toContain('### Result not rendered')
+    expect(DEFAULT_CONNECTOR_MESSAGES.degradedNotice).not.toContain('Résultat non rendu')
+    expect(DEFAULT_CONNECTOR_MESSAGES.degradedVersionSuffix).toBe(' (schema: `{version}`)')
+    expect(DEFAULT_CONNECTOR_MESSAGES.versionWarning).toContain('Unrecognized connector schema')
+    expect(DEFAULT_CONNECTOR_MESSAGES.versionWarning).not.toContain('Schéma connecteur')
+  })
+
+  it('unreadable payload WITHOUT a string schemaVersion → no version suffix', () => {
+    const content = contentOf(connectorResultToUILayout({ foo: 'bar' }), 'connector-degraded-notice')
+    expect(content).toBe(
+      '### Result not rendered\n\nThe connector result could not be interpreted. This explicit state replaces a silent disappearance of the rendering.'
+    )
+    expect(content).not.toContain('{versionSuffix}')
+  })
+
+  it('unreadable payload WITH a string schemaVersion → suffix interpolated', () => {
+    const content = contentOf(
+      connectorResultToUILayout({ schemaVersion: 'weird/v9' }),
+      'connector-degraded-notice'
+    )
+    expect(content).toContain(' (schema: `weird/v9`)')
+    expect(content).not.toContain('{version}')
+  })
+
+  it('unknown version → the warning names the version read and the one expected', () => {
+    const content = contentOf(
+      connectorResultToUILayout({ ...VALID, schemaVersion: 'connector-dynamic-result/v2' }),
+      'connector-version-warning'
+    )
+    expect(content).toBe(
+      '> \u26A0 Unrecognized connector schema (`connector-dynamic-result/v2`, expected `' +
+        CONNECTOR_DYNAMIC_RESULT_V1 +
+        '`). The rendering below is in degraded mode.'
+    )
+  })
+
+  it('honors a `messages` override (and merges it over the defaults)', () => {
+    const layout = connectorResultToUILayout(
+      { ...VALID, schemaVersion: 'connector-dynamic-result/v2' },
+      { messages: { versionWarning: 'Schéma {version} inconnu (attendu {expected}).' } }
+    )
+    expect(contentOf(layout, 'connector-version-warning')).toBe(
+      `Schéma connector-dynamic-result/v2 inconnu (attendu ${CONNECTOR_DYNAMIC_RESULT_V1}).`
+    )
+
+    const degraded = connectorResultToUILayout(
+      { schemaVersion: 'weird/v9' },
+      {
+        messages: {
+          degradedNotice: 'Rendu impossible{versionSuffix}.',
+          degradedVersionSuffix: ' (schéma : {version})',
+        },
+      }
+    )
+    expect(contentOf(degraded, 'connector-degraded-notice')).toBe(
+      'Rendu impossible (schéma : weird/v9).'
+    )
+  })
+
+  it('a partial override leaves the other messages at their English default', () => {
+    const layout = connectorResultToUILayout(
+      { foo: 'bar' },
+      { messages: { versionWarning: 'ignored here' } }
+    )
+    expect(contentOf(layout, 'connector-degraded-notice')).toContain('### Result not rendered')
   })
 })
 

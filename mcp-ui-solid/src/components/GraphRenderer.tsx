@@ -30,6 +30,7 @@ import { DegradedFallback } from './DegradedFallback';
 import { graphToDegradedTable } from '../utils/degraded-projections';
 import { escapeHtml } from '../utils/escape-html';
 import { useTelemetry } from '../context/MCPUITelemetryContext';
+import { formatMCPUIString, useMCPUIStrings } from '../context/MCPUIStringsContext';
 
 // Module-scoped lazy import promise — first call triggers the dynamic
 // import, subsequent calls reuse the resolved module.
@@ -220,6 +221,7 @@ export interface GraphRendererProps {
 }
 
 export const GraphRenderer: Component<GraphRendererProps> = (props) => {
+  const strings = useMCPUIStrings();
   const params = () => props.component.params as GraphComponentParams;
   const isExpanded = useExpanded();
   const telemetry = useTelemetry();
@@ -296,7 +298,7 @@ export const GraphRenderer: Component<GraphRendererProps> = (props) => {
       graphInstance = new (Graph as any)(config);
       await graphInstance.render();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to render graph';
+      const message = err instanceof Error ? err.message : strings.graphRenderError;
       setError(message);
       // Fallback ladder (P2.5): the native G6 render threw — emit telemetry
       // so the failure is observable, then degrade to the edge/node table
@@ -344,13 +346,13 @@ export const GraphRenderer: Component<GraphRendererProps> = (props) => {
           const url = (canvas as HTMLCanvasElement).toDataURL('image/png');
           await downloadDataUrl(url, `${graphFilenameStem(params())}.png`);
         } else {
-          setError('PNG export not supported in current renderer mode');
+          setError(strings.graphPngUnsupported);
         }
       } else {
         await downloadDataUrl(dataUrl, `${graphFilenameStem(params())}.png`);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'PNG export failed');
+      setError(err instanceof Error ? err.message : strings.graphPngExportFailed);
     }
     setExportMenuOpen(false);
   };
@@ -371,7 +373,7 @@ export const GraphRenderer: Component<GraphRendererProps> = (props) => {
         >
           <div class="w-full p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
             <p class="text-sm font-medium text-yellow-900 dark:text-yellow-100">
-              Graph rendering unavailable
+              {strings.graphUnavailable}
             </p>
             <p class="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
               Install <code>@antv/g6</code> peer dependency to render <code>type: "graph"</code>{' '}
@@ -382,9 +384,9 @@ export const GraphRenderer: Component<GraphRendererProps> = (props) => {
       }
     >
       <ExpandableWrapper
-        title={params().title ?? 'Graph'}
+        title={params().title ?? strings.graphTitle}
         copyData={toJSON(params())}
-        copyLabel="Copy graph (JSON)"
+        copyLabel={strings.graphCopy}
         toolbarVariant={props.toolbarVariant}
       >
         <div
@@ -399,12 +401,12 @@ export const GraphRenderer: Component<GraphRendererProps> = (props) => {
               type="button"
               onClick={() => setExportMenuOpen((v) => !v)}
               class="px-2 py-1 text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
-              title="Export graph"
-              aria-label="Export graph"
+              title={strings.graphExport}
+              aria-label={strings.graphExport}
               aria-haspopup="menu"
               aria-expanded={exportMenuOpen()}
             >
-              Export ▾
+              {strings.graphExportMenu}
             </button>
             <PortalDropdownMenu
               open={exportMenuOpen()}
@@ -415,13 +417,21 @@ export const GraphRenderer: Component<GraphRendererProps> = (props) => {
             >
               <For
                 each={[
-                  { label: 'Download PNG', onClick: handleExportPNG, hint: 'visual snapshot' },
                   {
-                    label: 'Download Mermaid',
-                    onClick: handleExportMermaid,
-                    hint: 'markdown / GitHub',
+                    label: strings.graphDownloadPng,
+                    onClick: handleExportPNG,
+                    hint: strings.graphDownloadPngHint,
                   },
-                  { label: 'Download JSON', onClick: handleExportJSON, hint: 'raw data' },
+                  {
+                    label: strings.graphDownloadMermaid,
+                    onClick: handleExportMermaid,
+                    hint: strings.graphDownloadMermaidHint,
+                  },
+                  {
+                    label: strings.graphDownloadJson,
+                    onClick: handleExportJSON,
+                    hint: strings.graphDownloadJsonHint,
+                  },
                 ]}
               >
                 {(item) => (
@@ -454,9 +464,14 @@ export const GraphRenderer: Component<GraphRendererProps> = (props) => {
               rather than showing a bare message. Export menu stays usable. */}
           <Show when={error()}>
             <DegradedFallback
-              message={`Graph rendering failed: ${error()}`}
-              caption="Showing the graph data as a table — the interactive view is unavailable."
-              {...graphToDegradedTable(params())}
+              message={formatMCPUIString(strings.graphRenderFailed, { error: String(error()) })}
+              caption={strings.graphDegradedCaption}
+              {...graphToDegradedTable(params(), {
+                source: strings.degradedColSource,
+                target: strings.degradedColTarget,
+                label: strings.degradedColLabel,
+                node: strings.degradedColNode,
+              })}
             />
           </Show>
         </div>

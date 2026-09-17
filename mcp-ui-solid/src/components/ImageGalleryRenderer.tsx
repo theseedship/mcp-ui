@@ -8,6 +8,7 @@ import type { UIComponent, ImageGalleryParams } from '../types'
 import { LightboxOverlay } from './LightboxOverlay'
 import { ExpandableWrapper, useExpanded } from './ExpandableWrapper'
 import { safeUrl } from '../utils/safe-url'
+import { formatMCPUIString, useMCPUIStrings } from '../context/MCPUIStringsContext'
 
 export interface ImageGalleryRendererProps {
   /**
@@ -37,6 +38,7 @@ function imagesToTextList(p: ImageGalleryParams | undefined): string {
 }
 
 export const ImageGalleryRenderer: Component<ImageGalleryRendererProps> = (props) => {
+  const strings = useMCPUIStrings()
   const [selectedIndex, setSelectedIndex] = createSignal<number | null>(null)
   const isExpanded = useExpanded()
 
@@ -91,9 +93,9 @@ export const ImageGalleryRenderer: Component<ImageGalleryRendererProps> = (props
 
   return (
     <ExpandableWrapper
-      title={params()?.title || 'Gallery'}
+      title={params()?.title || strings.galleryTitle}
       copyData={imagesToTextList(params())}
-      copyLabel="Copy image URLs"
+      copyLabel={strings.galleryCopy}
       toolbarVariant={props.toolbarVariant}
     >
     <div class={`w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden ${
@@ -114,11 +116,13 @@ export const ImageGalleryRenderer: Component<ImageGalleryRendererProps> = (props
               class={`relative overflow-hidden rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none group ${aspectClass()}`}
               onClick={() => handleImageClick(index())}
               type="button"
-              aria-label={image.alt || `View image ${index() + 1}`}
+              aria-label={
+                image.alt || formatMCPUIString(strings.galleryViewImage, { index: index() + 1 })
+              }
             >
               <img
                 src={safeUrl(image.thumbnail || image.url, { allowDataImage: true })}
-                alt={image.alt || `Image ${index() + 1}`}
+                alt={image.alt || formatMCPUIString(strings.galleryImageAlt, { index: index() + 1 })}
                 srcset={image.srcset}
                 sizes={image.sizes}
                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"

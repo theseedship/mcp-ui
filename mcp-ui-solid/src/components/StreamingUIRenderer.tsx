@@ -36,7 +36,11 @@
  */
 
 import { Show, For, createSignal, onMount } from 'solid-js'
-import { useStreamingUI, type UseStreamingUIOptions } from '../hooks/useStreamingUI'
+import {
+  useStreamingUI,
+  type StreamingUIMessages,
+  type UseStreamingUIOptions,
+} from '../hooks/useStreamingUI'
 import type { UIComponent, RendererError } from '../types'
 import { UIResourceRenderer, type ValidationErrorMode } from './UIResourceRenderer'
 import { useMCPUIStrings } from '../context/MCPUIStringsContext'
@@ -73,6 +77,21 @@ function asFullWidth(component: UIComponent): UIComponent {
 }
 
 export function StreamingUIRenderer(props: StreamingUIRendererProps) {
+  const strings = useMCPUIStrings()
+  // Getters: each message is read from the context when the hook produces it.
+  // An explicit `props.messages` entry wins over the context.
+  const messages: StreamingUIMessages = {
+    get initializing() { return props.messages?.initializing ?? strings.streamInitializing },
+    get connecting() { return props.messages?.connecting ?? strings.streamConnecting },
+    get loadingComponent() { return props.messages?.loadingComponent ?? strings.streamLoadingComponent },
+    get dashboardLoaded() { return props.messages?.dashboardLoaded ?? strings.streamDashboardLoaded },
+    get errorProgress() { return props.messages?.errorProgress ?? strings.streamErrorProgress },
+    get connectionFailed() { return props.messages?.connectionFailed ?? strings.streamConnectionFailed },
+    get requestFailed() { return props.messages?.requestFailed ?? strings.streamRequestFailed },
+    get emptyResponse() { return props.messages?.emptyResponse ?? strings.streamEmptyResponse },
+    get serverSide() { return props.messages?.serverSide ?? strings.streamServerSide },
+    get unknownError() { return props.messages?.unknownError ?? strings.streamUnknownError },
+  }
   const { components, isLoading, isStreaming, error, progress, metadata, startStreaming } =
     useStreamingUI({
       query: props.query,
@@ -82,9 +101,9 @@ export function StreamingUIRenderer(props: StreamingUIRendererProps) {
       onComplete: props.onComplete,
       onError: props.onError,
       onComponentReceived: props.onComponentReceived,
+      messages,
     })
 
-  const strings = useMCPUIStrings()
   const [animatingComponents, setAnimatingComponents] = createSignal<Set<string>>(new Set())
 
   // Track new components for animation
@@ -156,7 +175,9 @@ export function StreamingUIRenderer(props: StreamingUIRendererProps) {
                 d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            <span class="font-medium text-error-primary">{error()?.error}</span>
+            <span class="font-medium text-error-primary">
+              {error()?.error === 'ssr' ? strings.streamServerSideTitle : error()?.error}
+            </span>
           </div>
           <p class="text-sm text-text-secondary">{error()?.message}</p>
 
@@ -217,31 +238,40 @@ export function StreamingUIRenderer(props: StreamingUIRendererProps) {
         <div class="mt-6 rounded-lg border border-border-subtle bg-surface-secondary p-4 text-sm text-text-secondary">
           <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
             <div>
-              <div class="font-medium text-text-primary">Provider</div>
+              <div class="font-medium text-text-primary">{strings.metaProvider}</div>
               <div>{metadata()?.provider}</div>
             </div>
             <div>
-              <div class="font-medium text-text-primary">Model</div>
+              <div class="font-medium text-text-primary">{strings.metaModel}</div>
               <div>{metadata()?.model}</div>
             </div>
             <div>
-              <div class="font-medium text-text-primary">Execution Time</div>
+              <div class="font-medium text-text-primary">{strings.metaExecutionTime}</div>
               <div>{metadata()?.executionTimeMs}ms</div>
             </div>
             <Show when={metadata()?.costUSD !== undefined}>
               <div>
-                <div class="font-medium text-text-primary">Cost</div>
-                <div>${metadata()?.costUSD?.toFixed(4)}</div>
+                <div class="font-medium text-text-primary">{strings.metaCost}</div>
+                <div>
+                  {new Intl.NumberFormat(strings.locale, {
+                    style: 'currency',
+                    currency: 'USD',
+                    currencyDisplay: 'narrowSymbol',
+                    minimumFractionDigits: 4,
+                    maximumFractionDigits: 4,
+                    useGrouping: false,
+                  }).format(metadata()?.costUSD ?? 0)}
+                </div>
               </div>
             </Show>
             <div>
-              <div class="font-medium text-text-primary">TTFB</div>
+              <div class="font-medium text-text-primary">{strings.metaTtfb}</div>
               <div>{metadata()?.firstTokenMs}ms</div>
             </div>
             <Show when={metadata()?.cached}>
               <div>
-                <div class="font-medium text-text-primary">Cached</div>
-                <div class="text-success-primary">Yes</div>
+                <div class="font-medium text-text-primary">{strings.metaCached}</div>
+                <div class="text-success-primary">{strings.yes}</div>
               </div>
             </Show>
           </div>

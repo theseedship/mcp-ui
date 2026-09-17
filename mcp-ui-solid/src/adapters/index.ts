@@ -14,13 +14,23 @@
  * ```
  */
 
-export { connectorResultToUILayout, connectorActionsToActionGroup } from './connector';
+export {
+  connectorResultToUILayout,
+  connectorActionsToActionGroup,
+  DEFAULT_CONNECTOR_MESSAGES,
+} from './connector';
 export type {
   ConnectorResultToUILayoutOptions,
   ConnectorActionsToActionGroupOptions,
+  ConnectorAdapterMessages,
 } from './connector';
 
-export { macroRunToScratchpadState, macroInterrogationToChatPromptConfig } from './macro-run';
+export {
+  macroRunToScratchpadState,
+  macroInterrogationToChatPromptConfig,
+  DEFAULT_MACRO_RUN_MESSAGES,
+} from './macro-run';
+export type { MacroRunAdapterMessages, MacroRunAdapterOptions } from './macro-run';
 
 export {
   createComparisonLayout,

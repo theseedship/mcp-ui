@@ -5,6 +5,91 @@ SolidJS components + chat toolkit for MCP-generated UI. Part of the [MCP UI ecos
 [![npm version](https://img.shields.io/npm/v/@seed-ship/mcp-ui-solid.svg)](https://www.npmjs.com/package/@seed-ship/mcp-ui-solid)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+## What's New in v6.20.0
+
+- **Complete i18n of the library chrome.** Every user-visible chrome string —
+  copy/export/download button titles, the code toolbar, prefill source
+  badges, the lightbox, the modal close button, `VerifiedText`'s tooltips,
+  degraded-fallback captions, status badges, form-validation messages, and
+  more — now reads from `MCPUIStrings` (components, via `useMCPUIStrings()`)
+  or an exported `messages`/`labels` option (runtime-free adapters, services,
+  helpers), except the exclusion policy P1–P8 in
+  [`CHANGELOG.md`](./CHANGELOG.md) (keyboard key caps, the OpenStreetMap
+  attribution, developer/peer-dependency diagnostics, file-format acronyms
+  and HTTP verbs, components with their own `labels`/`messages` prop, hook-level errors and `console.*`, and
+  LLM-facing registry examples). See **Internationalization** below for the
+  full key table and a French example dictionary.
+- **New exported `formatMCPUIString(template, vars)` helper** for hosts that
+  render their own chrome and want the same `{placeholder}` substitution
+  `mcp-ui-solid` uses internally. It lives in the dependency-free
+  `src/utils/format-string.ts`, so the runtime-free adapters use it too.
+- **New `messages` option on `connectorResultToUILayout()`** — the connector
+  adapter's own degraded-state paragraphs (unreadable payload, unrecognized
+  schema version) are no longer hardcoded French; they default to English
+  `DEFAULT_CONNECTOR_MESSAGES` and accept a partial override for hosts that
+  render in another language. See **Server-side producers** below. The macro
+  adapter gets the same treatment: `macroRunToScratchpadState()` /
+  `macroInterrogationToChatPromptConfig()` take a `messages` option backed by
+  `DEFAULT_MACRO_RUN_MESSAGES` (`"Agent"` / `"Progress"` / `"Result"` section
+  titles, abort/failure/confirm copy) — see the injectable-wording bullet
+  below.
+- **Five chrome defaults changed from French to English** —
+  `tableSearchPlaceholder` (`"Rechercher dans le tableau..."` →
+  `"Search the table..."`), `verifiedStripLabel` (`"[non vérifié]"` →
+  `"[unverified]"`), `scratchpadEdit` (`"Modifier"` → `"Edit"`),
+  `citationUnresolved` (`"[réf. {id}]"` → `"[ref. {id}]"`, via the new
+  `CitationCtx.unresolvedLabel`), and `formPrefilledOne` / `formPrefilledMany`
+  (`"{count} champ(s) pré-rempli(s) sur {total}"` → `"{count} field(s)
+  pre-filled out of {total}"`). A connector's own
+  `tableParams.searchPlaceholder` still wins; otherwise restore the French
+  text via `<MCPUIStringsProvider>`. See [`CHANGELOG.md`](./CHANGELOG.md) for
+  the complete key list.
+- **`StreamingUIRenderer` no longer shows the machine code `ssr` as its error
+  heading** during server rendering; it shows `streamServerSideTitle`
+  (`"Streaming unavailable"`). The hook's `StreamError.error` keeps `'ssr'`.
+- **Injectable wording for the runtime-free helpers.** Modules that cannot
+  read the context (they must stay free of `solid-js`) now take their English
+  as a TRAILING OPTIONAL parameter with an exported default table, so every
+  existing call is unchanged:
+  `macroRunToScratchpadState(run, { messages })` /
+  `macroInterrogationToChatPromptConfig(q, { messages })`
+  (`DEFAULT_MACRO_RUN_MESSAGES`),
+  `validateFieldValue(value, field, messages)` /
+  `validateFormData(data, fields, messages)` (`DEFAULT_VALIDATION_MESSAGES` —
+  `FormRenderer` feeds it from `MCPUIStrings`),
+  `graphToDegradedTable` / `mapToDegradedTable` / `chartToDegradedTable`
+  (`DEGRADED_PROJECTION_LABELS`) and `chartToDataTable`
+  (`CHART_DATA_TABLE_LABELS`).
+- **The chrome-strings guard is now a TypeScript-AST scanner over all of
+  `src`** (`scripts/chrome-scan.ts`, not published) — it follows literals
+  through `||` / `??` / ternary branches / template spans / helper returns /
+  signal setters into visible attributes, JSX children and the clipboard,
+  and flags French and hardcoded locales anywhere. Each exemption names an
+  exclusion-policy item and is kept live by a test; a runtime
+  pseudo-localization test renders the renderers with marker strings and CJK
+  payloads and fails on any Latin text left in the DOM.
+- **New `locale` key (default `'en-US'`)** drives every number / date
+  formatting and collation call — a **default change**: these sites used
+  `'fr-FR'` / `'fr'` or the runtime locale before. See
+  [`locale`](#locale--number-date-and-sort-formatting-default-change-in-v6200).
+- **`useStreamingUI({ messages })`** — the hook's progress and error messages
+  are injectable (`DEFAULT_STREAMING_UI_MESSAGES`); `StreamingUIRenderer`
+  feeds them from `MCPUIStrings` (`stream*` keys).
+- `MCPUIStrings` now covers **270 keys** in total, all grouped by the
+  component they belong to. See the full key reference below.
+
+> **Not covered by `MCPUIStringsProvider`:** `PresentationFeedback` documents
+> its own `labels` prop (`DEFAULT_PRESENTATION_FEEDBACK_LABELS`) and is
+> localized through that prop, not through the chrome-strings context.
+
+The handful of strings that stay hardcoded fall under an explicit exclusion
+policy (P1–P8: keyboard key caps, the OpenStreetMap/ODbL attribution,
+developer diagnostics naming an npm/peer dependency or a config flag,
+file-format acronyms and HTTP verbs, components with their own documented `labels`/`messages` prop, hook-level
+errors consumers handle, and LLM-facing example payloads) — see
+[`CHANGELOG.md`](./CHANGELOG.md)'s `## [6.20.0]` entry for the full policy
+text and every concrete occurrence.
+
 ## What's New in v6.19.1
 
 - `FeedbackInline`'s thumb buttons now take their `aria-label` from
@@ -182,6 +267,24 @@ Sprint OpenData / macros — `docs/briefs/ROADMAP-opendata-macro-mcpui.md`.
   const layout = connectorResultToUILayout(connectorResult)
   ```
 
+  **Since v6.20.0** — `connectorResultToUILayout`'s two degraded-state
+  paragraphs (unreadable payload, unrecognized schema version) used to be
+  hardcoded French. They now default to English `ConnectorAdapterMessages`
+  (`DEFAULT_CONNECTOR_MESSAGES`) and accept a partial override via the
+  `messages` option, since these adapters are dependency-free and cannot
+  read `<MCPUIStringsProvider>`:
+
+  ```ts
+  import { connectorResultToUILayout } from '@seed-ship/mcp-ui-solid/adapters'
+
+  const layout = connectorResultToUILayout(connectorResult, {
+    messages: {
+      versionWarning:
+        '> ⚠ Schéma connecteur non reconnu (`{version}`, attendu `{expected}`). Le rendu ci-dessous est en mode dégradé.',
+    },
+  })
+  ```
+
 > **Note** — `FeedbackInline`'s acknowledgement defaults changed from
 > French to English (`'Thanks!'`, `"Noted — we'll improve"`). Wrap your app
 > in `<MCPUIStringsProvider>` with French strings, or pass `positiveAck` /
@@ -265,7 +368,7 @@ Everything rolled up from the 4.x series is documented in the previous section b
 
 - **Data Verification Layer** - Anti-hallucination: `validateAgainstSource()` detects ~90% of numerical hallucinations, zero LLM cost, <1ms
 - **VerifiedText component** - Inline badges (verified/hallucinated) with highlight, strip, annotate modes
-- **DataPreviewSection** - Paginated data table with CSV/JSON export, source attribution, FR locale formatting
+- **DataPreviewSection** - Paginated data table with CSV/JSON export, source attribution, locale formatting (`MCPUIStrings.locale`)
 - **GeoJSON maps** - Polygon/line/point rendering, choropleth coloring, feature popups, multi-layer support
 - **PMTiles** - Vector tiles for large datasets (>5000 features) via optional `protomaps-leaflet`
 - **Time-series charts** - `timeAxis` config for date-based x-axis in ChartJSRenderer
@@ -906,6 +1009,693 @@ to load or throws.
 
 Net effect: an SSR pass never leaks or executes untrusted markup, and the
 client upgrades to the rich version — with a visible reflow — once mounted.
+
+## Internationalization (i18n) — `MCPUIStrings`
+
+`<MCPUIStringsProvider>` localizes the library's own **chrome** — button
+titles, `aria-label`s, placeholders, empty states. It never touches
+**content** (`params.title`, table data, action labels, chat prompt copy):
+that comes from the payload and is already localized by whoever produced
+it. Every key is optional; an omitted key falls back to its English
+`DEFAULT_MCPUI_STRINGS` value, so mounting the provider is entirely opt-in
+and partial overrides are the normal case.
+
+```tsx
+import { MCPUIStringsProvider } from '@seed-ship/mcp-ui-solid'
+
+<MCPUIStringsProvider strings={{ expand: 'Agrandir', feedbackUseful: 'Utile' }}>
+  <App />
+</MCPUIStringsProvider>
+```
+
+A handful of keys are templates: they carry a `{placeholder}` the renderer
+fills in at call time via the exported `formatMCPUIString(template, vars)`
+helper. Hosts that render their own equivalent chrome (e.g. a custom sort
+header) can call the same helper to get the same substitution behavior —
+an unrecognized `{placeholder}` is left verbatim rather than becoming
+`undefined`:
+
+```ts
+import { formatMCPUIString } from '@seed-ship/mcp-ui-solid'
+
+formatMCPUIString('Sort by {column}', { column: 'Revenue' }) // 'Sort by Revenue'
+formatMCPUIString('Export CSV ({count} rows)', { count: 42 }) // 'Export CSV (42 rows)'
+```
+
+### Full key reference
+
+| Key | English default | Where it appears |
+|-----|------------------|-------------------|
+| `expand` | `Expand` | `ExpandableWrapper` toolbar — expand-to-fullscreen button `title` |
+| `expandedView` | `Expanded view` | `ExpandableWrapper` — fullscreen modal heading/`aria-label` when untitled |
+| `copyToClipboard` | `Copy to clipboard` | `ExpandableWrapper` — default copy-button tooltip (overridden by a `copyLabel` prop) |
+| `closeExpandedView` | `Close expanded view` | `ExpandableWrapper` — fullscreen modal close button `aria-label` |
+| `feedbackUseful` | `Useful` | `FeedbackInline` — thumb-up button `title`/`aria-label` |
+| `feedbackNotUseful` | `Not useful` | `FeedbackInline` — thumb-down button `title`/`aria-label` |
+| `feedbackPositiveAck` | `Thanks!` | `FeedbackInline` — acknowledgement after a positive rating |
+| `feedbackNegativeAck` | `Noted — we'll improve` | `FeedbackInline` — acknowledgement after a negative rating |
+| `retry` | `Retry` | `StreamingUIRenderer` — retry button label |
+| `ok` | `OK` | `ScratchpadPanel` — inline filter editor confirm button |
+| `cancel` | `Cancel` | `ScratchpadPanel` (inline filter editor), `ChatPrompt` (`ConfirmBody`, payload `cancelLabel` still wins) — generic cancel button |
+| `confirm` | `Confirm` | `ChatPrompt` (`ConfirmBody`) — generic confirm button |
+| `submit` | `Submit` | `ChatPrompt` (`FormBody`), `FormRenderer`, `ScratchpadPanel` (`EmbeddedFormSection`) — generic submit button |
+| `dismiss` | `Dismiss` | `ChatPrompt` — `aria-label` of the dismiss button |
+| `yes` | `Yes` | `StreamingUIRenderer` (cached cell), `ScratchpadPanel` (`FeedbackSection` approve label) |
+| `no` | `No` | `ScratchpadPanel` — `FeedbackSection` reject label |
+| `chartView` | `Chart` | `ChartJSRenderer` — chart/data view switch, "chart" side |
+| `chartDataView` | `Data` | `ChartJSRenderer` — chart/data view switch, "data" side |
+| `chartViewSelector` | `Chart or data view` | `ChartJSRenderer` — view switch accessible name |
+| `chartDataTable` | `Chart data` | `ChartJSRenderer` — data-table caption/accessible name |
+| `chartDataSummary` | `Exact values are available in the data view.` | `ChartJSRenderer` — screen-reader description of the chart canvas |
+| `chartNoData` | `No chart data` | `ChartJSRenderer` — empty state |
+| `paginationPrevious` | `Previous page` | `UIResourceRenderer` (table) — pagination "previous" button accessible name |
+| `paginationNext` | `Next page` | `UIResourceRenderer` (table) — pagination "next" button accessible name |
+| `paginationPageSize` | `Rows per page` | `UIResourceRenderer` (table) — page-size `<select>` accessible name |
+| `gridRegion` | `Layout grid` | `GridRenderer` — fallback `aria-label` for an untitled grid region |
+| `autocompleteSuggestions` | `Suggestions` | `AutocompleteDropdown` — suggestions listbox `aria-label` |
+| `autocompleteLoading` | `Loading...` | `AutocompleteDropdown` — fallback loading message |
+| `autocompleteEmpty` | `No suggestions found` | `AutocompleteDropdown` — fallback empty state |
+| `carouselTitle` | `Carousel` | `CarouselRenderer` — expandable-wrapper toolbar title |
+| `carouselCopy` | `Copy items (JSON)` | `CarouselRenderer` — copy button `copyLabel` |
+| `mapTitle` | `Map` | `MapRenderer` — expandable-wrapper toolbar title |
+| `mapCopy` | `Copy markers as GeoJSON` | `MapRenderer` — copy button `copyLabel` |
+| `chartDownloadPng` | `Download PNG` | `ChartJSRenderer` — PNG export button `title` |
+| `chartDownloadPngAria` | `Download chart as PNG` | `ChartJSRenderer` — PNG export button `aria-label` |
+| `chartCopy` | `Copy chart data (JSON)` | `ChartJSRenderer` — copy button `copyLabel` |
+| `chartLoading` | `Loading chart...` | `ChartJSRenderer` — overlay shown while the chart library and data are loading |
+| `codeSearchPlaceholder` | `Search…` | `CodeBlockRenderer` — in-code search input `placeholder` |
+| `codeSearchAria` | `Search in code` | `CodeBlockRenderer` — in-code search input `aria-label` |
+| `codeDownloadAria` | `Download code as file` | `CodeBlockRenderer` — download button `aria-label` |
+| `codeDownload` | `Download code` | `CodeBlockRenderer` — download button `title` |
+| `codeToggleWordWrap` | `Toggle word wrap` | `CodeBlockRenderer` — word-wrap toggle `aria-label` |
+| `codeCopy` | `Copy code` | `CodeBlockRenderer` — copy button `title`/`aria-label` |
+| `codeTitle` | `Code` | `CodeBlockRenderer` — heading and toolbar title when no filename/language is given |
+| `codeWordWrapEnable` | `Enable word wrap` | `CodeBlockRenderer` — word-wrap toggle `title` while word wrap is OFF |
+| `codeWordWrapDisable` | `Disable word wrap` | `CodeBlockRenderer` — word-wrap toggle `title` while word wrap is ON |
+| `exportCsvRows` | `Export CSV ({count} rows)` | `DataPreviewSection` — CSV export button `title`. Template: `{count}` |
+| `exportJsonRows` | `Export JSON ({count} rows)` | `DataPreviewSection` — JSON export button `title`. Template: `{count}` |
+| `sortBy` | `Sort by {column}` | `DataPreviewSection` / tables — sortable column header `title`. Template: `{column}` |
+| `removeItem` | `Remove {name}` | Form fields (chips/tags/filters) — removal button `aria-label`. Template: `{name}` |
+| `filterPlaceholder` | `Filter...` | Form fields — multi-select options filter input `placeholder` |
+| `fieldNotSupported` | `Not supported` | `FormFieldRenderer` — badge shown next to a field whose type the renderer does not support |
+| `fieldNoMatches` | `No matches` | `FormFieldRenderer` (`MultiSelectField`) — empty state of the option list |
+| `fieldGroupContainer` | `Group container` | `FormFieldRenderer` — fallback help text of a `fieldset` field with none |
+| `fieldSelectPlaceholder` | `Select...` | `FormFieldRenderer` — fallback `placeholder` of the multi-select trigger |
+| `fieldTagsPlaceholder` | `Type and press Enter...` | `FormFieldRenderer` (`TagsField`) — fallback `placeholder` of the tags input |
+| `scratchpadClose` | `Close` | `ScratchpadPanel` — close button `aria-label` |
+| `scratchpadPreview` | `Preview` | `ScratchpadPanel` — heading of the filter preview block |
+| `scratchpadNoResults` | `No results for these filters` | `ScratchpadPanel` — empty state of the filter preview block |
+| `scratchpadModifyFilters` | `Modify filters` | `ScratchpadPanel` — "refine the filters" button in the empty preview |
+| `scratchpadNoFilters` | `No filters` | `ScratchpadPanel` — empty state of the active-filter chip row |
+| `scratchpadEdit` | `Edit` | `ScratchpadPanel` — collapsed embedded form's "edit" button |
+| `scratchpadSend` | `Send` | `ScratchpadPanel` (`FeedbackSection`) — free-text feedback "send" button |
+| `scratchpadShowRaw` | `Show raw SSE payload` | `ScratchpadPanel` (`FormDebugTrace`) — debug toggle while the raw payload is hidden |
+| `scratchpadHideRaw` | `Hide raw SSE payload` | `ScratchpadPanel` (`FormDebugTrace`) — debug toggle while the raw payload is shown |
+| `scratchpadCommentPlaceholder` | `Add a comment...` | `ScratchpadPanel` (`FeedbackSection`) — fallback `placeholder` of the free-text feedback input |
+| `scratchpadError` | `Error` | `ScratchpadPanel` (`ErrorSectionRenderer`) — fallback message of an error section with none |
+| `scratchpadSource` | `Source` | `ScratchpadPanel` (`SourceCardSection`) — fallback name of a source card with none |
+| `graphExport` | `Export graph` | `GraphRenderer` — export-menu trigger `title`/`aria-label` |
+| `graphCopy` | `Copy graph (JSON)` | `GraphRenderer` — copy button `copyLabel` |
+| `graphTitle` | `Graph` | `GraphRenderer` — expandable-wrapper toolbar title when untitled |
+| `graphExportMenu` | `Export ▾` | `GraphRenderer` — visible label of the export-menu trigger button |
+| `graphDownloadPng` | `Download PNG` | `GraphRenderer` — "download PNG" export-menu item label |
+| `graphDownloadPngHint` | `visual snapshot` | `GraphRenderer` — hint under the "download PNG" item |
+| `graphDownloadMermaid` | `Download Mermaid` | `GraphRenderer` — "download Mermaid" export-menu item label |
+| `graphDownloadMermaidHint` | `markdown / GitHub` | `GraphRenderer` — hint under the "download Mermaid" item |
+| `graphDownloadJson` | `Download JSON` | `GraphRenderer` — "download JSON" export-menu item label |
+| `graphDownloadJsonHint` | `raw data` | `GraphRenderer` — hint under the "download JSON" item |
+| `galleryCopy` | `Copy image URLs` | `ImageGalleryRenderer` — copy button `copyLabel` |
+| `galleryTitle` | `Gallery` | `ImageGalleryRenderer` — expandable-wrapper toolbar title when untitled |
+| `videoCopy` | `Copy video URL` | `VideoRenderer` — copy button `copyLabel` |
+| `videoTitle` | `Video` | `VideoRenderer` — toolbar title and iframe `title` when untitled |
+| `sourceDetected` | `Detected from message` | `FormFieldRenderer` — "detected" prefill-source badge `title` |
+| `sourceInferred` | `Inferred from context` | `FormFieldRenderer` — "inferred" prefill-source badge `title` |
+| `sourcePrevious` | `Previously provided` | `FormFieldRenderer` — "user"/previous prefill-source badge `title` |
+| `lightboxLabel` | `Image lightbox` | `LightboxOverlay` — dialog `aria-label` |
+| `lightboxClose` | `Close lightbox` | `LightboxOverlay` — close button `aria-label` |
+| `lightboxPrevious` | `Previous image` | `LightboxOverlay` — previous-image button `aria-label` |
+| `lightboxNext` | `Next image` | `LightboxOverlay` — next-image button `aria-label` |
+| `modalClose` | `Close modal` | `ModalRenderer` — close button `aria-label` |
+| `copy` | `Copy` | `UIResourceRenderer` — default generic copy-button `title`/`aria-label` |
+| `copyMetric` | `Copy metric` | `UIResourceRenderer` (metric) — copy button `title` |
+| `copyText` | `Copy text` | `UIResourceRenderer` (text) — copy button `title` |
+| `copyErrorDetails` | `Copy error details` | `UIResourceRenderer` (error) — copy button `title` |
+| `tableTitle` | `Table` | `UIResourceRenderer` (table) — expandable-wrapper toolbar title when untitled |
+| `tableCopyCsv` | `Copy table (CSV)` | `UIResourceRenderer` (table) — CSV copy button `title`/`copyLabel` |
+| `tableExport` | `Export table` | `UIResourceRenderer` (table) — export-menu trigger `title`/`aria-label` |
+| `tableClearSearch` | `Clear search` | `UIResourceRenderer` (table) — search reset button `aria-label` |
+| `tableAriaLabel` | `Data table` | `UIResourceRenderer` (table) — scroll-region fallback `aria-label` when untitled |
+| `tableSearchPlaceholder` | `Search the table...` | `UIResourceRenderer` (table) — search input `placeholder`. A connector's own `tableParams.searchPlaceholder` still wins when set |
+| `tableCopyTsv` | `Copy TSV` | `UIResourceRenderer` (table) — "copy as TSV" export-menu item |
+| `tableDownloadCsv` | `Download CSV` | `UIResourceRenderer` (table) — "download CSV" export-menu item |
+| `tableDownloadJson` | `Download JSON` | `UIResourceRenderer` (table) — "download JSON" export-menu item |
+| `perPageSuffix` | `/ page` | `UIResourceRenderer` (table) — suffix after the pagination page-size selector |
+| `imageAlt` | `Image` | `UIResourceRenderer` (image) — fallback `alt` text |
+| `imageViewFullSize` | `View full size: {alt}` | `UIResourceRenderer` (image) — zoom-link `aria-label`. Template: `{alt}` |
+| `iframeTitle` | `Embedded content` | `UIResourceRenderer` (iframe) — fallback `title` |
+| `linkLabel` | `Link` | `UIResourceRenderer` (link) — fallback visible label |
+| `linkOpensInNewTab` | `{label}: {description} (opens in new tab)` | `UIResourceRenderer` (link) — `aria-label`. Template: `{label}`, `{description}` |
+| `validationWarning` | `Component validation warning` | `UIResourceRenderer` — inline component-validation warning chip `aria-label` |
+| `resourceTitle` | `Resource` | `UIResourceRenderer` — fallback heading for an HTML resource with no title or URI |
+| `chartError` | `Chart Error` | `UIResourceRenderer` (`ChartRenderer`) — heading of the chart renderer's error overlay |
+| `validationError` | `Validation Error` | `UIResourceRenderer` — heading of the blocking component-validation error card |
+| `validationUnknownError` | `Unknown validation error` | `UIResourceRenderer` — fallback detail of a validation error carrying no message |
+| `errorUnknown` | `Unknown error` | `UIResourceRenderer` (`ErrorCardRenderer`) — fallback message inside the error card's copyable text |
+| `errorUnknownToolName` | `Unknown` | `UIResourceRenderer` (`ErrorCardRenderer`) — fallback tool name in the error card heading |
+| `errorToolExecution` | `An error occurred during tool execution` | `UIResourceRenderer` (`ErrorCardRenderer`) — fallback body of an error card carrying no message |
+| `verifiedTitle` | `Verified against source data` | `VerifiedText` — `title` of a verified segment |
+| `verifiedAria` | `verified` | `VerifiedText` — verified marker glyph `aria-label` |
+| `unverifiedAria` | `unverified` | `VerifiedText` — unverified marker glyph `aria-label` |
+| `verifiedNotFound` | `Not found in source data` | `VerifiedText` — `title` when there is no closest match |
+| `verifiedNotFoundClosest` | `Not found in source data. Closest: {closest} ({pct}% off)` | `VerifiedText` — `title` when there is a closest match. Template: `{closest}`, `{pct}` |
+| `verifiedStripLabel` | `[unverified]` | `VerifiedText` — placeholder shown in `mode="strip"` |
+| `verifiedConfidence` | `{pct}% verified` | `ScratchpadPanel` (`ActionSection`), `VerifiedText` — confidence summary of a validated answer. Template: `{pct}` |
+| `verifiedUnverifiedCount` | `({count} unverified)` | `ScratchpadPanel` (`ActionSection`), `VerifiedText` — count of unverified numbers next to the confidence summary. Template: `{count}` |
+| `promptLoadingPreview` | `Loading preview...` | `ChatPrompt` (`FormBody`) — placeholder shown while the form's live preview is loading |
+| `promptConfirmed` | `Confirmed` | `ChatPrompt` — submitted label of a confirmed `confirm` prompt (no `confirmLabel`) |
+| `promptCancelled` | `Cancelled` | `ChatPrompt` — submitted label of a cancelled `confirm` prompt (no `cancelLabel`) |
+| `promptFormSubmitted` | `Form submitted` | `ChatPrompt` — submitted label of a `form` prompt whose fields are all empty |
+| `formSubmissionFailed` | `Submission failed` | `FormRenderer` — fallback error when the submit action fails without a message |
+| `formSubmitCountdown` | `{label} in {seconds}s...` | `FormRenderer` — auto-submit countdown notice. Template: `{label}`, `{seconds}` |
+| `actionGroupLabel` | `Action group` | `ActionGroupRenderer` — fallback `aria-label` of an action group without one |
+| `artifactDescription` | `Generated artifact` | `ArtifactRenderer` — fallback description of an artifact card without one |
+| `degradedCaption` | `Showing the underlying data — the interactive view is unavailable.` | `DegradedFallback` — fallback caption of the degraded-renderer notice |
+| `metaProvider` | `Provider` | `StreamingUIRenderer` — metadata panel provider cell label |
+| `metaModel` | `Model` | `StreamingUIRenderer` — metadata panel model cell label |
+| `metaExecutionTime` | `Execution Time` | `StreamingUIRenderer` — metadata panel execution-time cell label |
+| `metaCost` | `Cost` | `StreamingUIRenderer` — metadata panel cost cell label |
+| `metaTtfb` | `TTFB` | `StreamingUIRenderer` — metadata panel time-to-first-byte cell label |
+| `metaCached` | `Cached` | `StreamingUIRenderer` — metadata panel cache-hit cell label |
+| `download` | `Download` | `ArtifactRenderer` — download link label |
+| `unknown` | `unknown` | `GenerativeUIErrorBoundary` — fallback for a missing component type/id |
+| `citationUnresolved` | `[ref. {id}]` | `UIResourceRenderer` (table) — placeholder kept for a citation marker no `citationMap` resolves (empty map only). Template: `{id}` |
+| `invalidComponent` | `Invalid {type}` | `UIResourceRenderer` — `errorMode: 'inline-warn'` validation chip text. Template: `{type}` |
+| `toolErrorTitle` | `Tool Error: {tool}` | `UIResourceRenderer` — tool-error card heading. Template: `{tool}` (falls back to `errorUnknownToolName`) |
+| `errorTypeLabel` | `Type: {type}` | `UIResourceRenderer` — tool-error card error-type line. Template: `{type}` |
+| `errorSuggestions` | `Suggestions:` | `UIResourceRenderer` — heading above the tool-error suggestion list |
+| `chartInvalidData` | `Invalid chart data: missing data.datasets` | `UIResourceRenderer` (`ChartRenderer`) — shown when the payload has no `data.datasets` |
+| `unsupportedComponentType` | `Unsupported component type:` | `UIResourceRenderer` — prefix of the unsupported-component notice (the type follows in a `<code>`) |
+| `previewPrev` | `Prev` | `DataPreviewSection` — previous-page button visible label |
+| `previewNext` | `Next` | `DataPreviewSection` — next-page button visible label |
+| `previewPageIndicator` | `Page {page} / {total}` | `DataPreviewSection` — page indicator between the two buttons. Template: `{page}`, `{total}` |
+| `fieldResolving` | `Resolving...` | `FormFieldRenderer` — inline notice while an entity reference is being resolved |
+| `formPrefilledOne` | `{count} field pre-filled out of {total}` | `FormRenderer`, `ScratchpadPanel` — prefill summary, single field. Template: `{count}` (always 1), `{total}` |
+| `formPrefilledMany` | `{count} fields pre-filled out of {total}` | `FormRenderer`, `ScratchpadPanel` — prefill summary, several fields. Template: `{count}`, `{total}` |
+| `formSubmitting` | `Submitting...` | `FormRenderer` — busy label of the submit button while submitting |
+| `formReset` | `Reset` | `FormRenderer` — reset button label |
+| `errorBoundaryTitle` | `Component Failed to Render` | `GenerativeUIErrorBoundary` — default fallback heading |
+| `errorBoundaryMeta` | `Type: {type} \| ID: {id}...` | `GenerativeUIErrorBoundary` — default fallback metadata line. Template: `{type}`, `{id}` (both fall back to `unknown`) |
+| `errorBoundaryRetry` | `Retry Rendering` | `GenerativeUIErrorBoundary` — default fallback retry button label |
+| `scratchpadSearch` | `Search` | `ScratchpadPanel` — `waiting_human` search button label |
+| `scratchpadNextStep` | `Next` | `ScratchpadPanel` (`EnrichedStepsSection`) — advance-to-next-step button label |
+| `scratchpadPlan` | `Plan:` | `ScratchpadPanel` (`PromptSection`) — label preceding the interrogation plan summary |
+| `scratchpadModify` | `Modify` | `ScratchpadPanel` (`PromptSection`) — "modify this prompt" button label |
+| `scratchpadDetails` | `Details` | `ScratchpadPanel` (`ErrorSectionRenderer`) — "show details" toggle label |
+| `scratchpadItems` | `items` | `ScratchpadPanel` (`ActionSection`) — unit suffix after the item count |
+| `videoUnsupported` | `Your browser does not support the video tag.` | `VideoRenderer` — fallback text of a `<video>` element the browser cannot play |
+| `previewShowingRange` | `Showing {start}–{end} of {total}` | `DataPreviewSection` — paginated page-info line (template) |
+| `previewRowsOne` | `{count} row` | `DataPreviewSection` — unpaginated row count, singular (template) |
+| `previewRowsMany` | `{count} rows` | `DataPreviewSection` — unpaginated row count, plural (template) |
+| `previewTotalSuffix` | ` ({total} total)` | `DataPreviewSection` — suffix when the payload declares more rows than sent (template) |
+| `statusLoading` | `Loading...` | `ScratchpadPanel` — status badge, `loading` |
+| `statusActionAvailable` | `Action available` | `ScratchpadPanel` — status badge, `ready` |
+| `statusYourTurn` | `Your turn` | `ScratchpadPanel` — status badge, `waiting_human` |
+| `statusProcessing` | `Processing...` | `ScratchpadPanel` — status badge, `processing` |
+| `statusComplete` | `Complete` | `ScratchpadPanel` — status badge, `complete` (the `error` badge reuses `scratchpadError`) |
+| `agentStatusIdle` | `Idle` | `AgentCard` / `AgentStatusBadge` — status label |
+| `agentStatusRunning` | `Running` | `AgentCard` / `AgentStatusBadge` — status label |
+| `agentStatusWaiting` | `Waiting` | `AgentCard` / `AgentStatusBadge` — status label |
+| `agentStatusDone` | `Done` | `AgentCard` / `AgentStatusBadge` — status label |
+| `agentStatusError` | `Error` | `AgentCard` / `AgentStatusBadge` — status label |
+| `handoffItems` | `{count} items` | `AgentHandoff` — fallback summary (template); `content.summary` wins |
+| `degradedMoreRows` | `+{count} more rows not shown.` | `DegradedFallback` — truncation notice (template) |
+| `chartDegradedCaption` | `Showing the chart data as a table — the interactive chart is unavailable.` | `ChartJSRenderer` — degraded table caption |
+| `chartRenderFailed` | `Chart rendering failed: {error}` | `ChartJSRenderer` — degraded table notice (template) |
+| `chartRenderError` | `Chart rendering failed` | `ChartJSRenderer` — fallback reason when the render throws without a message |
+| `chartQuickchartCaption` | `Showing the chart data as a table.` | `UIResourceRenderer` — degraded table caption when chart.js is missing |
+| `graphDegradedCaption` | `Showing the graph data as a table — the interactive view is unavailable.` | `GraphRenderer` — degraded table caption |
+| `graphRenderFailed` | `Graph rendering failed: {error}` | `GraphRenderer` — degraded table notice (template) |
+| `graphRenderError` | `Failed to render graph` | `GraphRenderer` — fallback reason when the G6 render throws without a message |
+| `graphPngUnsupported` | `PNG export not supported in current renderer mode` | `GraphRenderer` — PNG export error |
+| `graphPngExportFailed` | `PNG export failed` | `GraphRenderer` — PNG export error without a message |
+| `mapDegradedCaption` | `Showing the map data as a coordinate table — the interactive map is unavailable.` | `MapRenderer` — degraded table caption |
+| `mapRenderFailed` | `Map rendering failed: {error}` | `MapRenderer` — degraded table notice (template) |
+| `mapRenderError` | `Failed to render map` | `MapRenderer` — fallback reason when the Leaflet render throws without a message |
+| `mapLibraryUnavailable` | `Map library could not be loaded.` | `MapRenderer` — the Leaflet bundle failed to load |
+| `degradedColType` | `Type` | Degraded map table — feature type column |
+| `degradedColLat` | `Lat` | Degraded map table — latitude column |
+| `degradedColLng` | `Lng` | Degraded map table — longitude column |
+| `degradedColInfo` | `Info` | Degraded map table — property summary column |
+| `degradedColSource` | `Source` | Degraded graph table — edge source column |
+| `degradedColTarget` | `Target` | Degraded graph table — edge target column |
+| `degradedColNode` | `Node` | Degraded graph table — node id column |
+| `degradedColLabel` | `Label` | Degraded graph / chart tables — label column |
+| `degradedSeries` | `Series {n}` | Degraded chart table — unlabelled dataset name (template) |
+| `chartTableSeries` | `Series` | `ChartJSRenderer` accessible data table — series column |
+| `chartTablePoint` | `Point` | `ChartJSRenderer` accessible data table — point-index column |
+| `autocompleteHintNavigate` | ` to navigate, ` | `AutocompleteDropdown` — hint prose between the arrow and Enter key caps |
+| `autocompleteHintSelect` | ` to select, ` | `AutocompleteDropdown` — hint prose between the Enter and Esc key caps |
+| `autocompleteHintDismiss` | ` to dismiss` | `AutocompleteDropdown` — hint prose after the Esc key cap |
+| `autocompleteTabToAccept` | `Tab to accept` | `AutocompleteFormField` — ghost-text hint |
+| `fieldAddMorePlaceholder` | `Add more...` | `FormFieldRenderer` — multi-value entity picker placeholder |
+| `galleryViewImage` | `View image {index}` | `ImageGalleryRenderer` — thumbnail button `aria-label` (template); `image.alt` wins |
+| `galleryImageAlt` | `Image {index}` | `ImageGalleryRenderer` — image `alt` (template); `image.alt` wins |
+| `imageAltFallback` | `image` | `UIResourceRenderer` — noun substituted into `imageViewFullSize` when the image has no `alt` |
+| `chartVisualizationAlt` | `Chart visualization` | `UIResourceRenderer` — chart image `alt`/`aria-label` with no payload title |
+| `chartWithTitleAlt` | `Chart: {title}` | `UIResourceRenderer` — chart image `alt`/`aria-label` with a title (template) |
+| `chartLoadFailed` | `Failed to load chart` | `UIResourceRenderer` — the chart image failed to load |
+| `paginationAllRows` | `All` | `UIResourceRenderer` — page-size option that disables pagination |
+| `fieldRequired` | `{field} is required` | Form validation (template) |
+| `fieldMustBeChecked` | `{field} must be checked` | Form validation (template) |
+| `fieldMinLength` | `Minimum {min} characters required` | Form validation (template) |
+| `fieldMaxLength` | `Maximum {max} characters allowed` | Form validation (template) |
+| `fieldInvalidPattern` | `Invalid format` | Form validation — value does not match `field.pattern` |
+| `fieldInvalidEmail` | `Invalid email address` | Form validation |
+| `fieldInvalidNumber` | `Must be a valid number` | Form validation |
+| `fieldMinValue` | `Minimum value is {min}` | Form validation (template) |
+| `fieldMaxValue` | `Maximum value is {max}` | Form validation (template) |
+| `fieldMinDate` | `Date must be after {min}` | Form validation (template) |
+| `fieldMaxDate` | `Date must be before {max}` | Form validation (template) |
+| `fieldInvalidOption` | `Please select a valid option` | Form validation |
+| `fieldInvalidFormat` | `Invalid format (expected: {format})` | Form validation (template); `field.valueFormatHint` wins |
+| `locale` | `en-US` | BCP-47 tag for number / date formatting and collation in chrome and table cells (see below) |
+| `briefingAdded` | `+{count} added` | `BriefingDiff` — stats summary (template) |
+| `briefingRemoved` | `{count} removed` | `BriefingDiff` — stats summary (template) |
+| `briefingChanged` | `{count} changed` | `BriefingDiff` — stats summary (template) |
+| `footerSources` | `{count} sources` | `FooterRenderer` — source count (template) |
+| `degradedMarker` | `marker` | Degraded map table — `Type` cell of a marker row |
+| `degradedFeature` | `feature` | Degraded map table — `Type` cell of a GeoJSON feature without a geometry type |
+| `fieldUnknownType` | `Unknown field type: {type}` | `FormFieldRenderer` — warning under a field of unknown type (template) |
+| `fieldSelectedCount` | `{count} selected` | `FormFieldRenderer` — multiselect trigger with selections (template) |
+| `scratchpadErrorCode` | `Code: {code}` | `ScratchpadPanel` — error state code line (template) |
+| `scratchpadResultCount` | `{count} results` | `ScratchpadPanel` — data-source card row count (template) |
+| `tableVirtualizedRows` | `(virtualized: {count} rows)` | `UIResourceRenderer` — table title suffix while virtualized (template) |
+| `tableSearchResultsOne` | `{count} result on {total}` | `UIResourceRenderer` — search result count, singular (template) |
+| `tableSearchResultsMany` | `{count} results on {total}` | `UIResourceRenderer` — search result count, plural (template) |
+| `tableServerPageRange` | `Showing {start} - {end} of {total}` | `UIResourceRenderer` — server-side pagination range (template) |
+| `errorCopyText` | `Error in {tool}: {message}` | `UIResourceRenderer` — text the tool-error card's Copy button puts on the clipboard (template) |
+| `errorUnknownTool` | `unknown tool` | `UIResourceRenderer` — tool name in `errorCopyText` when the error has none |
+| `streamInitializing` | `Initializing...` | `StreamingUIRenderer` — progress message before the stream starts |
+| `streamConnecting` | `Connecting to server...` | `StreamingUIRenderer` — progress message while connecting |
+| `streamLoadingComponent` | `Loading {type} component...` | `StreamingUIRenderer` — progress message per streamed component (template) |
+| `streamDashboardLoaded` | `Dashboard loaded` | `StreamingUIRenderer` — progress message on completion |
+| `streamErrorProgress` | `Error: {message}` | `StreamingUIRenderer` — progress message after an error (template) |
+| `streamConnectionFailed` | `Stream connection failed` | `StreamingUIRenderer` — error title when the connection fails |
+| `streamRequestFailed` | `Stream request failed` | `StreamingUIRenderer` — error message for a non-OK response without a message |
+| `streamEmptyResponse` | `Response body is null` | `StreamingUIRenderer` — error message for a response without a body |
+| `streamServerSide` | `Streaming UI cannot start on server-side` | `StreamingUIRenderer` — error message when started during SSR |
+| `streamUnknownError` | `Unknown error` | `StreamingUIRenderer` — error message when the failure has none |
+| `streamServerSideTitle` | `Streaming unavailable` | `StreamingUIRenderer` — error heading when streaming was started during SSR (replaces the machine code `ssr`) |
+| `graphUnavailable` | `Graph rendering unavailable` | `GraphRenderer` — heading when the `@antv/g6` peer is missing |
+| `mapPmtilesUnavailable` | `PMTiles layer unavailable — the optional "protomaps-leaflet" peer dependency failed to load or render.` | `MapRenderer` — banner when the PMTiles overlay fails |
+| `mapBaseMapStillShown` | `The base map is still shown.` | `MapRenderer` — sentence after the PMTiles banner |
+| `chartJsUnavailable` | `Chart.js is not available. Install chart.js peer dependency.` | `UIResourceRenderer` chart — error when `renderer: 'native'` is forced without chart.js |
+| `chartIframeUnavailable` | `Interactive chart unavailable — install the chart.js peer dependency, or set allowQuickchartFallback to use the external quickchart.io renderer.` | `UIResourceRenderer` chart — degraded-table message when chart.js is missing and quickchart is not allowed |
+| `previewInvalidContent` | `[DataPreviewSection] Invalid content format` | `DataPreviewSection` — fallback when the content is not `{ columns, rows }` |
+| `citationViewSource` | `View source - {label}` | `UIResourceRenderer` table — default citation chip tooltip (template; via `CitationCtx.viewSourceLabel`) |
+| `sizeBytes` | `{size} B` | `ArtifactRenderer` — file size below 1 KB (template) |
+| `sizeKilobytes` | `{size} KB` | `ArtifactRenderer` — file size in kilobytes (template) |
+| `sizeMegabytes` | `{size} MB` | `ArtifactRenderer` — file size in megabytes (template) |
+
+### `locale` — number, date and sort formatting (default change in v6.20.0)
+
+`strings.locale` (default `'en-US'`) is passed to every `toLocaleString` /
+`toLocaleDateString` / `localeCompare` the library calls itself: table sorting
+and the client-side range count in `UIResourceRenderer`, the tool-error card
+timestamp, `DataPreviewSection` number / currency / date cells, sorting and
+page-info counts, `ScratchpadPanel` preview / data-source counts, and
+`MapRenderer` auto-generated popups. Before v6.20.0 these sites hardcoded
+`'fr-FR'` / `'fr'` or used the runtime's implicit locale (which could differ
+between SSR and hydration). To keep French formatting:
+`<MCPUIStringsProvider strings={{ locale: 'fr-FR' }}>`.
+
+**SSR determinism.** `strings.locale` always resolves to an explicit BCP-47
+tag — `'en-US'` unless a provider overrides it — never to the server's or the
+browser's ambient locale. That is what makes it safe to call in SSR
+components: the same tag renders the same formatted string on the server and
+after hydration, so there is no server/client markup mismatch. Relying on the
+runtime's implicit locale (an argument-less `toLocaleString()`) is exactly
+the pre-v6.20.0 behavior this key replaces, and it did not have that
+guarantee. An invalid tag in the provider resolves to `'en-US'` instead of
+making `Intl` throw (`resolveMCPUILocale()` exposes the same check).
+
+The locale does not fix the time zone. Date-only `DataPreviewSection` cells
+are formatted in UTC so every viewer sees the same calendar date. Date-time
+cells and the tool-error card timestamp are formatted only after mount, in the
+viewer's time zone: server markup shows the raw date-time value.
+
+`useStreamingUI()` called directly (without `StreamingUIRenderer`) takes the
+same messages as a `messages` option (`DEFAULT_STREAMING_UI_MESSAGES`).
+
+### `tableSearchPlaceholder`, `verifiedStripLabel`, `scratchpadEdit`, `citationUnresolved` and `formPrefilledOne`/`formPrefilledMany` changed from French to English
+
+As of v6.20.0 these five defaults are English, matching every other key. If
+you relied on the previous French defaults with no provider mounted,
+restore them explicitly:
+
+```tsx
+<MCPUIStringsProvider
+  strings={{
+    tableSearchPlaceholder: 'Rechercher dans le tableau...',
+    verifiedStripLabel: '[non vérifié]',
+    scratchpadEdit: 'Modifier',
+    citationUnresolved: '[réf. {id}]',
+    formPrefilledOne: '{count} champ pré-rempli sur {total}',
+    formPrefilledMany: '{count} champs pré-remplis sur {total}',
+  }}
+>
+  <App />
+</MCPUIStringsProvider>
+```
+
+### French example dictionary
+
+A complete override covering every key above:
+
+```tsx
+import { MCPUIStringsProvider } from '@seed-ship/mcp-ui-solid'
+import type { MCPUIStrings } from '@seed-ship/mcp-ui-solid'
+
+const fr: MCPUIStrings = {
+  expand: 'Agrandir',
+  expandedView: 'Vue agrandie',
+  copyToClipboard: 'Copier dans le presse-papiers',
+  closeExpandedView: 'Fermer la vue agrandie',
+  feedbackUseful: 'Utile',
+  feedbackNotUseful: 'Pas utile',
+  feedbackPositiveAck: 'Merci !',
+  feedbackNegativeAck: "Noté — on va s'améliorer",
+  retry: 'Réessayer',
+  ok: 'OK',
+  cancel: 'Annuler',
+  confirm: 'Confirmer',
+  submit: 'Envoyer',
+  dismiss: 'Fermer',
+  yes: 'Oui',
+  no: 'Non',
+  chartView: 'Graphique',
+  chartDataView: 'Données',
+  chartViewSelector: 'Vue graphique ou données',
+  chartDataTable: 'Données du graphique',
+  chartDataSummary: 'Les valeurs exactes sont disponibles dans la vue données.',
+  chartNoData: 'Aucune donnée de graphique',
+  paginationPrevious: 'Page précédente',
+  paginationNext: 'Page suivante',
+  paginationPageSize: 'Lignes par page',
+  gridRegion: 'Grille de mise en page',
+  autocompleteSuggestions: 'Suggestions',
+  autocompleteLoading: 'Chargement...',
+  autocompleteEmpty: 'Aucune suggestion trouvée',
+  carouselTitle: 'Carrousel',
+  carouselCopy: 'Copier les éléments (JSON)',
+  mapTitle: 'Carte',
+  mapCopy: 'Copier les repères en GeoJSON',
+  chartDownloadPng: 'Télécharger en PNG',
+  chartDownloadPngAria: 'Télécharger le graphique en PNG',
+  chartCopy: 'Copier les données du graphique (JSON)',
+  chartLoading: 'Chargement du graphique...',
+  codeSearchPlaceholder: 'Rechercher…',
+  codeSearchAria: 'Rechercher dans le code',
+  codeDownloadAria: 'Télécharger le code en fichier',
+  codeDownload: 'Télécharger le code',
+  codeToggleWordWrap: 'Activer/désactiver le retour à la ligne',
+  codeCopy: 'Copier le code',
+  codeTitle: 'Code',
+  codeWordWrapEnable: 'Activer le retour à la ligne',
+  codeWordWrapDisable: 'Désactiver le retour à la ligne',
+  exportCsvRows: 'Exporter en CSV ({count} lignes)',
+  exportJsonRows: 'Exporter en JSON ({count} lignes)',
+  sortBy: 'Trier par {column}',
+  removeItem: 'Supprimer {name}',
+  filterPlaceholder: 'Filtrer...',
+  fieldNotSupported: 'Non pris en charge',
+  fieldNoMatches: 'Aucun résultat',
+  fieldGroupContainer: 'Conteneur de groupe',
+  fieldSelectPlaceholder: 'Sélectionner...',
+  fieldTagsPlaceholder: 'Saisir puis appuyer sur Entrée...',
+  scratchpadClose: 'Fermer',
+  scratchpadPreview: 'Aperçu',
+  scratchpadNoResults: 'Aucun résultat pour ces filtres',
+  scratchpadModifyFilters: 'Modifier les filtres',
+  scratchpadNoFilters: 'Aucun filtre',
+  scratchpadEdit: 'Modifier',
+  scratchpadSend: 'Envoyer',
+  scratchpadShowRaw: 'Afficher la charge SSE brute',
+  scratchpadHideRaw: 'Masquer la charge SSE brute',
+  scratchpadCommentPlaceholder: 'Ajouter un commentaire...',
+  scratchpadError: 'Erreur',
+  scratchpadSource: 'Source',
+  graphExport: 'Exporter le graphe',
+  graphCopy: 'Copier le graphe (JSON)',
+  graphTitle: 'Graphe',
+  graphExportMenu: 'Exporter ▾',
+  graphDownloadPng: 'Télécharger en PNG',
+  graphDownloadPngHint: 'instantané visuel',
+  graphDownloadMermaid: 'Télécharger en Mermaid',
+  graphDownloadMermaidHint: 'markdown / GitHub',
+  graphDownloadJson: 'Télécharger en JSON',
+  graphDownloadJsonHint: 'données brutes',
+  galleryCopy: 'Copier les URL des images',
+  galleryTitle: 'Galerie',
+  videoCopy: "Copier l'URL de la vidéo",
+  videoTitle: 'Vidéo',
+  sourceDetected: 'Détecté depuis le message',
+  sourceInferred: 'Déduit du contexte',
+  sourcePrevious: 'Fourni précédemment',
+  lightboxLabel: "Visionneuse d'image",
+  lightboxClose: 'Fermer la visionneuse',
+  lightboxPrevious: 'Image précédente',
+  lightboxNext: 'Image suivante',
+  modalClose: 'Fermer la fenêtre modale',
+  copy: 'Copier',
+  copyMetric: 'Copier la métrique',
+  copyText: 'Copier le texte',
+  copyErrorDetails: "Copier les détails de l'erreur",
+  tableTitle: 'Tableau',
+  tableCopyCsv: 'Copier le tableau (CSV)',
+  tableExport: 'Exporter le tableau',
+  tableClearSearch: 'Effacer la recherche',
+  tableAriaLabel: 'Tableau de données',
+  tableSearchPlaceholder: 'Rechercher dans le tableau...',
+  tableCopyTsv: 'Copier en TSV',
+  tableDownloadCsv: 'Télécharger en CSV',
+  tableDownloadJson: 'Télécharger en JSON',
+  perPageSuffix: '/ page',
+  imageAlt: 'Image',
+  imageViewFullSize: 'Voir en taille réelle : {alt}',
+  iframeTitle: 'Contenu intégré',
+  linkLabel: 'Lien',
+  linkOpensInNewTab: '{label} : {description} (ouvre un nouvel onglet)',
+  validationWarning: 'Avertissement de validation du composant',
+  resourceTitle: 'Ressource',
+  chartError: 'Erreur du graphique',
+  validationError: 'Erreur de validation',
+  validationUnknownError: 'Erreur de validation inconnue',
+  errorUnknown: 'Erreur inconnue',
+  errorUnknownToolName: 'Inconnu',
+  errorToolExecution: "Une erreur s'est produite lors de l'exécution de l'outil",
+  verifiedTitle: 'Vérifié par rapport aux données source',
+  verifiedAria: 'vérifié',
+  unverifiedAria: 'non vérifié',
+  verifiedNotFound: 'Introuvable dans les données source',
+  verifiedNotFoundClosest: "Introuvable dans les données source. Le plus proche : {closest} ({pct} % d'écart)",
+  verifiedStripLabel: '[non vérifié]',
+  verifiedConfidence: '{pct}% vérifié',
+  verifiedUnverifiedCount: '({count} non vérifié)',
+  promptLoadingPreview: "Chargement de l'aperçu...",
+  promptConfirmed: 'Confirmé',
+  promptCancelled: 'Annulé',
+  promptFormSubmitted: 'Formulaire envoyé',
+  formSubmissionFailed: 'Envoi échoué',
+  formSubmitCountdown: '{label} dans {seconds}s...',
+  actionGroupLabel: "Groupe d'actions",
+  artifactDescription: 'Artefact généré',
+  degradedCaption: "Affichage des données sous-jacentes — la vue interactive n'est pas disponible.",
+  metaProvider: 'Fournisseur',
+  metaModel: 'Modèle',
+  metaExecutionTime: "Temps d'exécution",
+  metaCost: 'Coût',
+  metaTtfb: 'TTFB',
+  metaCached: 'En cache',
+  download: 'Télécharger',
+  unknown: 'inconnu',
+  citationUnresolved: '[réf. {id}]',
+  invalidComponent: '{type} invalide',
+  toolErrorTitle: 'Erreur outil : {tool}',
+  errorTypeLabel: 'Type : {type}',
+  errorSuggestions: 'Suggestions :',
+  chartInvalidData: 'Données de graphique invalides : data.datasets manquant',
+  unsupportedComponentType: 'Type de composant non pris en charge :',
+  previewPrev: 'Préc.',
+  previewNext: 'Suiv.',
+  previewPageIndicator: 'Page {page} / {total}',
+  fieldResolving: 'Résolution...',
+  formPrefilledOne: '{count} champ pré-rempli sur {total}',
+  formPrefilledMany: '{count} champs pré-remplis sur {total}',
+  formSubmitting: 'Envoi...',
+  formReset: 'Réinitialiser',
+  errorBoundaryTitle: "Le composant n'a pas pu être rendu",
+  errorBoundaryMeta: 'Type : {type} | ID : {id}...',
+  errorBoundaryRetry: 'Réessayer le rendu',
+  scratchpadSearch: 'Rechercher',
+  scratchpadNextStep: 'Suivant',
+  scratchpadPlan: 'Plan :',
+  scratchpadModify: 'Modifier',
+  scratchpadDetails: 'Détails',
+  scratchpadItems: 'éléments',
+  videoUnsupported: 'Votre navigateur ne prend pas en charge la balise vidéo.',
+  previewShowingRange: 'Affichage de {start}–{end} sur {total}',
+  previewRowsOne: '{count} ligne',
+  previewRowsMany: '{count} lignes',
+  previewTotalSuffix: ' ({total} au total)',
+  statusLoading: 'Chargement...',
+  statusActionAvailable: 'Action disponible',
+  statusYourTurn: 'À vous',
+  statusProcessing: 'Traitement...',
+  statusComplete: 'Terminé',
+  agentStatusIdle: 'Inactif',
+  agentStatusRunning: 'En cours',
+  agentStatusWaiting: 'En attente',
+  agentStatusDone: 'Terminé',
+  agentStatusError: 'Erreur',
+  handoffItems: '{count} éléments',
+  degradedMoreRows: '+{count} lignes supplémentaires non affichées.',
+  chartDegradedCaption:
+    "Affichage des données du graphique sous forme de tableau — le graphique interactif n'est pas disponible.",
+  chartRenderFailed: 'Échec du rendu du graphique : {error}',
+  chartRenderError: 'Échec du rendu du graphique',
+  chartQuickchartCaption: 'Affichage des données du graphique sous forme de tableau.',
+  graphDegradedCaption:
+    "Affichage des données du graphe sous forme de tableau — la vue interactive n'est pas disponible.",
+  graphRenderFailed: 'Échec du rendu du graphe : {error}',
+  graphRenderError: 'Échec du rendu du graphe',
+  graphPngUnsupported: "Export PNG non pris en charge dans ce mode de rendu",
+  graphPngExportFailed: 'Échec de l’export PNG',
+  mapDegradedCaption:
+    "Affichage des données de la carte sous forme de tableau de coordonnées — la carte interactive n'est pas disponible.",
+  mapRenderFailed: 'Échec du rendu de la carte : {error}',
+  mapRenderError: 'Échec du rendu de la carte',
+  mapLibraryUnavailable: 'Impossible de charger la bibliothèque de cartographie.',
+  degradedColType: 'Type',
+  degradedColLat: 'Lat',
+  degradedColLng: 'Long',
+  degradedColInfo: 'Infos',
+  degradedColSource: 'Source',
+  degradedColTarget: 'Cible',
+  degradedColNode: 'Nœud',
+  degradedColLabel: 'Libellé',
+  degradedSeries: 'Série {n}',
+  chartTableSeries: 'Série',
+  chartTablePoint: 'Point',
+  autocompleteHintNavigate: ' pour naviguer, ',
+  autocompleteHintSelect: ' pour sélectionner, ',
+  autocompleteHintDismiss: ' pour fermer',
+  autocompleteTabToAccept: 'Tab pour accepter',
+  fieldAddMorePlaceholder: 'Ajouter...',
+  galleryViewImage: "Voir l'image {index}",
+  galleryImageAlt: 'Image {index}',
+  imageAltFallback: 'image',
+  chartVisualizationAlt: 'Visualisation du graphique',
+  chartWithTitleAlt: 'Graphique : {title}',
+  chartLoadFailed: 'Échec du chargement du graphique',
+  paginationAllRows: 'Toutes',
+  fieldRequired: '{field} est requis',
+  fieldMustBeChecked: '{field} doit être coché',
+  fieldMinLength: '{min} caractères minimum requis',
+  fieldMaxLength: '{max} caractères maximum autorisés',
+  fieldInvalidPattern: 'Format invalide',
+  fieldInvalidEmail: 'Adresse e-mail invalide',
+  fieldInvalidNumber: 'Doit être un nombre valide',
+  fieldMinValue: 'La valeur minimale est {min}',
+  fieldMaxValue: 'La valeur maximale est {max}',
+  fieldMinDate: 'La date doit être postérieure au {min}',
+  fieldMaxDate: 'La date doit être antérieure au {max}',
+  fieldInvalidOption: 'Veuillez sélectionner une option valide',
+  fieldInvalidFormat: 'Format invalide (attendu : {format})',
+  locale: 'fr-FR',
+  briefingAdded: '+{count} ajouté(s)',
+  briefingRemoved: '{count} supprimé(s)',
+  briefingChanged: '{count} modifié(s)',
+  footerSources: '{count} sources',
+  degradedMarker: 'repère',
+  degradedFeature: 'entité',
+  fieldUnknownType: 'Type de champ inconnu : {type}',
+  fieldSelectedCount: '{count} sélectionné(s)',
+  scratchpadErrorCode: 'Code : {code}',
+  scratchpadResultCount: '{count} résultats',
+  tableVirtualizedRows: '(virtualisé : {count} lignes)',
+  tableSearchResultsOne: '{count} résultat sur {total}',
+  tableSearchResultsMany: '{count} résultats sur {total}',
+  tableServerPageRange: 'Lignes {start} à {end} sur {total}',
+  errorCopyText: 'Erreur dans {tool} : {message}',
+  errorUnknownTool: 'outil inconnu',
+  streamInitializing: 'Initialisation...',
+  streamConnecting: 'Connexion au serveur...',
+  streamLoadingComponent: 'Chargement du composant {type}...',
+  streamDashboardLoaded: 'Tableau de bord chargé',
+  streamErrorProgress: 'Erreur : {message}',
+  streamConnectionFailed: 'Échec de la connexion au flux',
+  streamRequestFailed: 'Échec de la requête de flux',
+  streamEmptyResponse: 'Réponse vide',
+  streamServerSide: 'Le streaming ne peut pas démarrer côté serveur',
+  streamUnknownError: 'Erreur inconnue',
+  streamServerSideTitle: 'Streaming indisponible',
+  graphUnavailable: 'Rendu du graphe indisponible',
+  mapPmtilesUnavailable:
+    "Couche PMTiles indisponible — la dépendance optionnelle « protomaps-leaflet » n'a pas pu être chargée ou rendue.",
+  mapBaseMapStillShown: 'Le fond de carte reste affiché.',
+  chartJsUnavailable: "Chart.js n'est pas disponible. Installez la dépendance chart.js.",
+  chartIframeUnavailable:
+    'Graphique interactif indisponible — installez la dépendance chart.js, ou activez allowQuickchartFallback pour utiliser le rendu externe quickchart.io.',
+  previewInvalidContent: 'Format de contenu invalide',
+  citationViewSource: 'Voir la source - {label}',
+  sizeBytes: '{size} o',
+  sizeKilobytes: '{size} Ko',
+  sizeMegabytes: '{size} Mo',
+}
+
+<MCPUIStringsProvider strings={fr}><App /></MCPUIStringsProvider>
+```
+
+### Exclusion policy
+
+A handful of strings stay hardcoded on purpose — P1–P8, with every concrete
+occurrence, live in [`CHANGELOG.md`](./CHANGELOG.md)'s `## [6.20.0]` entry.
+In short:
+
+| # | What stays hardcoded | Why |
+|---|---|---|
+| P1 | Keyboard key caps inside `<kbd>` (`Enter`, `Esc`) | The physical key reads the same in any language |
+| P2 | The OpenStreetMap / ODbL tile attribution | Exact wording required by the license; override via `params.attribution` |
+| P3 | Developer diagnostics naming an npm/peer package or a config flag, bracketed `[Component] …` messages, debug-only panels, developer-misuse errors, and the structural `ValidationError.message` of `services/validation.ts` | Addressed to a developer or to the payload producer, not to the end user |
+| P4 | Machine tokens: file-format acronyms, HTTP verbs, unit symbols, ISO currency codes, chart point property names (`x`/`y`/`r`) | Not prose — still overridable where a `labels` parameter exists |
+| P5 | Pure module functions with a documented render override | No occurrence remains — the citation chip tooltip is now `citationViewSource` |
+| P6 | `PresentationFeedback`'s labels | The component documents its own `labels` prop instead |
+| P7 | Hook-level errors returned to the consumer, `onError` payloads, `console`/logger/telemetry strings | The library itself never renders these |
+| P8 | `services/component-registry.ts` and `plugins/` system prompts | LLM-facing schema/example text — translating it would teach the model non-English payloads |
+
+### Options — runtime-free adapters, services and hooks
+
+These modules cannot rely on `MCPUIStringsProvider`: the adapters, services
+and helpers are runtime-free (no `solid-js` import), and `useStreamingUI` is a
+hook a host may call outside any provider. So each takes its own English wording as a trailing optional parameter with an
+exported default table:
+
+| Module | Function(s) | Option | Default table | Keys |
+|---|---|---|---|---|
+| `adapters/connector.ts` (`/adapters`) | `connectorResultToUILayout` | `options.messages?: Partial<ConnectorAdapterMessages>` | `DEFAULT_CONNECTOR_MESSAGES` | `degradedNotice`, `degradedVersionSuffix`, `versionWarning` |
+| `adapters/macro-run.ts` (`/adapters`) | `macroRunToScratchpadState`, `macroInterrogationToChatPromptConfig` | `options.messages?: Partial<MacroRunAdapterMessages>` | `DEFAULT_MACRO_RUN_MESSAGES` | `agentSectionTitle`, `progressSectionTitle`, `resultSectionTitle`, `runAborted`, `runFailed`, `confirmDefault` |
+| `services/validation.ts` (root, `/validation`) | `validateFieldValue`, `validateFormData` | `messages?: Partial<FormValidationMessages>` | `DEFAULT_VALIDATION_MESSAGES` | `required`, `mustBeChecked`, `minLength`, `maxLength`, `invalidPattern`, `invalidEmail`, `invalidNumber`, `minValue`, `maxValue`, `minDate`, `maxDate`, `invalidOption`, `invalidFormat` |
+| `utils/degraded-projections.ts` (root) | `graphToDegradedTable`, `mapToDegradedTable`, `chartToDegradedTable` | `labels?: Partial<DegradedProjectionLabels>` | `DEGRADED_PROJECTION_LABELS` | `source`, `target`, `label`, `node`, `type`, `lat`, `lng`, `info`, `marker`, `feature`, `series` |
+| `components/chart-data-table.ts` (root) | `chartToDataTable` | `labels?: Partial<ChartDataTableLabels>` | `CHART_DATA_TABLE_LABELS` | `series`, `point`, `label`, `seriesName`, `x`, `y`, `r` |
+| `hooks/useStreamingUI.ts` (root, `/hooks`) | `useStreamingUI` | `options.messages?: Partial<StreamingUIMessages>` | `DEFAULT_STREAMING_UI_MESSAGES` | `initializing`, `connecting`, `loadingComponent`, `dashboardLoaded`, `errorProgress`, `connectionFailed`, `requestFailed`, `emptyResponse`, `serverSide`, `unknownError` |
+
+Every option is a trailing OPTIONAL parameter, so existing calls keep
+type-checking and behaving identically. `StreamingUIRenderer` and
+`FormRenderer` feed their module's table from `useMCPUIStrings()`
+automatically — a host only calls these functions with an explicit
+`messages`/`labels` override when it uses the adapter or helper directly,
+outside a component that already wires it up.
 
 ## Telemetry
 

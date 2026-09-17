@@ -10,6 +10,7 @@ import type { UIComponent, CodeComponentParams } from '../types'
 import { ExpandableWrapper, useExpanded } from './ExpandableWrapper'
 import { highlightQuery } from './UIResourceRenderer'
 import { escapeHtml } from '../utils/escape-html'
+import { useMCPUIStrings } from '../context/MCPUIStringsContext'
 
 /** Map of `params.language` → file extension for the v6.2.0 download button. */
 const LANGUAGE_EXTENSIONS: Record<string, string> = {
@@ -45,6 +46,7 @@ export interface CodeBlockRendererProps {
 }
 
 export const CodeBlockRenderer: Component<CodeBlockRendererProps> = (props) => {
+    const strings = useMCPUIStrings()
     const [highlightedCode, setHighlightedCode] = createSignal<string>('')
     const [isCopied, setIsCopied] = createSignal(false)
     const [isHljsLoaded, setIsHljsLoaded] = createSignal(false)
@@ -201,12 +203,12 @@ export const CodeBlockRenderer: Component<CodeBlockRendererProps> = (props) => {
     }
 
     return (
-        <ExpandableWrapper title={params()?.filename || params()?.language || 'Code'} copyData={params()?.code} copyLabel="Copy code" toolbarVariant={props.toolbarVariant}>
+        <ExpandableWrapper title={params()?.filename || params()?.language || strings.codeTitle} copyData={params()?.code} copyLabel={strings.codeCopy} toolbarVariant={props.toolbarVariant}>
         <div class={`w-full bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden text-sm flex flex-col ${isExpanded() ? 'flex-1 min-h-0' : ''}`}>
             {/* Header */}
             <div class="flex items-center justify-between px-4 py-2 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shrink-0">
                 <div class="font-mono text-xs text-gray-600 dark:text-gray-400">
-                    {params()?.filename || params()?.language || 'Code'}
+                    {params()?.filename || params()?.language || strings.codeTitle}
                 </div>
                 <div class="flex items-center gap-2">
                     {/* Search input (v6.2.0) */}
@@ -214,16 +216,16 @@ export const CodeBlockRenderer: Component<CodeBlockRendererProps> = (props) => {
                         type="text"
                         value={searchQuery()}
                         onInput={(e) => setSearchQuery(e.currentTarget.value)}
-                        placeholder="Search…"
+                        placeholder={strings.codeSearchPlaceholder}
                         class="px-2 py-0.5 text-xs border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 outline-none w-32"
-                        aria-label="Search in code"
+                        aria-label={strings.codeSearchAria}
                     />
                     {/* Download button (v6.2.0) */}
                     <button
                         onClick={handleDownload}
                         class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 focus:outline-none transition-colors"
-                        aria-label="Download code as file"
-                        title="Download code"
+                        aria-label={strings.codeDownloadAria}
+                        title={strings.codeDownload}
                     >
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -233,8 +235,8 @@ export const CodeBlockRenderer: Component<CodeBlockRendererProps> = (props) => {
                     <button
                         onClick={() => setWordWrap(!wordWrap())}
                         class={`focus:outline-none transition-colors ${wordWrap() ? 'text-blue-500 dark:text-blue-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
-                        aria-label="Toggle word wrap"
-                        title={wordWrap() ? 'Disable word wrap' : 'Enable word wrap'}
+                        aria-label={strings.codeToggleWordWrap}
+                        title={wordWrap() ? strings.codeWordWrapDisable : strings.codeWordWrapEnable}
                     >
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a4 4 0 010 8H9m4 0l-3-3m3 3l-3 3M3 6h18M3 14h4" />
@@ -244,8 +246,8 @@ export const CodeBlockRenderer: Component<CodeBlockRendererProps> = (props) => {
                     <button
                         onClick={handleCopy}
                         class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 focus:outline-none transition-colors"
-                        aria-label="Copy code"
-                        title="Copy code"
+                        aria-label={strings.codeCopy}
+                        title={strings.codeCopy}
                     >
                         <Show when={isCopied()} fallback={
                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

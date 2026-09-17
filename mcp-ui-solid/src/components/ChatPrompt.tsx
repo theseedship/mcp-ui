@@ -52,6 +52,7 @@ import type {
   FormPromptConfig,
 } from '../types/chat-bus'
 import { FormFieldRenderer } from './FormFieldRenderer'
+import { useMCPUIStrings } from '../context/MCPUIStringsContext'
 import type { FormFieldParams } from '../types'
 
 export interface ChatPromptProps {
@@ -78,6 +79,8 @@ export interface ChatPromptProps {
  * />
  */
 export const ChatPrompt: Component<ChatPromptProps> = (props) => {
+  const strings = useMCPUIStrings()
+
   // F1: Guard against null/undefined config (e.g. after dismiss clears state)
   if (!props.config) return null
 
@@ -100,7 +103,7 @@ export const ChatPrompt: Component<ChatPromptProps> = (props) => {
             ? 'px-3 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors'
             : 'p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors'
           }
-          aria-label={props.dismissLabel || 'Dismiss'}
+          aria-label={props.dismissLabel || strings.dismiss}
         >
           <Show when={props.dismissLabel} fallback={
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -124,10 +127,10 @@ export const ChatPrompt: Component<ChatPromptProps> = (props) => {
           <Match when={props.config.type === 'confirm'}>
             <ConfirmBody
               config={props.config.config as ConfirmPromptConfig}
-              onConfirm={() => props.onSubmit({ type: 'confirm', value: 'confirmed', label: (props.config.config as ConfirmPromptConfig).confirmLabel || 'Confirmed' })}
+              onConfirm={() => props.onSubmit({ type: 'confirm', value: 'confirmed', label: (props.config.config as ConfirmPromptConfig).confirmLabel || strings.promptConfirmed })}
               onCancel={() => {
                 props.onDismiss?.()
-                props.onSubmit({ type: 'confirm', value: 'cancelled', label: (props.config.config as ConfirmPromptConfig).cancelLabel || 'Cancelled', dismissed: true })
+                props.onSubmit({ type: 'confirm', value: 'cancelled', label: (props.config.config as ConfirmPromptConfig).cancelLabel || strings.promptCancelled, dismissed: true })
               }}
             />
           </Match>
@@ -213,6 +216,7 @@ const ConfirmBody: Component<{
   onConfirm: () => void
   onCancel: () => void
 }> = (props) => {
+  const strings = useMCPUIStrings()
   const isDanger = () => props.config.variant === 'danger'
 
   return (
@@ -225,7 +229,7 @@ const ConfirmBody: Component<{
           onClick={props.onCancel}
           class="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
         >
-          {props.config.cancelLabel || 'Cancel'}
+          {props.config.cancelLabel || strings.cancel}
         </button>
         <button
           onClick={props.onConfirm}
@@ -235,7 +239,7 @@ const ConfirmBody: Component<{
               : 'bg-blue-600 hover:bg-blue-700'
           }`}
         >
-          {props.config.confirmLabel || 'Confirm'}
+          {props.config.confirmLabel || strings.confirm}
         </button>
       </div>
     </div>
@@ -248,6 +252,7 @@ const FormBody: Component<{
   config: FormPromptConfig
   onSubmit: (data: Record<string, unknown>, label: string) => void
 }> = (props) => {
+  const strings = useMCPUIStrings()
   const [formData, setFormData] = createSignal<Record<string, any>>({})
   const [dynamicOptions, setDynamicOptions] = createSignal<Record<string, Array<{ label: string; value: string }>>>({})
   const [previewText, setPreviewText] = createSignal<string>('')
@@ -336,7 +341,7 @@ const FormBody: Component<{
       .filter(([, v]) => v !== undefined && v !== '' && !(Array.isArray(v) && v.length === 0))
       .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`)
       .join(', ')
-    props.onSubmit(data, label || 'Form submitted')
+    props.onSubmit(data, label || strings.promptFormSubmitted)
   }
 
   const isValid = () => {
@@ -379,7 +384,7 @@ const FormBody: Component<{
           <Show when={previewLoading()} fallback={
             <p class="text-blue-700 dark:text-blue-300">{previewText()}</p>
           }>
-            <p class="text-blue-400 animate-pulse">Loading preview...</p>
+            <p class="text-blue-400 animate-pulse">{strings.promptLoadingPreview}</p>
           </Show>
         </div>
       </Show>
@@ -390,7 +395,7 @@ const FormBody: Component<{
           disabled={!isValid()}
           class="px-4 py-2 text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
         >
-          {props.config.submitLabel || 'Submit'}
+          {props.config.submitLabel || strings.submit}
         </button>
       </div>
     </form>

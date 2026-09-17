@@ -17,6 +17,7 @@ import {
   MCPUIStringsProvider,
   useMCPUIStrings,
   DEFAULT_MCPUI_STRINGS,
+  resolveMCPUILocale,
   type MCPUIStrings,
 } from './MCPUIStringsContext'
 import { FeedbackInline } from '../components/FeedbackInline'
@@ -66,6 +67,28 @@ describe('MCPUIStringsContext (v6.6.0)', () => {
     }
     render(() => <Probe />)
     expect(captured).toEqual(DEFAULT_MCPUI_STRINGS)
+  })
+
+  it('resolves an invalid or empty locale to en-US and canonicalizes valid ones (v6.20.0)', () => {
+    expect(resolveMCPUILocale('not_a_locale')).toBe('en-US')
+    expect(resolveMCPUILocale('')).toBe('en-US')
+    expect(resolveMCPUILocale(undefined)).toBe('en-US')
+    expect(resolveMCPUILocale('fr-fr')).toBe('fr-FR')
+
+    let captured: ReturnType<typeof useMCPUIStrings> | undefined
+    const Probe = () => {
+      captured = useMCPUIStrings()
+      return <span>{(1234.5).toLocaleString(captured.locale)}</span>
+    }
+    const [locale, setLocale] = createSignal('not_a_locale')
+    render(() => (
+      <MCPUIStringsProvider strings={{ locale: locale() }}>
+        <Probe />
+      </MCPUIStringsProvider>
+    ))
+    expect(captured!.locale).toBe('en-US')
+    setLocale('de-de')
+    expect(captured!.locale).toBe('de-DE')
   })
 
   it('provider partial-merges over the EN defaults', () => {

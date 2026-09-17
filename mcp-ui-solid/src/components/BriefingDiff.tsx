@@ -7,6 +7,7 @@
 
 import { For, Show } from 'solid-js'
 import type { BriefingDiffContent } from '../types/chat-bus'
+import { formatMCPUIString, useMCPUIStrings } from '../context/MCPUIStringsContext'
 
 export interface BriefingDiffProps {
   content: BriefingDiffContent
@@ -19,6 +20,7 @@ const CHANGE_CONFIG: Record<string, { icon: string; color: string; bg: string }>
 }
 
 export function BriefingDiff(props: BriefingDiffProps) {
+  const strings = useMCPUIStrings()
   const c = () => props.content
 
   if (typeof console !== 'undefined') {
@@ -45,13 +47,19 @@ export function BriefingDiff(props: BriefingDiffProps) {
         {(stats) => (
           <div class="flex items-center gap-3 text-xs">
             <Show when={stats().added > 0}>
-              <span class="text-green-600 dark:text-green-400">+{stats().added} added</span>
+              <span class="text-green-600 dark:text-green-400">
+                {formatMCPUIString(strings.briefingAdded, { count: stats().added })}
+              </span>
             </Show>
             <Show when={stats().removed > 0}>
-              <span class="text-red-600 dark:text-red-400">{stats().removed} removed</span>
+              <span class="text-red-600 dark:text-red-400">
+                {formatMCPUIString(strings.briefingRemoved, { count: stats().removed })}
+              </span>
             </Show>
             <Show when={stats().changed > 0}>
-              <span class="text-amber-600 dark:text-amber-400">{stats().changed} changed</span>
+              <span class="text-amber-600 dark:text-amber-400">
+                {formatMCPUIString(strings.briefingChanged, { count: stats().changed })}
+              </span>
             </Show>
           </div>
         )}

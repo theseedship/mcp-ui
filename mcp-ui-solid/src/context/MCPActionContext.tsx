@@ -4,6 +4,7 @@
  */
 
 import { createContext, createSignal, useContext, ParentComponent, Accessor } from 'solid-js'
+import { useMCPUIStrings } from './MCPUIStringsContext'
 
 /**
  * Action request payload
@@ -223,6 +224,8 @@ const defaultExecutor = async (request: ActionRequest): Promise<ActionResult> =>
  * ```
  */
 export const MCPActionProvider: ParentComponent<MCPActionProviderProps> = (props) => {
+  // The error of a failed action can be rendered by FormRenderer.
+  const strings = useMCPUIStrings()
   const [isExecuting, setIsExecuting] = createSignal(false)
   const [lastResult, setLastResult] = createSignal<ActionResult>()
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -270,7 +273,7 @@ export const MCPActionProvider: ParentComponent<MCPActionProviderProps> = (props
     } catch (error) {
       const errorResult: ActionResult = {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : strings.errorUnknown,
         timestamp: new Date().toISOString(),
         toolName: request.toolName,
       }

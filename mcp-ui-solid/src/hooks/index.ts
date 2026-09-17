@@ -4,9 +4,10 @@
  * SolidJS hooks for managing UI resource state and streaming
  */
 
-export { useStreamingUI } from './useStreamingUI'
+export { useStreamingUI, DEFAULT_STREAMING_UI_MESSAGES } from './useStreamingUI'
 export type {
   UseStreamingUIOptions,
+  StreamingUIMessages,
   StreamingUIState,
   StreamProgress,
   StreamError,

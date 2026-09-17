@@ -7,6 +7,7 @@ import {
   graphToDegradedTable,
   mapToDegradedTable,
   chartToDegradedTable,
+  DEGRADED_PROJECTION_LABELS,
 } from './degraded-projections';
 
 describe('graphToDegradedTable', () => {
@@ -109,5 +110,79 @@ describe('chartToDegradedTable', () => {
 
   it('handles a chart with no data without throwing', () => {
     expect(chartToDegradedTable({}).rows).toEqual([]);
+  });
+});
+
+// ─── i18n (v6.20.0) ──────────────────────────────────────────
+
+describe('degraded projection labels are injectable', () => {
+  it('ships English defaults', () => {
+    expect(DEGRADED_PROJECTION_LABELS).toEqual({
+      source: 'Source',
+      target: 'Target',
+      label: 'Label',
+      node: 'Node',
+      type: 'Type',
+      lat: 'Lat',
+      lng: 'Lng',
+      info: 'Info',
+      marker: 'marker',
+      feature: 'feature',
+      series: 'Series {n}',
+    });
+  });
+
+  it('overrides the graph edge and node headers', () => {
+    const edges = graphToDegradedTable(
+      { edges: [{ source: 'a', target: 'b' }] },
+      { source: 'Origine', target: 'Cible', label: 'Libellé' }
+    );
+    expect(edges.columns).toEqual(['Origine', 'Cible', 'Libellé']);
+
+    const nodes = graphToDegradedTable(
+      { nodes: [{ id: 'a' }] },
+      { node: 'Nœud', label: 'Libellé' }
+    );
+    expect(nodes.columns).toEqual(['Nœud', 'Libellé']);
+  });
+
+  it('overrides the map coordinate headers', () => {
+    const t = mapToDegradedTable(
+      { markers: [{ position: [1, 2] }] },
+      { type: 'Type', lat: 'Latitude', lng: 'Longitude', info: 'Détails' }
+    );
+    expect(t.columns).toEqual(['Type', 'Latitude', 'Longitude', 'Détails']);
+  });
+
+  it('overrides the marker / feature kind cells (v6.20.0, 6th pass)', () => {
+    const t = mapToDegradedTable(
+      {
+        markers: [{ position: [1, 2] }],
+        geojson: { features: [{ geometry: { coordinates: [3, 4] } }] },
+      },
+      { marker: 'repère', feature: 'entité' }
+    );
+    expect(t.rows.map((r) => r[0])).toEqual(['repère', 'entité']);
+    expect(mapToDegradedTable({ markers: [{ position: [1, 2] }] }).rows[0][0]).toBe('marker');
+  });
+
+  it('overrides the chart series template, and keeps a labelled dataset intact', () => {
+    const t = chartToDegradedTable(
+      { data: { labels: ['A'], datasets: [{ data: [1] }, { label: 'Revenue', data: [2] }] } },
+      { series: 'Série {n}' }
+    );
+    expect(t.columns).toEqual(['', 'Série 1', 'Revenue']);
+  });
+
+  it('keeps the English defaults when no labels are passed (backward compatible)', () => {
+    expect(mapToDegradedTable({ markers: [{ position: [1, 2] }] }).columns).toEqual([
+      'Type',
+      'Lat',
+      'Lng',
+      'Info',
+    ]);
+    expect(
+      chartToDegradedTable({ data: { labels: ['A'], datasets: [{ data: [1] }] } }).columns
+    ).toEqual(['', 'Series 1']);
   });
 });

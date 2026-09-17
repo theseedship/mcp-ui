@@ -7,6 +7,7 @@
 
 import { Show, For } from 'solid-js'
 import type { AgentCardContent } from '../types/chat-bus'
+import { useMCPUIStrings } from '../context/MCPUIStringsContext'
 
 export interface AgentCardProps {
   content: AgentCardContent
@@ -23,15 +24,31 @@ const AVATAR_MAP: Record<string, string> = {
   robot: '\uD83E\uDD16',
 }
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; pulse: boolean }> = {
-  idle: { label: 'Idle', color: 'bg-gray-400', pulse: false },
-  running: { label: 'Running', color: 'bg-blue-500', pulse: true },
-  waiting: { label: 'Waiting', color: 'bg-amber-500', pulse: true },
-  done: { label: 'Done', color: 'bg-green-500', pulse: false },
-  error: { label: 'Error', color: 'bg-red-500', pulse: false },
+/**
+ * Status styling. The record stays module-level, but it carries a
+ * `labelKey` rather than English: the label is resolved from
+ * `useMCPUIStrings()` at render time so a host provider can localize it.
+ */
+type AgentStatusLabelKey =
+  | 'agentStatusIdle'
+  | 'agentStatusRunning'
+  | 'agentStatusWaiting'
+  | 'agentStatusDone'
+  | 'agentStatusError'
+
+const STATUS_CONFIG: Record<
+  string,
+  { labelKey: AgentStatusLabelKey; color: string; pulse: boolean }
+> = {
+  idle: { labelKey: 'agentStatusIdle', color: 'bg-gray-400', pulse: false },
+  running: { labelKey: 'agentStatusRunning', color: 'bg-blue-500', pulse: true },
+  waiting: { labelKey: 'agentStatusWaiting', color: 'bg-amber-500', pulse: true },
+  done: { labelKey: 'agentStatusDone', color: 'bg-green-500', pulse: false },
+  error: { labelKey: 'agentStatusError', color: 'bg-red-500', pulse: false },
 }
 
 export function AgentCard(props: AgentCardProps) {
+  const strings = useMCPUIStrings()
   const c = () => props.content
   const status = () => STATUS_CONFIG[c().status] || STATUS_CONFIG.idle
   const avatar = () => AVATAR_MAP[c().avatar || ''] || c().avatar || '\uD83E\uDD16'
@@ -54,8 +71,8 @@ export function AgentCard(props: AgentCardProps) {
         <div class="flex items-center gap-2">
           <span class="font-medium text-sm text-gray-900 dark:text-white truncate">{c().name}</span>
           {/* Status dot */}
-          <span class={`inline-block w-2 h-2 rounded-full ${status().color} ${status().pulse ? 'animate-pulse' : ''}`} title={status().label} />
-          <span class="text-xs text-gray-500 dark:text-gray-400">{status().label}</span>
+          <span class={`inline-block w-2 h-2 rounded-full ${status().color} ${status().pulse ? 'animate-pulse' : ''}`} title={strings[status().labelKey]} />
+          <span class="text-xs text-gray-500 dark:text-gray-400">{strings[status().labelKey]}</span>
         </div>
 
         {/* Model */}
@@ -97,13 +114,14 @@ export interface AgentStatusBadgeProps {
 }
 
 export function AgentStatusBadge(props: AgentStatusBadgeProps) {
+  const strings = useMCPUIStrings()
   const status = () => STATUS_CONFIG[props.status] || STATUS_CONFIG.idle
 
   return (
     <span class="inline-flex items-center gap-1.5 text-xs">
       <span class={`w-2 h-2 rounded-full ${status().color} ${status().pulse ? 'animate-pulse' : ''}`} />
       <span class="text-gray-600 dark:text-gray-300">{props.agentName}</span>
-      <span class="text-gray-400 dark:text-gray-500">{status().label}</span>
+      <span class="text-gray-400 dark:text-gray-500">{strings[status().labelKey]}</span>
     </span>
   )
 }

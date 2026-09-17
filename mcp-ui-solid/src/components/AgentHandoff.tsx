@@ -7,6 +7,7 @@
 
 import { Show } from 'solid-js'
 import type { AgentHandoffContent } from '../types/chat-bus'
+import { formatMCPUIString, useMCPUIStrings } from '../context/MCPUIStringsContext'
 
 export interface AgentHandoffProps {
   content: AgentHandoffContent
@@ -24,6 +25,7 @@ function getAvatar(key?: string): string {
 }
 
 export function AgentHandoff(props: AgentHandoffProps) {
+  const strings = useMCPUIStrings()
   const c = () => props.content
 
   if (typeof console !== 'undefined') {
@@ -49,7 +51,8 @@ export function AgentHandoff(props: AgentHandoffProps) {
         </div>
         <Show when={c().summary || c().itemCount}>
           <span class="text-[10px] text-gray-500 dark:text-gray-400 text-center">
-            {c().summary || `${c().itemCount} items`}
+            {c().summary ||
+              formatMCPUIString(strings.handoffItems, { count: c().itemCount ?? 0 })}
           </span>
         </Show>
       </div>

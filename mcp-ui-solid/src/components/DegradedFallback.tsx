@@ -16,6 +16,7 @@
  */
 
 import { Component, For, Show } from 'solid-js';
+import { formatMCPUIString, useMCPUIStrings } from '../context/MCPUIStringsContext';
 
 export interface DegradedFallbackProps {
   /** Short, human-readable reason the native render was skipped/failed. */
@@ -37,6 +38,7 @@ export interface DegradedFallbackProps {
 }
 
 export const DegradedFallback: Component<DegradedFallbackProps> = (props) => {
+  const strings = useMCPUIStrings();
   const maxRows = () => props.maxRows ?? 50;
   const allRows = () => props.rows ?? [];
   const shownRows = () => allRows().slice(0, maxRows());
@@ -50,7 +52,7 @@ export const DegradedFallback: Component<DegradedFallbackProps> = (props) => {
     >
       <p class="text-sm font-medium text-amber-900 dark:text-amber-100">{props.message}</p>
       <p class="mt-0.5 text-xs text-amber-700 dark:text-amber-300">
-        {props.caption ?? 'Showing the underlying data — the interactive view is unavailable.'}
+        {props.caption ?? strings.degradedCaption}
       </p>
 
       <Show when={hasTable()}>
@@ -84,7 +86,7 @@ export const DegradedFallback: Component<DegradedFallbackProps> = (props) => {
         </div>
         <Show when={hiddenCount() > 0}>
           <p class="mt-1 text-[10px] text-amber-600 dark:text-amber-400">
-            +{hiddenCount()} more rows not shown.
+            {formatMCPUIString(strings.degradedMoreRows, { count: hiddenCount() })}
           </p>
         </Show>
       </Show>

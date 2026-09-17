@@ -7,6 +7,7 @@ import { Component, For, Show } from 'solid-js'
 import type { UIComponent, ActionGroupParams, ActionComponentParams } from '../types'
 import { useAction } from '../hooks/useAction'
 import { safeUrl } from '../utils/safe-url'
+import { useMCPUIStrings } from '../context/MCPUIStringsContext'
 
 export interface ActionGroupRendererProps {
   /**
@@ -147,6 +148,7 @@ const ActionButton: Component<{
  * ```
  */
 export const ActionGroupRenderer: Component<ActionGroupRendererProps> = (props) => {
+  const strings = useMCPUIStrings()
   const params = () => props.params || (props.component?.params as ActionGroupParams) || { actions: [] }
 
   const layoutClass = () => {
@@ -181,7 +183,7 @@ export const ActionGroupRenderer: Component<ActionGroupRendererProps> = (props) 
     <div
       class={`${layoutClass()} ${gapClass()} ${params()?.fullWidth ? 'w-full' : ''}`}
       role="group"
-      aria-label={params()?.label || 'Action group'}
+      aria-label={params()?.label || strings.actionGroupLabel}
     >
       <For each={params()?.actions || []}>
         {(action, index) => <ActionButton action={action} index={index()} />}

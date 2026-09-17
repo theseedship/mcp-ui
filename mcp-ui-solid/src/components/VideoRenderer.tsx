@@ -8,6 +8,7 @@
 import { Component, createMemo, Show } from 'solid-js'
 import type { UIComponent, VideoComponentParams } from '../types'
 import { ExpandableWrapper, useExpanded } from './ExpandableWrapper'
+import { useMCPUIStrings } from '../context/MCPUIStringsContext'
 
 export interface VideoRendererProps {
   /**
@@ -74,6 +75,7 @@ function parseVideoUrl(url: string): VideoInfo {
 }
 
 export const VideoRenderer: Component<VideoRendererProps> = (props) => {
+  const strings = useMCPUIStrings()
   const params = () => props.params || (props.component?.params as VideoComponentParams)
   const isExpanded = useExpanded()
 
@@ -135,9 +137,9 @@ export const VideoRenderer: Component<VideoRendererProps> = (props) => {
 
   return (
     <ExpandableWrapper
-      title={params()?.title || 'Video'}
+      title={params()?.title || strings.videoTitle}
       copyData={params()?.url || ''}
-      copyLabel="Copy video URL"
+      copyLabel={strings.videoCopy}
       toolbarVariant={props.toolbarVariant}
     >
     <div class={`w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden ${
@@ -168,14 +170,14 @@ export const VideoRenderer: Component<VideoRendererProps> = (props) => {
               onError={handleVideoError}
             >
               <track kind="captions" />
-              Your browser does not support the video tag.
+              {strings.videoUnsupported}
             </video>
           }
         >
           {/* YouTube/Vimeo embed */}
           <iframe
             src={embedUrl()!}
-            title={params()?.title || 'Video'}
+            title={params()?.title || strings.videoTitle}
             class="absolute inset-0 w-full h-full"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             allowfullscreen

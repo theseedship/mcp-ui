@@ -5,8 +5,13 @@
  * @experimental
  */
 
-import { createSignal, createMemo, createEffect, For, Show } from 'solid-js'
+import { createSignal, createMemo, createEffect, For, Show, onMount } from 'solid-js'
 import type { DataPreviewContent, DataPreviewColumn } from '../types/chat-bus'
+import {
+  DEFAULT_MCPUI_STRINGS,
+  formatMCPUIString,
+  useMCPUIStrings,
+} from '../context/MCPUIStringsContext'
 
 export interface DataPreviewSectionProps {
   content: DataPreviewContent
@@ -16,24 +21,62 @@ type SortDir = 'asc' | 'desc' | null
 
 // ─── Formatting helpers ─────────────────────────────────────
 
-function formatNumber(value: unknown, format?: string): string {
+/**
+ * `locale` — BCP-47 tag (`MCPUIStrings.locale`, default `'en-US'`). Before
+ * 6.20.0 these helpers hardcoded `'fr-FR'` / `'fr'`.
+ */
+function formatNumber(
+  value: unknown,
+  format?: string,
+  locale: string = DEFAULT_MCPUI_STRINGS.locale
+): string {
   if (typeof value !== 'number' || !isFinite(value)) return String(value ?? '')
-  if (format === 'percent') return `${(value * 100).toFixed(1)}%`
-  if (format === 'currency') return `${value.toLocaleString('fr-FR')} EUR`
-  if (Number.isInteger(value)) return value.toLocaleString('fr-FR')
-  return value.toLocaleString('fr-FR', { maximumFractionDigits: 2 })
+  if (format === 'percent') {
+    return new Intl.NumberFormat(locale, {
+      style: 'percent',
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+      useGrouping: false,
+    }).format(value)
+  }
+  if (format === 'currency') return `${value.toLocaleString(locale)} EUR`
+  if (Number.isInteger(value)) return value.toLocaleString(locale)
+  return value.toLocaleString(locale, { maximumFractionDigits: 2 })
 }
 
-function formatCell(value: unknown, col: DataPreviewColumn): string {
+function formatCell(
+  value: unknown,
+  col: DataPreviewColumn,
+  locale: string = DEFAULT_MCPUI_STRINGS.locale,
+  /** False before mount: date-time values stay raw so SSR and hydration match. */
+  zoneAware = true
+): string {
   if (value == null) return '\u2014'
-  if (col.type === 'number') return formatNumber(value, col.format)
+  if (col.type === 'number') return formatNumber(value, col.format, locale)
   if (col.type === 'date' && typeof value === 'string') {
-    try { return new Date(value).toLocaleDateString('fr-FR') } catch { return value }
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return value
+    // A date-only value (`2026-09-17`) has no time zone: format it in UTC so
+    // every viewer, and the server, shows the same calendar date.
+    const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(value)
+    // A date-time's calendar date depends on the viewer's time zone, which the
+    // server cannot know: keep the raw value until the component has mounted.
+    if (!dateOnly && !zoneAware) return value
+    try {
+      return date.toLocaleDateString(locale, dateOnly ? { timeZone: 'UTC' } : undefined)
+    } catch {
+      return value
+    }
   }
   return String(value)
 }
 
-function compareValues(a: unknown, b: unknown, type?: string): number {
+function compareValues(
+  a: unknown,
+  b: unknown,
+  type?: string,
+  locale: string = DEFAULT_MCPUI_STRINGS.locale
+): number {
   if (a == null && b == null) return 0
   if (a == null) return 1
   if (b == null) return -1
@@ -53,7 +96,7 @@ function compareValues(a: unknown, b: unknown, type?: string): number {
     if (isNaN(db)) return -1
     return da - db
   }
-  return String(a).localeCompare(String(b), 'fr', { sensitivity: 'base' })
+  return String(a).localeCompare(String(b), locale, { sensitivity: 'base' })
 }
 
 // ─── Export helpers ─────────────────────────────────────────
@@ -101,6 +144,7 @@ function resolveContent(raw: unknown): DataPreviewContent | null {
 // ─── Component ──────────────────────────────────────────────
 
 export function DataPreviewSection(props: DataPreviewSectionProps) {
+  const strings = useMCPUIStrings()
   const content = createMemo(() => {
     const resolved = resolveContent(props.content)
     if (!resolved) {
@@ -115,6 +159,8 @@ export function DataPreviewSection(props: DataPreviewSectionProps) {
   const showPageInfo = () => content()?.showPageInfo !== false
 
   const [page, setPage] = createSignal(content()?.initialPage ?? 0)
+  const [mounted, setMounted] = createSignal(false)
+  onMount(() => setMounted(true))
   const [sortKey, setSortKey] = createSignal<string | null>(null)
   const [sortDir, setSortDir] = createSignal<SortDir>(null)
 
@@ -142,7 +188,7 @@ export function DataPreviewSection(props: DataPreviewSectionProps) {
     if (!key || !dir) return r
     const col = columns().find(c => c.key === key)
     return [...r].sort((a, b) => {
-      const cmp = compareValues(a[key], b[key], col?.type)
+      const cmp = compareValues(a[key], b[key], col?.type, strings.locale)
       return dir === 'desc' ? -cmp : cmp
     })
   })
@@ -186,7 +232,7 @@ export function DataPreviewSection(props: DataPreviewSectionProps) {
   return (
     <Show when={content()} fallback={
       <div class="text-xs text-amber-600 dark:text-amber-400 p-2">
-        [DataPreviewSection] Invalid content format
+        {strings.previewInvalidContent}
       </div>
     }>
       {(c) => (
@@ -208,14 +254,14 @@ export function DataPreviewSection(props: DataPreviewSectionProps) {
                 <button
                   class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                   onClick={handleExportCSV}
-                  title={`Export CSV (${sortedRows().length} rows)`}
+                  title={formatMCPUIString(strings.exportCsvRows, { count: sortedRows().length })}
                 >
                   CSV
                 </button>
                 <button
                   class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                   onClick={handleExportJSON}
-                  title={`Export JSON (${sortedRows().length} rows)`}
+                  title={formatMCPUIString(strings.exportJsonRows, { count: sortedRows().length })}
                 >
                   JSON
                 </button>
@@ -234,7 +280,7 @@ export function DataPreviewSection(props: DataPreviewSectionProps) {
                         class="px-3 py-2 font-medium text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700 cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
                         style={{ "text-align": columnAlign(col) }}
                         onClick={() => handleSort(col.key)}
-                        title={`Sort by ${col.label}`}
+                        title={formatMCPUIString(strings.sortBy, { column: col.label })}
                       >
                         <span class="inline-flex items-center gap-1">
                           {col.label}
@@ -266,7 +312,7 @@ export function DataPreviewSection(props: DataPreviewSectionProps) {
                             class="px-3 py-2 text-gray-800 dark:text-gray-200"
                             style={{ "text-align": columnAlign(col) }}
                           >
-                            {formatCell(row[col.key], col)}
+                            {formatCell(row[col.key], col, strings.locale, mounted())}
                           </td>
                         )}
                       </For>
@@ -282,13 +328,22 @@ export function DataPreviewSection(props: DataPreviewSectionProps) {
             <Show when={showPageInfo()}>
               <span>
                 {isPaginated()
-                  ? `Showing ${rangeStart()}\u2013${rangeEnd()} of ${sortedRows().length.toLocaleString('fr-FR')}`
-                  : `${sortedRows().length} row${sortedRows().length !== 1 ? 's' : ''}`
-                }
+                  ? formatMCPUIString(strings.previewShowingRange, {
+                      start: rangeStart().toLocaleString(strings.locale),
+                      end: rangeEnd().toLocaleString(strings.locale),
+                      // `strings.locale` formats the count, so the chrome
+                      // string and the digits agree (and SSR matches the client).
+                      total: sortedRows().length.toLocaleString(strings.locale),
+                    })
+                  : formatMCPUIString(
+                      sortedRows().length === 1 ? strings.previewRowsOne : strings.previewRowsMany,
+                      { count: sortedRows().length.toLocaleString(strings.locale) }
+                    )}
                 {c().totalRows && c().totalRows! > sortedRows().length
-                  ? ` (${c().totalRows!.toLocaleString('fr-FR')} total)`
-                  : ''
-                }
+                  ? formatMCPUIString(strings.previewTotalSuffix, {
+                      total: c().totalRows!.toLocaleString(strings.locale),
+                    })
+                  : ''}
               </span>
             </Show>
             <Show when={!showPageInfo()}><span /></Show>
@@ -296,19 +351,30 @@ export function DataPreviewSection(props: DataPreviewSectionProps) {
             <Show when={isPaginated()}>
               <div class="flex items-center gap-1">
                 <button
+                  type="button"
                   class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   disabled={page() === 0}
                   onClick={() => setPage(p => p - 1)}
+                  aria-label={strings.paginationPrevious}
+                  data-mcp-ui-action="page-prev"
                 >
-                  &#x25C0; Prev
+                  <span aria-hidden="true">&#x25C0;</span> {strings.previewPrev}
                 </button>
-                <span class="px-2">Page {page() + 1} / {totalPages()}</span>
+                <span class="px-2" aria-live="polite">
+                  {formatMCPUIString(strings.previewPageIndicator, {
+                    page: page() + 1,
+                    total: totalPages(),
+                  })}
+                </span>
                 <button
+                  type="button"
                   class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   disabled={page() >= totalPages() - 1}
                   onClick={() => setPage(p => p + 1)}
+                  aria-label={strings.paginationNext}
+                  data-mcp-ui-action="page-next"
                 >
-                  Next &#x25B6;
+                  {strings.previewNext} <span aria-hidden="true">&#x25B6;</span>
                 </button>
               </div>
             </Show>

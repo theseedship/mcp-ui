@@ -9,7 +9,11 @@
 
 import { describe, it, expect } from 'vitest';
 import type { MacroRunV1, MacroInterrogationV1, MacroStepV1 } from '@seed-ship/mcp-ui-spec';
-import { macroRunToScratchpadState, macroInterrogationToChatPromptConfig } from './macro-run';
+import {
+  macroRunToScratchpadState,
+  macroInterrogationToChatPromptConfig,
+  DEFAULT_MACRO_RUN_MESSAGES,
+} from './macro-run';
 import type { ScratchpadSection } from '../types/chat-bus';
 
 // ─── Fixture builders ────────────────────────────────────────
@@ -289,5 +293,81 @@ describe('macroInterrogationToChatPromptConfig', () => {
       run({ status: 'awaiting_input', pendingInterrogation: q })
     ).sections.find((s) => s.type === 'prompt')?.content;
     expect(embedded).toEqual(standalone);
+  });
+});
+
+// ─── i18n (v6.20.0) ──────────────────────────────────────────
+
+describe('macro-run adapter messages', () => {
+  it('ships English defaults — the adapter never hardcodes another language', () => {
+    expect(DEFAULT_MACRO_RUN_MESSAGES).toEqual({
+      agentSectionTitle: 'Agent',
+      progressSectionTitle: 'Progress',
+      resultSectionTitle: 'Result',
+      runAborted: 'Macro run aborted.',
+      runFailed: 'Macro run failed.',
+      confirmDefault: 'Please confirm to continue.',
+    });
+  });
+
+  it('uses the English defaults when no `messages` option is passed', () => {
+    const state = macroRunToScratchpadState(run({ status: 'aborted', steps: STEPS }));
+    expect(state.sections.find((s) => s.type === 'agent_card')?.title).toBe('Agent');
+    expect(state.sections.find((s) => s.type === 'stepper')?.title).toBe('Progress');
+    expect(state.error?.message).toBe('Macro run aborted.');
+  });
+
+  it('overrides the section titles and the run-failure wording', () => {
+    const state = macroRunToScratchpadState(run({ status: 'failed', steps: STEPS }), {
+      messages: {
+        agentSectionTitle: 'Agent IA',
+        progressSectionTitle: 'Avancement',
+        runFailed: 'Le macro a échoué.',
+      },
+    });
+
+    expect(state.sections.find((s) => s.type === 'agent_card')?.title).toBe('Agent IA');
+    expect(state.sections.find((s) => s.type === 'stepper')?.title).toBe('Avancement');
+    expect(state.error?.message).toBe('Le macro a échoué.');
+  });
+
+  it('overrides the result section title', () => {
+    const state = macroRunToScratchpadState(
+      run({
+        results: [{ id: 'r1', type: 'table', position: { colStart: 1, colSpan: 12 }, params: {} }],
+      } as Partial<MacroRunV1>),
+      { messages: { resultSectionTitle: 'Résultat' } }
+    );
+    expect(state.sections.filter((s) => s.title === 'Résultat')).toHaveLength(1);
+  });
+
+  it('overrides the elicitation confirm fallback, directly and through the run', () => {
+    const q = interrogation({ kind: 'elicitation', elicitationSchema: undefined, message: undefined });
+
+    const direct = macroInterrogationToChatPromptConfig(q, {
+      messages: { confirmDefault: 'Merci de confirmer pour continuer.' },
+    });
+    expect((direct.config as { message?: string }).message).toBe(
+      'Merci de confirmer pour continuer.'
+    );
+
+    const embedded = macroRunToScratchpadState(
+      run({ status: 'awaiting_input', pendingInterrogation: q }),
+      { messages: { confirmDefault: 'Merci de confirmer pour continuer.' } }
+    ).sections.find((s) => s.type === 'prompt')?.content;
+    expect(embedded).toEqual(direct);
+
+    // Untouched without the option.
+    expect(
+      (macroInterrogationToChatPromptConfig(q).config as { message?: string }).message
+    ).toBe('Please confirm to continue.');
+  });
+
+  it('leaves a partial override filling only the named keys', () => {
+    const state = macroRunToScratchpadState(run({ status: 'aborted' }), {
+      messages: { runAborted: 'Macro interrompu.' },
+    });
+    expect(state.error?.message).toBe('Macro interrompu.');
+    expect(state.sections.find((s) => s.type === 'agent_card')?.title).toBe('Agent');
   });
 });
