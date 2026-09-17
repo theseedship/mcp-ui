@@ -10,7 +10,7 @@ import { escapeHtml } from '../utils/escape-html'
 import { safeUrl } from '../utils/safe-url'
 import { SafeHtml } from './SafeHtml'
 import type { UIComponent, UILayout, RendererError, TableVirtualizeOptions } from '../types'
-import { validateComponent, DEFAULT_RESOURCE_LIMITS, getIframeSandbox } from '../services/validation'
+import { validateComponent, DEFAULT_RESOURCE_LIMITS, getIframeSandbox, isTrustedIframeDomain } from '../services/validation'
 import { GenerativeUIErrorBoundary } from './GenerativeUIErrorBoundary'
 import { markRenderStart, markRenderEnd, PERF_PREFIX } from '../utils/perf'
 import { isDebugEnabled } from '../utils/logger'
@@ -27,6 +27,9 @@ import {
   formatMCPUIString,
   useMCPUIStrings,
 } from '../context/MCPUIStringsContext'
+import { useMCPUIConfig } from '../context/MCPUIConfigContext'
+import { shouldSetCredentialless } from '../utils/iframe-coep'
+import { IframeFallbackLink } from './IframeFallbackLink'
 
 /**
  * How `<UIResourceRenderer>` reacts when `validateComponent()` rejects a
@@ -1458,7 +1461,12 @@ function TextRenderer(props: { component: UIComponent }) {
  */
 function IframeRenderer(props: { component: UIComponent }) {
   const strings = useMCPUIStrings()
+  const config = useMCPUIConfig()
   const params = props.component.params as any
+  // v6.21.0 — the host's custom trusted hosts now reach BOTH the sandbox (they
+  // used not to: `getIframeSandbox(params.url)` was called with no options) and
+  // the `credentialless` decision.
+  const trustOptions = () => ({ customTrustedDomains: config.customTrustedIframeDomains })
   return (
     <div class="w-full h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col">
       <Show when={params.title}>
@@ -1471,9 +1479,22 @@ function IframeRenderer(props: { component: UIComponent }) {
         title={params.title || strings.iframeTitle}
         class="w-full border-0 flex-1"
         style={`height: ${params.height || '400px'}; min-height: 300px;`}
-        sandbox={getIframeSandbox(params.url)}
+        sandbox={getIframeSandbox(params.url, trustOptions())}
+        // `attr:` is required: `credentialless` is in dom-expressions'
+        // `Properties` set, so a plain `credentialless={…}` compiles to a JS
+        // property assignment and never reaches the DOM as an attribute.
+        // `true | undefined` keeps it a BOOLEAN attribute — bare in SSR
+        // markup, removed (not `="false"`) when it does not apply.
+        attr:credentialless={
+          shouldSetCredentialless(params.url, config, {
+            // This iframe's sandbox never carries `allow-same-origin` for an
+            // untrusted host, so it already runs without cookies.
+            sandboxedWithoutSameOrigin: !isTrustedIframeDomain(params.url, trustOptions()),
+          }) || undefined
+        }
         loading="lazy"
       />
+      <IframeFallbackLink url={params.url} class="border-t border-gray-200 dark:border-gray-700" />
     </div>
   )
 }
@@ -1595,6 +1616,7 @@ function ComponentRenderer(props: {
   // opt in see zero behavior change.
   const telemetry = useTelemetry()
   const strings = useMCPUIStrings()
+  const componentConfig = useMCPUIConfig()
 
   onMount(() => {
     markRenderEnd(props.component.id)
@@ -1636,8 +1658,13 @@ function ComponentRenderer(props: {
     }
   })
 
-  // Validate component before rendering
-  const validation = validateComponent(props.component)
+  // Validate component before rendering. The host's allow-list extension
+  // (v6.21.0) has to reach validation too: an unlisted host is replaced by the
+  // validation card before any renderer runs.
+  const validation = validateComponent(props.component, {
+    iframePolicy: componentConfig.iframePolicy,
+    customIframeDomains: componentConfig.customIframeDomains,
+  })
   if (!validation.valid) {
     props.onError?.({
       type: 'validation',

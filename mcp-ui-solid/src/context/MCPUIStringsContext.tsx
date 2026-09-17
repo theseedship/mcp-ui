@@ -323,6 +323,13 @@ export interface MCPUIStrings {
   imageViewFullSize?: string
   /** Fallback `title` of an iframe without one. */
   iframeTitle?: string
+  /**
+   * Label of the "open in a new tab" link rendered under an embed
+   * (`IframeRenderer`, `VideoRenderer`). A COEP-blocked iframe fires no
+   * observable event, so this link is the only way out of a blank frame.
+   * @since 6.21.0
+   */
+  iframeOpenInNewTab?: string
   /** Fallback label of a link component without one. */
   linkLabel?: string
   /**
@@ -1085,6 +1092,9 @@ export const DEFAULT_MCPUI_STRINGS: Required<MCPUIStrings> = {
   sizeBytes: '{size} B',
   sizeKilobytes: '{size} KB',
   sizeMegabytes: '{size} MB',
+
+  // ── 6.21.0 — iframe COEP fallback ──────────────────────────
+  iframeOpenInNewTab: 'Open in a new tab',
 }
 
 /**

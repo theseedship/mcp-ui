@@ -333,6 +333,11 @@ const FORMER_LITERALS: Record<string, string> = {
   sizeBytes: '{size} B',
   sizeKilobytes: '{size} KB',
   sizeMegabytes: '{size} MB',
+
+  // 6.21.0 — new chrome, no former literal: the "open in a new tab" link
+  // under an embed did not exist before. Pinned here all the same so the
+  // "covers exactly" check below stays exhaustive.
+  iframeOpenInNewTab: 'Open in a new tab',
 }
 
 /**

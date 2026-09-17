@@ -5,6 +5,25 @@ SolidJS components + chat toolkit for MCP-generated UI. Part of the [MCP UI ecos
 [![npm version](https://img.shields.io/npm/v/@seed-ship/mcp-ui-solid.svg)](https://www.npmjs.com/package/@seed-ship/mcp-ui-solid)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+## What's New in v6.21.0
+
+- **Iframes work under `Cross-Origin-Embedder-Policy: credentialless`.** Both
+  iframes the library renders — the `iframe` component and `VideoRenderer`'s
+  YouTube / Vimeo embed — now carry the boolean `credentialless` attribute
+  when their host is **not** in `TRUSTED_IFRAME_DOMAINS`. Trusted hosts
+  deliberately do not get it (a cookie-less authenticated embed shows a login
+  screen). Chrome / Edge 110+ honour the attribute; Firefox ignores it; Safari
+  ignores the COEP value entirely — see
+  [*Iframes under COEP*](#iframes-under-coep--mcpuiconfigprovider-v6210).
+- **New `<MCPUIConfigProvider>`** (`MCPUIConfig`, `useMCPUIConfig`,
+  `DEFAULT_MCPUI_CONFIG`) — host-level rendering policy:
+  `iframeCredentialless`, `customTrustedIframeDomains`, `iframeFallbackLink`.
+- **New `isTrustedIframeDomain()`** export (root barrel and `/validation`),
+  and a new `iframeOpenInNewTab` chrome string for the "open in a new tab"
+  link rendered under an embed that COEP may have blocked silently.
+- **Fixed**: `IframeRenderer` called `getIframeSandbox()` without options, so
+  a host's custom trusted domains never reached the sandbox.
+
 ## What's New in v6.20.0
 
 - **Complete i18n of the library chrome.** Every user-visible chrome string —
@@ -951,7 +970,7 @@ const { state, pinned, close } = useScratchpadState()
 | `modal` | Portal overlay, sizes sm-full, Escape/backdrop close |
 | `image-gallery` | Grid layout, lightbox, keyboard nav |
 | `video` | YouTube/Vimeo/direct URL |
-| `iframe` | Tiered sandbox, 80+ whitelisted domains |
+| `iframe` | Tiered sandbox, 80+ whitelisted domains, COEP `credentialless` (v6.21.0) |
 | `image` | Responsive with lazy loading |
 | `link` | Styled link cards |
 | `action` | Tool call buttons |
@@ -960,6 +979,99 @@ const { state, pinned, close } = useScratchpadState()
 | `carousel` | Content carousel |
 | `artifact` | File download/preview |
 | `footer` | Metadata display |
+
+## Iframes under COEP — `MCPUIConfigProvider` (v6.21.0)
+
+The library renders exactly two iframes: the `iframe` component
+(`IframeRenderer`) and `VideoRenderer`'s YouTube / Vimeo embed. Both are
+constrained by `DEFAULT_IFRAME_DOMAINS` (the allow-list) and
+`getIframeSandbox()` (the tiered sandbox — `allow-same-origin allow-forms`
+for `TRUSTED_IFRAME_DOMAINS`, `allow-scripts allow-popups` for everything
+else).
+
+A host that serves `Cross-Origin-Embedder-Policy: credentialless` adds a
+third constraint: the browser refuses any cross-origin iframe whose own
+document sends no COEP header — which is YouTube, Vimeo, Google Docs, Notion
+and most of the allow-list. The frame stays blank, and the page cannot even
+detect it (a refused cross-origin document fires no `error` event). The fix
+is the boolean HTML attribute `<iframe credentialless>`.
+
+By default (`'auto'`) the library sets it only where nothing is lost: the
+`iframe` component pointing at a **non-trusted** host, whose sandbox already
+has no `allow-same-origin` and therefore no cookies or storage. Two cases are
+left alone on purpose:
+
+- **Trusted hosts** are in that list because they need their own cookies to
+  authenticate, and a cookie-less authenticated embed only renders a login
+  screen — a clear block beats a broken frame.
+- **The video embed** carries no sandbox, so a YouTube or Vimeo frame really
+  does hold provider cookies (consent, playback state). A host under COEP
+  unblocks it with `iframeCredentialless: 'always'`, accepting that trade;
+  a host without COEP keeps 6.20.0 behaviour and changes nothing.
+
+`<MCPUIConfigProvider>` is where a host overrides all of this. It is the
+behavioural counterpart of `<MCPUIStringsProvider>`: context-based, entirely
+optional, and `DEFAULT_MCPUI_CONFIG` applies when it is absent.
+
+```tsx
+import { MCPUIConfigProvider } from '@seed-ship/mcp-ui-solid'
+
+<MCPUIConfigProvider
+  config={{
+    iframeCredentialless: 'always',            // also unblocks the video embed
+    iframePolicy: 'extend',                    // accept hosts outside the allow-list
+    customIframeDomains: ['embed.acme.com'],   // …these ones
+    customTrustedIframeDomains: ['embed.acme.com'], // …and treat them as trusted
+    iframeFallbackLink: 'auto',                // default
+  }}
+>
+  <App />
+</MCPUIConfigProvider>
+```
+
+| Option | Values | Default | What it does |
+|--------|--------|---------|--------------|
+| `iframeCredentialless` | `'auto'` \| `'always'` \| `'never'` | `'auto'` | `'auto'`: the attribute on the `iframe` component when its host is **not** in `TRUSTED_IFRAME_DOMAINS` (+ `customTrustedIframeDomains`) — those frames already run without cookies. The video embed is excluded, since it has none of that sandboxing. `'always'`: every iframe, video and trusted hosts included — what a COEP host wants. `'never'`: none. |
+| `customTrustedIframeDomains` | `string[]` | `[]` | Hosts treated as trusted on top of `TRUSTED_IFRAME_DOMAINS`: no `credentialless`, and `allow-same-origin` in the sandbox. Subdomains of a listed host match. This only reclassifies a host the allow-list already accepts — pair it with `customIframeDomains` for anything else. |
+| `iframePolicy` | `'strict'` \| `'extend'` \| `'allow-all'` | `'strict'` | How `UIResourceRenderer` validates an `iframe` component's host. `'strict'` accepts `DEFAULT_IFRAME_DOMAINS` only; a host outside it is replaced by the validation card before any renderer runs. |
+| `customIframeDomains` | `string[]` | `[]` | Extra hosts the allow-list accepts when `iframePolicy` is `'extend'`. |
+| `iframeFallbackLink` | `'auto'` \| `'always'` \| `'never'` | `'auto'` | Whether an "open in a new tab" link (`strings.iframeOpenInNewTab`) shows under the embed. `'auto'` shows it only when the page is cross-origin isolated. `window.crossOriginIsolated` is read **after mount**, so SSR markup and hydration match. Note that flag needs COOP `same-origin` **and** COEP: a host that sends COEP alone blocks embeds while the flag is false, so it should set `'always'`. |
+
+The attribute is a boolean attribute: absent from the DOM when it does not
+apply, never `credentialless="false"`.
+
+Like `<MCPUIStringsProvider>`, a nested `<MCPUIConfigProvider>` merges over the
+defaults, not over an outer provider: repeat the options you want to keep.
+
+`isTrustedIframeDomain(url, { customTrustedDomains? })` is exported (root
+barrel and the `/validation` subpath) if you need the same decision outside
+the renderers.
+
+### Browser support
+
+| | header `COEP: credentialless` | attribute `<iframe credentialless>` |
+| --- | --- | --- |
+| Chrome / Edge | 96+ | **110+** |
+| Firefox | 119+ | **not supported** |
+| Safari | not supported (value ignored) | not supported |
+
+Firefox applies the header but ignores the attribute, so third-party iframes
+stay blocked there while the host sends COEP — nothing in this library can
+change that, and the fallback link is what the user gets. Safari does not
+know the value, treats the header as absent, and embeds simply work.
+
+### The CSP is still yours
+
+The allow-list is not a substitute for your Content-Security-Policy. The
+browser enforces `frame-src`, which the **host** sets, and a domain missing
+from it stays blocked whatever this library emits:
+
+```
+Content-Security-Policy: frame-src https://www.youtube-nocookie.com https://player.vimeo.com …
+```
+
+The comment on `DEFAULT_IFRAME_DOMAINS` in `services/validation.ts` says the
+same thing: *"Must match CSP frame-src directive."*
 
 ## SSR Compatibility
 
@@ -1153,6 +1265,7 @@ formatMCPUIString('Export CSV ({count} rows)', { count: 42 }) // 'Export CSV (42
 | `imageAlt` | `Image` | `UIResourceRenderer` (image) — fallback `alt` text |
 | `imageViewFullSize` | `View full size: {alt}` | `UIResourceRenderer` (image) — zoom-link `aria-label`. Template: `{alt}` |
 | `iframeTitle` | `Embedded content` | `UIResourceRenderer` (iframe) — fallback `title` |
+| `iframeOpenInNewTab` | `Open in a new tab` | `IframeRenderer` / `VideoRenderer` — label of the COEP fallback link under an embed (v6.21.0) |
 | `linkLabel` | `Link` | `UIResourceRenderer` (link) — fallback visible label |
 | `linkOpensInNewTab` | `{label}: {description} (opens in new tab)` | `UIResourceRenderer` (link) — `aria-label`. Template: `{label}`, `{description}` |
 | `validationWarning` | `Component validation warning` | `UIResourceRenderer` — inline component-validation warning chip `aria-label` |
@@ -1484,6 +1597,7 @@ const fr: MCPUIStrings = {
   imageAlt: 'Image',
   imageViewFullSize: 'Voir en taille réelle : {alt}',
   iframeTitle: 'Contenu intégré',
+  iframeOpenInNewTab: 'Ouvrir dans un nouvel onglet',
   linkLabel: 'Lien',
   linkOpensInNewTab: '{label} : {description} (ouvre un nouvel onglet)',
   validationWarning: 'Avertissement de validation du composant',
@@ -1781,6 +1895,7 @@ import {
   GraphRenderer, isG6Available, graphToMermaid, graphToJSON,
   renderCellValue, // v5.7.0 — citation-chip-aware table cell renderer
   MCPUIStringsProvider, useMCPUIStrings, DEFAULT_MCPUI_STRINGS, // v6.6.0 i18n chrome
+  MCPUIConfigProvider, useMCPUIConfig, DEFAULT_MCPUI_CONFIG, // v6.21.0 host policy
 } from '@seed-ship/mcp-ui-solid'
 
 // Hooks
@@ -1808,7 +1923,8 @@ import {
 // Validation + Security
 import {
   validateComponent, validateLayout, validateIframeDomain,
-  getIframeSandbox, DEFAULT_RESOURCE_LIMITS,
+  getIframeSandbox, isTrustedIframeDomain, // v6.21.0 — trusted-host test
+  DEFAULT_RESOURCE_LIMITS,
   DEFAULT_IFRAME_DOMAINS, TRUSTED_IFRAME_DOMAINS,
   ComponentRegistry, mergeScratchpadSections,
   validateAgainstSource, // v4.0.0 — anti-hallucination
@@ -1849,7 +1965,8 @@ import type {
   MapPopupConfig, MapLayer, MapPMTilesConfig,
   IframePolicy, ValidationOptions,
   CitationCtx, CitationEntry, DuplicateMountInfo, DuplicateMountReporter,
-  MCPUIStrings, TelemetryEvent, TelemetrySink, TelemetryOptions, TelemetryDispatcher,
+  MCPUIStrings, MCPUIConfig, // v6.21.0
+  TelemetryEvent, TelemetrySink, TelemetryOptions, TelemetryDispatcher,
   DataValidation, HallucinatedNumber, DataValidationOptions,
   VerifiedTextContent, DataPreviewContent, MapSectionContent,
   ChatBus, ChatEvents, ChatCommands, ScratchpadState, ScratchpadSection,

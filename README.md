@@ -9,6 +9,20 @@ A collection of TypeScript packages for building generative, streaming user inte
 
 ## What's New
 
+**6.21.0 (`mcp-ui-solid`):** The library's iframes now work on a host serving
+`Cross-Origin-Embedder-Policy: credentialless`. The `iframe` component and
+`VideoRenderer`'s YouTube / Vimeo embed carry the boolean `credentialless`
+attribute whenever their host is **not** in `TRUSTED_IFRAME_DOMAINS` — trusted
+hosts deliberately keep their cookies and stay blocked under COEP rather than
+render a login screen. A new `<MCPUIConfigProvider>` (`iframeCredentialless`,
+`customTrustedIframeDomains`, `iframeFallbackLink`) lets a host override all
+of it, a new `isTrustedIframeDomain()` export exposes the decision, and a new
+`iframeOpenInNewTab` chrome string labels the "open in a new tab" link shown
+under an embed COEP may have blocked silently. Chrome/Edge 110+ honour the
+attribute, Firefox ignores it, Safari ignores the COEP value entirely. Also
+fixed: `IframeRenderer` called `getIframeSandbox()` without options, so a
+host's custom trusted domains never reached the sandbox.
+
 **6.20.0 (`mcp-ui-solid`):** Every user-visible chrome string now reads from
 `MCPUIStrings` (components, via `useMCPUIStrings()`) or an exported
 `messages`/`labels` option (runtime-free adapters, services, helpers), except
@@ -70,7 +84,7 @@ native chart/data switching, and chart/table/graph catalogue parity.
 See the [integration handoff](./mcp-ui-solid/docs/briefs/VISUALIZATION-FOUNDATION-2026-09-14.md).
 This work does not add automatic MCP selection or shared host filters.
 
-**Current line — `mcp-ui-solid` 6.20.0** (post-`5.0.0`, audit-driven visual-renderer
+**Current line — `mcp-ui-solid` 6.21.0** (post-`5.0.0`, audit-driven visual-renderer
 & streaming hardening; `mcp-ui-spec` 5.6.0). Highlights from 6.18.0 — see
 [`mcp-ui-solid/CHANGELOG.md`](./mcp-ui-solid/CHANGELOG.md) for the full list
 including 6.19.0:
@@ -128,7 +142,7 @@ This monorepo contains three packages published under `@seed-ship/`:
 
 | Package | Version | Description |
 |---------|---------|-------------|
-| [`@seed-ship/mcp-ui-solid`](./mcp-ui-solid) | 6.20.0 | SolidJS components for rendering MCP-generated UI |
+| [`@seed-ship/mcp-ui-solid`](./mcp-ui-solid) | 6.21.0 | SolidJS components for rendering MCP-generated UI |
 | [`@seed-ship/mcp-ui-spec`](./mcp-ui-spec) | 5.6.0 | JSON schemas and Zod validators |
 | [`@seed-ship/mcp-ui-cli`](./mcp-ui-cli) | 5.0.1 | CLI for validation and type generation |
 
