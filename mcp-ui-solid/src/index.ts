@@ -142,6 +142,18 @@ export type {
   MCPUIStringsProviderProps,
 } from './context/MCPUIStringsContext'
 
+// Host rendering policy — iframe `credentialless` / COEP (v6.21.0)
+export {
+  MCPUIConfigProvider,
+  MCPUIConfigContext,
+  useMCPUIConfig,
+  DEFAULT_MCPUI_CONFIG,
+} from './context/MCPUIConfigContext'
+export type {
+  MCPUIConfig,
+  MCPUIConfigProviderProps,
+} from './context/MCPUIConfigContext'
+
 // Telemetry sink (B.5 — v5.6.0)
 export {
   MCPUITelemetryProvider,
@@ -331,6 +343,9 @@ export {
   validateLayout,
   validateIframeDomain,
   getIframeSandbox,
+  // v6.21.0 — the trusted-host test behind `getIframeSandbox` and the
+  // `credentialless` iframe attribute.
+  isTrustedIframeDomain,
   DEFAULT_RESOURCE_LIMITS,
   DEFAULT_IFRAME_DOMAINS,
   TRUSTED_IFRAME_DOMAINS,

@@ -690,6 +690,42 @@ export function validateIframeDomain(
 }
 
 /**
+ * Is this URL's host a trusted iframe host?
+ *
+ * A host matches when it equals an entry of `TRUSTED_IFRAME_DOMAINS` (plus
+ * `options.customTrustedDomains`) or is a subdomain of one. Trusted hosts
+ * need their own cookies/storage to authenticate, which is why they receive
+ * `allow-same-origin` in `getIframeSandbox` and deliberately do NOT receive
+ * the `credentialless` iframe attribute (an authenticated embed loaded
+ * without its cookies only shows a login screen).
+ *
+ * An unparsable URL is never trusted.
+ *
+ * @param url - The iframe URL
+ * @param options - Optional custom trusted domains, merged over the defaults
+ * @returns `true` when the URL's host is trusted
+ * @since v6.21.0 — extracted from `getIframeSandbox`, identical matching.
+ */
+export function isTrustedIframeDomain(
+  url: string,
+  options?: { customTrustedDomains?: string[] }
+): boolean {
+  try {
+    const domain = new URL(url).hostname;
+    const trustedList = options?.customTrustedDomains
+      ? [...TRUSTED_IFRAME_DOMAINS, ...options.customTrustedDomains]
+      : TRUSTED_IFRAME_DOMAINS;
+
+    return trustedList.some(
+      (trusted) => domain === trusted || domain.endsWith(`.${trusted}`)
+    );
+  } catch {
+    // Invalid URL — never trusted.
+    return false;
+  }
+}
+
+/**
  * Get the appropriate sandbox attribute for an iframe URL.
  *
  * Trusted domains (Google, Deposium, payment, auth-requiring services) get
@@ -707,22 +743,8 @@ export function getIframeSandbox(
 ): string {
   const baseSandbox = 'allow-scripts allow-popups';
 
-  try {
-    const domain = new URL(url).hostname;
-    let trustedList = TRUSTED_IFRAME_DOMAINS;
-    if (options?.customTrustedDomains) {
-      trustedList = [...TRUSTED_IFRAME_DOMAINS, ...options.customTrustedDomains];
-    }
-
-    const isTrusted = trustedList.some(
-      (trusted) => domain === trusted || domain.endsWith(`.${trusted}`)
-    );
-
-    if (isTrusted) {
-      return `${baseSandbox} allow-same-origin allow-forms`;
-    }
-  } catch {
-    // Invalid URL — use restrictive sandbox
+  if (isTrustedIframeDomain(url, options)) {
+    return `${baseSandbox} allow-same-origin allow-forms`;
   }
 
   return baseSandbox;

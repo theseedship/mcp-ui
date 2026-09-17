@@ -9,6 +9,9 @@ import { Component, createMemo, Show } from 'solid-js'
 import type { UIComponent, VideoComponentParams } from '../types'
 import { ExpandableWrapper, useExpanded } from './ExpandableWrapper'
 import { useMCPUIStrings } from '../context/MCPUIStringsContext'
+import { useMCPUIConfig } from '../context/MCPUIConfigContext'
+import { shouldSetCredentialless } from '../utils/iframe-coep'
+import { IframeFallbackLink } from './IframeFallbackLink'
 
 export interface VideoRendererProps {
   /**
@@ -76,6 +79,7 @@ function parseVideoUrl(url: string): VideoInfo {
 
 export const VideoRenderer: Component<VideoRendererProps> = (props) => {
   const strings = useMCPUIStrings()
+  const config = useMCPUIConfig()
   const params = () => props.params || (props.component?.params as VideoComponentParams)
   const isExpanded = useExpanded()
 
@@ -181,10 +185,19 @@ export const VideoRenderer: Component<VideoRendererProps> = (props) => {
             class="absolute inset-0 w-full h-full"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             allowfullscreen
+            // v6.21.0 — youtube-nocookie / player.vimeo are not trusted hosts,
+            // so under COEP `credentialless` is what lets them load at all.
+            // `attr:` + `true | undefined` — see the note in `IframeRenderer`.
+            attr:credentialless={shouldSetCredentialless(embedUrl()!, config) || undefined}
             loading="lazy"
           />
         </Show>
       </div>
+
+      {/* v6.21.0 — a COEP-blocked embed is silent; this link is the way out. */}
+      <Show when={embedUrl()}>
+        <IframeFallbackLink url={params()?.url || ''} />
+      </Show>
 
       {/* Caption */}
       <Show when={params()?.caption}>

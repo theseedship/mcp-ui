@@ -9,6 +9,7 @@ export {
   validateLayout,
   validateIframeDomain,
   getIframeSandbox,
+  isTrustedIframeDomain,
   DEFAULT_RESOURCE_LIMITS,
   DEFAULT_IFRAME_DOMAINS,
   TRUSTED_IFRAME_DOMAINS,

@@ -11,8 +11,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > **Note (2026-07-03):** after `5.2.0` this monorepo-wide log was superseded by
 > the per-package changelogs, which are the source of truth for every release
-> (current: `mcp-ui-solid` 6.20.0, `mcp-ui-spec` 5.6.0, `mcp-ui-cli` 5.0.1). New
+> (current: `mcp-ui-solid` 6.21.0, `mcp-ui-spec` 5.6.0, `mcp-ui-cli` 5.0.1). New
 > entries go there; this file is kept for historical monorepo-level context.
+
+## [6.21.0] - 2026-09-17 (`mcp-ui-solid`)
+
+- Added: the two iframes the library renders (the `iframe` component and
+  `VideoRenderer`'s YouTube / Vimeo embed) now carry the boolean
+  `credentialless` attribute when their host is not in
+  `TRUSTED_IFRAME_DOMAINS`, so they load on a host serving
+  `Cross-Origin-Embedder-Policy: credentialless`; trusted hosts deliberately
+  do not get it (an authenticated embed without cookies shows a login
+  screen). New `<MCPUIConfigProvider>` / `useMCPUIConfig()` /
+  `DEFAULT_MCPUI_CONFIG` / `MCPUIConfig` host policy
+  (`iframeCredentialless`, `customTrustedIframeDomains`,
+  `iframeFallbackLink`), new exported `isTrustedIframeDomain()` (root barrel
+  and the `/validation` subpath, which now also exports `getIframeSandbox`),
+  and a new `iframeOpenInNewTab` chrome string for the "open in a new tab"
+  link under an embed. Works on Chrome/Edge 110+; Firefox ignores the
+  attribute, Safari ignores the COEP value.
+- Fixed: `IframeRenderer` called `getIframeSandbox()` with no options, so a
+  host's custom trusted domains never reached the sandbox.
 
 ## [6.20.0] - 2026-09-17 (`mcp-ui-solid`)
 

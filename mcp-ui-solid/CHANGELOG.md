@@ -5,6 +5,140 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.21.0] - 2026-09-17
+
+The library's iframes now work on a host that serves
+`Cross-Origin-Embedder-Policy: credentialless`.
+
+### The problem
+
+Under that header a browser refuses **any** cross-origin iframe whose own
+document does not itself send a COEP header. That is YouTube, Vimeo, Google
+Docs, Notion — nearly every entry of `DEFAULT_IFRAME_DOMAINS`. The frame stays
+blank and nothing in the page can detect it: a refused cross-origin document
+fires no `error` event the parent can observe. The `credentialless` *header*
+only relaxes the rule for sub-resources (images, fonts, map tiles — which is
+why the quickchart `<img>` fallback and the Leaflet tiles were never
+affected); nested documents need the boolean HTML attribute
+`<iframe credentialless>` on the tag itself.
+
+### What the library now does
+
+Both iframes it renders — `IframeRenderer` (the `iframe` component) and
+`VideoRenderer`'s YouTube / Vimeo embed — carry `credentialless` when their
+host is **not** in `TRUSTED_IFRAME_DOMAINS`.
+
+- **Untrusted hosts get the attribute.** They already ran without cookies:
+  their sandbox has no `allow-same-origin`. The attribute costs them nothing
+  and is exactly what unblocks them under COEP.
+- **Trusted hosts deliberately do NOT get it.** `TRUSTED_IFRAME_DOMAINS`
+  (Google Docs/Drive, Notion, Airtable, Figma, Linear, Stripe, Polar, HubSpot,
+  Calendly, …) exists precisely because those embeds need their own cookies to
+  authenticate. Loaded `credentialless` they would render a login screen — a
+  visibly broken embed. Under COEP they stay blocked, which is the honest
+  outcome; `iframeCredentialless: 'always'` overrides it if you disagree.
+
+The attribute is a **boolean** attribute: it is absent from the DOM when it
+does not apply, never `credentialless="false"`.
+
+### Added
+
+- **`<MCPUIConfigProvider>` / `useMCPUIConfig()` / `DEFAULT_MCPUI_CONFIG` /
+  `MCPUIConfig`** (new `src/context/MCPUIConfigContext.tsx`, exported from the
+  root barrel) — host-level rendering policy, the behavioural counterpart of
+  `MCPUIStrings`. Three options:
+
+  | option | default | meaning |
+  | --- | --- | --- |
+  | `iframeCredentialless` | `'auto'` | `'auto'`: attribute on every non-trusted host. `'always'`: on every iframe. `'never'`: on none. |
+  | `customTrustedIframeDomains` | `[]` | extra hosts treated as trusted — no `credentialless`, and `allow-same-origin` in the sandbox. Subdomains match. |
+  | `iframeFallbackLink` | `'auto'` | when the "open in a new tab" link shows under an embed. `'auto'`: only on a cross-origin-isolated page. |
+
+  ```tsx
+  import { MCPUIConfigProvider } from '@seed-ship/mcp-ui-solid'
+
+  // A host that serves COEP: credentialless and embeds its own tool.
+  <MCPUIConfigProvider
+    config={{
+      iframeCredentialless: 'auto',
+      customTrustedIframeDomains: ['embed.acme.com'],
+      iframeFallbackLink: 'auto',
+    }}
+  >
+    <App />
+  </MCPUIConfigProvider>
+
+  // A host with no COEP header that does not want its embeds to lose cookies.
+  <MCPUIConfigProvider config={{ iframeCredentialless: 'never' }}>
+    <App />
+  </MCPUIConfigProvider>
+  ```
+
+  With no provider mounted, `DEFAULT_MCPUI_CONFIG` applies — every renderer
+  still works standalone.
+
+- **`isTrustedIframeDomain(url, { customTrustedDomains? })`** — the trusted-host
+  test `getIframeSandbox` already performed, extracted and exported from the
+  root barrel and from the `@seed-ship/mcp-ui-solid/validation` subpath
+  (`getIframeSandbox` is now exported from that subpath too). Invalid URL →
+  `false`, so an unparsable URL is never trusted and does receive the
+  attribute. Matching is unchanged: exact host, or a subdomain of a listed
+  host.
+
+- **`MCPUIStrings.iframeOpenInNewTab`** — optional, default
+  `'Open in a new tab'`. Label of the link rendered under an embed, which is
+  the only way out of a silently blocked frame. Visibility follows
+  `iframeFallbackLink`; `window.crossOriginIsolated` is read **after mount**,
+  never during render, so SSR markup and hydration agree. That flag requires
+  COOP `same-origin` on top of COEP — a host that sends COEP alone should set
+  `iframeFallbackLink: 'always'`, since its embeds are blocked while the flag
+  reads false. The link is skipped
+  when `safeUrl()` rejects the URL. `MCPUIStrings` now covers **271 keys**.
+
+### Fixed
+
+- `IframeRenderer` called `getIframeSandbox(params.url)` with no options, so a
+  host's custom trusted domains never reached the sandbox. It now passes
+  `{ customTrustedDomains: config.customTrustedIframeDomains }`, which is what
+  makes `customTrustedIframeDomains` grant `allow-same-origin` as documented.
+
+### Browser support
+
+| | header `COEP: credentialless` | attribute `<iframe credentialless>` |
+| --- | --- | --- |
+| Chrome / Edge | 96+ | **110+** |
+| Firefox | 119+ | **not supported** |
+| Safari | not supported (value ignored) | not supported |
+
+- **Chrome / Edge** — the attribute fixes the problem. This is the majority
+  case.
+- **Firefox** — honours the header but ignores the attribute, so third-party
+  iframes stay blocked for as long as the host page sends COEP. Nothing in
+  this library can change that; it is a host-side trade-off (drop COEP, or
+  accept the degradation on Firefox). The fallback link is what the user gets
+  there.
+- **Safari** — does not know the `credentialless` value and treats the header
+  as absent: no cross-origin isolation, but embeds work.
+
+### Note for hosts
+
+The library's allow-list is not a substitute for your CSP. The browser also
+enforces `frame-src`, which the host sets — a domain missing from it stays
+blocked whatever this library emits (see the comment at
+`services/validation.ts` on `DEFAULT_IFRAME_DOMAINS`: "Must match CSP
+frame-src directive").
+
+### Tests
+
+`src/components/IframeCredentialless.test.tsx` (25 tests) — the
+`isTrustedIframeDomain` matching table, attribute presence/absence through
+`<UIResourceRenderer>` and `<VideoRenderer>` for each `iframeCredentialless`
+mode, the `customTrustedIframeDomains` → sandbox plumbing, the fallback link
+under each `iframeFallbackLink` mode with `window.crossOriginIsolated`
+stubbed, and the SSR-shape assertions on the pure decision helpers. Plus a new
+`iframeOpenInNewTab` case in `MCPUIStringsContext.sweep.test.tsx` and the
+default pinned in `mcpui-strings-defaults.test.ts`.
+
 ## [6.20.0] - 2026-09-17
 
 Every user-visible chrome string the library itself renders — button titles,

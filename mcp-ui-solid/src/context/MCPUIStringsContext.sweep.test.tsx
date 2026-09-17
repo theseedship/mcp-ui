@@ -11,6 +11,7 @@ import { describe, it, expect, afterEach, vi } from 'vitest'
 import { render, cleanup, fireEvent, waitFor } from '@solidjs/testing-library'
 import type { JSX } from 'solid-js'
 import { MCPUIStringsProvider, useMCPUIStrings } from './MCPUIStringsContext'
+import { MCPUIConfigProvider } from './MCPUIConfigContext'
 import { ChatPrompt } from '../components/ChatPrompt'
 import { CodeBlockRenderer } from '../components/CodeBlockRenderer'
 import { FormRenderer } from '../components/FormRenderer'
@@ -1427,5 +1428,43 @@ describe('sweep — degraded projection column headers reach the table', () => {
 
     expect(headers(withProvider)).toEqual(['Type', 'Latitude', 'Longitude', 'Détails'])
     expect(headers(withDefaults)).toEqual(['Type', 'Lat', 'Lng', 'Info'])
+  })
+})
+
+// ─── 6.21.0 — iframe COEP fallback link ─────────────────────────────────
+
+/**
+ * The "open in a new tab" link under an embed (`IframeFallbackLink`). It is
+ * new chrome rather than a replaced literal, so the "with no provider" leg
+ * pins the English default `DEFAULT_MCPUI_STRINGS.iframeOpenInNewTab`.
+ * `iframeFallbackLink: 'always'` takes `window.crossOriginIsolated` out of
+ * the picture.
+ */
+describe('sweep — iframe fallback link (6.21.0)', () => {
+  const ui = () => (
+    <MCPUIConfigProvider config={{ iframeFallbackLink: 'always' }}>
+      <UIResourceRenderer
+        content={
+          {
+            id: 'iframe-sweep',
+            type: 'iframe',
+            params: { url: 'https://www.youtube.com/embed/x' },
+            position: { colStart: 1, colSpan: 12 },
+          } as UIComponent
+        }
+      />
+    </MCPUIConfigProvider>
+  )
+
+  const linkText = (root: ParentNode): string | null =>
+    root.querySelector('a[data-mcp-ui-action="open-external"]')?.textContent ?? null
+
+  it('localizes the link label', () => {
+    const { withProvider, withDefaults } = renderBoth(
+      { iframeOpenInNewTab: 'Ouvrir dans un nouvel onglet' },
+      ui
+    )
+    expect(linkText(withProvider)).toBe('Ouvrir dans un nouvel onglet')
+    expect(linkText(withDefaults)).toBe('Open in a new tab')
   })
 })

@@ -27,6 +27,9 @@ import {
   formatMCPUIString,
   useMCPUIStrings,
 } from '../context/MCPUIStringsContext'
+import { useMCPUIConfig } from '../context/MCPUIConfigContext'
+import { shouldSetCredentialless } from '../utils/iframe-coep'
+import { IframeFallbackLink } from './IframeFallbackLink'
 
 /**
  * How `<UIResourceRenderer>` reacts when `validateComponent()` rejects a
@@ -1458,7 +1461,12 @@ function TextRenderer(props: { component: UIComponent }) {
  */
 function IframeRenderer(props: { component: UIComponent }) {
   const strings = useMCPUIStrings()
+  const config = useMCPUIConfig()
   const params = props.component.params as any
+  // v6.21.0 — the host's custom trusted hosts now reach BOTH the sandbox (they
+  // used not to: `getIframeSandbox(params.url)` was called with no options) and
+  // the `credentialless` decision.
+  const trustOptions = () => ({ customTrustedDomains: config.customTrustedIframeDomains })
   return (
     <div class="w-full h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col">
       <Show when={params.title}>
@@ -1471,9 +1479,16 @@ function IframeRenderer(props: { component: UIComponent }) {
         title={params.title || strings.iframeTitle}
         class="w-full border-0 flex-1"
         style={`height: ${params.height || '400px'}; min-height: 300px;`}
-        sandbox={getIframeSandbox(params.url)}
+        sandbox={getIframeSandbox(params.url, trustOptions())}
+        // `attr:` is required: `credentialless` is in dom-expressions'
+        // `Properties` set, so a plain `credentialless={…}` compiles to a JS
+        // property assignment and never reaches the DOM as an attribute.
+        // `true | undefined` keeps it a BOOLEAN attribute — bare in SSR
+        // markup, removed (not `="false"`) when it does not apply.
+        attr:credentialless={shouldSetCredentialless(params.url, config) || undefined}
         loading="lazy"
       />
+      <IframeFallbackLink url={params.url} class="border-t border-gray-200 dark:border-gray-700" />
     </div>
   )
 }

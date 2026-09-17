@@ -19,6 +19,10 @@ export {
   validateTableComponent,
   validatePayloadSize,
   validateIframeDomain,
+  getIframeSandbox,
+  // v6.21.0 — trusted-host test shared by the sandbox and the
+  // `credentialless` iframe attribute.
+  isTrustedIframeDomain,
   sanitizeString,
   DEFAULT_RESOURCE_LIMITS,
   // v6.20.0 — end-user form validation with injectable wording.
