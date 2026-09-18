@@ -1029,6 +1029,48 @@ import { MCPUIConfigProvider } from '@seed-ship/mcp-ui-solid'
 </MCPUIConfigProvider>
 ```
 
+When you keep a partial configuration in a variable, name the authored,
+all-optional view explicitly:
+
+```tsx
+import {
+  MCPUIConfigProvider,
+  type MCPUIConfigInput,
+} from '@seed-ship/mcp-ui-solid'
+
+const config: MCPUIConfigInput = {
+  iframeCredentialless: 'always',
+  chartZoom: 'never',
+}
+
+<MCPUIConfigProvider config={config}>
+  <App />
+</MCPUIConfigProvider>
+```
+
+Prefer `MCPUIConfigProvider` for partial overrides. The exported raw context is
+also a public read surface, so its `Provider` requires the complete, resolved
+`MCPUIConfig` value. If an integration must provide that context directly,
+spread the defaults first:
+
+```tsx
+import {
+  DEFAULT_MCPUI_CONFIG,
+  MCPUIConfigContext,
+} from '@seed-ship/mcp-ui-solid'
+
+<MCPUIConfigContext.Provider
+  value={{ ...DEFAULT_MCPUI_CONFIG, iframeCredentialless: 'always' }}
+>
+  <App />
+</MCPUIConfigContext.Provider>
+```
+
+`MCPUIConfigInput` contains the library's built-in authoring fields.
+`MCPUIConfig` remains an interface for consumers that extend or augment the
+resolved contract; `MCPUIConfigProvider` also accepts those augmented fields
+as partial inline overrides.
+
 | Option | Values | Default | What it does |
 |--------|--------|---------|--------------|
 | `iframeCredentialless` | `'auto'` \| `'always'` \| `'never'` | `'auto'` | `'auto'`: the attribute on the `iframe` component when its host is **not** in `TRUSTED_IFRAME_DOMAINS` (+ `customTrustedIframeDomains`) — those frames already run without cookies. The video embed is excluded, since it has none of that sandboxing. `'always'`: every iframe, video and trusted hosts included — what a COEP host wants. `'never'`: none. |
@@ -1966,6 +2008,7 @@ import type {
   IframePolicy, ValidationOptions,
   CitationCtx, CitationEntry, DuplicateMountInfo, DuplicateMountReporter,
   MCPUIStrings, MCPUIConfig, // v6.21.0
+  MCPUIConfigInput, // v6.22.1 — the authored, all-optional view
   TelemetryEvent, TelemetrySink, TelemetryOptions, TelemetryDispatcher,
   DataValidation, HallucinatedNumber, DataValidationOptions,
   VerifiedTextContent, DataPreviewContent, MapSectionContent,

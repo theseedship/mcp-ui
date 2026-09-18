@@ -167,6 +167,7 @@ export {
 } from './context/MCPUIConfigContext'
 export type {
   MCPUIConfig,
+  MCPUIConfigInput,
   MCPUIConfigProviderProps,
 } from './context/MCPUIConfigContext'
 

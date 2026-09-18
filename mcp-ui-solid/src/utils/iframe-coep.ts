@@ -27,14 +27,15 @@ import type { MCPUIConfig } from '../context/MCPUIConfigContext'
  *
  * An unparsable URL is not trusted, so it gets the attribute.
  *
- * Takes a RESOLVED config (`Required<MCPUIConfig>` — what `useMCPUIConfig()`
- * and `DEFAULT_MCPUI_CONFIG` hand out). `MCPUIConfig`'s own fields are
- * optional so new keys stay backward compatible, and reading an unresolved
- * one here would silently re-implement the defaults next to their source.
+ * Takes a RESOLVED config — `MCPUIConfig`, which is what `useMCPUIConfig()`
+ * and `DEFAULT_MCPUI_CONFIG` hand out, every key present. The authored view is
+ * `MCPUIConfigInput`, whose fields are optional so that a new key stays
+ * backward compatible; accepting one of those here would mean re-implementing
+ * the defaults next to their source, and silently drifting from them.
  */
 export function shouldSetCredentialless(
   url: string,
-  config: Required<MCPUIConfig>,
+  config: MCPUIConfig,
   options: { sandboxedWithoutSameOrigin: boolean }
 ): boolean {
   const mode = config.iframeCredentialless
@@ -71,7 +72,7 @@ export function createCrossOriginIsolated(): Accessor<boolean> {
  * Takes a resolved config, for the reason given on `shouldSetCredentialless`.
  */
 export function shouldShowIframeFallbackLink(
-  config: Required<MCPUIConfig>,
+  config: MCPUIConfig,
   crossOriginIsolated: boolean
 ): boolean {
   const mode = config.iframeFallbackLink

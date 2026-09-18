@@ -1,21 +1,31 @@
 // @vitest-environment node
 /**
- * Host-config guard — `MCPUIConfig` declares no required field.
+ * Host-config guard — the STRUCTURE of the two published policy types.
  *
  * @since v6.22.0
  *
- * `MCPUIConfig` gains a key in a MINOR release each time the library grows a
- * policy switch (`iframeFallbackLink` in 6.21.0, `chartZoom` in 6.22.0). While
- * its fields were required, every such addition broke the build of a consumer
- * holding a COMPLETE config — a typed constant, or a direct
- * `<MCPUIConfigContext.Provider value={…}>` — over a behaviour change they had
- * not made. `MCPUIConfigContext.test.tsx` pins the consumer-side claim with
- * `satisfies MCPUIConfig`, but `pnpm typecheck` excludes `*.test.tsx`, so this
- * scan is what actually fails when a field loses its `?`.
+ * The policy type gains a key in a MINOR release each time the library grows a
+ * switch (`iframeFallbackLink` in 6.21.0, `chartZoom` in 6.22.0), and neither
+ * side may break when it does. Hence two names, and two invariants:
  *
- * It is the same trade the chrome-strings guard makes next door: the shape of
- * a published type is an invariant, and an AST read of the declaration is the
- * only check that survives the test files being outside the `tsc` program.
+ *   - `MCPUIConfigInput` (authored) declares NO required field, so a new key
+ *     never breaks a consumer who builds a config;
+ *   - `MCPUIConfig` (resolved) stays an interface extending
+ *     `Required<MCPUIConfigInput>`, so a consumer who only READS one never
+ *     meets `undefined`, while interface extension and augmentation remain
+ *     compatible with the pre-6.22.0 public contract.
+ *
+ * 6.22.0 held the first and lost the second, which is why both are pinned here.
+ *
+ * ## Why an AST scan on top of the type checker
+ *
+ * `MCPUIConfigContext.test.tsx` states both claims with real annotations, and
+ * since 6.22.1 `pnpm typecheck` does check that file, through
+ * `tsconfig.contracts.json`. This scan is not a substitute for it: it reads the
+ * DECLARATIONS rather than their use, so it still fails when someone adds a
+ * required field that no existing annotation happens to exercise, and it names
+ * the offending key in the failure message. Same trade the chrome-strings
+ * guard makes next door.
  */
 
 import { describe, expect, it } from 'vitest'
@@ -30,7 +40,7 @@ const CONFIG_FILE = join(
   'MCPUIConfigContext.tsx'
 )
 
-/** The `MCPUIConfig` property signatures, read off the interface declaration. */
+/** The `MCPUIConfigInput` property signatures, read off the interface declaration. */
 function readConfigMembers(): Array<{ name: string; optional: boolean }> {
   const source = ts.createSourceFile(
     CONFIG_FILE,
@@ -40,7 +50,7 @@ function readConfigMembers(): Array<{ name: string; optional: boolean }> {
   )
   const members: Array<{ name: string; optional: boolean }> = []
   source.forEachChild((node) => {
-    if (!ts.isInterfaceDeclaration(node) || node.name.text !== 'MCPUIConfig') return
+    if (!ts.isInterfaceDeclaration(node) || node.name.text !== 'MCPUIConfigInput') return
     for (const member of node.members) {
       if (!ts.isPropertySignature(member) || !ts.isIdentifier(member.name)) continue
       members.push({ name: member.name.text, optional: member.questionToken !== undefined })
@@ -49,7 +59,7 @@ function readConfigMembers(): Array<{ name: string; optional: boolean }> {
   return members
 }
 
-describe('MCPUIConfig shape guard', () => {
+describe('MCPUIConfigInput shape guard', () => {
   it('finds the interface (the scan below is otherwise vacuous)', () => {
     expect(readConfigMembers().map((m) => m.name)).toContain('chartZoom')
   })
@@ -60,13 +70,50 @@ describe('MCPUIConfig shape guard', () => {
       .map((m) => m.name)
     expect(
       required,
-      'Mark these `?`: a required MCPUIConfig field breaks every consumer holding a complete config. The default belongs in DEFAULT_MCPUI_CONFIG, which is Required<MCPUIConfig> and fails to compile without it.'
+      'Mark these `?`: a required MCPUIConfigInput field breaks every consumer authoring a config. The resolved interface MCPUIConfig extends Required<MCPUIConfigInput> is what readers get, and DEFAULT_MCPUI_CONFIG carries that annotation so a key without a default fails to compile.'
     ).toEqual([])
   })
 
+  it('keeps MCPUIConfig the RESOLVED view of that input', () => {
+    // The other half of the contract, and the one 6.22.0 lost: a reader doing
+    // `const p: IframePolicy = config.iframePolicy` must not meet `undefined`.
+    const source = ts.createSourceFile(
+      CONFIG_FILE,
+      readFileSync(CONFIG_FILE, 'utf8'),
+      ts.ScriptTarget.Latest,
+      true
+    )
+    let resolvedBase: string | undefined
+    source.forEachChild((node) => {
+      if (!ts.isInterfaceDeclaration(node) || node.name.text !== 'MCPUIConfig') return
+      resolvedBase = node.heritageClauses
+        ?.flatMap((clause) => clause.types)
+        .map((type) => type.getText(source).replace(/\s+/g, ''))
+        .find((type) => type === 'Required<MCPUIConfigInput>')
+    })
+    expect(
+      resolvedBase,
+      'MCPUIConfig must stay an interface extending `Required<MCPUIConfigInput>`. Widening it to the partial input type makes every published field `| undefined`; replacing the interface with an alias breaks declaration merging.'
+    ).toBe('Required<MCPUIConfigInput>')
+  })
+
+  it('types MCPUIConfigContext with the RESOLVED view', () => {
+    // The context is exported, so `useContext(MCPUIConfigContext)` is a public
+    // read surface. Typing it with the input view would leave a direct reader
+    // on `IframePolicy | undefined` — the regression restored everywhere else.
+    // Hosts that want to pass only some keys use `MCPUIConfigProvider`.
+    const text = readFileSync(CONFIG_FILE, 'utf8')
+    const call = /createContext<([^>]+)>/.exec(text)?.[1]
+    expect(
+      call,
+      'MCPUIConfigContext must be createContext<MCPUIConfig>. With MCPUIConfigInput, a consumer reading the context directly gets every field as `| undefined`.'
+    ).toBe('MCPUIConfig')
+  })
+
   it('gives DEFAULT_MCPUI_CONFIG a value for exactly the declared keys', () => {
-    // The runtime half of `Required<MCPUIConfig>`: the annotation catches a
-    // missing key at compile time, this catches a stale extra one.
+    // The runtime half of `MCPUIConfig extends Required<MCPUIConfigInput>`:
+    // the annotation catches a missing key at compile time, this catches a
+    // stale extra one.
     const declared = readConfigMembers()
       .map((m) => m.name)
       .sort()
