@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { marked } from 'marked'
 import type { MathRenderer } from '../context/MCPUIMathContext'
 import { renderKatexMath } from '../plugins/katex'
 import { MATH_MARKDOWN_LIMITS, parseMathMarkdown } from './math-markdown'
@@ -7,6 +8,16 @@ const math: MathRenderer = (tex, { displayMode }) =>
   `<span class="katex"><math display="${displayMode ? 'block' : 'inline'}"><semantics><mrow><mi>${tex}</mi></mrow><annotation encoding="application/x-tex">${tex}</annotation></semantics></math></span>`
 
 describe('parseMathMarkdown', () => {
+  it('isolates the global Markdown parser and different host renderers', () => {
+    const before = marked.parse('$x$', { async: false })
+    const first = parseMathMarkdown('$x$', () => '<math><mi>first</mi></math>', 'prose')
+    const second = parseMathMarkdown('$x$', () => '<math><mi>second</mi></math>', 'prose')
+    expect(first).toContain('<mi>first</mi>')
+    expect(second).toContain('<mi>second</mi>')
+    expect(second).not.toContain('first')
+    expect(marked.parse('$x$', { async: false })).toBe(before)
+  })
+
   it('renders closed inline and display expressions before Markdown underscore parsing', () => {
     const out = parseMathMarkdown('($V_{th}$)\n\n$$\nx^2\n$$', math, 'prose')
     expect(out).toContain('<mi>V_{th}</mi>')
