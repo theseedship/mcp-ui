@@ -43,24 +43,28 @@ import type { IframePolicy } from '../types'
  * Host-level rendering policy. Every field has a default — a provider passes
  * a partial override.
  *
- * ## Why every field is optional
+ * ## Two names, because there are two jobs
  *
- * This interface grows a key every time the library gains a policy switch,
- * and those releases are MINOR. Were the fields required, adding one would
- * break the build of any consumer holding a COMPLETE `MCPUIConfig` value —
- * a typed constant, a helper that returns one, or a direct
- * `<MCPUIConfigContext.Provider value={…}>` — because their object would
- * suddenly miss a key. Nothing about their behaviour changed; only `tsc`
- * would fail. Optional fields make each new key additive.
+ * This type grows a key every time the library gains a policy switch, and
+ * those releases are MINOR — so neither AUTHORING a config nor READING one
+ * may break when a key appears. Those two demands pull in opposite
+ * directions, and one name cannot serve both:
  *
- * The completeness guarantee moves from the type to the two values that
- * actually need it, exactly as `MCPUIStrings` does it:
- * `DEFAULT_MCPUI_CONFIG` is `Required<MCPUIConfig>`, so forgetting a default
- * is a compile error HERE, and {@link useMCPUIConfig} returns
- * `Required<MCPUIConfig>`, so every renderer still reads a fully resolved
- * value and never has to null-check a policy.
+ * - an author must be allowed to omit the new key, so the fields they write
+ *   have to be OPTIONAL;
+ * - a reader assigning `const p: IframePolicy = config.iframePolicy` must not
+ *   suddenly face `undefined`, so the fields they read have to be REQUIRED.
+ *
+ * Hence {@link MCPUIConfigInput} (what a host writes — every field optional)
+ * and {@link MCPUIConfig} (what the library hands back — every field
+ * resolved). `MCPUIConfig` is derived from the input type, so the two can
+ * never drift and a key is declared exactly once.
+ *
+ * Use `MCPUIConfigInput` for anything you construct, including a direct
+ * `<MCPUIConfigContext.Provider value={…}>`; use `MCPUIConfig` for anything
+ * you receive, which is what {@link useMCPUIConfig} returns.
  */
-export interface MCPUIConfig {
+export interface MCPUIConfigInput {
   /**
    * When the library puts the boolean `credentialless` attribute on an
    * `<iframe>` it renders.
@@ -142,16 +146,24 @@ export interface MCPUIConfig {
 }
 
 /**
+ * The resolved host policy: every key present. This is what the library hands
+ * back, so a reader never null-checks a policy.
+ *
+ * Derived from {@link MCPUIConfigInput} rather than declared again, so a key
+ * exists in exactly one place and the two views cannot drift.
+ */
+export type MCPUIConfig = Required<MCPUIConfigInput>
+
+/**
  * Defaults. Chosen so a host that sends no COEP header sees no change from
  * 6.20.0 apart from the fallback link, which `'auto'` keeps hidden there —
  * and, since 6.22.0, so no inline component ever captures the wheel
  * (`chartZoom: 'expanded'`).
  *
- * Typed `Required<MCPUIConfig>`: the interface's fields are optional so that
- * adding one stays backward compatible, and this annotation is what keeps a
- * new key from shipping without a default.
+ * Typed `MCPUIConfig` (i.e. resolved): that annotation is what stops a new
+ * key from shipping without a default.
  */
-export const DEFAULT_MCPUI_CONFIG: Required<MCPUIConfig> = {
+export const DEFAULT_MCPUI_CONFIG: MCPUIConfig = {
   iframeCredentialless: 'auto',
   customTrustedIframeDomains: [],
   iframePolicy: 'strict',
@@ -161,19 +173,19 @@ export const DEFAULT_MCPUI_CONFIG: Required<MCPUIConfig> = {
 }
 
 /**
- * Deliberately typed with the PARTIAL `MCPUIConfig`, not `Required<…>`: a
- * host that bypasses `MCPUIConfigProvider` and feeds this provider directly
- * may pass whichever keys it cares about, and `useMCPUIConfig` fills the
- * rest. Widening it this way only ever accepts more than before.
+ * Deliberately typed with the INPUT view, not the resolved one: a host that
+ * bypasses `MCPUIConfigProvider` and feeds this context directly may pass
+ * whichever keys it cares about, and `useMCPUIConfig` fills the rest. This
+ * only ever accepts more than a resolved type would.
  */
-export const MCPUIConfigContext = createContext<MCPUIConfig>(DEFAULT_MCPUI_CONFIG)
+export const MCPUIConfigContext = createContext<MCPUIConfigInput>(DEFAULT_MCPUI_CONFIG)
 
 /**
  * Reads the active host config, resolved: every key is present, whether it
  * came from the provider or from `DEFAULT_MCPUI_CONFIG`. Returns the defaults
  * outright when no `<MCPUIConfigProvider>` is mounted above.
  */
-export function useMCPUIConfig(): Required<MCPUIConfig> {
+export function useMCPUIConfig(): MCPUIConfig {
   return mergeProps(DEFAULT_MCPUI_CONFIG, useContext(MCPUIConfigContext))
 }
 
@@ -182,7 +194,7 @@ export interface MCPUIConfigProviderProps {
    * Partial override of the host config. Any key left unset falls back to
    * `DEFAULT_MCPUI_CONFIG`.
    */
-  config?: Partial<MCPUIConfig>
+  config?: MCPUIConfigInput
   children: JSX.Element
 }
 

@@ -1,53 +1,67 @@
 /**
- * v6.22.0 — `MCPUIConfig` is a PARTIAL type, resolved on read.
+ * v6.22.1 — two names: `MCPUIConfigInput` (authored, every field optional) and
+ * `MCPUIConfig` (resolved, every field present).
  *
- * `MCPUIConfig` gains a key in a minor release each time the library grows a
- * policy switch (`iframeFallbackLink` in 6.21.0, `chartZoom` in 6.22.0). While
- * its fields were required, every such addition broke the build of a consumer
- * holding a complete config — a typed constant, or a direct
- * `<MCPUIConfigContext.Provider value={…}>` — over a behaviour change they had
- * not made. The fields are optional now, and completeness is guaranteed by the
- * values instead: `DEFAULT_MCPUI_CONFIG` is `Required<MCPUIConfig>`, and
- * `useMCPUIConfig()` returns `Required<MCPUIConfig>`.
+ * The policy type gains a key in a minor release each time the library grows a
+ * switch (`iframeFallbackLink` in 6.21.0, `chartZoom` in 6.22.0), and neither
+ * side may break when it does. One name could not serve both: required fields
+ * broke AUTHORS holding a complete config, optional fields broke READERS
+ * assigning `const p: IframePolicy = config.iframePolicy`. 6.22.0 shipped the
+ * second of those regressions; this file pins both directions so neither can
+ * come back.
  *
  * Coverage:
- *   1. A partial literal type-checks as `MCPUIConfig` (the `satisfies` below)
- *   2. Readers always see a resolved config: no provider, partial provider,
- *      and a bare `MCPUIConfigContext.Provider` fed a partial value
+ *   1. A partial literal type-checks as `MCPUIConfigInput`
+ *   2. A reader of `MCPUIConfig` gets non-optional fields
+ *   3. Readers always see a resolved config at runtime: no provider, partial
+ *      provider, and a bare `MCPUIConfigContext.Provider` fed a partial value
  *
- * `pnpm typecheck` excludes `*.test.tsx`, so (1) would not fail CI on its own:
- * `mcpui-config-guard.test.ts` re-states it as an AST scan of the declaration.
+ * `pnpm typecheck` excludes `*.test.tsx`, so (1) and (2) would not fail CI on
+ * their own: `mcpui-config-guard.test.ts` re-states them as an AST scan.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest'
 import { render, cleanup } from '@solidjs/testing-library'
 import type { JSX } from 'solid-js'
+import type { IframePolicy } from '../types'
 import {
   MCPUIConfigContext,
   MCPUIConfigProvider,
   useMCPUIConfig,
   DEFAULT_MCPUI_CONFIG,
   type MCPUIConfig,
+  type MCPUIConfigInput,
 } from './MCPUIConfigContext'
 
 /**
- * (1) The compile-time claim, written the way a consumer writes it.
+ * (1) The AUTHOR's claim, written the way a consumer writes it.
  *
  * Under the 6.21.0 shape — every field required — each of these literals was a
  * `tsc` error, and so was any config written before a later key existed.
  * `satisfies` checks assignability without widening the literal types.
  */
-const EMPTY_CONFIG = {} satisfies MCPUIConfig
-const ONE_KEY_CONFIG = { chartZoom: 'never' } satisfies MCPUIConfig
+const EMPTY_CONFIG = {} satisfies MCPUIConfigInput
+const ONE_KEY_CONFIG = { chartZoom: 'never' } satisfies MCPUIConfigInput
 /** The 6.20.0-era complete value: still valid two policy keys later. */
 const PRE_6_21_CONFIG = {
   iframeCredentialless: 'auto',
   customTrustedIframeDomains: [],
   iframePolicy: 'strict',
   customIframeDomains: [],
-} satisfies MCPUIConfig
-/** A resolved config is a config too — `Required<T>` is assignable to `T`. */
+} satisfies MCPUIConfigInput
+/** A resolved config is valid input too — `Required<T>` is assignable to `T`. */
+const RESOLVED_AS_INPUT: MCPUIConfigInput = DEFAULT_MCPUI_CONFIG
+
+/**
+ * (2) The READER's claim, which 6.22.0 broke by making every field optional.
+ *
+ * These annotations are the regression: under that shape each right-hand side
+ * was `… | undefined` and none of them compiled under `strictNullChecks`.
+ */
 const RESOLVED_CONFIG: MCPUIConfig = DEFAULT_MCPUI_CONFIG
+const READ_POLICY: IframePolicy = RESOLVED_CONFIG.iframePolicy
+const READ_CREDENTIALLESS: 'auto' | 'always' | 'never' = RESOLVED_CONFIG.iframeCredentialless
+const READ_DOMAINS: string[] = RESOLVED_CONFIG.customIframeDomains
 
 /** Renders `ui` and hands back the config the renderer underneath reads. */
 function captureConfig(ui: (probe: () => JSX.Element) => JSX.Element) {
@@ -60,13 +74,22 @@ function captureConfig(ui: (probe: () => JSX.Element) => JSX.Element) {
   return captured!
 }
 
-describe('MCPUIConfig — adding a key stays backward compatible', () => {
-  it('accepts an empty literal, a one-key literal and a pre-6.21.0 config', () => {
+describe('the policy type — adding a key breaks neither side', () => {
+  it('lets an author omit any key (MCPUIConfigInput)', () => {
     // The runtime assertions are trivial; the `satisfies` annotations are the test.
     expect(EMPTY_CONFIG).toEqual({})
     expect(ONE_KEY_CONFIG.chartZoom).toBe('never')
     expect(PRE_6_21_CONFIG.iframePolicy).toBe('strict')
+    expect(RESOLVED_AS_INPUT).toEqual(DEFAULT_MCPUI_CONFIG)
+  })
+
+  it('hands a reader every key, non-optional (MCPUIConfig)', () => {
+    // Same shape: the annotations above are what would fail to compile if the
+    // resolved view ever went partial again, as it did in 6.22.0.
     expect(RESOLVED_CONFIG).toEqual(DEFAULT_MCPUI_CONFIG)
+    expect(READ_POLICY).toBe('strict')
+    expect(READ_CREDENTIALLESS).toBe('auto')
+    expect(READ_DOMAINS).toEqual([])
   })
 })
 

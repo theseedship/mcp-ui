@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.22.1] - 2026-09-18
+
+Fixes a typing regression 6.22.0 introduced. Runtime behaviour is identical.
+
+### The mistake
+
+6.22.0 made every `MCPUIConfig` field optional so that adding a policy key
+would stop breaking consumers who *author* a complete config. That fixed one
+direction and broke the other: `MCPUIConfig` is a published type, so anyone who
+*reads* one — `const policy: IframePolicy = config.iframePolicy` — suddenly
+faced `… | undefined` and stopped compiling under `strictNullChecks`. Trading
+one compile break for the opposite one is not a fix.
+
+The two demands genuinely conflict, and one name cannot serve both: an author
+must be allowed to omit a key, a reader must never meet `undefined`.
+
+### The fix — two names
+
+- **`MCPUIConfigInput`** (new, exported): what a host writes. Every field
+  optional, so a new policy key is always additive. This is what
+  `MCPUIConfigProvider`'s `config` prop takes, and what
+  `MCPUIConfigContext.Provider` accepts.
+- **`MCPUIConfig`**: what the library hands back — `Required<MCPUIConfigInput>`,
+  every key present, which is the 6.21.0 meaning restored. `useMCPUIConfig()`
+  and `DEFAULT_MCPUI_CONFIG` carry it.
+
+Derived rather than declared twice, so a key is written once and the two views
+cannot drift. The guard test now pins **both** halves: every `MCPUIConfigInput`
+field stays optional, and `MCPUIConfig` stays the `Required<…>` alias. Both were
+verified to fail when the corresponding regression is reintroduced.
+
+**Nothing to change in consuming code** unless you annotate a config you build:
+switch those to `MCPUIConfigInput`. Reading is exactly as it was in 6.21.0.
+
 ## [6.22.0] - 2026-09-18
 
 Wheel zoom and drag pan on the surfaces that could not be read when the content
