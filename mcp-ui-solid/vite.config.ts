@@ -25,6 +25,7 @@ export default defineConfig({
         adapters: resolve(__dirname, 'src/adapters/index.ts'),
         'adapters/presentation': resolve(__dirname, 'src/adapters/presentation.ts'),
         'plugins/duckdb': resolve(__dirname, 'src/plugins/duckdb.ts'),
+        'plugins/katex': resolve(__dirname, 'src/plugins/katex.ts'),
       },
       name: 'McpUiSolid',
       formats: ['es', 'cjs'],
