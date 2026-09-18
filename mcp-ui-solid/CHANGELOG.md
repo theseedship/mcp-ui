@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.23.0] - 2026-09-18
+
+### Added
+
+- Opt-in `MCPUIMathProvider` and `MathRenderer` for markdown text and table
+  cells, including virtualized tables; separate optional `/plugins/katex`
+  adapter. No new required config fields and no KaTeX import from the root.
+- Bounded dollar-delimited math parsing, currency guards, isolated Marked
+  instances, sanitized MathML-only rendering and literal fallback. Styles,
+  annotation subtrees, executable markup and trusted TeX commands stay blocked.
+- SSR keeps escaped source until the existing client hydration upgrade;
+  original text/data is retained for copy and export. No CSS or font install.
+
 ## [6.22.1] - 2026-09-18
 
 Fixes a typing regression 6.22.0 introduced. Runtime behaviour is identical.

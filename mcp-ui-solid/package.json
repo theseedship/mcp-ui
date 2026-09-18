@@ -1,6 +1,6 @@
 {
   "name": "@seed-ship/mcp-ui-solid",
-  "version": "6.22.1",
+  "version": "6.23.0",
   "description": "SolidJS components for rendering MCP-generated UI resources",
   "type": "module",
   "files": [
@@ -44,6 +44,9 @@
       ],
       "plugins/duckdb": [
         "./dist/plugins/duckdb.d.ts"
+      ],
+      "plugins/katex": [
+        "./dist/plugins/katex.d.ts"
       ]
     }
   },
@@ -147,11 +150,22 @@
         "default": "./dist/plugins/duckdb.cjs"
       }
     },
+    "./plugins/katex": {
+      "solid": "./src/plugins/katex.ts",
+      "import": {
+        "types": "./dist/plugins/katex.d.ts",
+        "default": "./dist/plugins/katex.js"
+      },
+      "require": {
+        "types": "./dist/plugins/katex.d.cts",
+        "default": "./dist/plugins/katex.cjs"
+      }
+    },
     "./src/*": "./src/*"
   },
   "scripts": {
     "build": "vite build && pnpm build:types",
-    "build:types": "tsc --declaration --emitDeclarationOnly --outDir dist --composite false && pnpm build:types:copy",
+    "build:types": "tsc --declaration --emitDeclarationOnly --outDir dist --composite false && pnpm build:types:copy && cp dist/plugins/katex.d.ts dist/plugins/katex.d.cts",
     "build:types:copy": "printf \"export * from './components/index';\\nexport { default } from './components/index';\\n\" > dist/components.d.ts && printf \"export * from './hooks/index';\\n\" > dist/hooks.d.ts && printf \"export * from './types/index';\\n\" > dist/types.d.ts && printf \"export * from './adapters/index';\\n\" > dist/adapters.d.ts && pnpm build:types:cts",
     "build:types:cts": "cp dist/index.d.ts dist/index.d.cts && cp dist/components.d.ts dist/components.d.cts 2>/dev/null || true && cp dist/hooks.d.ts dist/hooks.d.cts 2>/dev/null || true && cp dist/types.d.ts dist/types.d.cts 2>/dev/null || true && cp dist/validation.d.ts dist/validation.d.cts 2>/dev/null || true && cp dist/types-export.d.ts dist/types-export.d.cts 2>/dev/null || true && cp dist/adapters.d.ts dist/adapters.d.cts 2>/dev/null || true && cp dist/adapters/presentation.d.ts dist/adapters/presentation.d.cts 2>/dev/null || true && cp dist/plugins/duckdb.d.ts dist/plugins/duckdb.d.cts 2>/dev/null || true",
     "dev": "vite build --watch",
@@ -191,6 +205,7 @@
     "chart.js": "^4.0.0",
     "chartjs-plugin-zoom": "^2.0.0",
     "highlight.js": "^11.9.0",
+    "katex": "^0.18.7",
     "leaflet": "^1.9.4",
     "leaflet.markercluster": "^1.5.0",
     "protomaps-leaflet": "^4.0.0",
@@ -210,6 +225,9 @@
       "optional": true
     },
     "highlight.js": {
+      "optional": true
+    },
+    "katex": {
       "optional": true
     },
     "leaflet": {
@@ -247,6 +265,7 @@
     "chart.js": "^4.5.1",
     "eslint": "^8.56.0",
     "jsdom": "^27.2.0",
+    "katex": "^0.18.7",
     "leaflet.markercluster": "^1.5.3",
     "size-limit": "^12.0.0",
     "solid-js": "^1.9.11",

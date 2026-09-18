@@ -5,6 +5,58 @@ SolidJS components + chat toolkit for MCP-generated UI. Part of the [MCP UI ecos
 [![npm version](https://img.shields.io/npm/v/@seed-ship/mcp-ui-solid.svg)](https://www.npmjs.com/package/@seed-ship/mcp-ui-solid)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+## What's New in v6.23.0
+
+Opt-in LaTeX in markdown text components and table cells, with the same
+currency guards and sanitized MathML output. No change without a provider;
+`MCPUIConfig` is unchanged. See [Math rendering](#math-rendering).
+
+## Math rendering
+
+Install the optional peer only if the host wants the supplied KaTeX adapter:
+
+```bash
+pnpm add katex@^0.18.7
+```
+
+```tsx
+import { MCPUIMathProvider, UIResourceRenderer } from '@seed-ship/mcp-ui-solid'
+import { renderKatexMath } from '@seed-ship/mcp-ui-solid/plugins/katex'
+
+<MCPUIMathProvider renderMath={renderKatexMath}>
+  <UIResourceRenderer content={resource} />
+</MCPUIMathProvider>
+```
+
+The provider applies to `text` with `markdown: true` and string-valued table
+cells, including virtualized rows. It recognizes `$...$` inline and `$$...$$`
+display formulas in their own paragraph (not embedded mid-sentence).
+Code spans/fences and link destinations are not formulas;
+currency such as `$5` and `$5-$10` remains text. Malformed/incomplete formulas
+degrade to their source. Copy/export continues to use the original data.
+
+The adapter emits **MathML only**: no KaTeX stylesheet, fonts, CDN requests,
+HTML layout or inline styles. Native MathML rendering varies by browser and
+may differ from the chat's HTML+MathML layout. There is no automatic loading:
+the explicit plugin import is the opt-in dependency boundary; hosts can load
+that module before mounting the provider if they want a separate chunk.
+
+Alternatively pass a synchronous `MathRenderer` function returning MathML
+(`(tex, { displayMode }) => string | null`). The library still sanitizes it;
+return `null` or throw to retain literal source. Passing `null` (or omitting
+`renderMath`) on a nested provider disables inherited math. Arbitrary Marked
+extensions and sanitizer overrides are deliberately not public API.
+
+On the server, escaped source is emitted without calling the renderer. The
+existing `SafeHtml` client upgrade renders sanitized formulas after hydration.
+Processing is bounded to 100,000 source characters, 4,096 per expression and
+128 expressions per parse; oversized input stays escaped text. The adapter
+also limits macro expansion and dimensions, disables trusted commands, and
+does not share macro definitions across formulas. TeX annotation subtrees are
+removed rather than exposing duplicate source after sanitization.
+
+See the [design and integration handoff](./docs/briefs/LATEX-MATHML-2026-09-18.md).
+
 ## What's New in v6.21.0
 
 - **Iframes work under `Cross-Origin-Embedder-Policy: credentialless`.** Both

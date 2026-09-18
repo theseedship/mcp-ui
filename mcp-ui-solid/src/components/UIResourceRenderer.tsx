@@ -67,6 +67,8 @@ import { RenderProvider } from './RenderContext'
 import { useAction } from '../hooks/useAction'
 import { createResponsiveGrid } from '../hooks/createResponsiveGrid'
 import { marked } from 'marked'
+import { useMCPUIMath, type MathRenderer } from '../context/MCPUIMathContext'
+import { parseMathMarkdown } from '../utils/math-markdown'
 
 /**
  * Copy button component with visual feedback
@@ -443,6 +445,9 @@ export function highlightQuery(html: string, query: string): string {
   const walker = document.createTreeWalker(template.content, NodeFilter.SHOW_TEXT)
   const textNodes: Text[] = []
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    // A HTML <mark> inside MathML can change or break its layout/semantics.
+    // Keep formulas intact; ordinary text around them remains searchable.
+    if (node.parentElement?.closest('math')) continue
     textNodes.push(node as Text)
   }
 
@@ -595,7 +600,7 @@ function transformCellCitations(text: string, ctx: CitationCtx): string {
   )
 }
 
-export function renderCellValue(value: any, citationCtx?: CitationCtx): string {
+export function renderCellValue(value: any, citationCtx?: CitationCtx, mathRenderer?: MathRenderer): string {
   // Handle null/undefined
   if (value === null || value === undefined) {
     return '-'
@@ -644,6 +649,18 @@ export function renderCellValue(value: any, citationCtx?: CitationCtx): string {
   // Pattern 4: empty string after cleanup → "-"
   if (strValue.trim() === '') {
     return '-'
+  }
+
+  // Math must be tokenized before Markdown or citation rewrites can consume
+  // TeX underscores or bracket arguments (e.g. \sqrt[3]{x}). The opt-in path
+  // transforms citations only in ordinary text tokens, never math/code/URLs.
+  if (mathRenderer && strValue.includes('$')) {
+    return parseMathMarkdown(
+      strValue,
+      mathRenderer,
+      'cellMarkdown',
+      citationCtx ? (text) => transformCellCitations(text, citationCtx) : undefined,
+    )
   }
 
   // Detect and convert markdown links: [text](url) — runs FIRST because
@@ -706,6 +723,7 @@ function TableRenderer(props: {
   const tableParams = props.component.params as any
   let scrollContainerRef: HTMLDivElement | undefined
   const strings = useMCPUIStrings()
+  const mathRenderer = useMCPUIMath()
 
   // v5.7.0 — opt-in citation chip rendering inside cells. When `citationMap`
   // is present in params, build a CitationCtx once and thread it through
@@ -1006,7 +1024,7 @@ function TableRenderer(props: {
             <For each={tableParams.columns}>
               {(column: any) => (
                 <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-200 whitespace-normal break-words leading-relaxed first:pl-6 last:pr-6">
-                  <SafeHtml html={() => highlightQuery(renderCellValue(row[column.key], citationCtx), debouncedQuery())} />
+                  <SafeHtml html={() => highlightQuery(renderCellValue(row[column.key], citationCtx, mathRenderer()), debouncedQuery())} />
                 </td>
               )}
             </For>
@@ -1045,7 +1063,7 @@ function TableRenderer(props: {
                 <For each={tableParams.columns}>
                   {(column: any) => (
                     <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-200 whitespace-normal break-words leading-relaxed first:pl-6 last:pr-6">
-                      <SafeHtml html={() => highlightQuery(renderCellValue(row[column.key], citationCtx), debouncedQuery())} />
+                      <SafeHtml html={() => highlightQuery(renderCellValue(row[column.key], citationCtx, mathRenderer()), debouncedQuery())} />
                     </td>
                   )}
                 </For>
@@ -1362,6 +1380,7 @@ function extractImageFromMarkdown(
  */
 function TextRenderer(props: { component: UIComponent }) {
   const strings = useMCPUIStrings()
+  const mathRenderer = useMCPUIMath()
   const textParams = props.component.params as any
 
   // Check if this is an image markdown that should be rendered as image
@@ -1399,6 +1418,8 @@ function TextRenderer(props: { component: UIComponent }) {
       return escapeHtml(String(raw))
     }
     if (textParams.markdown && !imageData()) {
+      const renderMath = mathRenderer()
+      if (renderMath) return parseMathMarkdown(String(raw), renderMath, 'prose')
       return sanitizeHtml(marked.parse(raw, { async: false }) as string, SANITIZE_PROFILES.prose)
     }
     return sanitizeHtml(String(raw), SANITIZE_PROFILES.prose)

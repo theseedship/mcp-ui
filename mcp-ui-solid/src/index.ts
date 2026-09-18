@@ -390,6 +390,9 @@ export {
   DEGRADED_PROJECTION_LABELS,
 } from './utils/degraded-projections'
 export type { DegradedProjectionLabels } from './utils/degraded-projections'
+export { MCPUIMathProvider } from './context/MCPUIMathContext'
+export type { MathRenderer, MathRenderOptions, MCPUIMathProviderProps } from './context/MCPUIMathContext'
+
 export { chartToDataTable, CHART_DATA_TABLE_LABELS } from './components/chart-data-table'
 export type { ChartDataTableLabels } from './components/chart-data-table'
 

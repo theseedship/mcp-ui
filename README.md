@@ -9,6 +9,11 @@ A collection of TypeScript packages for building generative, streaming user inte
 
 ## What's New
 
+**6.23.0 (`mcp-ui-solid`):** opt-in LaTeX in markdown text and table cells
+through `MCPUIMathProvider`, with an optional KaTeX-to-MathML adapter. No CSS,
+fonts, or additional required config keys. See the
+[setup and limits](./mcp-ui-solid/README.md#math-rendering).
+
 **6.21.0 (`mcp-ui-solid`):** The library's iframes now work on a host serving
 `Cross-Origin-Embedder-Policy: credentialless`. The `iframe` component and
 `VideoRenderer`'s YouTube / Vimeo embed carry the boolean `credentialless`
@@ -84,7 +89,7 @@ native chart/data switching, and chart/table/graph catalogue parity.
 See the [integration handoff](./mcp-ui-solid/docs/briefs/VISUALIZATION-FOUNDATION-2026-09-14.md).
 This work does not add automatic MCP selection or shared host filters.
 
-**Current line — `mcp-ui-solid` 6.21.0** (post-`5.0.0`, audit-driven visual-renderer
+**Current line — `mcp-ui-solid` 6.23.0** (post-`5.0.0`, audit-driven visual-renderer
 & streaming hardening; `mcp-ui-spec` 5.6.0). Highlights from 6.18.0 — see
 [`mcp-ui-solid/CHANGELOG.md`](./mcp-ui-solid/CHANGELOG.md) for the full list
 including 6.19.0:
@@ -142,7 +147,7 @@ This monorepo contains three packages published under `@seed-ship/`:
 
 | Package | Version | Description |
 |---------|---------|-------------|
-| [`@seed-ship/mcp-ui-solid`](./mcp-ui-solid) | 6.21.0 | SolidJS components for rendering MCP-generated UI |
+| [`@seed-ship/mcp-ui-solid`](./mcp-ui-solid) | 6.23.0 | SolidJS components for rendering MCP-generated UI |
 | [`@seed-ship/mcp-ui-spec`](./mcp-ui-spec) | 5.6.0 | JSON schemas and Zod validators |
 | [`@seed-ship/mcp-ui-cli`](./mcp-ui-cli) | 5.0.1 | CLI for validation and type generation |
 
