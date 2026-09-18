@@ -175,14 +175,30 @@ describe('<ChartJSRenderer>', () => {
     expect(viewport.classList.contains('min-h-0')).toBe(true);
     expect(table.textContent).toContain('Row 40');
 
-    // v6.22.0 — the default `chartZoom: 'expanded'` switches zoom on inside the
-    // modal, and Chart.js can only give the plugin's hooks to a chart built
-    // after it was registered. So the chart is rebuilt ONCE, on the same
-    // reparented canvas: the previous instance is destroyed rather than left
-    // running beside the new one (the double-render the reparenting exists to
-    // prevent). See `ChartJSRenderer.zoom.test.tsx` for the gating itself.
-    await waitFor(() => expect(chartHarness.instances).toHaveLength(2));
-    expect(chartHarness.instances[0].destroy).toHaveBeenCalledTimes(1);
+    // v6.22.0 — the default `chartZoom: 'expanded'` does ask for zoom inside
+    // the modal, but the `FakeChart` above is a partial Chart build with no
+    // static `register`, so the plugin can never be registered and zoom is
+    // never offered. Nothing about the chart config changed, so the canvas is
+    // reparented into the modal with its ORIGINAL instance still on it: no
+    // rebuild, no destroy, no double-render. The rebuild-on-register path is
+    // covered where a Chart stub actually exposes `register`
+    // (`ChartJSRenderer.zoom.test.tsx`), and the stub without one gets its own
+    // file (`ChartJSRenderer.zoom.no-register.test.tsx`).
+    //
+    // "Nothing happened" is only worth asserting once the thing that would
+    // have happened has had its chance. This file does not mock
+    // `chartjs-plugin-zoom`, so the renderer is waiting on the REAL module —
+    // awaiting the same two registry entries its plugin effect awaits puts
+    // this test behind them, and the loop drains the handful of microtask
+    // hops `ensureZoomPlugin`'s async body adds on top. A bare
+    // `await Promise.resolve()` returns long before the import settles, which
+    // would pass whether or not the partial build is handled.
+    await import('chartjs-plugin-zoom').catch(() => null);
+    await import('chart.js/auto');
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+
+    expect(chartHarness.instances).toHaveLength(1);
+    expect(chartHarness.instances[0].destroy).not.toHaveBeenCalled();
   });
 
   it('uses the default data height and applies a custom class to the chart wrapper', () => {

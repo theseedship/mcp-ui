@@ -273,4 +273,163 @@ describe('<ChartJSRenderer> zoom — plugin installed', () => {
     // A pie has no scales: the plugin would eat the wheel and move nothing.
     expect(latestZoomOptions()).toBeUndefined();
   });
+
+  it("keeps the consumer's own plugins.zoom instead of overwriting it", async () => {
+    // `ChartComponentParams.options` is the public Chart.js escape hatch, so
+    // `plugins.zoom` is a supported place for a host to put what this renderer
+    // cannot guess. Overwriting the key would throw away axis limits, wheel
+    // speed and the host's own callbacks, silently.
+    const onZoomComplete = vi.fn();
+
+    const { getByLabelText } = render(() => (
+      <MCPUIConfigProvider config={{ chartZoom: 'always' }}>
+        <ChartJSRenderer
+          component={chartComponent({
+            options: {
+              plugins: {
+                legend: { position: 'top' },
+                zoom: {
+                  limits: { x: { min: 0, max: 100 }, y: { min: -10 } },
+                  zoom: { wheel: { speed: 0.05 }, onZoomComplete },
+                  pan: { modifierKey: 'ctrl' },
+                },
+              },
+            },
+          })}
+        />
+      </MCPUIConfigProvider>
+    ));
+
+    // `pinch` only ever comes from the renderer, so it marks the merged
+    // config — the pre-plugin chart already carries the consumer's block.
+    await waitFor(() => expect(latestZoomOptions()?.zoom?.pinch).toBeTruthy());
+    const merged = latestZoomOptions()!;
+
+    // Everything the host configured survives…
+    expect(merged.limits).toEqual({ x: { min: 0, max: 100 }, y: { min: -10 } });
+    expect(merged.zoom.onZoomComplete).toBe(onZoomComplete);
+    expect(merged.pan.modifierKey).toBe('ctrl');
+    // …merged into, not over, what the renderer needs to work.
+    expect(merged.zoom.wheel).toEqual({ enabled: true, speed: 0.05 });
+    expect(merged.zoom.pinch).toEqual({ enabled: true });
+    expect(merged.zoom.drag).toEqual({ enabled: false });
+    expect(merged.zoom.mode).toBe('xy');
+    expect(merged.pan.enabled).toBe(true);
+    expect(merged.pan.mode).toBe('xy');
+    // The neighbouring plugin blocks are untouched by any of this.
+    expect(chartHarness.configs.at(-1).options.plugins.legend).toMatchObject({
+      display: true,
+      position: 'top',
+    });
+
+    // And the renderer's own `onZoom` still fires, so the reset control still
+    // knows when the chart is off its initial viewport.
+    const chart = chartHarness.instances.at(-1);
+    chart.zoomed = true;
+    merged.zoom.onZoom({ chart });
+
+    const reset = await waitFor(() => getByLabelText('Reset zoom'));
+    fireEvent.click(reset);
+    expect(chart.resetZoom).toHaveBeenCalledTimes(1);
+  });
+
+  it("treats an explicitly-undefined consumer value as an omission, not an erasure", async () => {
+    // A host forwarding an optional prop — `onZoom: props.onZoom` with nothing
+    // passed — serialises to a key whose value is `undefined`. Letting that
+    // overwrite would delete the renderer's own hook and leave the reset
+    // control lying about the chart.
+    const { getByLabelText } = render(() => (
+      <MCPUIConfigProvider config={{ chartZoom: 'always' }}>
+        <ChartJSRenderer
+          component={chartComponent({
+            options: {
+              plugins: {
+                zoom: {
+                  limits: undefined,
+                  zoom: { mode: undefined, onZoom: undefined, wheel: { speed: 0.05 } },
+                  pan: { mode: undefined },
+                },
+              },
+            },
+          })}
+        />
+      </MCPUIConfigProvider>
+    ));
+
+    await waitFor(() => expect(latestZoomOptions()?.zoom?.pinch).toBeTruthy());
+    const merged = latestZoomOptions()!;
+
+    // The renderer's own values survive the undefined keys…
+    expect(merged.zoom.mode).toBe('xy');
+    expect(merged.pan.mode).toBe('xy');
+    expect(typeof merged.zoom.onZoom).toBe('function');
+    // …and the one value the host really did set still wins.
+    expect(merged.zoom.wheel).toEqual({ enabled: true, speed: 0.05 });
+
+    // The surviving hook is what makes the reset control appear.
+    const chart = chartHarness.instances.at(-1);
+    chart.zoomed = true;
+    merged.zoom.onZoom({ chart });
+    await waitFor(() => expect(getByLabelText('Reset zoom')).toBeTruthy());
+  });
+
+  it('honours plugins.zoom: false, the documented Chart.js per-chart opt-out', async () => {
+    // `false` disables one plugin for one chart. It is a deliberate host
+    // instruction and must beat `chartZoom`, or a consumer who switched zoom
+    // off finds it back on the moment the chart is expanded.
+    const { queryByLabelText } = render(() => (
+      <MCPUIConfigProvider config={{ chartZoom: 'always' }}>
+        <ChartJSRenderer
+          component={chartComponent({ options: { plugins: { zoom: false } } })}
+        />
+      </MCPUIConfigProvider>
+    ));
+
+    await waitFor(() => expect(chartHarness.instances.length).toBeGreaterThan(0));
+    await Promise.resolve();
+
+    // The host's value reaches Chart.js untouched — not a merged block.
+    expect(latestZoomOptions()).toBe(false);
+    expect(queryByLabelText('Zoom in')).toBeNull();
+  });
+
+  it("composes the consumer's onZoom / onPan with its own rather than replacing them", async () => {
+    // Two callbacks want the same key. Either alone loses something real: the
+    // host's telemetry, or the reset button's honesty. So both run.
+    const onZoom = vi.fn();
+    const onPan = vi.fn();
+
+    const { getByLabelText, queryByLabelText } = render(() => (
+      <MCPUIConfigProvider config={{ chartZoom: 'always' }}>
+        <ChartJSRenderer
+          component={chartComponent({
+            options: {
+              plugins: { zoom: { zoom: { onZoom }, pan: { mode: 'x', onPan } } },
+            },
+          })}
+        />
+      </MCPUIConfigProvider>
+    ));
+
+    await waitFor(() => expect(latestZoomOptions()?.zoom?.pinch).toBeTruthy());
+    const merged = latestZoomOptions()!;
+    // On a plain value the caller wins: an explicit `'x'` is the more specific
+    // instruction, and the renderer's `'xy'` was only ever a default.
+    expect(merged.pan.mode).toBe('x');
+
+    const chart = chartHarness.instances.at(-1);
+    chart.zoomed = true;
+    merged.zoom.onZoom({ chart });
+
+    expect(onZoom).toHaveBeenCalledWith({ chart });
+    fireEvent.click(await waitFor(() => getByLabelText('Reset zoom')));
+    await waitFor(() => expect(queryByLabelText('Reset zoom')).toBeNull());
+
+    // Same bargain on the pan side.
+    chart.zoomed = true;
+    merged.pan.onPan({ chart });
+
+    expect(onPan).toHaveBeenCalledWith({ chart });
+    expect(await waitFor(() => getByLabelText('Reset zoom'))).toBeTruthy();
+  });
 });

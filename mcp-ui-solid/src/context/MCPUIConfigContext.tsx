@@ -42,6 +42,23 @@ import type { IframePolicy } from '../types'
 /**
  * Host-level rendering policy. Every field has a default — a provider passes
  * a partial override.
+ *
+ * ## Why every field is optional
+ *
+ * This interface grows a key every time the library gains a policy switch,
+ * and those releases are MINOR. Were the fields required, adding one would
+ * break the build of any consumer holding a COMPLETE `MCPUIConfig` value —
+ * a typed constant, a helper that returns one, or a direct
+ * `<MCPUIConfigContext.Provider value={…}>` — because their object would
+ * suddenly miss a key. Nothing about their behaviour changed; only `tsc`
+ * would fail. Optional fields make each new key additive.
+ *
+ * The completeness guarantee moves from the type to the two values that
+ * actually need it, exactly as `MCPUIStrings` does it:
+ * `DEFAULT_MCPUI_CONFIG` is `Required<MCPUIConfig>`, so forgetting a default
+ * is a compile error HERE, and {@link useMCPUIConfig} returns
+ * `Required<MCPUIConfig>`, so every renderer still reads a fully resolved
+ * value and never has to null-check a policy.
  */
 export interface MCPUIConfig {
   /**
@@ -61,7 +78,7 @@ export interface MCPUIConfig {
    * blocked while the host sends COEP); Safari ignores the COEP value itself,
    * so nothing is blocked there in the first place.
    */
-  iframeCredentialless: 'auto' | 'always' | 'never'
+  iframeCredentialless?: 'auto' | 'always' | 'never'
 
   /**
    * Extra hosts treated as trusted, on top of `TRUSTED_IFRAME_DOMAINS`:
@@ -72,21 +89,21 @@ export interface MCPUIConfig {
    * iframe whose host is outside `DEFAULT_IFRAME_DOMAINS`, add it to
    * {@link MCPUIConfig.customIframeDomains} with `iframePolicy: 'extend'`.
    */
-  customTrustedIframeDomains: string[]
+  customTrustedIframeDomains?: string[]
 
   /**
    * How `UIResourceRenderer` validates an `iframe` component's host:
    * `'strict'` (default) accepts `DEFAULT_IFRAME_DOMAINS` only, `'extend'`
    * also accepts {@link MCPUIConfig.customIframeDomains}.
    */
-  iframePolicy: IframePolicy
+  iframePolicy?: IframePolicy
 
   /**
    * Extra hosts the allow-list accepts when `iframePolicy` is `'extend'`.
    * Without this, a component pointing at an unlisted host is replaced by the
    * validation card before any renderer runs.
    */
-  customIframeDomains: string[]
+  customIframeDomains?: string[]
 
   /**
    * When the library renders an "open in a new tab" link under an embed
@@ -102,7 +119,7 @@ export interface MCPUIConfig {
    *   render, so SSR markup and hydration agree.
    * - `'always'` / `'never'` — unconditional.
    */
-  iframeFallbackLink: 'auto' | 'always' | 'never'
+  iframeFallbackLink?: 'auto' | 'always' | 'never'
 
   /**
    * Where `ChartJSRenderer` enables wheel-zoom / drag-pan / pinch on a chart
@@ -121,7 +138,7 @@ export interface MCPUIConfig {
    *
    * @since 6.22.0
    */
-  chartZoom: 'expanded' | 'always' | 'never'
+  chartZoom?: 'expanded' | 'always' | 'never'
 }
 
 /**
@@ -129,8 +146,12 @@ export interface MCPUIConfig {
  * 6.20.0 apart from the fallback link, which `'auto'` keeps hidden there —
  * and, since 6.22.0, so no inline component ever captures the wheel
  * (`chartZoom: 'expanded'`).
+ *
+ * Typed `Required<MCPUIConfig>`: the interface's fields are optional so that
+ * adding one stays backward compatible, and this annotation is what keeps a
+ * new key from shipping without a default.
  */
-export const DEFAULT_MCPUI_CONFIG: MCPUIConfig = {
+export const DEFAULT_MCPUI_CONFIG: Required<MCPUIConfig> = {
   iframeCredentialless: 'auto',
   customTrustedIframeDomains: [],
   iframePolicy: 'strict',
@@ -139,13 +160,20 @@ export const DEFAULT_MCPUI_CONFIG: MCPUIConfig = {
   chartZoom: 'expanded',
 }
 
+/**
+ * Deliberately typed with the PARTIAL `MCPUIConfig`, not `Required<…>`: a
+ * host that bypasses `MCPUIConfigProvider` and feeds this provider directly
+ * may pass whichever keys it cares about, and `useMCPUIConfig` fills the
+ * rest. Widening it this way only ever accepts more than before.
+ */
 export const MCPUIConfigContext = createContext<MCPUIConfig>(DEFAULT_MCPUI_CONFIG)
 
 /**
- * Reads the active host config. Returns `DEFAULT_MCPUI_CONFIG` when no
- * `<MCPUIConfigProvider>` is mounted above.
+ * Reads the active host config, resolved: every key is present, whether it
+ * came from the provider or from `DEFAULT_MCPUI_CONFIG`. Returns the defaults
+ * outright when no `<MCPUIConfigProvider>` is mounted above.
  */
-export function useMCPUIConfig(): MCPUIConfig {
+export function useMCPUIConfig(): Required<MCPUIConfig> {
   return mergeProps(DEFAULT_MCPUI_CONFIG, useContext(MCPUIConfigContext))
 }
 

@@ -96,10 +96,20 @@ let zoomPluginRegistered = false;
  * Only ever called from an effect, never at module scope or during render, so
  * SSR never reaches `hammerjs` (a plugin dependency that reads `document` as
  * it loads).
+ *
+ * `@vite-ignore` for the same reason `duckdb.ts` and `MapRenderer.tsx` carry
+ * it on THEIR optional peers: this library is built with the peer externalised,
+ * so the bare specifier survives into the published bundle and a consumer's
+ * bundler resolves it statically — an app that never installed the plugin then
+ * fails its own dependency scan at build time, long before the `.catch()`
+ * below could turn the absence into the supported `null`. The four peers that
+ * anyone using the feature at all has installed (`chart.js`, `leaflet`,
+ * `@antv/g6`, `highlight.js`) stay bare on purpose: they benefit from the
+ * pre-bundling this comment opts out of.
  */
 const loadZoomPlugin = (): Promise<unknown | null> => {
   if (!zoomPluginPromise) {
-    zoomPluginPromise = import('chartjs-plugin-zoom')
+    zoomPluginPromise = import(/* @vite-ignore */ 'chartjs-plugin-zoom')
       .then((module: any) => module.default ?? module)
       .catch(() => null);
   }
@@ -117,20 +127,38 @@ const loadZoomPlugin = (): Promise<unknown | null> => {
  *
  * Chart.js only gives the plugin's hooks to charts constructed AFTER the
  * `register()` call, so the caller rebuilds its chart once this resolves.
+ *
+ * Resolves to `null` on EVERY failure and never rejects. Its one call site is
+ * a fire-and-forget `.then()` inside an effect, with nowhere to put a rejection
+ * handler that would mean anything to the host: `loadZoomPlugin()` already
+ * swallows the missing optional peer, but `loadChartJS()` below rejects on a
+ * host that installed neither, and that rejection would surface as an
+ * unhandled one. The chart's own render effect reports the missing `chart.js`
+ * through `onError` and the degraded table; zoom just quietly is not offered.
  */
 const ensureZoomPlugin = async (): Promise<unknown | null> => {
-  const plugin = await loadZoomPlugin();
-  if (!plugin) return null;
+  try {
+    const plugin = await loadZoomPlugin();
+    if (!plugin) return null;
 
-  if (!zoomPluginRegistered) {
-    const Chart: any = await loadChartJS();
-    // A stubbed or partial Chart build may not expose `register`; treat that
-    // like an absent peer rather than throwing inside the render effect.
-    if (typeof Chart?.register === 'function') Chart.register(plugin);
-    zoomPluginRegistered = true;
+    if (!zoomPluginRegistered) {
+      const Chart: any = await loadChartJS();
+      // A stubbed or partial Chart build may not expose `register`; treat that
+      // like an absent peer. Returning the plugin here would be worse than
+      // returning nothing: the renderer would hang zoom options off a chart
+      // that has no zoom hooks, and paint a toolbar whose buttons do nothing.
+      if (typeof Chart?.register !== 'function') return null;
+
+      Chart.register(plugin);
+      // Set only now that a registration has actually happened, so a later
+      // call still gets its chance on a Chart build that does expose it.
+      zoomPluginRegistered = true;
+    }
+
+    return plugin;
+  } catch {
+    return null;
   }
-
-  return plugin;
 };
 
 /**
@@ -161,6 +189,64 @@ const isChartZoomed = (chart: any): boolean => {
   if (typeof chart?.isZoomedOrPanned === 'function') return Boolean(chart.isZoomedOrPanned());
   const level = chart?.getZoomLevel?.();
   return typeof level === 'number' ? level !== 1 : false;
+};
+
+/** A JSON-ish object — the only shape a zoom option tree is ever built from. */
+const isPlainZoomObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+/**
+ * Deep-merge this renderer's zoom block with the consumer's own.
+ *
+ * `ChartComponentParams.options` is the public Chart.js escape hatch, and
+ * `plugins.zoom` is where a host tunes what this renderer cannot guess:
+ * `limits`, wheel `speed`, a pan `modifierKey`, its own callbacks. Spreading
+ * the renderer's block over it would silently drop the lot, so the two trees
+ * are merged branch by branch (`zoom.wheel`, `zoom.pinch`, `zoom.drag`, `pan`,
+ * `limits`, …).
+ *
+ * Two rules, both deliberate:
+ *   - on a plain value the CALLER wins — an explicit `mode: 'x'` is a more
+ *     specific instruction than this renderer's default `'xy'`;
+ *   - on a function both run, renderer first. The only functions the renderer
+ *     puts in that tree are `onZoom` / `onPan`, and they are what keeps the
+ *     reset control in sync with the viewport — letting a caller's callback
+ *     REPLACE them would leave the toolbar lying about the chart, so they are
+ *     composed instead.
+ */
+const mergeZoomOptions = (
+  base: Record<string, unknown>,
+  override: unknown
+): Record<string, unknown> => {
+  if (!isPlainZoomObject(override)) return base;
+
+  const merged: Record<string, unknown> = { ...base };
+
+  for (const [key, value] of Object.entries(override)) {
+    // An explicitly-undefined key is an OMISSION, not an instruction to erase.
+    // A host forwarding an optional prop — `zoom: { onZoom: props.onZoom }`
+    // with nothing passed — would otherwise delete the renderer's own hook,
+    // which is exactly what keeps the reset control honest. This is also the
+    // semantics `mergeProps` gives every other merge in this package.
+    if (value === undefined) continue;
+
+    const ours = merged[key];
+
+    if (isPlainZoomObject(ours) && isPlainZoomObject(value)) {
+      merged[key] = mergeZoomOptions(ours, value);
+    } else if (typeof ours === 'function' && typeof value === 'function') {
+      const rendererHook = ours as (...args: unknown[]) => unknown;
+      const callerHook = value as (...args: unknown[]) => unknown;
+      merged[key] = (...args: unknown[]) => {
+        rendererHook(...args);
+        return callerHook(...args);
+      };
+    } else {
+      merged[key] = value;
+    }
+  }
+
+  return merged;
 };
 
 export interface ChartJSRendererProps {
@@ -261,6 +347,13 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
    */
   const zoomWanted = createMemo(() => {
     if (!ZOOMABLE_CHART_TYPES.has(params().type)) return false;
+    // `false` (or `null`) on the host's own `plugins.zoom` is Chart.js's
+    // documented per-chart plugin opt-out. It speaks about THIS chart, so it
+    // beats the host-wide `chartZoom` policy — and gating here rather than at
+    // the options merge keeps one source of truth, so the plugin is never even
+    // downloaded and the toolbar never offers controls that would do nothing.
+    const hostZoom = params().options?.plugins?.zoom;
+    if (hostZoom === false || hostZoom === null) return false;
     const mode = config.chartZoom;
     if (mode === 'never') return false;
     if (mode === 'always') return true;
@@ -382,6 +475,7 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
       }
 
       // Build options, merging time-axis config if present (v3.1.0)
+      const hostZoomOptions = chartParams.options?.plugins?.zoom;
       const baseOptions: any = {
         responsive: true,
         maintainAspectRatio: false,
@@ -394,8 +488,13 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
             ...chartParams.options?.plugins?.legend,
           },
           // Present only once the optional peer has loaded AND the current
-          // surface wants zoom — otherwise the key is absent entirely.
-          ...(zoom ? { zoom } : {}),
+          // surface wants zoom. Merged rather than assigned, so a consumer's
+          // own `plugins.zoom` survives; when zoom is off, the spread above
+          // has already left their block exactly as they wrote it.
+          // An explicit `plugins.zoom: false` never reaches here: `zoomWanted`
+          // already returned false for it, so `zoom` is null and the spread
+          // above carries the host's own value through untouched.
+          ...(zoom ? { zoom: mergeZoomOptions(zoom, hostZoomOptions) } : {}),
         },
       };
 

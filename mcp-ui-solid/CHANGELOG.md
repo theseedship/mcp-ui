@@ -35,10 +35,36 @@ expanded view only, and why inline zoom is opt-in.
 - **Chart.js zoom and pan**, through `chartjs-plugin-zoom` as a new **optional**
   peer dependency. Absent, charts render exactly as before — no warning, no
   broken UI. A reset button appears in the toolbar only while the chart is
-  actually zoomed.
+  actually zoomed. A chart's own `options.plugins.zoom` is preserved: the
+  renderer's block is deep-merged into it, the caller's explicit values win
+  (`limits`, wheel `speed`, a pan `modifierKey`, `mode`), and a caller's
+  `onZoom` / `onPan` is *composed* with the renderer's rather than replacing
+  it, so the reset control stays in sync with the viewport either way. A key
+  the caller left `undefined` is read as an omission, not as an erasure. And
+  `options.plugins.zoom: false` — Chart.js's documented per-chart plugin
+  opt-out — beats `chartZoom`: the plugin is never downloaded and the toolbar
+  offers no controls.
 - **`MCPUIConfig.chartZoom`**: `'expanded'` (default), `'always'` or `'never'`.
 - Four string keys: `zoomIn`, `zoomOut`, `zoomReset`, `zoomLevel`
   (`'Zoom {percent}%'`). Chrome key count 271 → 275.
+
+### Changed
+
+- **Every `MCPUIConfig` field is now optional**, as `MCPUIStrings` has always
+  been. `MCPUIConfig` grows a key in a minor release each time the library
+  gains a policy switch — `iframeFallbackLink` in 6.21.0, `chartZoom` here —
+  and while the fields were required, each addition broke the build of anyone
+  holding a *complete* config: a typed constant, a helper returning one, or a
+  direct `<MCPUIConfigContext.Provider value={…}>`. Nothing about their
+  behaviour had changed; only `tsc` failed. Adding a key is additive now.
+
+  The completeness guarantee moved onto the values: `DEFAULT_MCPUI_CONFIG` is
+  typed `Required<MCPUIConfig>` (a new key without a default is a compile error
+  in the library), and `useMCPUIConfig()` returns `Required<MCPUIConfig>`, so
+  every renderer still reads a fully resolved policy and never null-checks one.
+  `MCPUIConfigContext` itself stays typed `MCPUIConfig`, which makes providing
+  it directly *more* permissive than before. Backward compatible in both
+  directions: a consumer already passing a field still type-checks.
 
 ### Fixed
 

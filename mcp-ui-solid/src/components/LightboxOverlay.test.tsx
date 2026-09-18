@@ -88,6 +88,24 @@ describe('LightboxOverlay', () => {
     return setSelected
   }
 
+  /**
+   * Mounts the overlay on a gallery the test can REPLACE while the index is
+   * held — a host whose list streams in, is refiltered, or is simply rebuilt
+   * by a parent re-render (`ImageGalleryRenderer` passes `params()?.images || []`).
+   */
+  const mountGallery = (index = 1) => {
+    const [gallery, setGallery] = createSignal<GalleryImage[]>(images)
+    render(() => (
+      <LightboxOverlay
+        images={gallery()}
+        selectedIndex={index}
+        onClose={onClose}
+        onNavigate={onNavigate}
+      />
+    ))
+    return setGallery
+  }
+
   describe('transform plumbing', () => {
     it('starts unzoomed, with the origin the anchoring maths requires', () => {
       mount()
@@ -376,6 +394,58 @@ describe('LightboxOverlay', () => {
 
       expect(scale()).toBe(1)
       expect(translation()).toEqual({ x: 0, y: 0 })
+    })
+
+    it('resets the zoom when the images are swapped under a held index', () => {
+      const setGallery = mountGallery(1)
+
+      wheel(-100, { x: 120, y: 90 })
+      expect(scale()).toBeGreaterThan(1)
+      expect(translation().x).not.toBe(0)
+
+      // `selectedIndex` never moves, but index 1 is now a different photo.
+      // Carrying the old transform over is the black frame the reset exists
+      // to prevent — a zoomed corner of one picture, shown on another.
+      setGallery([
+        { url: 'https://example.com/a.jpg', alt: 'A' },
+        { url: 'https://example.com/b.jpg', alt: 'B' },
+      ])
+
+      expect(image().getAttribute('src')).toBe('https://example.com/b.jpg')
+      expect(scale()).toBe(1)
+      expect(translation()).toEqual({ x: 0, y: 0 })
+    })
+
+    it('resets when only the srcset changes the picture', () => {
+      const setGallery = mountGallery(1)
+
+      wheel(-100)
+      expect(scale()).toBeGreaterThan(1)
+
+      // Same `url`, different candidates: the browser may well paint another
+      // image entirely, so this counts as a new picture too.
+      setGallery(
+        images.map((img, i) =>
+          i === 1 ? { ...img, srcset: 'https://example.com/2@2x.jpg 2x' } : img
+        )
+      )
+
+      expect(scale()).toBe(1)
+    })
+
+    it('keeps the zoom when the host re-passes the same picture in a new array', () => {
+      const setGallery = mountGallery(1)
+
+      wheel(-100, { x: 120, y: 90 })
+      const zoomed = scale()
+      const panned = translation()
+
+      // A fresh array on an unrelated parent update is not a new picture, and
+      // must not throw away a zoom the user is in the middle of.
+      setGallery([...images])
+
+      expect(scale()).toBe(zoomed)
+      expect(translation()).toEqual(panned)
     })
 
     it('resets the zoom when the overlay is closed and reopened', () => {

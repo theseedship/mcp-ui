@@ -9,7 +9,7 @@
  * lightbox and needs no host opt-in.
  */
 
-import { Component, Show, createEffect, onCleanup } from 'solid-js'
+import { Component, Show, createEffect, createMemo, onCleanup } from 'solid-js'
 import { Portal } from 'solid-js/web'
 import type { GalleryImage } from '../types'
 import { safeUrl } from '../utils/safe-url'
@@ -83,14 +83,47 @@ export const LightboxOverlay: Component<LightboxOverlayProps> = (props) => {
   }
 
   /**
+   * Identity of the picture on screen, as a VALUE rather than as an object
+   * reference — `null` while the overlay is closed.
+   *
+   * The index alone does not name a picture. A host that replaces `images`
+   * under a held `selectedIndex` — a gallery whose list streams in, a refilter,
+   * a re-render that rebuilds the array — puts a different photo on screen
+   * without the index ever moving. `url` and `srcset` are what the `<img>`
+   * below actually resolves, so together with the index they are what "the
+   * displayed image changed" has to mean. (`sizes` is left out on purpose: it
+   * re-picks among the candidates of the SAME picture, so it changes the
+   * resolution fetched, never the subject the zoom is framing.)
+   *
+   * A memo, and a string, so the comparison is by value: `ImageGalleryRenderer`
+   * passes `params()?.images || []`, a fresh array on every parent update, and
+   * re-reading that must not by itself count as a new picture — it would throw
+   * away a zoom the user is in the middle of. The index stays in the key so
+   * that navigating between two entries sharing a URL is still the clean slate
+   * the arrows promise.
+   */
+  const displayedImage = createMemo(() => {
+    if (props.selectedIndex === null) return null
+    const image = props.images[props.selectedIndex]
+    return JSON.stringify([props.selectedIndex, image?.url ?? null, image?.srcset ?? null])
+  })
+
+  /**
    * Every image opens at its fitted size. Without this the transform left over
    * from the previous picture would be applied to the next one — a 6× zoom on
    * a corner of a portrait photo, carried onto a landscape one, shows black.
    * It also settles the "arrows vs. panning" question: navigating away is
    * always a clean slate rather than a frame half-belonging to two images.
    *
+   * The dependency is `displayedImage()` and not `selectedIndex`, for the same
+   * reason: a swapped-out `images` array reaches the user as exactly that black
+   * frame — the old picture's scale and offset applied to a new photo — with no
+   * navigation to blame it on.
+   *
    * `reset()` reads its state through `untrack`, so this effect subscribes to
-   * `selectedIndex` only and never re-runs on its own write.
+   * that one memo and never re-runs on its own write. The scale and offset it
+   * writes are absent from the memo for the same reason: panning must not
+   * reset the pan.
    *
    * `cancelGesture()` comes first, and matters most on the CLOSE (`null`): the
    * pan handlers live on the backdrop, inside the `<Show>` below, but the
@@ -104,7 +137,7 @@ export const LightboxOverlay: Component<LightboxOverlayProps> = (props) => {
    * and the arrow keys dead behind their pan guards.
    */
   createEffect(() => {
-    props.selectedIndex
+    displayedImage()
     panZoom.cancelGesture()
     panZoom.reset()
   })
