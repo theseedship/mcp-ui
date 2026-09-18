@@ -190,7 +190,10 @@ export const DEFAULT_MCPUI_CONFIG: MCPUIConfig = {
  * The cost lands on the rarer side: a host feeding this context directly
  * passes a COMPLETE value, `{ ...DEFAULT_MCPUI_CONFIG, ...mine }`. Anyone who
  * wants to pass only the keys they care about uses `MCPUIConfigProvider`,
- * whose `config` prop takes {@link MCPUIConfigInput} and does that merge.
+ * whose `config` prop takes `Partial<`{@link MCPUIConfig}`>` and does that
+ * merge. That preserves optional properties added through declaration
+ * merging; {@link MCPUIConfigInput} remains the unaugmented built-in input
+ * shape a host can name for ordinary authored configs.
  */
 export const MCPUIConfigContext = createContext<MCPUIConfig>(DEFAULT_MCPUI_CONFIG)
 
@@ -208,7 +211,7 @@ export interface MCPUIConfigProviderProps {
    * Partial override of the host config. Any key left unset falls back to
    * `DEFAULT_MCPUI_CONFIG`.
    */
-  config?: MCPUIConfigInput
+  config?: Partial<MCPUIConfig>
   children: JSX.Element
 }
 
