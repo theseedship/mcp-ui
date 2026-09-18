@@ -156,7 +156,7 @@ export function parseMathMarkdown(
   const textRenderer = transformText
     ? {
         renderer: {
-          text(token: Tokens.Text | Tokens.Escape) {
+          text(this: Renderer, token: Tokens.Text | Tokens.Escape): string {
             // Block text tokens (notably list-item text) can own already
             // tokenized inline children. Recurse first so math and code keep
             // their own renderers; leaf text callbacks run as parsing descends.
