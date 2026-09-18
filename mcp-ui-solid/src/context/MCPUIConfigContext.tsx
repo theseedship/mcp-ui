@@ -60,9 +60,15 @@ import type { IframePolicy } from '../types'
  * resolved). `MCPUIConfig` is derived from the input type, so the two can
  * never drift and a key is declared exactly once.
  *
- * Use `MCPUIConfigInput` for anything you construct, including a direct
- * `<MCPUIConfigContext.Provider value={…}>`; use `MCPUIConfig` for anything
- * you receive, which is what {@link useMCPUIConfig} returns.
+ * Which one you name depends on the surface:
+ *
+ * - `<MCPUIConfigProvider config={…}>` takes `MCPUIConfigInput` — name that
+ *   type for a partial you build, and it merges the rest;
+ * - `<MCPUIConfigContext.Provider value={…}>` takes the RESOLVED
+ *   `MCPUIConfig`, because that context is read as well as written, so a
+ *   direct provider hands over `{ ...DEFAULT_MCPUI_CONFIG, ...mine }`;
+ * - anything you RECEIVE is `MCPUIConfig`, which is what
+ *   {@link useMCPUIConfig} returns.
  */
 export interface MCPUIConfigInput {
   /**

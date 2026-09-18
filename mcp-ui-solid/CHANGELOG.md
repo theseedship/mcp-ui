@@ -25,8 +25,8 @@ must be allowed to omit a key, a reader must never meet `undefined`.
 
 - **`MCPUIConfigInput`** (new, exported): what a host writes. Every field
   optional, so a new policy key is always additive. This is what
-  `MCPUIConfigProvider`'s `config` prop takes, and what
-  `MCPUIConfigContext.Provider` accepts.
+  `MCPUIConfigProvider`'s `config` prop takes. Note it is NOT what
+  `MCPUIConfigContext.Provider` takes — see below.
 - **`MCPUIConfig`**: what the library hands back — `Required<MCPUIConfigInput>`,
   every key present, which is the 6.21.0 meaning restored. `useMCPUIConfig()`,
   `DEFAULT_MCPUI_CONFIG` and `MCPUIConfigContext` carry it.
