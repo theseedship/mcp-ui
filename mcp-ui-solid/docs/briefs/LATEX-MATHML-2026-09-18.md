@@ -45,8 +45,8 @@ SafeHtml hydration repair upgrades the client. Source copy/export is retained.
   around the MCP UI renderers. The existing chat formatter need not change.
 - The repository does not modify Deposium's chat or host integration. Check
   native MathML on the target browsers; SSR first paint remains plain source.
-- PR #28 is the base for this release. Merge it before this feature PR; stage
-  6.23.0 through the existing release process and approve on npm afterward.
+- PR #28's config compatibility fix is now merged into main and included here.
+  Stage 6.23.0 through the existing release process and approve on npm afterward.
   A version change in this branch does not itself mean publication occurred.
 
 References: [KaTeX options](https://katex.org/docs/options.html),

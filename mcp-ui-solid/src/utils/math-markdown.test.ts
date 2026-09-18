@@ -61,6 +61,15 @@ describe('parseMathMarkdown', () => {
     expect(out).toContain(source.replace('\\$', '$'))
   })
 
+  it('does not reject nonnumeric math merely because a digit follows its closer', () => {
+    const renderer = vi.fn(math)
+    const out = parseMathMarkdown('$x$2', renderer, 'prose')
+    expect(renderer).toHaveBeenCalledOnce()
+    expect(renderer).toHaveBeenCalledWith('x', { displayMode: false })
+    expect(out).toContain('<math')
+    expect(out).toContain('2')
+  })
+
   it.each(['$5$', '$2x + 1$', '$2 + 3$', '$2\\pi$'])('keeps numeric-leading math valid: %s', (source) => {
     const renderer = vi.fn(math)
     parseMathMarkdown(source, renderer, 'prose')
@@ -125,6 +134,32 @@ describe('parseMathMarkdown', () => {
       const renderer = vi.fn(math)
       parseMathMarkdown(source, renderer, 'prose')
       expect(renderer).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each(['prose', 'cellMarkdown'] as const)(
+    'does not parse dollar pairs inside a bare GFM URL in the %s profile',
+    (profile) => {
+      const renderer = vi.fn(math)
+      const out = parseMathMarkdown('https://example.test/$x$', renderer, profile)
+      const host = document.createElement('div')
+      host.innerHTML = out
+      expect(renderer).not.toHaveBeenCalled()
+      expect(host.querySelector('a')?.getAttribute('href')).toBe('https://example.test/$x$')
+      expect(host.querySelector('a')?.textContent).toBe('https://example.test/$x$')
+    },
+  )
+
+  it.each(['prose', 'cellMarkdown'] as const)(
+    'protects a bare URL while still rendering a later formula in the %s profile',
+    (profile) => {
+      const renderer = vi.fn(math)
+      const out = parseMathMarkdown('https://example.test/$x$ then $y$', renderer, profile)
+      const host = document.createElement('div')
+      host.innerHTML = out
+      expect(host.querySelector('a')?.getAttribute('href')).toBe('https://example.test/$x$')
+      expect(renderer).toHaveBeenCalledOnce()
+      expect(renderer).toHaveBeenCalledWith('y', { displayMode: false })
     },
   )
 

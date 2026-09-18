@@ -75,7 +75,7 @@ interface MathToken extends Tokens.Generic {
 function isCurrencyLike(raw: string, tex: string, following: string): boolean {
   if (/^\$\s|\s\$$/.test(raw)) return true
   if (/^\d+(?:[.,]\d+)?-\s*$/.test(tex)) return true
-  if (/^\d/.test(following)) return true
+  if (/^\d/.test(tex) && /^\d/.test(following)) return true
 
   // A currency opener can otherwise pair with the opening delimiter of a
   // later expression ("$5 then ($x$)"). Reinterpret that first candidate
