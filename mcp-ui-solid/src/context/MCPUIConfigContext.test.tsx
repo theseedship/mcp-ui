@@ -112,7 +112,9 @@ describe('useMCPUIConfig — always returns a resolved config', () => {
   it('resolves a partial value fed straight to MCPUIConfigContext.Provider', () => {
     // The path the required-field shape rejected at compile time: a host that
     // bypasses MCPUIConfigProvider still passes only the keys it cares about.
-    const partial: MCPUIConfig = { iframeFallbackLink: 'always' }
+    // Annotated with the INPUT view — the resolved `MCPUIConfig` would reject
+    // this literal, which is the whole point of there being two names.
+    const partial: MCPUIConfigInput = { iframeFallbackLink: 'always' }
     const config = captureConfig((probe) => (
       <MCPUIConfigContext.Provider value={partial}>{probe()}</MCPUIConfigContext.Provider>
     ))

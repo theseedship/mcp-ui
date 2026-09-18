@@ -36,6 +36,16 @@ cannot drift. The guard test now pins **both** halves: every `MCPUIConfigInput`
 field stays optional, and `MCPUIConfig` stays the `Required<…>` alias. Both were
 verified to fail when the corresponding regression is reintroduced.
 
+### How this got through
+
+`pnpm typecheck` excludes `**/*.test.ts(x)`, so a type-level claim written in a
+test file failed nothing — 6.22.0 shipped both a broken `MCPUIConfig` and a
+fixture annotated with the wrong type, and neither `typecheck` nor `test` said a
+word. `tsconfig.contracts.json` now type-checks the handful of test files whose
+`satisfies` and annotations *are* the test, and `typecheck` runs it. Including
+every test file instead would surface 53 unrelated errors, so that stays a
+separate piece of work.
+
 **Nothing to change in consuming code** unless you annotate a config you build:
 switch those to `MCPUIConfigInput`. Reading is exactly as it was in 6.21.0.
 

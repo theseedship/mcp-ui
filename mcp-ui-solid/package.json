@@ -159,7 +159,7 @@
     "test:watch": "vitest",
     "test:browser": "vitest --mode browser",
     "lint": "eslint src",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.contracts.json",
     "clean": "rm -rf dist",
     "size": "size-limit",
     "size:analyze": "size-limit --why"

@@ -1,0 +1,19 @@
+// Type-checks the few test files that assert a PUBLISHED TYPE CONTRACT rather
+// than a behaviour — the ones whose `satisfies` and annotations ARE the test.
+//
+// The main tsconfig excludes `**/*.test.ts(x)`, so a type-level claim written
+// in a test file fails nothing: 6.22.0 shipped a broken `MCPUIConfig` and a
+// test fixture annotated with the wrong type, and neither `pnpm typecheck` nor
+// `pnpm test` said a word. Including every test file instead would surface 53
+// unrelated errors, so this config lists only the contract files.
+//
+// Add a file here when its assertions are types, not behaviour.
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src/context/MCPUIConfigContext.test.tsx",
+    "src/context/MCPUIConfigContext.tsx",
+    "src/types/index.ts"
+  ],
+  "exclude": ["node_modules", "dist"]
+}
