@@ -1,5 +1,6 @@
 /**
- * MCPUIConfigContext — host-level rendering policy for the library's iframes.
+ * MCPUIConfigContext — host-level rendering policy: the library's iframes
+ * (v6.21.0) and, since v6.22.0, where a chart may capture the wheel.
  *
  * @since v6.21.0
  *
@@ -102,11 +103,32 @@ export interface MCPUIConfig {
    * - `'always'` / `'never'` — unconditional.
    */
   iframeFallbackLink: 'auto' | 'always' | 'never'
+
+  /**
+   * Where `ChartJSRenderer` enables wheel-zoom / drag-pan / pinch on a chart
+   * (through the optional `chartjs-plugin-zoom` peer dependency — absent, the
+   * chart renders exactly as it does without this setting).
+   *
+   * Hijacking the mouse wheel on a component sitting inline in a scrolling
+   * chat feed is hostile: the user scrolls the conversation and the chart eats
+   * the gesture. So zoom belongs to a surface that OWNS its viewport, which
+   * here is `ExpandableWrapper`'s fullscreen modal.
+   *
+   * - `'expanded'` (default) — only inside the fullscreen modal.
+   * - `'always'` — inline as well. For a host that lays charts out in a
+   *   dashboard rather than in a feed, where the wheel has nothing to steal.
+   * - `'never'` — off everywhere; the plugin is never registered.
+   *
+   * @since 6.22.0
+   */
+  chartZoom: 'expanded' | 'always' | 'never'
 }
 
 /**
  * Defaults. Chosen so a host that sends no COEP header sees no change from
- * 6.20.0 apart from the fallback link, which `'auto'` keeps hidden there.
+ * 6.20.0 apart from the fallback link, which `'auto'` keeps hidden there —
+ * and, since 6.22.0, so no inline component ever captures the wheel
+ * (`chartZoom: 'expanded'`).
  */
 export const DEFAULT_MCPUI_CONFIG: MCPUIConfig = {
   iframeCredentialless: 'auto',
@@ -114,6 +136,7 @@ export const DEFAULT_MCPUI_CONFIG: MCPUIConfig = {
   iframePolicy: 'strict',
   customIframeDomains: [],
   iframeFallbackLink: 'auto',
+  chartZoom: 'expanded',
 }
 
 export const MCPUIConfigContext = createContext<MCPUIConfig>(DEFAULT_MCPUI_CONFIG)

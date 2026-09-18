@@ -1,6 +1,6 @@
 {
   "name": "@seed-ship/mcp-ui-solid",
-  "version": "6.21.0",
+  "version": "6.22.0",
   "description": "SolidJS components for rendering MCP-generated UI resources",
   "type": "module",
   "files": [
@@ -21,14 +21,30 @@
   "types": "./dist/index.d.ts",
   "typesVersions": {
     "*": {
-      "components": ["./dist/components.d.ts"],
-      "hooks": ["./dist/hooks.d.ts"],
-      "types": ["./dist/types.d.ts"],
-      "validation": ["./dist/validation.d.ts"],
-      "types-only": ["./dist/types-export.d.ts"],
-      "adapters": ["./dist/adapters.d.ts"],
-      "adapters/presentation": ["./dist/adapters/presentation.d.ts"],
-      "plugins/duckdb": ["./dist/plugins/duckdb.d.ts"]
+      "components": [
+        "./dist/components.d.ts"
+      ],
+      "hooks": [
+        "./dist/hooks.d.ts"
+      ],
+      "types": [
+        "./dist/types.d.ts"
+      ],
+      "validation": [
+        "./dist/validation.d.ts"
+      ],
+      "types-only": [
+        "./dist/types-export.d.ts"
+      ],
+      "adapters": [
+        "./dist/adapters.d.ts"
+      ],
+      "adapters/presentation": [
+        "./dist/adapters/presentation.d.ts"
+      ],
+      "plugins/duckdb": [
+        "./dist/plugins/duckdb.d.ts"
+      ]
     }
   },
   "exports": {
@@ -173,6 +189,7 @@
     "@duckdb/duckdb-wasm": "^1.28.0",
     "@tanstack/solid-virtual": "^3.0.0",
     "chart.js": "^4.0.0",
+    "chartjs-plugin-zoom": "^2.0.0",
     "highlight.js": "^11.9.0",
     "leaflet": "^1.9.4",
     "leaflet.markercluster": "^1.5.0",
@@ -187,6 +204,9 @@
       "optional": true
     },
     "chart.js": {
+      "optional": true
+    },
+    "chartjs-plugin-zoom": {
       "optional": true
     },
     "highlight.js": {

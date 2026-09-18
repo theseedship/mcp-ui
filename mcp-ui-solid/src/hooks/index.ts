@@ -59,6 +59,19 @@ export type {
   UseAutocompleteReturn,
 } from './useAutocomplete'
 
+// Pan/zoom primitive (v6.22.0). It lives under `src/utils` because it is pure
+// arithmetic plus two signals, but it is reactive and registers an onCleanup,
+// so it is used exactly like a hook — hence this re-export on the `./hooks`
+// subpath as well as on the root barrel.
+export { createPanZoom } from '../utils/pan-zoom'
+export type {
+  PanZoomOptions,
+  PanZoomController,
+  PanZoomState,
+  PanZoomPoint,
+  PanZoomCursor,
+} from '../utils/pan-zoom'
+
 // Data Validator hooks (v3.1.0 — anti-hallucination)
 export { useDataValidator } from './useDataValidator'
 export type {

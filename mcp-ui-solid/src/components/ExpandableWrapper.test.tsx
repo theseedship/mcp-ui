@@ -203,6 +203,26 @@ describe('ExpandableWrapper', () => {
     expect(queryByRole('dialog')).toBeNull()
   })
 
+  it('does not close when a drag that started inside the panel is released on the backdrop', async () => {
+    const { getByLabelText, getByRole, getByText, queryByRole } = render(() => (
+      <ExpandableWrapper title="Test">
+        <div>Content</div>
+      </ExpandableWrapper>
+    ))
+
+    fireEvent.click(getByLabelText('Expand'))
+    const dialog = getByRole('dialog')
+
+    // A pan or a text selection presses inside the panel and releases over the
+    // 16px backdrop margin. Per the UI Events spec the browser then dispatches
+    // `click` on the nearest common ancestor — the backdrop — which used to
+    // close the modal mid-gesture.
+    fireEvent.pointerDown(getByText('Content'))
+    fireEvent.click(dialog)
+
+    expect(queryByRole('dialog')).not.toBeNull()
+  })
+
   it('has dark theme classes on modal elements', async () => {
     const { getByLabelText, getByRole } = render(() => (
       <ExpandableWrapper title="Dark Theme Test">

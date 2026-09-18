@@ -5,6 +5,59 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.22.0] - 2026-09-18
+
+Wheel zoom and drag pan on the surfaces that could not be read when the content
+was dense: the image lightbox, and Chart.js charts in their expanded view.
+
+### The rule this follows
+
+**Wheel zoom is only ever enabled on a surface that owns its viewport** — a
+fullscreen overlay or the expanded modal. A component sitting inline in a
+scrolling page must not swallow the wheel, or a user scrolling the page finds
+themselves zooming a chart instead. That is why chart zoom defaults to the
+expanded view only, and why inline zoom is opt-in.
+
+### Added
+
+- **`createPanZoom(options)`** (`src/utils/pan-zoom.ts`, exported from the root
+  and from the `./hooks` subpath) — a dependency-free cursor-anchored zoom and
+  drag-pan primitive: the point under the pointer stays under the pointer.
+  Handles two-finger pinch, clamps to `min`/`max`, and exposes
+  `cancelGesture()` for the case where the surface carrying the handlers is
+  torn down while a pointer is still down. The pure helpers behind it
+  (`clampScale`, `contentPointAt`, `viewportPointOf`, `zoomAtAnchor`) are
+  exported too.
+- **`LightboxOverlay` zooms.** Wheel, drag to pan, double-click to toggle,
+  pinch on touch, and the keyboard shortcuts `+` / `-` / `0` alongside the
+  existing Escape and arrows. Zoom controls carry a level readout, and the zoom
+  resets when the displayed image changes.
+- **Chart.js zoom and pan**, through `chartjs-plugin-zoom` as a new **optional**
+  peer dependency. Absent, charts render exactly as before — no warning, no
+  broken UI. A reset button appears in the toolbar only while the chart is
+  actually zoomed.
+- **`MCPUIConfig.chartZoom`**: `'expanded'` (default), `'always'` or `'never'`.
+- Four string keys: `zoomIn`, `zoomOut`, `zoomReset`, `zoomLevel`
+  (`'Zoom {percent}%'`). Chrome key count 271 → 275.
+
+### Fixed
+
+- **`ExpandableWrapper` no longer closes on a drag released over its backdrop.**
+  When a press and its release have different targets the browser dispatches
+  `click` on their nearest common ancestor — the backdrop — so panning a zoomed
+  chart, or selecting text in an expanded table, and releasing over the 16px
+  margin around the panel tore the modal down mid-gesture. The close now
+  requires the gesture to have *begun* on the backdrop. This was reachable
+  before this release for any drag inside an expanded view; chart panning just
+  made it easy to hit.
+
+### Not affected
+
+Maps and graphs already zoomed: `MapRenderer` enables Leaflet's
+`scrollWheelZoom` and `GraphRenderer` registers G6's `zoom-canvas` /
+`drag-canvas`. Iframes (including a diagram served from `mermaid.ink`) are
+cross-origin documents and cannot be transformed by the host at all.
+
 ## [6.21.0] - 2026-09-17
 
 The library's iframes now work on a host that serves

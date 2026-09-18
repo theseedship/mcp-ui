@@ -174,7 +174,15 @@ describe('<ChartJSRenderer>', () => {
     expect(viewport.classList.contains('flex-1')).toBe(true);
     expect(viewport.classList.contains('min-h-0')).toBe(true);
     expect(table.textContent).toContain('Row 40');
-    expect(chartHarness.instances).toHaveLength(1);
+
+    // v6.22.0 — the default `chartZoom: 'expanded'` switches zoom on inside the
+    // modal, and Chart.js can only give the plugin's hooks to a chart built
+    // after it was registered. So the chart is rebuilt ONCE, on the same
+    // reparented canvas: the previous instance is destroyed rather than left
+    // running beside the new one (the double-render the reparenting exists to
+    // prevent). See `ChartJSRenderer.zoom.test.tsx` for the gating itself.
+    await waitFor(() => expect(chartHarness.instances).toHaveLength(2));
+    expect(chartHarness.instances[0].destroy).toHaveBeenCalledTimes(1);
   });
 
   it('uses the default data height and applies a custom class to the chart wrapper', () => {
