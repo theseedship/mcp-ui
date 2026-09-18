@@ -13,7 +13,8 @@
  * Coverage:
  *   1. A partial literal type-checks as `MCPUIConfigInput`
  *   2. A reader of `MCPUIConfig` gets non-optional fields
- *   3. The published interface remains extendable and declaration-mergeable
+ *   3. The published interface remains extendable and declaration-mergeable,
+ *      including an augmented property passed inline to the provider
  *   4. Readers always see a resolved config at runtime: no provider, a partial
  *      through `MCPUIConfigProvider`, and a bare `MCPUIConfigContext.Provider`
  *      fed the complete value its type now asks for
@@ -117,6 +118,17 @@ describe('the policy type — adding a key breaks neither side', () => {
     // assertion only keeps the values live for the runtime test suite.
     expect(EXTENDED_CONFIG.consumerExtension).toBe('merged')
     expect(EXTENDED_CONFIG.applicationPolicy).toBe(true)
+  })
+
+  it('accepts an augmented property inline on the provider config', () => {
+    // This JSX is the compile-time regression test: typing `config` as the
+    // unaugmented MCPUIConfigInput rejects this consumer-owned property.
+    const config = captureConfig((probe) => (
+      <MCPUIConfigProvider config={{ consumerExtension: 'inline' }}>
+        {probe()}
+      </MCPUIConfigProvider>
+    ))
+    expect(config.consumerExtension).toBe('inline')
   })
 })
 
