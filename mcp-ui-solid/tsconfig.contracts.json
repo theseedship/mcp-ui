@@ -10,10 +10,21 @@
 // Add a file here when its assertions are types, not behaviour.
 {
   "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "composite": false,
+    "paths": {
+      "@seed-ship/mcp-ui-solid": ["./src/index.ts"]
+    }
+  },
   "include": [
     "src/context/MCPUIConfigContext.test.tsx",
+    "src/context/MCPUIConfigContext.public-contract.test.tsx",
     "src/context/MCPUIConfigContext.tsx",
-    "src/types/index.ts"
+    "src/index.ts",
+    "src/solid-jsx-attrs.d.ts",
+    "src/types/index.ts",
+    "src/vite-env.d.ts"
   ],
   "exclude": ["node_modules", "dist"]
 }
