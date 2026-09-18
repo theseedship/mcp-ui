@@ -1966,6 +1966,7 @@ import type {
   IframePolicy, ValidationOptions,
   CitationCtx, CitationEntry, DuplicateMountInfo, DuplicateMountReporter,
   MCPUIStrings, MCPUIConfig, // v6.21.0
+  MCPUIConfigInput, // v6.22.1 — the authored, all-optional view
   TelemetryEvent, TelemetrySink, TelemetryOptions, TelemetryDispatcher,
   DataValidation, HallucinatedNumber, DataValidationOptions,
   VerifiedTextContent, DataPreviewContent, MapSectionContent,

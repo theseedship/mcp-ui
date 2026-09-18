@@ -97,14 +97,14 @@ export interface MCPUIConfigInput {
    *
    * This only RECLASSIFIES a host the allow-list already accepts. To render an
    * iframe whose host is outside `DEFAULT_IFRAME_DOMAINS`, add it to
-   * {@link MCPUIConfig.customIframeDomains} with `iframePolicy: 'extend'`.
+   * {@link MCPUIConfigInput.customIframeDomains} with `iframePolicy: 'extend'`.
    */
   customTrustedIframeDomains?: string[]
 
   /**
    * How `UIResourceRenderer` validates an `iframe` component's host:
    * `'strict'` (default) accepts `DEFAULT_IFRAME_DOMAINS` only, `'extend'`
-   * also accepts {@link MCPUIConfig.customIframeDomains}.
+   * also accepts {@link MCPUIConfigInput.customIframeDomains}.
    */
   iframePolicy?: IframePolicy
 
@@ -155,10 +155,12 @@ export interface MCPUIConfigInput {
  * The resolved host policy: every key present. This is what the library hands
  * back, so a reader never null-checks a policy.
  *
- * Derived from {@link MCPUIConfigInput} rather than declared again, so a key
- * exists in exactly one place and the two views cannot drift.
+ * Extends `Required<`{@link MCPUIConfigInput}`>` rather than declaring the
+ * fields again, so a key exists in exactly one place and the two views cannot
+ * drift. It remains an interface so existing consumers can extend or augment
+ * the public contract as they could before 6.22.0.
  */
-export type MCPUIConfig = Required<MCPUIConfigInput>
+export interface MCPUIConfig extends Required<MCPUIConfigInput> {}
 
 /**
  * Defaults. Chosen so a host that sends no COEP header sees no change from

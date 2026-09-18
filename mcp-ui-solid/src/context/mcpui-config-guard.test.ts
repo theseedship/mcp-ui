@@ -10,8 +10,10 @@
  *
  *   - `MCPUIConfigInput` (authored) declares NO required field, so a new key
  *     never breaks a consumer who builds a config;
- *   - `MCPUIConfig` (resolved) stays `Required<MCPUIConfigInput>`, so a
- *     consumer who only READS one never meets `undefined`.
+ *   - `MCPUIConfig` (resolved) stays an interface extending
+ *     `Required<MCPUIConfigInput>`, so a consumer who only READS one never
+ *     meets `undefined`, while interface extension and augmentation remain
+ *     compatible with the pre-6.22.0 public contract.
  *
  * 6.22.0 held the first and lost the second, which is why both are pinned here.
  *
@@ -68,7 +70,7 @@ describe('MCPUIConfigInput shape guard', () => {
       .map((m) => m.name)
     expect(
       required,
-      'Mark these `?`: a required MCPUIConfigInput field breaks every consumer authoring a config. The resolved view MCPUIConfig = Required<MCPUIConfigInput> is what readers get, and DEFAULT_MCPUI_CONFIG carries that annotation so a key without a default fails to compile.'
+      'Mark these `?`: a required MCPUIConfigInput field breaks every consumer authoring a config. The resolved interface MCPUIConfig extends Required<MCPUIConfigInput> is what readers get, and DEFAULT_MCPUI_CONFIG carries that annotation so a key without a default fails to compile.'
     ).toEqual([])
   })
 
@@ -81,14 +83,17 @@ describe('MCPUIConfigInput shape guard', () => {
       ts.ScriptTarget.Latest,
       true
     )
-    let alias: string | undefined
+    let resolvedBase: string | undefined
     source.forEachChild((node) => {
-      if (!ts.isTypeAliasDeclaration(node) || node.name.text !== 'MCPUIConfig') return
-      alias = node.type.getText(source).replace(/\s+/g, '')
+      if (!ts.isInterfaceDeclaration(node) || node.name.text !== 'MCPUIConfig') return
+      resolvedBase = node.heritageClauses
+        ?.flatMap((clause) => clause.types)
+        .map((type) => type.getText(source).replace(/\s+/g, ''))
+        .find((type) => type === 'Required<MCPUIConfigInput>')
     })
     expect(
-      alias,
-      'MCPUIConfig must stay `Required<MCPUIConfigInput>`. Widening it to the partial input type makes every published field `| undefined` and breaks consumers who only READ a config.'
+      resolvedBase,
+      'MCPUIConfig must stay an interface extending `Required<MCPUIConfigInput>`. Widening it to the partial input type makes every published field `| undefined`; replacing the interface with an alias breaks declaration merging.'
     ).toBe('Required<MCPUIConfigInput>')
   })
 
@@ -106,8 +111,9 @@ describe('MCPUIConfigInput shape guard', () => {
   })
 
   it('gives DEFAULT_MCPUI_CONFIG a value for exactly the declared keys', () => {
-    // The runtime half of `MCPUIConfig = Required<MCPUIConfigInput>`: the annotation catches a
-    // missing key at compile time, this catches a stale extra one.
+    // The runtime half of `MCPUIConfig extends Required<MCPUIConfigInput>`:
+    // the annotation catches a missing key at compile time, this catches a
+    // stale extra one.
     const declared = readConfigMembers()
       .map((m) => m.name)
       .sort()

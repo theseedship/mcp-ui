@@ -27,9 +27,11 @@ must be allowed to omit a key, a reader must never meet `undefined`.
   optional, so a new policy key is always additive. This is what
   `MCPUIConfigProvider`'s `config` prop takes. Note it is NOT what
   `MCPUIConfigContext.Provider` takes — see below.
-- **`MCPUIConfig`**: what the library hands back — `Required<MCPUIConfigInput>`,
-  every key present, which is the 6.21.0 meaning restored. `useMCPUIConfig()`,
-  `DEFAULT_MCPUI_CONFIG` and `MCPUIConfigContext` carry it.
+- **`MCPUIConfig`**: what the library hands back — an interface extending
+  `Required<MCPUIConfigInput>`, every key present, which is the 6.21.0 meaning
+  restored. Keeping it an interface also preserves consumer extension and
+  declaration merging. `useMCPUIConfig()`, `DEFAULT_MCPUI_CONFIG` and
+  `MCPUIConfigContext` carry it.
 
 `MCPUIConfigContext` keeps the resolved type on purpose: it is exported, so
 `useContext(MCPUIConfigContext)` is a public read surface and typing it with the
@@ -41,21 +43,40 @@ merges at runtime, so an untyped host cannot break a renderer.
 
 Derived rather than declared twice, so a key is written once and the two views
 cannot drift. The guard test now pins **both** halves: every `MCPUIConfigInput`
-field stays optional, and `MCPUIConfig` stays the `Required<…>` alias. Both were
-verified to fail when the corresponding regression is reintroduced.
+field stays optional, and `MCPUIConfig` stays an interface extending
+`Required<…>`. The contract typecheck also pins interface extension and
+declaration merging. Both sides were verified to fail when their corresponding
+regression is reintroduced.
 
 ### How this got through
 
-`pnpm typecheck` excludes `**/*.test.ts(x)`, so a type-level claim written in a
-test file failed nothing — 6.22.0 shipped both a broken `MCPUIConfig` and a
-fixture annotated with the wrong type, and neither `typecheck` nor `test` said a
-word. `tsconfig.contracts.json` now type-checks the handful of test files whose
-`satisfies` and annotations *are* the test, and `typecheck` runs it. Including
-every test file instead would surface 53 unrelated errors, so that stays a
-separate piece of work.
+Through 6.22.0, `pnpm typecheck` ran the main `tsconfig.json` alone, and that
+config excludes `**/*.test.ts(x)`: a type-level claim written in a test file
+failed nothing. 6.22.0 shipped both a broken `MCPUIConfig` and a fixture
+annotated with the wrong type, and neither `typecheck` nor `test` said a word.
+`typecheck` now runs a second pass, `tsconfig.contracts.json`, which
+type-checks the handful of test files whose `satisfies` and annotations *are*
+the test. Including every test file instead would surface 53 unrelated errors,
+so that stays a separate piece of work.
 
-**Nothing to change in consuming code** unless you annotate a config you build:
-switch those to `MCPUIConfigInput`. Reading is exactly as it was in 6.21.0.
+### Upgrading
+
+Reading is exactly as it was in 6.21.0, whether through `useMCPUIConfig()`,
+`useContext(MCPUIConfigContext)` or a value typed `MCPUIConfig`.
+`MCPUIConfigProvider`'s `config` prop still accepts everything it accepted
+before, `Partial<MCPUIConfig>` included.
+
+Two authoring patterns stop compiling, coming from 6.21.0 or from 6.22.0:
+
+- **A config annotated `MCPUIConfig`.** From 6.22.0 a partial one fails; from
+  6.21.0 a complete one fails too, since it lacks `chartZoom`. Annotate it
+  `MCPUIConfigInput` instead.
+- **A value handed straight to `<MCPUIConfigContext.Provider>`**, annotated or
+  not: an inline literal fails the same way. Spread the defaults,
+  `{ ...DEFAULT_MCPUI_CONFIG, ...mine }`, or pass the keys to
+  `<MCPUIConfigProvider config={…}>`, which does that merge for you.
+
+Both replacements keep compiling when the library adds its next policy key.
 
 ## [6.22.0] - 2026-09-18
 
@@ -101,6 +122,11 @@ expanded view only, and why inline zoom is opt-in.
   (`'Zoom {percent}%'`). Chrome key count 271 → 275.
 
 ### Changed
+
+> **Superseded by 6.22.1.** Making the fields of the published `MCPUIConfig`
+> optional broke every consumer that *reads* one. 6.22.1 moves the optional
+> fields to a new `MCPUIConfigInput` and restores `MCPUIConfig` as the
+> resolved type. The entry below describes 6.22.0 as published.
 
 - **Every `MCPUIConfig` field is now optional**, as `MCPUIStrings` has always
   been. `MCPUIConfig` grows a key in a minor release each time the library

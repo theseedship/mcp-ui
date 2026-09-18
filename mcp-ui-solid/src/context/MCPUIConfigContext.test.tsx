@@ -13,7 +13,8 @@
  * Coverage:
  *   1. A partial literal type-checks as `MCPUIConfigInput`
  *   2. A reader of `MCPUIConfig` gets non-optional fields
- *   3. Readers always see a resolved config at runtime: no provider, a partial
+ *   3. The published interface remains extendable and declaration-mergeable
+ *   4. Readers always see a resolved config at runtime: no provider, a partial
  *      through `MCPUIConfigProvider`, and a bare `MCPUIConfigContext.Provider`
  *      fed the complete value its type now asks for
  *
@@ -36,6 +37,16 @@ import {
   type MCPUIConfig,
   type MCPUIConfigInput,
 } from './MCPUIConfigContext'
+
+declare module './MCPUIConfigContext' {
+  interface MCPUIConfig {
+    consumerExtension?: string
+  }
+}
+
+interface ExtendedConsumerConfig extends MCPUIConfig {
+  applicationPolicy: boolean
+}
 
 /**
  * (1) The AUTHOR's claim, written the way a consumer writes it.
@@ -66,6 +77,11 @@ const RESOLVED_CONFIG: MCPUIConfig = DEFAULT_MCPUI_CONFIG
 const READ_POLICY: IframePolicy = RESOLVED_CONFIG.iframePolicy
 const READ_CREDENTIALLESS: 'auto' | 'always' | 'never' = RESOLVED_CONFIG.iframeCredentialless
 const READ_DOMAINS: string[] = RESOLVED_CONFIG.customIframeDomains
+const EXTENDED_CONFIG: ExtendedConsumerConfig = {
+  ...DEFAULT_MCPUI_CONFIG,
+  consumerExtension: 'merged',
+  applicationPolicy: true,
+}
 
 /** Renders `ui` and hands back the config the renderer underneath reads. */
 function captureConfig(ui: (probe: () => JSX.Element) => JSX.Element) {
@@ -94,6 +110,13 @@ describe('the policy type — adding a key breaks neither side', () => {
     expect(READ_POLICY).toBe('strict')
     expect(READ_CREDENTIALLESS).toBe('auto')
     expect(READ_DOMAINS).toEqual([])
+  })
+
+  it('preserves interface extension and declaration merging', () => {
+    // The annotations above are the public compatibility contract; this
+    // assertion only keeps the values live for the runtime test suite.
+    expect(EXTENDED_CONFIG.consumerExtension).toBe('merged')
+    expect(EXTENDED_CONFIG.applicationPolicy).toBe(true)
   })
 })
 
