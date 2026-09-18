@@ -75,7 +75,48 @@ interface MathToken extends Tokens.Generic {
 function isCurrencyLike(raw: string, tex: string, following: string): boolean {
   if (/^\$\s|\s\$$/.test(raw)) return true
   if (/^\d+(?:[.,]\d+)?-\s*$/.test(tex)) return true
-  return /^\d/.test(following)
+  if (/^\d/.test(following)) return true
+
+  // A currency opener can otherwise pair with the opening delimiter of a
+  // later expression ("$5 then ($x$)"). Reinterpret that first candidate
+  // only when it starts with a bounded numeric amount and its apparent closer
+  // is immediately followed by a complete later inline body. This deliberately
+  // leaves inherently ambiguous standalone forms ($5$, $2 + 3$, $2\pi$) as
+  // math and does not depend on the prose between the two delimiters.
+  const amount = /^\d+(?:[.,]\d{1,2})?(?=$|[\s,;:!?()[\]+*/-])/.exec(tex)?.[0]
+  if (!amount) return false
+
+  // A standalone numeric token is valid math even when followed by prose or
+  // another expression ("$5$, then $x$"). Reassignment requires content
+  // beyond the amount itself.
+  const trailing = tex.slice(amount.length)
+  if (!trailing) return false
+
+  // During streaming, the later formula may not have closed yet. An unmatched
+  // opening parenthesis before its dollar is sufficient structural evidence
+  // that the numeric dollar was currency; otherwise a permissive renderer can
+  // briefly flash "5 then (" as math.
+  const hasUnmatchedOpeningParen = (trailing.match(/\(/g)?.length ?? 0) > (trailing.match(/\)/g)?.length ?? 0)
+  const containsTexCommand = /\\[A-Za-z]+/.test(trailing)
+  if (hasUnmatchedOpeningParen && !containsTexCommand) return true
+
+  const closerLooksLikeLaterOpener = /^(?![\s,.;:!?)}\]])(?:\\[^\n]|[^\\\n$])+\$(?!\$)/.test(following)
+  return closerLooksLikeLaterOpener
+}
+
+const CELL_LINK_ATTRIBUTES = 'target="_blank" rel="noopener noreferrer" class="text-blue-600 dark:text-blue-400 hover:underline"'
+
+function cellLinkExtension(): MarkedExtension {
+  return {
+    renderer: {
+      link(this: Renderer, token: Tokens.Link): string {
+        // Marked owns escaping of the destination, title and nested label
+        // tokens. Only inject fixed attributes into its already-safe anchor.
+        const anchor = Renderer.prototype.link.call(this, token) as string
+        return anchor.replace('<a ', `<a ${CELL_LINK_ATTRIBUTES} `)
+      },
+    },
+  }
 }
 
 function mathExtension(renderer: MathRenderer): MarkedExtension {
@@ -172,9 +213,10 @@ export function parseMathMarkdown(
         },
       }
     : undefined
-  const parser = textRenderer
-    ? new Marked({ gfm: true }, mathExtension(renderer), textRenderer)
-    : new Marked({ gfm: true }, mathExtension(renderer))
+  const extensions = [mathExtension(renderer)]
+  if (profile === 'cellMarkdown') extensions.push(cellLinkExtension())
+  if (textRenderer) extensions.push(textRenderer)
+  const parser = new Marked({ gfm: true }, ...extensions)
   const parsed = parser.parse(input, { async: false }) as string
   return sanitizeHtml(parsed, FINAL_PROFILES[profile])
 }

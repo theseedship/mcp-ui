@@ -16,7 +16,7 @@ currency guards and sanitized MathML output. No change without a provider;
 Install the optional peer only if the host wants the supplied KaTeX adapter:
 
 ```bash
-pnpm add katex@^0.18.7
+pnpm add --save-exact katex@0.18.4
 ```
 
 ```tsx
@@ -28,12 +28,19 @@ import { renderKatexMath } from '@seed-ship/mcp-ui-solid/plugins/katex'
 </MCPUIMathProvider>
 ```
 
+The adapter's optional peer is pinned to 0.18.4 to retain Node 20 installation
+compatibility. KaTeX 0.18.5–0.18.7 pull in Commander 15 (Node >=22.12);
+do not replace the pin with a caret range on Node 20.
+
 The provider applies to `text` with `markdown: true` and string-valued table
 cells, including virtualized rows. It recognizes `$...$` inline and `$$...$$`
 display formulas in their own paragraph (not embedded mid-sentence).
 Code spans/fences and link destinations are not formulas;
 currency such as `$5` and `$5-$10` remains text. Malformed/incomplete formulas
 degrade to their source. Copy/export continues to use the original data.
+Dollar syntax can be ambiguous: `$5$` is a formula. Escape a literal dollar
+as `\$` when composing currency and formulas; numeric math such as `$2 + 3$`
+remains supported. Math-enabled cell links keep their existing new-tab behavior.
 
 The adapter emits **MathML only**: no KaTeX stylesheet, fonts, CDN requests,
 HTML layout or inline styles. Native MathML rendering varies by browser and

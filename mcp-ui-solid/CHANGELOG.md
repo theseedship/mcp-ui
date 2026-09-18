@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   annotation subtrees, executable markup and trusted TeX commands stay blocked.
 - SSR keeps escaped source until the existing client hydration upgrade;
   original text/data is retained for copy and export. No CSS or font install.
+- Optional KaTeX peer pinned to 0.18.4 to preserve Node 20 installation
+  compatibility; later 0.18.x releases currently require Node >=22.12 via
+  Commander. Cell links retain the existing new-tab, rel and styling policy.
 
 ## [6.22.1] - 2026-09-18
 

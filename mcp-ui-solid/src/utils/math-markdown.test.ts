@@ -61,6 +61,64 @@ describe('parseMathMarkdown', () => {
     expect(out).toContain(source.replace('\\$', '$'))
   })
 
+  it.each(['$5$', '$2x + 1$', '$2 + 3$', '$2\\pi$'])('keeps numeric-leading math valid: %s', (source) => {
+    const renderer = vi.fn(math)
+    parseMathMarkdown(source, renderer, 'prose')
+    expect(renderer).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps numeric TeX with a deliberately open delimiter valid', () => {
+    const renderer = vi.fn(math)
+    parseMathMarkdown('$2 \\left(x\\right.$', renderer, 'prose')
+    expect(renderer).toHaveBeenCalledOnce()
+    expect(renderer).toHaveBeenCalledWith('2 \\left(x\\right.', { displayMode: false })
+  })
+
+  it.each([
+    'Cost $5',
+    'Cost $5 and',
+    'Cost $5 and then (',
+    'Cost $5 then ($',
+    'Cost $5 then ($x',
+    'Cost $5,($x',
+  ])('keeps a streaming currency prefix literal: %s', (source) => {
+    const renderer = vi.fn(math)
+    const out = parseMathMarkdown(source, renderer, 'prose')
+    expect(renderer).not.toHaveBeenCalled()
+    expect(out).toContain(source)
+  })
+
+  it.each([
+    'Cost $5 today; variable $x$',
+    'Cost $5 and then ($x$)',
+    'Cost $5 then ($x$)',
+    'Cost $5,($x$)',
+    'Cost $5 + ($x$)',
+  ])('preserves a currency opener and renders later math: %s', (source) => {
+    const renderer = vi.fn(math)
+    const out = parseMathMarkdown(source, renderer, 'prose')
+    expect(renderer).toHaveBeenCalledOnce()
+    expect(renderer).toHaveBeenCalledWith('x', { displayMode: false })
+    expect(out).toContain('Cost $5')
+    expect(out).toContain('<math')
+  })
+
+  it('does not reinterpret valid numeric math merely because another formula follows', () => {
+    const renderer = vi.fn(math)
+    parseMathMarkdown('$2 + 3$ and $x$', renderer, 'prose')
+    expect(renderer).toHaveBeenCalledTimes(2)
+    expect(renderer).toHaveBeenNthCalledWith(1, '2 + 3', { displayMode: false })
+    expect(renderer).toHaveBeenNthCalledWith(2, 'x', { displayMode: false })
+  })
+
+  it('keeps punctuation-separated numeric math before another formula', () => {
+    const renderer = vi.fn(math)
+    parseMathMarkdown('$5$, then $x$', renderer, 'prose')
+    expect(renderer).toHaveBeenCalledTimes(2)
+    expect(renderer).toHaveBeenNthCalledWith(1, '5', { displayMode: false })
+    expect(renderer).toHaveBeenNthCalledWith(2, 'x', { displayMode: false })
+  })
+
   it.each(['`$x$`', '```tex\n$x$\n```', '<span title="$x$">safe</span>', '[link](https://example.test/$x$)'])(
     'does not parse math inside protected Markdown/HTML syntax: %s',
     (source) => {
@@ -76,6 +134,37 @@ describe('parseMathMarkdown', () => {
     expect(out).toContain('<math')
     expect(out).toContain('data-citation-page="3"')
     expect(out).not.toContain('onclick')
+  })
+
+  it('adds the established external-link behavior only to cell Markdown', () => {
+    const source = '[documentation](https://example.test/docs)'
+    const cell = document.createElement('div')
+    cell.innerHTML = parseMathMarkdown(source, math, 'cellMarkdown')
+    const cellLink = cell.querySelector('a')
+    expect(cellLink?.getAttribute('target')).toBe('_blank')
+    expect(cellLink?.getAttribute('rel')).toBe('noopener noreferrer')
+    expect(cellLink?.className).toBe('text-blue-600 dark:text-blue-400 hover:underline')
+
+    const prose = document.createElement('div')
+    prose.innerHTML = parseMathMarkdown(source, math, 'prose')
+    expect(prose.querySelector('a')?.hasAttribute('target')).toBe(false)
+    expect(prose.querySelector('a')?.hasAttribute('rel')).toBe(false)
+    expect(prose.querySelector('a')?.hasAttribute('class')).toBe(false)
+  })
+
+  it('sanitizes dangerous cell link destinations without allowing attribute injection', () => {
+    const out = parseMathMarkdown(
+      '[unsafe](javascript:alert(1)" autofocus onfocus="alert(2))',
+      math,
+      'cellMarkdown',
+    )
+    const host = document.createElement('div')
+    host.innerHTML = out
+    const link = host.querySelector('a')
+    expect(link).not.toBeNull()
+    expect(link?.hasAttribute('href')).toBe(false)
+    expect(link?.getAttribute('target')).toBe('_blank')
+    expect(host.querySelector('[autofocus]')).toBeNull()
   })
 
   it('transforms adjacent citation text without touching TeX optional arguments', () => {

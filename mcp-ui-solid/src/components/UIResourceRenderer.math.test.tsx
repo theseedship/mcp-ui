@@ -88,8 +88,34 @@ describe('UIResourceRenderer math integration', () => {
     ))
 
     expect(container.querySelector('tbody math')?.textContent).toBe('x + 1')
-    expect(container.querySelector('tbody a')?.getAttribute('href')).toBe('https://example.test/docs')
+    const link = container.querySelector('tbody a')
+    expect(link?.getAttribute('href')).toBe('https://example.test/docs')
+    expect(link?.getAttribute('target')).toBe('_blank')
+    expect(link?.getAttribute('rel')).toBe('noopener noreferrer')
+    expect(link?.className).toBe('text-blue-600 dark:text-blue-400 hover:underline')
     expect(container.querySelector('[data-citation-page="7"]')).not.toBeNull()
+  })
+
+  it('composes nested math in a cell link with a citation', () => {
+    const { container } = renderWithMath(tableComponent(
+      '[formula $x + 1$](https://example.test/math) [1]',
+      { citationMap: { 1: { page: 11, file: 'nested.pdf' } } },
+    ))
+
+    const link = container.querySelector('tbody a')
+    expect(link?.querySelector('math')?.textContent).toBe('x + 1')
+    expect(link?.getAttribute('target')).toBe('_blank')
+    expect(link?.getAttribute('rel')).toBe('noopener noreferrer')
+    expect(container.querySelector('[data-citation-page="11"]')).not.toBeNull()
+  })
+
+  it('drops dangerous Markdown link destinations in math cells', () => {
+    const { container } = renderWithMath(tableComponent('$x$ [unsafe](javascript:alert(1))'))
+    const link = container.querySelector('tbody a')
+
+    expect(link).not.toBeNull()
+    expect(link?.hasAttribute('href')).toBe(false)
+    expect(container.innerHTML).not.toContain('javascript:')
   })
 
   it('preserves Markdown entities and nested emphasis when citations share a math cell', () => {
@@ -145,6 +171,15 @@ describe('UIResourceRenderer math integration', () => {
     expect(spy).not.toHaveBeenCalled()
     expect(container.textContent).toContain(source)
   })
+
+  it.each(['Cost $5 then ($x$)', 'Cost $5,($x$)', 'Cost $5 + ($x$)'])(
+    'preserves currency while rendering a later formula: %s',
+    (source) => {
+      const { container } = renderWithMath(textComponent(source))
+      expect(container.textContent).toContain('Cost $5')
+      expect(container.querySelector('math')?.textContent).toBe('x')
+    },
+  )
 
   it('sanitizes hostile markup returned by the math renderer', () => {
     const hostile: MathRenderer = () =>
