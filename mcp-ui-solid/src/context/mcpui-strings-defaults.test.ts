@@ -338,6 +338,13 @@ const FORMER_LITERALS: Record<string, string> = {
   // under an embed did not exist before. Pinned here all the same so the
   // "covers exactly" check below stays exhaustive.
   iframeOpenInNewTab: 'Open in a new tab',
+
+  // 6.22.0 — zoom / pan controls. New chrome too: the lightbox and the chart
+  // had no zoom UI before, so there is no former literal to preserve.
+  zoomIn: 'Zoom in',
+  zoomOut: 'Zoom out',
+  zoomReset: 'Reset zoom',
+  zoomLevel: 'Zoom {percent}%',
 }
 
 /**

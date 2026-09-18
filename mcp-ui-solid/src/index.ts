@@ -128,6 +128,22 @@ export type {
   DuplicateMountReporter,
 } from './utils/duplicate-mount-registry'
 
+// Cursor-anchored zoom + drag-pan primitive (v6.22.0 — lightbox, expanded views)
+export {
+  createPanZoom,
+  clampScale,
+  contentPointAt,
+  viewportPointOf,
+  zoomAtAnchor,
+} from './utils/pan-zoom'
+export type {
+  PanZoomOptions,
+  PanZoomController,
+  PanZoomState,
+  PanZoomPoint,
+  PanZoomCursor,
+} from './utils/pan-zoom'
+
 // Chrome i18n — library's own strings, EN defaults (v6.6.0 — D2/R4)
 export {
   MCPUIStringsProvider,

@@ -113,7 +113,32 @@ export const ExpandableWrapper: Component<ExpandableWrapperProps> = (props) => {
     }
   })
 
+  /**
+   * Did the gesture that produced the current click START on the backdrop?
+   *
+   * `null` means no pointer press was seen — a synthetic or programmatic
+   * click, which stays allowed so keyboard and test-driven closes keep working.
+   */
+  let pressedOnBackdrop: boolean | null = null
+
+  const handleBackdropPointerDown = (e: PointerEvent) => {
+    pressedOnBackdrop = e.target === e.currentTarget
+  }
+
+  /**
+   * Closing on a backdrop click is only safe when the gesture also BEGAN there.
+   *
+   * When a press and its release have different targets the browser dispatches
+   * `click` on their nearest common ancestor — here the backdrop. So a drag
+   * that starts on the content and releases over the 16px margin around the
+   * panel (panning a zoomed chart, selecting text in a table) would otherwise
+   * land on this handler with `e.target === e.currentTarget` and tear the modal
+   * down mid-gesture.
+   */
   const handleBackdropClick = (e: MouseEvent) => {
+    const startedOnBackdrop = pressedOnBackdrop
+    pressedOnBackdrop = null
+    if (startedOnBackdrop === false) return
     if (e.target === e.currentTarget) handleClose()
   }
 
@@ -164,6 +189,7 @@ export const ExpandableWrapper: Component<ExpandableWrapperProps> = (props) => {
             class="fixed inset-0 z-50 flex flex-col bg-black/50 backdrop-blur-sm"
             style={{ animation: 'expandable-fade-in 0.15s ease-out' }}
             onClick={handleBackdropClick}
+            onPointerDown={handleBackdropPointerDown}
             role="dialog"
             data-mcp-ui-portal="dialog"
             aria-modal="true"

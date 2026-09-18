@@ -274,6 +274,30 @@ export interface MCPUIStrings {
   /** `aria-label` of the lightbox "next image" button. */
   lightboxNext?: string
 
+  // ── Zoom controls (lightbox, chart) ────────────────────────
+  /**
+   * `aria-label` / `title` of the "zoom in" button.
+   * @since 6.22.0
+   */
+  zoomIn?: string
+  /**
+   * `aria-label` / `title` of the "zoom out" button.
+   * @since 6.22.0
+   */
+  zoomOut?: string
+  /**
+   * `aria-label` / `title` of the "reset zoom" button — the one the chart
+   * toolbar only shows while the chart is actually zoomed.
+   * @since 6.22.0
+   */
+  zoomReset?: string
+  /**
+   * Zoom-level readout next to the zoom buttons.
+   * Template — `{percent}` = the scale as a whole percentage (`100` at rest).
+   * @since 6.22.0
+   */
+  zoomLevel?: string
+
   // ── ModalRenderer ──────────────────────────────────────────
   /** `aria-label` of the modal close button. */
   modalClose?: string
@@ -1095,6 +1119,12 @@ export const DEFAULT_MCPUI_STRINGS: Required<MCPUIStrings> = {
 
   // ── 6.21.0 — iframe COEP fallback ──────────────────────────
   iframeOpenInNewTab: 'Open in a new tab',
+
+  // ── 6.22.0 — zoom / pan controls ───────────────────────────
+  zoomIn: 'Zoom in',
+  zoomOut: 'Zoom out',
+  zoomReset: 'Reset zoom',
+  zoomLevel: 'Zoom {percent}%',
 }
 
 /**
