@@ -173,12 +173,18 @@ export const DEFAULT_MCPUI_CONFIG: MCPUIConfig = {
 }
 
 /**
- * Deliberately typed with the INPUT view, not the resolved one: a host that
- * bypasses `MCPUIConfigProvider` and feeds this context directly may pass
- * whichever keys it cares about, and `useMCPUIConfig` fills the rest. This
- * only ever accepts more than a resolved type would.
+ * Typed with the RESOLVED view, because this context is read as well as
+ * written: it is exported, so a consumer may call
+ * `useContext(MCPUIConfigContext)` directly, and typing it as the input view
+ * would hand them `IframePolicy | undefined` — exactly the regression this
+ * whole split exists to undo.
+ *
+ * The cost lands on the rarer side: a host feeding this context directly
+ * passes a COMPLETE value, `{ ...DEFAULT_MCPUI_CONFIG, ...mine }`. Anyone who
+ * wants to pass only the keys they care about uses `MCPUIConfigProvider`,
+ * whose `config` prop takes {@link MCPUIConfigInput} and does that merge.
  */
-export const MCPUIConfigContext = createContext<MCPUIConfigInput>(DEFAULT_MCPUI_CONFIG)
+export const MCPUIConfigContext = createContext<MCPUIConfig>(DEFAULT_MCPUI_CONFIG)
 
 /**
  * Reads the active host config, resolved: every key is present, whether it

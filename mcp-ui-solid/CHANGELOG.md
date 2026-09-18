@@ -28,8 +28,16 @@ must be allowed to omit a key, a reader must never meet `undefined`.
   `MCPUIConfigProvider`'s `config` prop takes, and what
   `MCPUIConfigContext.Provider` accepts.
 - **`MCPUIConfig`**: what the library hands back — `Required<MCPUIConfigInput>`,
-  every key present, which is the 6.21.0 meaning restored. `useMCPUIConfig()`
-  and `DEFAULT_MCPUI_CONFIG` carry it.
+  every key present, which is the 6.21.0 meaning restored. `useMCPUIConfig()`,
+  `DEFAULT_MCPUI_CONFIG` and `MCPUIConfigContext` carry it.
+
+`MCPUIConfigContext` keeps the resolved type on purpose: it is exported, so
+`useContext(MCPUIConfigContext)` is a public read surface and typing it with the
+input view would leave a direct reader on `IframePolicy | undefined` — the very
+regression being undone. A host that bypasses `MCPUIConfigProvider` therefore
+passes a complete value, `{ ...DEFAULT_MCPUI_CONFIG, ...mine }`; passing only
+some keys is what the provider's `config` prop is for. `useMCPUIConfig()` still
+merges at runtime, so an untyped host cannot break a renderer.
 
 Derived rather than declared twice, so a key is written once and the two views
 cannot drift. The guard test now pins **both** halves: every `MCPUIConfigInput`

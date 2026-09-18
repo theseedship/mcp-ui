@@ -13,11 +13,15 @@
  * Coverage:
  *   1. A partial literal type-checks as `MCPUIConfigInput`
  *   2. A reader of `MCPUIConfig` gets non-optional fields
- *   3. Readers always see a resolved config at runtime: no provider, partial
- *      provider, and a bare `MCPUIConfigContext.Provider` fed a partial value
+ *   3. Readers always see a resolved config at runtime: no provider, a partial
+ *      through `MCPUIConfigProvider`, and a bare `MCPUIConfigContext.Provider`
+ *      fed the complete value its type now asks for
  *
- * `pnpm typecheck` excludes `*.test.tsx`, so (1) and (2) would not fail CI on
- * their own: `mcpui-config-guard.test.ts` re-states them as an AST scan.
+ * These annotations ARE the test. `tsconfig.contracts.json` puts this file in
+ * the `tsc` program — the main tsconfig excludes `*.test.tsx` — so `pnpm
+ * typecheck` fails on them; `mcpui-config-guard.test.ts` adds a structural AST
+ * scan of the declarations themselves, which catches a key no annotation here
+ * happens to exercise.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest'
@@ -109,17 +113,28 @@ describe('useMCPUIConfig — always returns a resolved config', () => {
     expect(config.iframeFallbackLink).toBe(DEFAULT_MCPUI_CONFIG.iframeFallbackLink)
   })
 
-  it('resolves a partial value fed straight to MCPUIConfigContext.Provider', () => {
-    // The path the required-field shape rejected at compile time: a host that
-    // bypasses MCPUIConfigProvider still passes only the keys it cares about.
-    // Annotated with the INPUT view — the resolved `MCPUIConfig` would reject
-    // this literal, which is the whole point of there being two names.
-    const partial: MCPUIConfigInput = { iframeFallbackLink: 'always' }
+  it('reads a complete value fed straight to MCPUIConfigContext.Provider', () => {
+    // The context is a READ surface too, so it is typed with the resolved view:
+    // a host bypassing MCPUIConfigProvider hands over a complete value, which
+    // is what `{ ...DEFAULT_MCPUI_CONFIG, ...mine }` is for. Passing only some
+    // keys is what MCPUIConfigProvider is for (the test above).
+    const complete: MCPUIConfig = { ...DEFAULT_MCPUI_CONFIG, iframeFallbackLink: 'always' }
+    const config = captureConfig((probe) => (
+      <MCPUIConfigContext.Provider value={complete}>{probe()}</MCPUIConfigContext.Provider>
+    ))
+    expect(config.iframeFallbackLink).toBe('always')
+    expect(config.chartZoom).toBe(DEFAULT_MCPUI_CONFIG.chartZoom)
+    expect(config.customTrustedIframeDomains).toEqual([])
+  })
+
+  it('still merges at runtime if a partial reaches the context anyway', () => {
+    // The type says complete; `useMCPUIConfig` does not rely on it. An
+    // untyped host (plain JS, or a cast) must not blow a renderer up.
+    const partial = { iframeFallbackLink: 'always' } as MCPUIConfigInput as MCPUIConfig
     const config = captureConfig((probe) => (
       <MCPUIConfigContext.Provider value={partial}>{probe()}</MCPUIConfigContext.Provider>
     ))
     expect(config.iframeFallbackLink).toBe('always')
     expect(config.chartZoom).toBe(DEFAULT_MCPUI_CONFIG.chartZoom)
-    expect(config.customTrustedIframeDomains).toEqual([])
   })
 })
