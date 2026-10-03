@@ -60,7 +60,7 @@ describe('chartToDataTable', () => {
           ],
         },
       }),
-    ).toEqual({
+    ).toMatchObject({
       columns: ['Label', 'North', 'South'],
       rows: [
         ['Jan', 1, 3],
@@ -75,7 +75,7 @@ describe('chartToDataTable', () => {
         type: 'scatter',
         data: { datasets: [{ label: 'Observations', data: [{ x: 2, y: 8 }] }] },
       }),
-    ).toEqual({
+    ).toMatchObject({
       columns: ['Series', 'Point', 'x', 'y'],
       rows: [['Observations', 1, 2, 8]],
     });
@@ -85,7 +85,7 @@ describe('chartToDataTable', () => {
         type: 'bubble',
         data: { datasets: [{ label: 'Cities', data: [{ x: 4, y: 6, r: 12 }] }] },
       }),
-    ).toEqual({
+    ).toMatchObject({
       columns: ['Series', 'Point', 'x', 'y', 'r'],
       rows: [['Cities', 1, 4, 6, 12]],
     });

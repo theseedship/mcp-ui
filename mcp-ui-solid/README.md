@@ -5,6 +5,16 @@ SolidJS components + chat toolkit for MCP-generated UI. Part of the [MCP UI ecos
 [![npm version](https://img.shields.io/npm/v/@seed-ship/mcp-ui-solid.svg)](https://www.npmjs.com/package/@seed-ship/mcp-ui-solid)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+## What's New in v6.24.0
+
+Explicit missing values in charts and tables, and a `unit` per chart. A `null`
+in a line, bar, radar, scatter or bubble dataset is now accepted and shown as
+missing, never as zero. Lines break, a missing bar gets a dashed outline, and a
+note under the chart says how. Table cells with no value are announced to
+screen readers and explained by a legend. Ten new `MCPUIStrings` keys; requires
+`@seed-ship/mcp-ui-spec` 5.7.0. See
+[Missing values and units in charts](#missing-values-and-units-in-charts-v6240).
+
 ## What's New in v6.23.0
 
 Opt-in LaTeX in markdown text components and table cells, with the same
@@ -714,6 +724,73 @@ Requires `protomaps-leaflet` peer dependency.
   },
 }} />
 ```
+
+## Missing values and units in charts (v6.24.0)
+
+`null` in a chart dataset is an **explicit missing value**: the value belongs
+to the series' grid (its label stays on the axis) but was not observed. Send
+`null` rather than `0`, and rather than a shorter array, whenever a value is
+absent; a series with no value at all is all `null`.
+
+```tsx
+<UIResourceRenderer content={{
+  id: 'wind',
+  type: 'chart',
+  position: { colStart: 1, colSpan: 12 },
+  params: {
+    type: 'line',
+    title: 'Wind speed',
+    unit: 'km/h',
+    data: {
+      labels: ['2026-10-04', '2026-10-05', '2026-10-06'],
+      datasets: [
+        { label: 'Lyon', data: [18, null, 31] },   // a hole on day 2
+        { label: 'Brest', data: [null, null, null] }, // no value at all
+      ],
+    },
+  },
+}} />
+```
+
+| Chart type | A missing value is drawn as | Note under the chart |
+|---|---|---|
+| `line`, `radar` | a break in the line — never joined to its neighbours (`spanGaps: false` is forced) | `chartMissingGaps` |
+| `bar` | a dashed outline at the baseline, so it cannot read as a zero bar | `chartMissingBars` |
+| `scatter`, `bubble` | nothing: the point is not plotted | `chartMissingPoints` |
+| `bar` with `stacked` scales | nothing: the baseline belongs to the series below, so no outline is drawn | `chartMissingPoints` |
+| `pie`, `doughnut`, `polarArea` | refused: Chart.js would draw a missing share as `0` — validation reports `MISSING_VALUE_UNSUPPORTED` | — |
+
+A series whose every entry is `null` keeps its legend entry, marked
+`chartLegendNoData`, and is named in a `chartSeriesNoData` note. A chart with
+nothing to plot says `chartNoData` in its plot area. Only an explicit entry is
+a missing value: a dataset with no entry (`data: []`) renders as it always
+did. The notes are linked to
+the canvas through `aria-describedby`, and the **Data** view marks every
+missing cell with the same `-` and screen-reader text as the table component,
+under a `missingValueLegend` line.
+
+`unit` (one per chart — split values with different units into separate
+charts) titles the value axis unless `options.scales` already does, follows
+each tooltip value (`chartValueWithUnit`), and joins the data-view column
+headers (`chartLabelWithUnit`).
+
+Daily series read best with ISO dates as plain category labels, as above:
+`timeAxis` needs a Chart.js date adapter the host must register itself.
+
+Tables follow the same rule: a cell that displays as `-` — `null`,
+`undefined`, an empty or whitespace-only string, `"undefined"`, or a literal
+`-` — shows a muted `-` with a visually-hidden `missingValue`, a
+`missingValueLegend` line follows the table, missing cells sort last, and
+search never matches them.
+
+The outlines, notes, legend marks and `unit` belong to the native Chart.js
+renderer. The opt-in QuickChart renderer receives the payload as is.
+
+A synthetic, end-to-end example — daily table, one chart per variable,
+comparison, map, thresholds, sources and limits, built with the three
+presentation recipes — lives in
+[`examples/geoai-daily-forecast/`](./examples/geoai-daily-forecast/) (not
+published; its tests run with the package's).
 
 ## Chat Bus — Agent Interactions (`@experimental`)
 
@@ -1530,6 +1607,20 @@ formatMCPUIString('Export CSV ({count} rows)', { count: 42 }) // 'Export CSV (42
 | `sizeBytes` | `{size} B` | `ArtifactRenderer` — file size below 1 KB (template) |
 | `sizeKilobytes` | `{size} KB` | `ArtifactRenderer` — file size in kilobytes (template) |
 | `sizeMegabytes` | `{size} MB` | `ArtifactRenderer` — file size in megabytes (template) |
+| `zoomIn` | `Zoom in` | `LightboxOverlay`, `ChartJSRenderer` — zoom-in button `title`/`aria-label` (v6.22.0) |
+| `zoomOut` | `Zoom out` | `LightboxOverlay`, `ChartJSRenderer` — zoom-out button `title`/`aria-label` (v6.22.0) |
+| `zoomReset` | `Reset zoom` | `LightboxOverlay`, `ChartJSRenderer` — reset button, shown while zoomed (v6.22.0) |
+| `zoomLevel` | `Zoom {percent}%` | `LightboxOverlay` — zoom-level readout (template, v6.22.0) |
+| `missingValue` | `Missing value` | Tables, chart data view, degraded tables — screen-reader text of a missing cell; tooltip value of a missing bar (v6.24.0) |
+| `missingValueLegend` | `“{marker}” marks a missing value.` | Legend under a table or data view with a missing cell (template, `{marker}` = `-`, v6.24.0) |
+| `chartMissingGaps` | `Breaks in a line mark missing values.` | `ChartJSRenderer` — note under a line or radar chart with a missing value (v6.24.0) |
+| `chartMissingBars` | `Dashed outlines mark missing values.` | `ChartJSRenderer` — note under a bar chart with a missing value (v6.24.0) |
+| `chartMissingPoints` | `Missing values are not plotted.` | `ChartJSRenderer` — note under a scatter, bubble or stacked bar chart with a missing value (v6.24.0) |
+| `chartSeriesNoData` | `No data for {series}.` | `ChartJSRenderer` — note naming the series with no value at all (template, `{series}` joined as a list in `locale`, v6.24.0) |
+| `chartLegendNoData` | `{series} (no data)` | `ChartJSRenderer` — legend entry of a series with no value at all (template, v6.24.0) |
+| `chartValueWithUnit` | `{value} {unit}` | `ChartJSRenderer` — tooltip value followed by the chart `unit` (template, v6.24.0) |
+| `chartLabelWithUnit` | `{label} ({unit})` | Chart data view and degraded chart tables — column header followed by the chart `unit` (template, v6.24.0) |
+| `chartMissingUnsupported` | `This chart type cannot show missing values.` | `ChartJSRenderer` — shown instead of a pie, doughnut or polar-area chart that received a missing value (v6.24.0) |
 
 ### `locale` — number, date and sort formatting (default change in v6.20.0)
 
@@ -1867,6 +1958,20 @@ const fr: MCPUIStrings = {
   sizeBytes: '{size} o',
   sizeKilobytes: '{size} Ko',
   sizeMegabytes: '{size} Mo',
+  zoomIn: 'Zoom avant',
+  zoomOut: 'Zoom arrière',
+  zoomReset: 'Réinitialiser le zoom',
+  zoomLevel: 'Zoom {percent} %',
+  missingValue: 'Valeur manquante',
+  missingValueLegend: '« {marker} » signale une valeur manquante.',
+  chartMissingGaps: 'Une interruption de la courbe signale une valeur manquante.',
+  chartMissingBars: 'Un contour en pointillés signale une valeur manquante.',
+  chartMissingPoints: 'Les valeurs manquantes ne sont pas tracées.',
+  chartSeriesNoData: 'Aucune donnée pour {series}.',
+  chartLegendNoData: '{series} (aucune donnée)',
+  chartValueWithUnit: '{value} {unit}',
+  chartLabelWithUnit: '{label} ({unit})',
+  chartMissingUnsupported: 'Ce type de graphique ne peut pas afficher de valeurs manquantes.',
 }
 
 <MCPUIStringsProvider strings={fr}><App /></MCPUIStringsProvider>
@@ -1901,8 +2006,8 @@ exported default table:
 | `adapters/connector.ts` (`/adapters`) | `connectorResultToUILayout` | `options.messages?: Partial<ConnectorAdapterMessages>` | `DEFAULT_CONNECTOR_MESSAGES` | `degradedNotice`, `degradedVersionSuffix`, `versionWarning` |
 | `adapters/macro-run.ts` (`/adapters`) | `macroRunToScratchpadState`, `macroInterrogationToChatPromptConfig` | `options.messages?: Partial<MacroRunAdapterMessages>` | `DEFAULT_MACRO_RUN_MESSAGES` | `agentSectionTitle`, `progressSectionTitle`, `resultSectionTitle`, `runAborted`, `runFailed`, `confirmDefault` |
 | `services/validation.ts` (root, `/validation`) | `validateFieldValue`, `validateFormData` | `messages?: Partial<FormValidationMessages>` | `DEFAULT_VALIDATION_MESSAGES` | `required`, `mustBeChecked`, `minLength`, `maxLength`, `invalidPattern`, `invalidEmail`, `invalidNumber`, `minValue`, `maxValue`, `minDate`, `maxDate`, `invalidOption`, `invalidFormat` |
-| `utils/degraded-projections.ts` (root) | `graphToDegradedTable`, `mapToDegradedTable`, `chartToDegradedTable` | `labels?: Partial<DegradedProjectionLabels>` | `DEGRADED_PROJECTION_LABELS` | `source`, `target`, `label`, `node`, `type`, `lat`, `lng`, `info`, `marker`, `feature`, `series` |
-| `components/chart-data-table.ts` (root) | `chartToDataTable` | `labels?: Partial<ChartDataTableLabels>` | `CHART_DATA_TABLE_LABELS` | `series`, `point`, `label`, `seriesName`, `x`, `y`, `r` |
+| `utils/degraded-projections.ts` (root) | `graphToDegradedTable`, `mapToDegradedTable`, `chartToDegradedTable` | `labels?: Partial<DegradedProjectionLabels>` | `DEGRADED_PROJECTION_LABELS` | `source`, `target`, `label`, `node`, `type`, `lat`, `lng`, `info`, `marker`, `feature`, `series`, `withUnit` (optional, v6.24.0: `{label} ({unit})`, chart headers when the chart has a unit) |
+| `components/chart-data-table.ts` (root) | `chartToDataTable` | `labels?: Partial<ChartDataTableLabels>` | `CHART_DATA_TABLE_LABELS` | `series`, `point`, `label`, `seriesName`, `x`, `y`, `r`, `withUnit` (optional, v6.24.0: `{label} ({unit})`, value headers when the chart has a unit) |
 | `hooks/useStreamingUI.ts` (root, `/hooks`) | `useStreamingUI` | `options.messages?: Partial<StreamingUIMessages>` | `DEFAULT_STREAMING_UI_MESSAGES` | `initializing`, `connecting`, `loadingComponent`, `dashboardLoaded`, `errorProgress`, `connectionFailed`, `requestFailed`, `emptyResponse`, `serverSide`, `unknownError` |
 
 Every option is a trailing OPTIONAL parameter, so existing calls keep

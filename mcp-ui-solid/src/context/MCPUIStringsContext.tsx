@@ -823,6 +823,70 @@ export interface MCPUIStrings {
   sizeKilobytes?: string
   /** ArtifactRenderer file size in megabytes. Template — `{size}`. */
   sizeMegabytes?: string
+
+  // ── Missing values (tables, chart data views, charts) ──────
+  /**
+   * Accessible name of a value that is explicitly missing: read by screen
+   * readers in place of the `-` a table cell shows, and the tooltip value of
+   * a bar whose value is `null`.
+   * @since 6.24.0
+   */
+  missingValue?: string
+  /**
+   * Legend under a table or data view that contains at least one missing
+   * value. Template — `{marker}` = the glyph the cells show (`-`).
+   * @since 6.24.0
+   */
+  missingValueLegend?: string
+  /**
+   * Note under a line or radar chart with a missing value: the line is broken
+   * there rather than drawn through, or down to zero.
+   * @since 6.24.0
+   */
+  chartMissingGaps?: string
+  /**
+   * Note under a bar chart with a missing value, which the chart draws as a
+   * dashed outline at the baseline so it cannot be read as a zero bar.
+   * @since 6.24.0
+   */
+  chartMissingBars?: string
+  /**
+   * Note under a chart that draws nothing for a missing value — a scatter or
+   * bubble chart, or a stacked bar chart (whose baseline belongs to the series
+   * below, so no outline can stand in for the bar).
+   * @since 6.24.0
+   */
+  chartMissingPoints?: string
+  /**
+   * Note naming the series whose values are ALL missing.
+   * Template — `{series}` = the series names, joined as a list in the locale.
+   * @since 6.24.0
+   */
+  chartSeriesNoData?: string
+  /**
+   * Legend entry of a series whose values are all missing.
+   * Template — `{series}` = the series name.
+   * @since 6.24.0
+   */
+  chartLegendNoData?: string
+  /**
+   * A value followed by the chart's `unit`, in tooltips.
+   * Template — `{value}` (already formatted), `{unit}`.
+   * @since 6.24.0
+   */
+  chartValueWithUnit?: string
+  /**
+   * A column header followed by the chart's `unit`, in the chart data view
+   * and the degraded tables. Template — `{label}`, `{unit}`.
+   * @since 6.24.0
+   */
+  chartLabelWithUnit?: string
+  /**
+   * Shown instead of a pie, doughnut or polar-area chart that received a
+   * missing value: those types would draw it as a zero share.
+   * @since 6.24.0
+   */
+  chartMissingUnsupported?: string
 }
 
 /**
@@ -1125,6 +1189,18 @@ export const DEFAULT_MCPUI_STRINGS: Required<MCPUIStrings> = {
   zoomOut: 'Zoom out',
   zoomReset: 'Reset zoom',
   zoomLevel: 'Zoom {percent}%',
+
+  // ── 6.24.0 — missing values ────────────────────────────────
+  missingValue: 'Missing value',
+  missingValueLegend: '“{marker}” marks a missing value.',
+  chartMissingGaps: 'Breaks in a line mark missing values.',
+  chartMissingBars: 'Dashed outlines mark missing values.',
+  chartMissingPoints: 'Missing values are not plotted.',
+  chartSeriesNoData: 'No data for {series}.',
+  chartLegendNoData: '{series} (no data)',
+  chartValueWithUnit: '{value} {unit}',
+  chartLabelWithUnit: '{label} ({unit})',
+  chartMissingUnsupported: 'This chart type cannot show missing values.',
 }
 
 /**

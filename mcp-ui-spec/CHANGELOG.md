@@ -5,14 +5,49 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [5.7.0] - 2026-10-03
+
+Explicit missing values in charts, and a unit per chart. Released together
+with `@seed-ship/mcp-ui-solid` 6.24.0, which renders both.
+
+### Added
+
+- **`null` in chart data is an explicit missing value.**
+  `ChartDatasetSchema.data` accepts `(number | null)[]`, and a point's `y`
+  may be `null`. It stands for a value that exists in the series' grid but was
+  not observed: a forecast with no wind figure on one day, a total that cannot
+  be computed. Before 5.7.0 the only ways to send that were `0`, which is
+  false, or a shorter array, which breaks the alignment of values with
+  `labels`. A series with no value at all is all `null`.
+  A `null` standing for a whole point, a point whose `x` is `null`, `NaN` and
+  non-number values are still rejected.
+- **`ChartComponentParamsSchema.unit`** (optional string, 1–32 characters):
+  the unit of every value in the chart (`'mm'`, `'km/h'`, `'°C'`). One unit per
+  chart; values in different units belong in separate charts.
+
+### Changed — for code that READS chart payloads
+
+- `ChartDataset['data']` (inferred from the schema) now includes `null`. Code
+  that reads chart values under `strictNullChecks` has to handle the missing
+  value, which is the point: a producer can now send one.
+
+### For producers that mirror this schema
+
+- A hand-copied mirror that compares root keys (Deposium's
+  `src/schemas/viz/chart.ts` and its `spec-parity.test.ts`) will report the new
+  root key `unit` until it is mirrored or allow-listed, and keeps rejecting
+  `null` until its `data` union is made nullable. Its parity test compares
+  root keys only, so the value shape needs a test of its own.
+- Pie, doughnut and polar-area charts cannot show a missing share honestly:
+  Chart.js parses a `null` share as `0`. The schema stays structural and
+  accepts it; `@seed-ship/mcp-ui-solid`'s `validateChartComponent` refuses it
+  with `MISSING_VALUE_UNSUPPORTED`. Do not emit `null` in those types.
 
 ### Fixed
 
 - `LICENSE` is now listed in the package's `files` array, so the MIT license
   text ships inside the npm tarball instead of only living in the repository.
-  This takes effect with the **next** spec release; the already-published
-  `5.6.0` tarball on npm is unchanged.
+  The already-published `5.6.0` tarball on npm is unchanged.
 
 ## [5.6.0] - 2026-09-14
 

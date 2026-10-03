@@ -17,6 +17,7 @@
 
 import { Component, For, Show } from 'solid-js';
 import { formatMCPUIString, useMCPUIStrings } from '../context/MCPUIStringsContext';
+import { MissingValueLegend, MissingValueMark } from './MissingValue';
 
 export interface DegradedFallbackProps {
   /** Short, human-readable reason the native render was skipped/failed. */
@@ -35,6 +36,13 @@ export interface DegradedFallbackProps {
   caption?: string;
   /** Max rows to render before truncating (default 50). */
   maxRows?: number;
+  /**
+   * Same shape as `rows`: `true` marks a cell whose value is missing, which
+   * renders as `<MissingValueMark/>` instead of its text. A
+   * `<MissingValueLegend/>` follows the table when a SHOWN cell is missing.
+   * Omitted, the output is unchanged. @since v6.24.0
+   */
+  missing?: boolean[][];
 }
 
 export const DegradedFallback: Component<DegradedFallbackProps> = (props) => {
@@ -43,6 +51,15 @@ export const DegradedFallback: Component<DegradedFallbackProps> = (props) => {
   const allRows = () => props.rows ?? [];
   const shownRows = () => allRows().slice(0, maxRows());
   const hiddenCount = () => Math.max(0, allRows().length - shownRows().length);
+  const isMissing = (rowIndex: number, colIndex: number) =>
+    props.missing?.[rowIndex]?.[colIndex] === true;
+  const anyShownMissing = () => {
+    const columnCount = props.columns?.length ?? 0;
+    return shownRows().some((_row, r) => {
+      for (let c = 0; c < columnCount; c += 1) if (isMissing(r, c)) return true;
+      return false;
+    });
+  };
   const hasTable = () => (props.columns?.length ?? 0) > 0 && allRows().length > 0;
 
   return (
@@ -69,12 +86,14 @@ export const DegradedFallback: Component<DegradedFallbackProps> = (props) => {
             </thead>
             <tbody>
               <For each={shownRows()}>
-                {(row) => (
+                {(row, rowIndex) => (
                   <tr class="border-t border-amber-100 dark:border-amber-800/60">
                     <For each={props.columns}>
                       {(_col, i) => (
                         <td class="px-2 py-1 text-amber-800 dark:text-amber-200">
-                          {String(row[i()] ?? '')}
+                          <Show when={isMissing(rowIndex(), i())} fallback={String(row[i()] ?? '')}>
+                            <MissingValueMark />
+                          </Show>
                         </td>
                       )}
                     </For>
@@ -84,6 +103,9 @@ export const DegradedFallback: Component<DegradedFallbackProps> = (props) => {
             </tbody>
           </table>
         </div>
+        <Show when={anyShownMissing()}>
+          <MissingValueLegend class="mt-2" />
+        </Show>
         <Show when={hiddenCount() > 0}>
           <p class="mt-1 text-[10px] text-amber-600 dark:text-amber-400">
             {formatMCPUIString(strings.degradedMoreRows, { count: hiddenCount() })}

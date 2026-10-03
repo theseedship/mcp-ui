@@ -19,6 +19,7 @@ describe('chart-data-table labels', () => {
       x: 'x',
       y: 'y',
       r: 'r',
+      withUnit: '{label} ({unit})',
     })
   })
 

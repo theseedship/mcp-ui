@@ -1,6 +1,6 @@
 {
   "name": "@seed-ship/mcp-ui-solid",
-  "version": "6.23.0",
+  "version": "6.24.0",
   "description": "SolidJS components for rendering MCP-generated UI resources",
   "type": "module",
   "files": [
@@ -173,7 +173,7 @@
     "test:watch": "vitest",
     "test:browser": "vitest --mode browser",
     "lint": "eslint src",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.contracts.json",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.contracts.json && tsc --noEmit -p tsconfig.examples.json",
     "clean": "rm -rf dist",
     "size": "size-limit",
     "size:analyze": "size-limit --why"
@@ -244,7 +244,7 @@
     }
   },
   "dependencies": {
-    "@seed-ship/mcp-ui-spec": "workspace:^5.6.0",
+    "@seed-ship/mcp-ui-spec": "workspace:^5.7.0",
     "@types/dompurify": "^3.0.5",
     "dompurify": "^3.4.12",
     "marked": "^16.3.0",

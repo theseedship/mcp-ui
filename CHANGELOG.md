@@ -11,8 +11,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > **Note (2026-07-03):** after `5.2.0` this monorepo-wide log was superseded by
 > the per-package changelogs, which are the source of truth for every release
-> (current: `mcp-ui-solid` 6.21.0, `mcp-ui-spec` 5.6.0, `mcp-ui-cli` 5.0.1). New
+> (current: `mcp-ui-solid` 6.24.0, `mcp-ui-spec` 5.7.0, `mcp-ui-cli` 5.0.1). New
 > entries go there; this file is kept for historical monorepo-level context.
+
+## [6.24.0] - 2026-10-03 (`mcp-ui-solid` 6.24.0, `mcp-ui-spec` 5.7.0)
+
+- Added: `null` in a chart dataset (a number, or a point's `y`) is an explicit
+  missing value. The spec schema accepts it, and `validateChartComponent`
+  accepts it for line, bar, radar, scatter and bubble charts while refusing it
+  for pie, doughnut and polar-area charts (`MISSING_VALUE_UNSUPPORTED`).
+  The renderer breaks lines instead of joining them, outlines a missing bar,
+  marks a series with no data in the legend, and writes a note under the
+  chart, linked through `aria-describedby`.
+- Added: chart `unit` (spec and renderer): value-axis title, tooltip value,
+  data-view and degraded-table headers.
+- Added: table cells with no value keep their `-`, now with screen-reader
+  text and a legend; missing cells sort last and never match a search.
+- Added: ten `MCPUIStrings` keys (275 → 285) and
+  `mcp-ui-solid/examples/geoai-daily-forecast/`, a synthetic GeoAI pilot built
+  with the presentation recipes.
+- See `mcp-ui-solid/CHANGELOG.md` and `mcp-ui-spec/CHANGELOG.md` for the
+  details and the notes for producers that mirror the chart schema.
 
 ## [6.21.0] - 2026-09-17 (`mcp-ui-solid`)
 

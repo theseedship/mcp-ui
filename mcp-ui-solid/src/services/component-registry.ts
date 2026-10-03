@@ -50,14 +50,15 @@ export const QuickchartRegistry: ComponentRegistryEntry = {
                 data: {
                   // Empty arrays match both branches; mirror Zod's inclusive union.
                   anyOf: [
-                    { type: 'array', items: { type: 'number' } },
+                    // `null` is an explicit MISSING value (v6.24.0): never a zero.
+                    { type: 'array', items: { type: ['number', 'null'] } },
                     {
                       type: 'array',
                       items: {
                         type: 'object',
                         properties: {
                           x: { oneOf: [{ type: 'string' }, { type: 'number' }] },
-                          y: { type: 'number' },
+                          y: { type: ['number', 'null'] },
                           r: { type: 'number', minimum: 0 },
                         },
                         required: ['x', 'y'],
@@ -109,6 +110,13 @@ export const QuickchartRegistry: ComponentRegistryEntry = {
           min: { type: 'string' },
           max: { type: 'string' },
         },
+      },
+      unit: {
+        type: 'string',
+        minLength: 1,
+        maxLength: 32,
+        description:
+          'Unit of the values (e.g. "°C", "%"): shown on the value axis, in tooltips and in the data view',
       },
       height: { type: 'string', description: 'Chart container height as a CSS value' },
       className: { type: 'string' },

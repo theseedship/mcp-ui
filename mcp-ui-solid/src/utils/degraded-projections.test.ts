@@ -129,6 +129,7 @@ describe('degraded projection labels are injectable', () => {
       marker: 'marker',
       feature: 'feature',
       series: 'Series {n}',
+      withUnit: '{label} ({unit})',
     });
   });
 

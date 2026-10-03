@@ -28,6 +28,8 @@ import {
   useMCPUIStrings,
 } from '../context/MCPUIStringsContext'
 import { useMCPUIConfig } from '../context/MCPUIConfigContext'
+import { isMissingCellValue, stripUndefinedDebris } from '../utils/missing-value'
+import { MissingValueLegend, MissingValueMark } from './MissingValue'
 import { shouldSetCredentialless } from '../utils/iframe-coep'
 import { IframeFallbackLink } from './IframeFallbackLink'
 
@@ -347,6 +349,7 @@ function ChartRenderer(props: {
                 caption={strings.chartQuickchartCaption}
                 {...chartToDegradedTable(params() ?? {}, {
                   series: strings.degradedSeries,
+                  withUnit: strings.chartLabelWithUnit,
                 })}
               />
             </div>
@@ -639,9 +642,10 @@ export function renderCellValue(value: any, citationCtx?: CitationCtx, mathRende
 
   // Clean up "undefined" patterns from backend data
   // Pattern 1: "Text – undefined" or "Text - undefined" → "Text"
-  strValue = strValue.replace(/\s*[–-]\s*undefined\s*$/gi, '')
   // Pattern 2: "undefined – Text" or "undefined - Text" → "Text"
-  strValue = strValue.replace(/^undefined\s*[–-]\s*/gi, '')
+  // (shared with `isMissingCellValue`, so the cells shown as `-` and the cells
+  // the table marks and explains as missing can never drift apart)
+  strValue = stripUndefinedDebris(strValue)
   // Pattern 3: standalone "undefined" → "-"
   if (strValue.trim().toLowerCase() === 'undefined') {
     return '-'
@@ -766,12 +770,18 @@ function TableRenderer(props: {
     const dir = sortDir()
     if (!key || !dir) return r
     const col = columns().find((c: any) => c.key === key)
-    const isNum = col?.type === 'number' || (r.length > 0 && typeof r[0]?.[key] === 'number')
+    // v6.24.0 — numeric mode is decided from the first NON-missing value, so a
+    // missing first row no longer flips a numeric column to string order.
+    const firstObserved = r.find((row: any) => !isMissingCellValue(row?.[key]))?.[key]
+    const isNum = col?.type === 'number' || typeof firstObserved === 'number'
     return [...r].sort((a: any, b: any) => {
       const va = a[key], vb = b[key]
-      if (va == null && vb == null) return 0
-      if (va == null) return 1
-      if (vb == null) return -1
+      // Missing values (null, undefined, '', 'undefined', '-') sort last in
+      // both directions — never as 0 and never first.
+      const missA = isMissingCellValue(va), missB = isMissingCellValue(vb)
+      if (missA && missB) return 0
+      if (missA) return 1
+      if (missB) return -1
       let cmp: number
       if (isNum) {
         cmp = (Number(va) || 0) - (Number(vb) || 0)
@@ -820,7 +830,7 @@ function TableRenderer(props: {
     return sortedRows().filter((row: any) =>
       cols.some((col: any) => {
         const val = row[col.key]
-        if (val == null) return false
+        if (isMissingCellValue(val)) return false
         return normalize(String(val)).includes(q)
       })
     )
@@ -1015,6 +1025,14 @@ function TableRenderer(props: {
 
   const tableId = `table-${Math.random().toString(36).slice(2, 9)}`
 
+  // v6.24.0 — whether ANY declared cell of ANY row is missing. Deliberately
+  // computed on all rows (not the current page / filter) so the legend does not
+  // flicker while paging, sorting or searching.
+  const hasMissingCells = createMemo(() => {
+    const cols = columns()
+    return allRows().some((row: any) => cols.some((col: any) => isMissingCellValue(row?.[col.key])))
+  })
+
   // Standard table body (non-virtualized) — uses client pagination when active
   const StandardTableBody = () => (
     <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -1024,7 +1042,12 @@ function TableRenderer(props: {
             <For each={tableParams.columns}>
               {(column: any) => (
                 <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-200 whitespace-normal break-words leading-relaxed first:pl-6 last:pr-6">
-                  <SafeHtml html={() => highlightQuery(renderCellValue(row[column.key], citationCtx, mathRenderer()), debouncedQuery())} />
+                  <Show
+                    when={!isMissingCellValue(row[column.key])}
+                    fallback={<MissingValueMark />}
+                  >
+                    <SafeHtml html={() => highlightQuery(renderCellValue(row[column.key], citationCtx, mathRenderer()), debouncedQuery())} />
+                  </Show>
                 </td>
               )}
             </For>
@@ -1063,7 +1086,12 @@ function TableRenderer(props: {
                 <For each={tableParams.columns}>
                   {(column: any) => (
                     <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-200 whitespace-normal break-words leading-relaxed first:pl-6 last:pr-6">
-                      <SafeHtml html={() => highlightQuery(renderCellValue(row[column.key], citationCtx, mathRenderer()), debouncedQuery())} />
+                      <Show
+                        when={!isMissingCellValue(row[column.key])}
+                        fallback={<MissingValueMark />}
+                      >
+                        <SafeHtml html={() => highlightQuery(renderCellValue(row[column.key], citationCtx, mathRenderer()), debouncedQuery())} />
+                      </Show>
                     </td>
                   )}
                 </For>
@@ -1221,6 +1249,11 @@ function TableRenderer(props: {
               </Show>
             </table>
           </div>
+
+          {/* Missing-value legend (v6.24.0) — outside the scroll region, before pagination */}
+          <Show when={hasMissingCells()}>
+            <MissingValueLegend class="mt-2 px-1" />
+          </Show>
 
           {/* Server-side pagination (legacy) */}
           <Show when={tableParams.pagination}>

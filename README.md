@@ -9,6 +9,16 @@ A collection of TypeScript packages for building generative, streaming user inte
 
 ## What's New
 
+**6.24.0 (`mcp-ui-solid`) + 5.7.0 (`mcp-ui-spec`):** explicit missing values
+in charts and tables, and a `unit` per chart. `null` in a line, bar, radar,
+scatter or bubble dataset is accepted and shown as missing, never as zero: a
+line breaks, a missing bar gets a dashed outline, a note under the chart says
+how, and a series with no data is named. Pie, doughnut and polar-area charts
+refuse it. Table cells with no value are announced to screen readers and
+explained by a legend. A synthetic GeoAI example built with the presentation
+recipes ships in `mcp-ui-solid/examples/`. See
+[Missing values and units in charts](./mcp-ui-solid/README.md#missing-values-and-units-in-charts-v6240).
+
 **6.23.0 (`mcp-ui-solid`):** opt-in LaTeX in markdown text and table cells
 through `MCPUIMathProvider`, with an optional KaTeX-to-MathML adapter. No CSS,
 fonts, or additional required config keys. See the
@@ -89,8 +99,8 @@ native chart/data switching, and chart/table/graph catalogue parity.
 See the [integration handoff](./mcp-ui-solid/docs/briefs/VISUALIZATION-FOUNDATION-2026-09-14.md).
 This work does not add automatic MCP selection or shared host filters.
 
-**Current line — `mcp-ui-solid` 6.23.0** (post-`5.0.0`, audit-driven visual-renderer
-& streaming hardening; `mcp-ui-spec` 5.6.0). Highlights from 6.18.0 — see
+**Current line — `mcp-ui-solid` 6.24.0** (post-`5.0.0`, audit-driven visual-renderer
+& streaming hardening; `mcp-ui-spec` 5.7.0). Highlights from 6.18.0 — see
 [`mcp-ui-solid/CHANGELOG.md`](./mcp-ui-solid/CHANGELOG.md) for the full list
 including 6.19.0:
 
@@ -147,8 +157,8 @@ This monorepo contains three packages published under `@seed-ship/`:
 
 | Package | Version | Description |
 |---------|---------|-------------|
-| [`@seed-ship/mcp-ui-solid`](./mcp-ui-solid) | 6.23.0 | SolidJS components for rendering MCP-generated UI |
-| [`@seed-ship/mcp-ui-spec`](./mcp-ui-spec) | 5.6.0 | JSON schemas and Zod validators |
+| [`@seed-ship/mcp-ui-solid`](./mcp-ui-solid) | 6.24.0 | SolidJS components for rendering MCP-generated UI |
+| [`@seed-ship/mcp-ui-spec`](./mcp-ui-spec) | 5.7.0 | JSON schemas and Zod validators |
 | [`@seed-ship/mcp-ui-cli`](./mcp-ui-cli) | 5.0.1 | CLI for validation and type generation |
 
 ### @seed-ship/mcp-ui-solid
