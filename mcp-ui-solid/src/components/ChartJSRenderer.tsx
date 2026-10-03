@@ -591,8 +591,11 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
 
       if (chartUnit !== undefined || chartMissing.hasMissing) {
         const tooltip = baseOptions.plugins.tooltip;
-        // A host-supplied label callback is the host's word and is kept.
-        if (!tooltip?.callbacks?.label) {
+        // `tooltip: false` (or `null`) is Chart.js's per-chart plugin opt-out:
+        // the payload turned tooltips off, and adding a callback object here
+        // would turn them back on. A host-supplied label callback is the
+        // host's word too. Both are left exactly as written.
+        if (tooltip !== false && tooltip !== null && !tooltip?.callbacks?.label) {
           baseOptions.plugins.tooltip = {
             ...tooltip,
             callbacks: {

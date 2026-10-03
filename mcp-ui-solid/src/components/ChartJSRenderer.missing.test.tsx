@@ -381,6 +381,21 @@ describe('<ChartJSRenderer> missing values and unit', () => {
       expect(config.data).toBe((component.params as any).data);
     });
 
+    it.each([false, null])(
+      'leaves tooltips turned off when the payload sets plugins.tooltip to %s',
+      async (off) => {
+        render(() => (
+          <ChartJSRenderer
+            component={chartComponent({ unit: 'mm', options: { plugins: { tooltip: off } } })}
+          />
+        ));
+        const config = await lastConfig();
+        // Still the payload's own opt-out, not an object Chart.js would
+        // read as "tooltips on" — even with a unit and a missing value.
+        expect(config.options.plugins.tooltip).toBe(off);
+      }
+    );
+
     it('keeps the payload tooltip options and a host-supplied label callback', async () => {
       const hostLabel = () => 'host';
       const component = chartComponent({
