@@ -345,6 +345,19 @@ const FORMER_LITERALS: Record<string, string> = {
   zoomOut: 'Zoom out',
   zoomReset: 'Reset zoom',
   zoomLevel: 'Zoom {percent}%',
+
+  // 6.24.0 — missing values. New chrome: a missing value used to be refused
+  // by chart validation and shown as an unexplained `-` in tables.
+  missingValue: 'Missing value',
+  missingValueLegend: '“{marker}” marks a missing value.',
+  chartMissingGaps: 'Breaks in a line mark missing values.',
+  chartMissingBars: 'Dashed outlines mark missing values.',
+  chartMissingPoints: 'Missing values are not plotted.',
+  chartSeriesNoData: 'No data for {series}.',
+  chartLegendNoData: '{series} (no data)',
+  chartValueWithUnit: '{value} {unit}',
+  chartLabelWithUnit: '{label} ({unit})',
+  chartMissingUnsupported: 'This chart type cannot show missing values.',
 }
 
 /**

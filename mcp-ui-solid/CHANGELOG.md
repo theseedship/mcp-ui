@@ -5,6 +5,131 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.24.0] - 2026-10-03
+
+Explicit missing values in charts and tables, and a unit per chart — lot 1 of
+the GeoAI display brief (`deposium_geoai/docs/handoffs/2026-10-03-mcp-ui-geoai-display-brief.md`).
+Released with `@seed-ship/mcp-ui-spec` 5.7.0, whose chart schema accepts both;
+the dependency floor moves to `^5.7.0`.
+
+### The rule
+
+Absence is never zero. A `null` keeps its slot — its label stays on the axis,
+its row stays in the table — and every view marks it, visibly and for screen
+readers. Until now `validateComponent` refused any chart carrying a `null`, so
+a host that drops invalid components (Deposium's chat does) showed nothing.
+
+Only an explicit entry is a missing value: `null` (or a non-finite number, or a
+point whose `y` is one). A dataset with no entry at all (`data: []`) is not —
+it renders exactly as it did in 6.23.0.
+
+### Added
+
+- **Charts accept `null`** in line, bar, radar, scatter and bubble datasets,
+  as a number slot or as a point's `y`:
+  - a line or a radar breaks at the missing value: `spanGaps: false` is set on
+    every dataset of a chart that has one, so nothing joins the neighbours,
+    and the date stays on the axis;
+  - a missing bar is drawn as a dashed outline at the baseline, so it cannot
+    be read as a zero bar (Chart.js draws nothing for both). Stacked or
+    overlaid bars get no outline — their baseline belongs to the series below,
+    so an outline there would point at the wrong series — and their note says
+    the values are not plotted;
+  - scatter and bubble charts leave the point out;
+  - a series whose every entry is missing keeps its legend entry, marked
+    `chartLegendNoData` ("(no data)"), and a chart with nothing to plot says
+    so in its plot area (`chartNoData`);
+  - a note under the chart explains how this chart shows a missing value
+    (`chartMissingGaps`, `chartMissingBars`, `chartMissingPoints`), shown when
+    a reader can actually see the mark, and names the series with no data
+    (`chartSeriesNoData`, joined with `Intl.ListFormat` in the strings
+    `locale`). The canvas's `aria-describedby` includes it. DOM hooks:
+    `[data-mcp-chart-notes]` and
+    `[data-mcp-chart-note="gaps|bars|omitted|no-data"]`;
+  - a tooltip names a missing bar (`missingValue`) instead of printing `0`.
+
+  Pie, doughnut and polar-area charts refuse `null`, as a bare value or as a
+  point's `y`, because Chart.js parses a missing share as `0` and would draw
+  every other share wrong. `validateChartComponent` reports
+  `MISSING_VALUE_UNSUPPORTED`. If a host bypasses validation, the renderer
+  shows its data table with `chartMissingUnsupported` instead of a misleading
+  chart.
+- **`unit`** on chart params: the value-axis title (bar, line, scatter and
+  bubble, unless `options.scales` already sets one), the tooltip value
+  (`chartValueWithUnit`, except on scatter and bubble, whose value is a pair)
+  and the column headers of the data view and of the degraded table
+  (`chartLabelWithUnit`). `validateChartComponent` reports `INVALID_UNIT` for
+  a non-string unit or one longer than 32 characters; an empty string is
+  tolerated and means "no unit".
+- **Tables.** A cell that already displayed as `-` — `null`, `undefined`, an
+  empty or whitespace-only string, `"undefined"` (after the backend's
+  `"X – undefined"` debris is stripped) or a literal `-` — is now muted,
+  hidden from assistive technology and followed by a visually-hidden
+  `missingValue`. A legend (`missingValueLegend`, `[data-mcp-missing-legend]`)
+  follows any table with such a cell. It is computed on every row, so it does
+  not flicker while paging. Missing cells sort last in both directions (an
+  empty string no longer sorts as `0`), a numeric column is detected from its
+  first present value, and search never matches a missing cell.
+- **The chart data view and the degraded tables** mark missing cells the same
+  way, under the same legend. `chartToDataTable` and `chartToDegradedTable`
+  return an extra `missing` matrix shaped like `rows`, which still hold `''`.
+  One exception: the degraded table prints point data (scatter, bubble,
+  `{x, y}` series) as JSON, where `"y":null` reads as such, and does not mark
+  it. `DegradedFallback` takes an optional `missing` prop; the graph and map
+  degraded tables do not change.
+- Ten `MCPUIStrings` keys (275 → 285), English defaults, French in the README
+  dictionary: `missingValue`, `missingValueLegend`, `chartMissingGaps`,
+  `chartMissingBars`, `chartMissingPoints`, `chartSeriesNoData`,
+  `chartLegendNoData`, `chartValueWithUnit`, `chartLabelWithUnit`,
+  `chartMissingUnsupported`.
+- `examples/geoai-daily-forecast/`: a synthetic, clearly labelled GeoAI pilot
+  (daily table, one chart per variable, comparison, map, thresholds, sources
+  and limits) built with `createComparisonLayout`, `createGeographyLayout` and
+  `createEvidenceLayout`, with tests for the brief's validation criteria that a
+  library can check. Not published, since it is outside `files`;
+  type-checked by `pnpm typecheck` (`tsconfig.examples.json`).
+
+### Unchanged on purpose
+
+- A chart with no missing entry and no unit builds exactly the 6.23.0
+  Chart.js config, and a table with no missing cell renders the 6.23.0 DOM
+  (both tested; the table against a capture taken before the change).
+- `renderCellValue` still returns `-` for a missing value; it now shares its
+  `"X – undefined"` cleanup with the table marks, so both always agree. CSV
+  and TSV exports still write an empty field, JSON still writes `null`.
+- Chart.js's default interaction (`nearest`, `intersect: true`) is kept. A
+  missing bar has no height, so its tooltip only appears in `index` mode.
+- No time axis is introduced: daily dates are categorical ISO labels. The
+  opt-in QuickChart renderer receives the payload as before; the unit and the
+  missing-value outlines, notes and legend belong to the native renderer.
+
+### Changed — for code that reads these types
+
+- `ChartComponentParams` datasets' `data` is now `Array<number | null>`, or
+  points whose `y` is `number | null`. Code that reads chart payloads under
+  `strictNullChecks` has to handle the missing value.
+- `chartToDataTable` and `chartToDegradedTable` always return the extra
+  `missing` matrix; code asserting their exact shape sees one more key.
+- `ChartDataTableLabels.withUnit` and `DegradedProjectionLabels.withUnit` are
+  new **optional** fields, so a complete labels table written for
+  6.20.0–6.23.0 as an object literal still type-checks (a
+  `Record<keyof …, string>` does not, as with any new key).
+  `CHART_DATA_TABLE_LABELS` and `DEGRADED_PROJECTION_LABELS` are now typed
+  `Required<…>`.
+- The `INVALID_DATA_TYPE` and `INVALID_POINT_DATA` messages now mention
+  `null`; the codes do not change.
+
+### For hosts
+
+- **Deposium (consumer):** bump to 6.24.0 and add the ten keys to the French
+  dictionary; `satisfies Required<MCPUIStrings>` fails until they are there.
+  The visually-hidden text uses an inline style, not Tailwind's `sr-only`, so
+  the Tailwind configuration needs no change.
+- **Producers:** emit `null` only in line, bar, radar, scatter and bubble
+  charts, never `0` for a missing value and never a shortened array. A
+  hand-copied schema mirror needs both `null` and `unit` (see the spec 5.7.0
+  changelog).
+
 ## [6.23.0] - 2026-09-18
 
 ### Added

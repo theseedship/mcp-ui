@@ -1,4 +1,5 @@
 import { formatMCPUIString } from '../utils/format-string';
+import { isMissingChartValue } from '../utils/missing-value';
 
 /**
  * Column headers and series names of the accessible chart data table.
@@ -26,10 +27,17 @@ export interface ChartDataTableLabels {
   x: string;
   y: string;
   r: string;
+  /**
+   * A value column header followed by the chart's `unit`. Template — `{label}`,
+   * `{unit}`. Only applied when the chart has a unit. Optional so that a
+   * complete labels table written for 6.20.0–6.23.0 still type-checks.
+   * @since v6.24.0
+   */
+  withUnit?: string;
 }
 
 /** English defaults for {@link ChartDataTableLabels}. */
-export const CHART_DATA_TABLE_LABELS: ChartDataTableLabels = {
+export const CHART_DATA_TABLE_LABELS: Required<ChartDataTableLabels> = {
   series: 'Series',
   point: 'Point',
   label: 'Label',
@@ -37,11 +45,20 @@ export const CHART_DATA_TABLE_LABELS: ChartDataTableLabels = {
   x: 'x',
   y: 'y',
   r: 'r',
+  withUnit: '{label} ({unit})',
 };
 
 export interface ChartDataTable {
   columns: string[];
   rows: Array<Array<string | number>>;
+  /**
+   * Same shape as `rows`: `true` for a VALUE cell whose source entry is
+   * missing (`null` / non-finite, or a point whose `y` is). A slot past the
+   * end of a shorter or empty dataset has no entry and is not flagged. Label,
+   * series, point-index, `x` and `r` cells are never missing. `rows` itself
+   * still holds `''` there. @since v6.24.0
+   */
+  missing: boolean[][];
 }
 
 interface ChartDatasetLike {
@@ -51,6 +68,8 @@ interface ChartDatasetLike {
 
 export interface ChartDataLike {
   type?: string;
+  /** Unit of the values: appended to the value column headers. @since v6.24.0 */
+  unit?: string;
   data?: {
     labels?: Array<string | number>;
     datasets?: ChartDatasetLike[];
@@ -87,6 +106,10 @@ export function chartToDataTable(
   labels?: Partial<ChartDataTableLabels>
 ): ChartDataTable {
   const l: ChartDataTableLabels = { ...CHART_DATA_TABLE_LABELS, ...labels };
+  const unit = typeof params.unit === 'string' && params.unit !== '' ? params.unit : undefined;
+  const unitTemplate = l.withUnit ?? CHART_DATA_TABLE_LABELS.withUnit;
+  const withUnit = (label: string) =>
+    unit === undefined ? label : formatMCPUIString(unitTemplate, { label, unit });
   const datasets = params.data?.datasets ?? [];
   const dataLabels = params.data?.labels ?? [];
   const pointData =
@@ -104,10 +127,11 @@ export function chartToDataTable(
       l.point,
       ...(hasLabels ? [l.label] : []),
       l.x,
-      l.y,
+      withUnit(l.y),
       ...(hasRadius ? [l.r] : []),
     ];
     const rows: Array<Array<string | number>> = [];
+    const missing: boolean[][] = [];
 
     datasets.forEach((dataset, datasetIndex) => {
       const series = dataset.label || formatMCPUIString(l.seriesName, { n: datasetIndex + 1 });
@@ -121,10 +145,20 @@ export function chartToDataTable(
           tableCell(point.y),
           ...(hasRadius ? [tableCell(point.r)] : []),
         ]);
+        // Only the y cell can be missing; a bare entry is its own y.
+        const yMissing = isMissingChartValue(isPoint(value) ? point.y : value);
+        missing.push([
+          false,
+          false,
+          ...(hasLabels ? [false] : []),
+          false,
+          yMissing,
+          ...(hasRadius ? [false] : []),
+        ]);
       });
     });
 
-    return { columns, rows };
+    return { columns, rows, missing };
   }
 
   const rowCount = Math.max(
@@ -134,18 +168,28 @@ export function chartToDataTable(
   );
   const columns = [
     l.label,
-    ...datasets.map(
-      (dataset, index) => dataset.label || formatMCPUIString(l.seriesName, { n: index + 1 })
+    ...datasets.map((dataset, index) =>
+      withUnit(dataset.label || formatMCPUIString(l.seriesName, { n: index + 1 }))
     ),
   ];
   const rows: Array<Array<string | number>> = [];
+  const missing: boolean[][] = [];
 
   for (let rowIndex = 0; rowIndex < rowCount; rowIndex += 1) {
     rows.push([
       tableCell(dataLabels[rowIndex] ?? rowIndex + 1),
       ...datasets.map((dataset) => tableCell(dataset.data?.[rowIndex])),
     ]);
+    // Only an ENTRY can be missing: a slot past the end of a shorter (or
+    // empty) dataset has no entry, and renders as before (an empty cell).
+    missing.push([
+      false,
+      ...datasets.map(
+        (dataset) =>
+          rowIndex < (dataset.data?.length ?? 0) && isMissingChartValue(dataset.data?.[rowIndex])
+      ),
+    ]);
   }
 
-  return { columns, rows };
+  return { columns, rows, missing };
 }

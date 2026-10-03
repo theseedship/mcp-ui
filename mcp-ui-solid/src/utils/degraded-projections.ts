@@ -12,6 +12,7 @@
  */
 
 import { formatMCPUIString } from './format-string';
+import { isMissingChartValue } from './missing-value';
 
 /**
  * Column headers and series names of the degraded tables.
@@ -46,10 +47,17 @@ export interface DegradedProjectionLabels {
   feature: string;
   /** Chart table — fallback dataset name. Template — `{n}`. */
   series: string;
+  /**
+   * Chart table — a dataset column header followed by the chart's `unit`.
+   * Template — `{label}`, `{unit}`. Only applied when the chart has a unit.
+   * Optional so that a complete labels table written for 6.20.0–6.23.0 still
+   * type-checks. @since v6.24.0
+   */
+  withUnit?: string;
 }
 
 /** English defaults for {@link DegradedProjectionLabels}. */
-export const DEGRADED_PROJECTION_LABELS: DegradedProjectionLabels = {
+export const DEGRADED_PROJECTION_LABELS: Required<DegradedProjectionLabels> = {
   source: 'Source',
   target: 'Target',
   label: 'Label',
@@ -61,6 +69,7 @@ export const DEGRADED_PROJECTION_LABELS: DegradedProjectionLabels = {
   marker: 'marker',
   feature: 'feature',
   series: 'Series {n}',
+  withUnit: '{label} ({unit})',
 };
 
 const withLabels = (labels?: Partial<DegradedProjectionLabels>): DegradedProjectionLabels => ({
@@ -71,6 +80,12 @@ const withLabels = (labels?: Partial<DegradedProjectionLabels>): DegradedProject
 export interface DegradedTable {
   columns: string[];
   rows: Array<Array<string | number>>;
+}
+
+/** A degraded chart table: its cells, plus which of them are missing values. */
+export interface DegradedChartTable extends DegradedTable {
+  /** Same shape as `rows`; `true` for a dataset entry that is missing. @since v6.24.0 */
+  missing: boolean[][];
 }
 
 const MAX_PROJECTED_ROWS = 200;
@@ -188,25 +203,50 @@ export function mapToDegradedTable(params: {
  * Chart → a series table: one row per label, one column per dataset. So a
  * chart that can't draw still shows its numbers. Point/object data (scatter,
  * bubble, time series) is stringified per cell.
+ *
+ * `missing` flags the cells whose dataset entry is a missing value (`null`
+ * or non-finite) so the table can mark them instead of showing an empty
+ * cell. A slot past the end of a shorter or empty dataset has no entry and is
+ * not flagged; a point object keeps its JSON text (where a `"y":null` reads
+ * as such) and is not flagged either. With a `unit`, dataset column headers
+ * become `labels.withUnit`.
  */
 export function chartToDegradedTable(params: {
+  unit?: string;
   data?: {
     labels?: Array<string | number>;
     datasets?: Array<{ label?: string; data?: unknown[] }>;
   };
-}, labels?: Partial<DegradedProjectionLabels>): DegradedTable {
+}, labels?: Partial<DegradedProjectionLabels>): DegradedChartTable {
   const l = withLabels(labels);
+  const unit = typeof params.unit === 'string' && params.unit !== '' ? params.unit : undefined;
   const datasets = params.data?.datasets ?? [];
   const dataLabels = params.data?.labels ?? [];
   const rowCount = Math.max(dataLabels.length, ...datasets.map((d) => d.data?.length ?? 0), 0);
 
   const columns = [
     '',
-    ...datasets.map((d, i) => d.label ?? formatMCPUIString(l.series, { n: i + 1 })),
+    ...datasets.map((d, i) => {
+      const name = d.label ?? formatMCPUIString(l.series, { n: i + 1 });
+      return unit === undefined
+        ? name
+        : formatMCPUIString(l.withUnit ?? DEGRADED_PROJECTION_LABELS.withUnit, { label: name, unit });
+    }),
   ];
   const rows: Array<Array<string | number>> = [];
+  const missing: boolean[][] = [];
   for (let r = 0; r < Math.min(rowCount, MAX_PROJECTED_ROWS); r++) {
     rows.push([cell(dataLabels[r] ?? r + 1), ...datasets.map((d) => cell(d.data?.[r]))]);
+    missing.push([
+      false,
+      ...datasets.map((d) => {
+        // Past the end of a shorter or empty dataset there is no entry, so
+        // nothing to flag (the cell stays empty, as before 6.24.0).
+        if (r >= (d.data?.length ?? 0)) return false;
+        const entry = d.data?.[r];
+        return (entry === null || typeof entry !== 'object') && isMissingChartValue(entry);
+      }),
+    ]);
   }
-  return { columns, rows };
+  return { columns, rows, missing };
 }

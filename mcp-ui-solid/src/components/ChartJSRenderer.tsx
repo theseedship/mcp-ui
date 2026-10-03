@@ -32,7 +32,17 @@ import type { Accessor, JSX } from 'solid-js';
 import type { UIComponent, ChartComponentParams } from '../types';
 import { ExpandableWrapper, useExpanded } from './ExpandableWrapper';
 import { DegradedFallback } from './DegradedFallback';
+import { MissingValueLegend, MissingValueMark } from './MissingValue';
 import { chartToDataTable } from './chart-data-table';
+import {
+  applyUnitAxisTitle,
+  createMissingLegendGenerator,
+  createMissingValuesPlugin,
+  createTooltipLabel,
+  missingNoteKind,
+  withDatasetsNoGapSpan,
+} from './chart-missing-plugin';
+import { PART_TO_WHOLE_CHART_TYPES, summarizeChartMissing } from '../utils/missing-value';
 import { useTelemetry } from '../context/MCPUITelemetryContext';
 import { useMCPUIConfig } from '../context/MCPUIConfigContext';
 import { formatMCPUIString, useMCPUIStrings } from '../context/MCPUIStringsContext';
@@ -320,9 +330,51 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
       point: strings.chartTablePoint,
       label: strings.degradedColLabel,
       seriesName: strings.degradedSeries,
+      withUnit: strings.chartLabelWithUnit,
     })
   );
+  // Absence is never zero: which entries are missing, and which series have
+  // nothing at all. Drives the notes, the plugin, the legend and the guard.
+  const missingSummary = createMemo(() => summarizeChartMissing(params()));
+  const unit = () => {
+    const value = params().unit;
+    return typeof value === 'string' && value !== '' ? value : undefined;
+  };
+  const anyMissingCell = () => tableData().missing.some((row) => row.some(Boolean));
+  // Never for a part-to-whole chart: it refuses missing values outright (the
+  // render effect turns it into the data table), so no convention applies —
+  // and the async guard must not leave a wrong note in the SSR markup.
+  const notesShown = () =>
+    missingSummary().hasMissing &&
+    !PART_TO_WHOLE_CHART_TYPES.has(params().type) &&
+    activeView() === 'chart' &&
+    !error();
+  const noteKind = () => missingNoteKind(params().type, params().options);
+  // The convention line explains a mark the reader can SEE: every missing bar
+  // gets a dashed stub, but a line or a scatter only shows an absence inside a
+  // series that still has values — a series with no value at all draws
+  // nothing, and the "no data" line alone covers it.
+  const conventionNoteShown = () =>
+    noteKind() === 'bars'
+      ? missingSummary().hasMissing
+      : missingSummary().partiallyMissing.some(Boolean);
+  // The series the chart has no data for, as a locale-aware list.
+  const noDataSeries = () => {
+    const names = (params().data?.datasets ?? [])
+      .map((dataset, index) =>
+        missingSummary().fullyMissing[index]
+          ? dataset?.label || formatMCPUIString(strings.degradedSeries, { n: index + 1 })
+          : null
+      )
+      .filter((name): name is string => name !== null);
+    try {
+      return new Intl.ListFormat(strings.locale, { type: 'conjunction' }).format(names);
+    } catch {
+      return names.join(', ');
+    }
+  };
   const descriptionId = createUniqueId();
+  const notesId = createUniqueId();
   const title = () => params().title || strings.chartView;
 
   // v6.1.0 — export visibility :
@@ -456,6 +508,8 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
     // plugin options at construction and the plugin only hooks charts created
     // after it was registered).
     const chartParams = params();
+    const chartMissing = missingSummary();
+    const chartUnit = unit();
     const zoom = zoomOptions();
     const version = ++renderVersion;
 
@@ -472,6 +526,14 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
       if (chartInstance) {
         chartInstance.destroy();
         chartInstance = null;
+      }
+
+      // A share of a whole cannot be missing: Chart.js parses `null` as 0 and
+      // would draw it as a zero slice. Validation rejects this earlier; this
+      // is the guard for a host that bypassed it. Thrown here so the catch
+      // below shows the data table (with the missing cells marked).
+      if (chartMissing.hasMissing && PART_TO_WHOLE_CHART_TYPES.has(chartParams.type)) {
+        throw new Error(strings.chartMissingUnsupported);
       }
 
       // Build options, merging time-axis config if present (v3.1.0)
@@ -517,12 +579,69 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
         };
       }
 
-      // Create new chart
-      chartInstance = new Chart(canvasRef, {
+      // Unit (v6.24.0): value-axis title and tooltip suffix. Both are no-ops
+      // on a payload without a unit.
+      applyUnitAxisTitle(baseOptions, chartParams.type, chartUnit);
+
+      const chartConfig: any = {
         type: chartParams.type,
         data: chartParams.data,
         options: baseOptions,
-      });
+      };
+
+      if (chartUnit !== undefined || chartMissing.hasMissing) {
+        const tooltip = baseOptions.plugins.tooltip;
+        // `tooltip: false` (or `null`) is Chart.js's per-chart plugin opt-out:
+        // the payload turned tooltips off, and adding a callback object here
+        // would turn them back on. A host-supplied label callback is the
+        // host's word too. Both are left exactly as written.
+        if (tooltip !== false && tooltip !== null && !tooltip?.callbacks?.label) {
+          baseOptions.plugins.tooltip = {
+            ...tooltip,
+            callbacks: {
+              ...tooltip?.callbacks,
+              label: createTooltipLabel(() => strings, chartUnit, chartParams.type),
+            },
+          };
+        }
+      }
+
+      if (chartMissing.hasMissing) {
+        // A line must break at a missing value, not join its neighbours.
+        chartConfig.data = withDatasetsNoGapSpan(chartParams.data);
+
+        // Legend of a fully-missing series: "{series} (no data)". Dataset
+        // legends only — pie-like legends list categories, not series.
+        const defaultGenerate =
+          baseOptions.plugins.legend?.labels?.generateLabels ??
+          Chart?.defaults?.plugins?.legend?.labels?.generateLabels;
+        if (typeof defaultGenerate === 'function') {
+          baseOptions.plugins.legend = {
+            ...baseOptions.plugins.legend,
+            labels: {
+              ...baseOptions.plugins.legend?.labels,
+              generateLabels: createMissingLegendGenerator(
+                defaultGenerate,
+                chartMissing.fullyMissing,
+                () => strings
+              ),
+            },
+          };
+        }
+
+        // Per-chart plugin (never `Chart.register`): the dashed stub of a
+        // missing bar, and "no data" on a chart with nothing to plot.
+        chartConfig.plugins = [
+          createMissingValuesPlugin({
+            allMissing: chartMissing.allMissing,
+            getNoDataText: () => strings.chartNoData,
+            getFontFamily: () => Chart?.defaults?.font?.family,
+          }),
+        ];
+      }
+
+      // Create new chart
+      chartInstance = new Chart(canvasRef, chartConfig);
 
       // A freshly built chart always sits on its initial viewport, so the
       // reset control goes away until the user zooms again.
@@ -761,12 +880,17 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
               </thead>
               <tbody>
                 <For each={tableData().rows}>
-                  {(row) => (
+                  {(row, rowIndex) => (
                     <tr class="border-t border-gray-100 dark:border-gray-700">
                       <For each={tableData().columns}>
                         {(_column, index) => (
                           <td class="px-3 py-2 text-gray-700 dark:text-gray-300">
-                            {String(row[index()] ?? '')}
+                            <Show
+                              when={tableData().missing[rowIndex()]?.[index()]}
+                              fallback={String(row[index()] ?? '')}
+                            >
+                              <MissingValueMark />
+                            </Show>
                           </td>
                         )}
                       </For>
@@ -786,6 +910,9 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
               </tbody>
             </table>
           </div>
+          <Show when={anyMissingCell()}>
+            <MissingValueLegend class="mt-2" />
+          </Show>
         </Show>
 
         <div
@@ -802,7 +929,7 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
             ref={canvasRef}
             role="img"
             aria-label={title()}
-            aria-describedby={descriptionId}
+            aria-describedby={notesShown() ? `${descriptionId} ${notesId}` : descriptionId}
             aria-hidden={activeView() !== 'chart' || Boolean(error())}
           />
           <Show when={isLoading() && activeView() === 'chart'}>
@@ -814,6 +941,32 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
             </div>
           </Show>
         </div>
+
+        {/* Missing values (v6.24.0): how THIS chart type shows them, and which
+            series have no data at all. Linked from the canvas, so a screen
+            reader hears the convention with the chart. */}
+        <Show when={notesShown()}>
+          <div
+            data-mcp-chart-notes=""
+            id={notesId}
+            class="mt-2 space-y-0.5 text-xs text-gray-600 dark:text-gray-400"
+          >
+            <Show when={conventionNoteShown()}>
+              <p data-mcp-chart-note={noteKind()}>
+                {noteKind() === 'bars'
+                  ? strings.chartMissingBars
+                  : noteKind() === 'omitted'
+                    ? strings.chartMissingPoints
+                    : strings.chartMissingGaps}
+              </p>
+            </Show>
+            <Show when={missingSummary().fullyMissing.some(Boolean)}>
+              <p data-mcp-chart-note="no-data">
+                {formatMCPUIString(strings.chartSeriesNoData, { series: noDataSeries() })}
+              </p>
+            </Show>
+          </div>
+        </Show>
           </div>
         )}
       />

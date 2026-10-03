@@ -604,13 +604,20 @@ export const ChartTypeSchema = z.enum([
 
 export const ChartDatasetSchema = z.object({
   label: z.string(),
-  // Either an array of numbers or an array of {x, y} points (Chart.js shapes)
+  // Either an array of numbers or an array of {x, y} points (Chart.js shapes).
+  //
+  // `null` is an EXPLICIT missing value (v5.7.0): the value exists in the
+  // series' grid but was not observed. Renderers keep its slot — the label
+  // stays on the axis, a line breaks there, nothing is drawn as zero. Send
+  // `null` rather than `0`, and rather than dropping the label, whenever a
+  // value is absent; a series with no value at all is all `null`.
   data: z.union([
-    z.array(z.number()),
+    z.array(z.number().nullable()),
     z.array(
       z.object({
         x: z.union([z.string(), z.number()]),
-        y: z.number(),
+        /** `null` — missing value at `x` (v5.7.0). */
+        y: z.number().nullable(),
         /** Bubble radius. Omit for scatter and time-series points. */
         r: z.number().finite().nonnegative().optional(),
       })
@@ -653,6 +660,12 @@ export const ChartComponentParamsSchema = z.object({
   timeAxis: ChartTimeAxisSchema.optional(),
   height: z.string().optional(),
   className: z.string().optional(),
+  /**
+   * Unit of every value in the chart (`'mm'`, `'km/h'`, `'°C'`), shown on the
+   * value axis, in tooltips and in the data-table headers (v5.7.0). One unit
+   * per chart: values with different units belong in separate charts.
+   */
+  unit: z.string().min(1).max(32).optional(),
 });
 
 // Table component (v5.0.1)

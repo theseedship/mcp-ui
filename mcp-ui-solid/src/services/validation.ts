@@ -45,6 +45,8 @@ import type {
 // Runtime-free template helper: `src/validation.ts` (the SSR-safe subpath)
 // re-exports this module, so it must stay free of any solid-js import.
 import { formatMCPUIString } from '../utils/format-string';
+// Runtime-free as well (v6.24.0): the missing-value rules shared with the renderers.
+import { PART_TO_WHOLE_CHART_TYPES } from '../utils/missing-value';
 
 /**
  * All known ComponentType values — used to distinguish known-but-unvalidated
@@ -477,36 +479,69 @@ export function validateChartComponent(
     }
   }
 
-  // Data type validation — numbers for categorical, {x,y} objects for point charts
+  // Data type validation — numbers for categorical, {x,y} objects for point charts.
+  //
+  // `null` is an explicit missing value (v6.24.0): a number slot, or a point's
+  // `y`, that exists but was not observed. Line, bar, radar, scatter and bubble
+  // charts keep its slot and mark it. Pie, doughnut and polar-area charts
+  // cannot: Chart.js parses a null share as `0`, so the other shares and the
+  // wedge itself would all be drawn wrong — those types refuse it.
+  const missingUnsupported = PART_TO_WHOLE_CHART_TYPES.has(chartType);
   for (const [index, dataset] of params.data.datasets.entries()) {
     if (!Array.isArray(dataset.data)) continue;
     const datasetIsPointChart = chartType === 'scatter' || chartType === 'bubble' || usesPoints(dataset.data);
     for (const [dataIndex, value] of dataset.data.entries()) {
+      const path = `params.data.datasets[${index}].data[${dataIndex}]`;
       if (datasetIsPointChart) {
         const vObj = value as any;
         if (
           typeof value !== 'object' ||
           value === null ||
           vObj.x == null ||
-          typeof vObj.y !== 'number' ||
+          (vObj.y !== null && typeof vObj.y !== 'number') ||
           (vObj.r !== undefined && (typeof vObj.r !== 'number' || !Number.isFinite(vObj.r) || vObj.r < 0))
         ) {
           errors.push({
-            path: `params.data.datasets[${index}].data[${dataIndex}]`,
-            message: `Invalid point data: expected {x, y} object`,
+            path,
+            message: `Invalid point data: expected {x, y} object (y may be null for a missing value)`,
             code: 'INVALID_POINT_DATA',
           });
-        }
-      } else {
-        if (typeof value !== 'number' || !Number.isFinite(value)) {
+        } else if (missingUnsupported && vObj.y === null) {
           errors.push({
-            path: `params.data.datasets[${index}].data[${dataIndex}]`,
-            message: `Invalid data value: ${value} (must be finite number)`,
-            code: 'INVALID_DATA_TYPE',
+            path,
+            message: `Missing value (null) is not supported by '${chartType}' charts, which would draw it as a zero share — use a bar or line chart, or a table`,
+            code: 'MISSING_VALUE_UNSUPPORTED',
           });
         }
+      } else if (value === null) {
+        if (missingUnsupported) {
+          errors.push({
+            path,
+            message: `Missing value (null) is not supported by '${chartType}' charts, which would draw it as a zero share — use a bar or line chart, or a table`,
+            code: 'MISSING_VALUE_UNSUPPORTED',
+          });
+        }
+      } else if (typeof value !== 'number' || !Number.isFinite(value)) {
+        errors.push({
+          path,
+          message: `Invalid data value: ${value} (must be a finite number, or null for a missing value)`,
+          code: 'INVALID_DATA_TYPE',
+        });
       }
     }
+  }
+
+  // `unit` (v6.24.0) ends up in the value-axis title, in every tooltip and in
+  // the data-view headers: a short string, or nothing. An empty string is
+  // tolerated — the renderer treats it as "no unit" — so a producer that
+  // emits `unit: ''` does not lose its whole chart over it.
+  const unit = (params as { unit?: unknown }).unit;
+  if (unit !== undefined && (typeof unit !== 'string' || unit.length > 32)) {
+    errors.push({
+      path: 'params.unit',
+      message: 'Invalid unit: expected a string of at most 32 characters',
+      code: 'INVALID_UNIT',
+    });
   }
 
   return {

@@ -81,7 +81,13 @@ export interface ChartComponentParams {
     labels: string[]
     datasets: Array<{
       label: string
-      data: number[] | Array<{ x: string | number; y: number; r?: number }>
+      /**
+       * `null` is an explicit missing value (v6.24.0): its label keeps its
+       * slot, a line breaks there, a bar shows a dashed outline — never a
+       * zero. Pie, doughnut and polar-area charts reject it, since they
+       * would draw it as a zero share.
+       */
+      data: Array<number | null> | Array<{ x: string | number; y: number | null; r?: number }>
       backgroundColor?: string | string[]
       borderColor?: string | string[]
       borderWidth?: number
@@ -135,6 +141,12 @@ export interface ChartComponentParams {
    * Custom CSS class (Sprint 7)
    */
   className?: string
+  /**
+   * Unit of every value in the chart (`'mm'`, `'km/h'`), shown as the value
+   * axis title (unless `options.scales` already sets one), after each tooltip
+   * value, and in the data-view column headers (v6.24.0). One unit per chart.
+   */
+  unit?: string
 }
 
 /**
