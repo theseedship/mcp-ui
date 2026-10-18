@@ -7,6 +7,8 @@ import { PortalDropdownMenu } from 'theme-source/components/PortalDropdownMenu'
 import { ScratchpadPanel } from 'theme-source/components/ScratchpadPanel'
 import { AutocompleteDropdown } from 'theme-source/components/AutocompleteDropdown'
 import { FormFieldRenderer } from 'theme-source/components/FormFieldRenderer'
+import { AutocompleteFormField } from 'theme-source/components/AutocompleteFormField'
+import { AutocompleteProvider } from 'theme-source/context/AutocompleteContext'
 import './fixture.css'
 
 function Fixture() {
@@ -22,6 +24,14 @@ function Fixture() {
     <button id="menu-trigger" ref={anchor} onClick={() => setMenu(!menu())}>Toggle menu</button>
     <PortalDropdownMenu open={menu()} onClose={() => setMenu(false)} trigger={anchor}><button id="menu-item">Menu item</button></PortalDropdownMenu>
     <section id="autocomplete" style={{position:'relative',height:'200px'}}><AutocompleteDropdown isOpen options={[{value:'a',label:'Alpha',description:'First'},{value:'b',label:'Beta'}]} selectedIndex={0} onSelect={() => {}} highlightMatch="Al" /></section>
+    <section id="text-controls">
+      <FormFieldRenderer field={{name:'theme-notes',label:'Notes',type:'textarea'}} value="" onChange={() => {}} />
+      <FormFieldRenderer field={{name:'theme-muted',label:'Muted title',type:'text',muted:true}} value="Suggested title" onChange={() => {}} />
+      <AutocompleteFormField field={{name:'theme-basic',label:'Basic completion',type:'text'}} value="" onChange={() => {}} />
+      <AutocompleteProvider plugins={[]}>
+        <AutocompleteFormField field={{name:'theme-completion',label:'Active completion',type:'text',autocomplete:{enabled:true}}} value="" onChange={() => {}} />
+      </AutocompleteProvider>
+    </section>
   </main>
 }
 render(() => <Fixture />, document.getElementById('app')!)

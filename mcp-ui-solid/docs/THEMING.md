@@ -23,6 +23,9 @@ the original per-component shades, dark variants and alpha paints; there is
 deliberately no single replacement palette that collapses those distinctions.
 Removing a token restores that original fallback. A custom color replaces the
 whole paint, including opacity, rather than applying the old opacity to it.
+Host tokens apply without a `.dark` class too; that class only selects the
+original dark fallbacks. Normal form text falls back to its inherited color
+when `--mcp-ui-fg` is absent, while muted fields keep their secondary role.
 
 ## Tokens
 
@@ -143,6 +146,10 @@ renderer identity and layout/zoom. Explicit dataset, scale, element, tooltip,
 node and edge styles keep precedence. Chart payload objects are shallow-cloned
 before the engine adds its generated colors, allowing one payload in multiple
 independently themed instances.
+Point paint overrides are separate from the line/radar stroke: an explicit
+point outline does not block a host series color on the line itself. Live
+updates also refresh Chart.js's shared point/bar paints without replacing
+their shared option objects or changing non-color settings.
 
 Chart.js tooltips use `surface`, `fg` and `border`; G6 tooltip content reads
 those current tokens when shown. An omitted series token leaves its original

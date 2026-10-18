@@ -21,6 +21,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Frozen 6.24.0 Chromium computed-style comparisons, host/portal regressions,
   static Tailwind class checks and theming documentation with coverage limits.
 
+### Fixed
+
+- Form input and autocomplete text respects the host foreground without a
+  `.dark` class, preserving inherited default colors and muted field states.
+- Explicit point paints no longer block themed line/radar strokes. Live
+  Chart.js theme updates also refresh resolved shared point/bar colors without
+  replacing their options or changing caller-provided non-color settings.
+
 ## [6.24.0] - 2026-10-03
 
 Explicit missing values in charts and tables, and a unit per chart — lot 1 of

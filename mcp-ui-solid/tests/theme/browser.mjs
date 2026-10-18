@@ -180,9 +180,25 @@ try {
       const surface='rgb(23, 37, 53)', fg='rgb(203, 217, 229)', border='rgb(107, 127, 149)', accent='rgb(169, 83, 137)'
       const muted='rgb(151, 167, 181)', controlBorder='rgb(137, 103, 83)', focus='rgb(193, 151, 53)', hover='rgb(43, 59, 71)', shadow='rgb(7, 9, 11) 2px 3px 4px 1px'
       await page.evaluate(({surface,fg,border,accent,muted,controlBorder,focus,hover,shadow})=>{
+        document.documentElement.classList.remove('dark')
         const host=document.querySelector('#theme-host')
+        host.classList.remove('dark')
         for(const [name,value] of Object.entries({surface,fg,border,accent,shadow,focus,'fg-muted':muted,'fg-subtle':muted,'border-control':controlBorder,'surface-hover':hover,'surface-muted':surface,'accent-soft':surface,'accent-fg':fg})) host.style.setProperty(`--mcp-ui-${name}`,value)
       },{surface,fg,border,accent,muted,controlBorder,focus,hover,shadow})
+      for(const selector of ['#field-required-title','#field-theme-notes','#field-theme-basic','#field-theme-completion']) {
+        const control=page.locator(selector)
+        await control.fill('Typed host-themed text')
+        assert.equal(await control.evaluate(element=>getComputedStyle(element).color),fg,`${selector} ignores host foreground without a dark class`)
+        await control.fill('')
+        await control.blur()
+      }
+      assert.equal(await page.locator('#field-theme-completion').getAttribute('aria-autocomplete'),'list','Autocomplete-enabled branch was not exercised')
+      const mutedInput=page.locator('#field-theme-muted')
+      assert.equal(await mutedInput.evaluate(element=>getComputedStyle(element).color),muted,'Normal input foreground overrode the muted state')
+      await mutedInput.focus()
+      assert.equal(await mutedInput.evaluate(element=>getComputedStyle(element).color),fg,'Focused muted input did not restore host foreground')
+      await mutedInput.blur()
+      console.log('PASS: typed text and both autocomplete branches follow host foreground without .dark; muted state is retained')
       const inline=await snapshot()
       assert.equal(inline.prompt.backgroundColor,surface,'Ancestor surface token is ignored by prompt')
       assert.equal(inline.prompt.borderTopColor,border,'Ancestor border token is ignored by prompt')

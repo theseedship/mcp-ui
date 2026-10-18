@@ -67,6 +67,7 @@ function createChartTheme(
   let tokens = readThemeTokens(root, CHART_THEME_TOKENS);
   const originalDatasets = params.data.datasets.map((dataset) => ({ ...dataset }));
   let engineColors: Array<{ backgroundColor: any; borderColor: any }> | undefined;
+  const sharedPaintOptions = new WeakMap<object, any>();
   const paths: Array<{ path: string[]; token: string }> = [
     { path: ['plugins', 'legend', 'labels', 'color'], token: '--mcp-ui-chart-label' },
     { path: ['plugins', 'tooltip', 'backgroundColor'], token: '--mcp-ui-surface' },
@@ -158,8 +159,9 @@ function createChartTheme(
         if (!original || !baseline) return;
         const datasetType = (original as any).type ?? params.type;
         const perPoint = ['pie', 'doughnut', 'polarArea'].includes(datasetType);
+        const lineWithPoints = datasetType === 'line' || datasetType === 'radar';
         const elementKinds = datasetType === 'bar' ? ['bar'] : perPoint ? ['arc'] :
-          datasetType === 'line' || datasetType === 'radar' ? ['line', 'point'] : ['point'];
+          lineWithPoints ? ['line'] : ['point'];
         const hasSeriesToken = perPoint
           ? dataset.data.some((_: unknown, i: number) => tokens[`--mcp-ui-chart-${((pointOffset + i) % 8) + 1}`])
           : Boolean(tokens[`--mcp-ui-chart-${(index % 8) + 1}`]);
@@ -180,6 +182,20 @@ function createChartTheme(
           // nor may options for an unrelated chart/element type mask this one.
           if (callerOptions?.[field] !== undefined ||
             elementKinds.some((kind) => callerOptions?.elements?.[kind]?.[field] !== undefined)) continue;
+          if (lineWithPoints && hasSeriesToken) {
+            // Dataset paints also feed point defaults. Preserve an explicit
+            // point paint under its native prefix before theming the line;
+            // otherwise the generic themed field would outrank elements.point.
+            const pointField = field === 'borderColor' ? 'pointBorderColor' : 'pointBackgroundColor';
+            const scopedPointPaint = callerOptions?.datasets?.[datasetType]?.elements?.point?.[field];
+            const pointPaint = scopedPointPaint !== undefined ? scopedPointPaint :
+              callerOptions?.elements?.point?.[field];
+            if ((original as any)[pointField] === undefined &&
+              callerOptions?.datasets?.[datasetType]?.[pointField] === undefined &&
+              callerOptions?.[pointField] === undefined && pointPaint !== undefined) {
+              dataset[pointField] = pointPaint;
+            }
+          }
           // Pie-like charts have no automatic per-point border palette.
           if (perPoint && field === 'borderColor') continue;
           if (perPoint) {
@@ -203,25 +219,36 @@ function createChartTheme(
         if (perPoint) pointOffset += dataset.data.length;
       });
     },
+    afterDatasetUpdate(_chart: any, args: any) {
+      const meta = args.meta;
+      if (!meta?.data?.length || typeof meta.controller?.getStyle !== 'function') return;
+      const index = meta.data.findIndex((element: any) => element.options?.$shared && !element.active);
+      if (index >= 0 && !Object.isFrozen(meta.data[index].options)) {
+        sharedPaintOptions.set(meta.controller, meta.data[index].options);
+      }
+      if (args.mode !== 'none') return;
+      // Chart.js deliberately skips updateSharedOptions in direct ('none')
+      // mode. Refresh only its shared paint values from the public resolver;
+      // retain the object captured before hover, even when every element is
+      // active now, so later deactivation cannot revive an old theme paint.
+      const shared = sharedPaintOptions.get(meta.controller);
+      if (!shared) return;
+      const resolved = meta.controller.getStyle(index >= 0 ? index : 0, false);
+      if (!resolved.$shared) return;
+      shared.backgroundColor = resolved.backgroundColor;
+      shared.borderColor = resolved.borderColor;
+    },
   };
-  let installed = false;
-  const install = (chart?: any) => {
-    if (installed || !CHART_THEME_TOKENS.some((name) => tokens[name])) return;
-    installed = true;
-    const source = chart?.data ?? chartConfig.data;
-    const data = { ...source, datasets: source.datasets.map((dataset: any) => ({ ...dataset })) };
-    if (chart) chart.data = data;
-    else chartConfig.data = data;
-    chartConfig.plugins = [...(chartConfig.plugins ?? []), plugin];
-  };
-  install();
+  // Bookkeeping must start before the first hover, even without host tokens.
+  // Without that capture a theme first enabled while all points are active
+  // cannot reach the native shared options using public APIs alone.
+  chartConfig.plugins = [...(chartConfig.plugins ?? []), plugin];
   return {
     applyOptions,
     refresh(chart: any) {
       const next = readThemeTokens(root, CHART_THEME_TOKENS);
       if (CHART_THEME_TOKENS.every((name) => next[name] === tokens[name])) return;
       tokens = next;
-      install(chart);
       addScalePaths(Object.keys(chart.scales ?? chart.config.options.scales ?? {}));
       applyOptions(chart.config.options);
       chart.update('none');

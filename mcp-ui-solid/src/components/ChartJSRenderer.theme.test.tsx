@@ -92,7 +92,8 @@ describe('ChartJSRenderer scoped canvas theme', () => {
     expect(chart.config.data).not.toBe((value.params as any).data);
     expect(chart.config.data.datasets[0]).not.toBe((value.params as any).data.datasets[0]);
     expect((value.params as any).data.datasets[0].backgroundColor).toBeUndefined();
-    expect(chart.config.plugins).toBeUndefined();
+    expect(chart.config.plugins.map((plugin: any) => plugin.id)).toEqual(['mcp-ui-theme']);
+    expect(chart.update).not.toHaveBeenCalled();
   });
 
   it('reads scoped tokens at mount and updates the same instance, restoring engine colors on removal', async () => {
@@ -205,7 +206,8 @@ describe('ChartJSRenderer scoped canvas theme', () => {
     ));
     await waitFor(() => expect(harness.instances).toHaveLength(1));
     const chart = harness.instances[0];
-    expect(chart.config.plugins).toBeUndefined();
+    expect(chart.config.plugins.map((plugin: any) => plugin.id)).toEqual(['mcp-ui-theme']);
+    expect(chart.update).not.toHaveBeenCalled();
     const scope = container.firstElementChild as HTMLElement;
     scope.style.setProperty('--mcp-ui-chart-1', '#333333');
     await waitFor(() => expect(chart.data.datasets[0].backgroundColor).toBe('#333333'));

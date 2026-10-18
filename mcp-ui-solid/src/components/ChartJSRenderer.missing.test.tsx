@@ -95,11 +95,11 @@ describe('<ChartJSRenderer> missing values and unit', () => {
       render(() => <ChartJSRenderer component={component} />);
       const config = await lastConfig();
 
-      expect(Object.keys(config).sort()).toEqual(['data', 'options', 'type']);
+      expect(Object.keys(config).sort()).toEqual(['data', 'options', 'plugins', 'type']);
       expect(config.type).toBe('bar');
       expect(config.data).toEqual(params.data);
       expect(config.data).not.toBe(params.data);
-      expect(config).not.toHaveProperty('plugins');
+      expect(config.plugins.map((plugin: any) => plugin.id)).toEqual(['mcp-ui-theme']);
       expect(config.options).toEqual({
         responsive: true,
         maintainAspectRatio: false,
@@ -175,7 +175,7 @@ describe('<ChartJSRenderer> missing values and unit', () => {
     it('installs a per-chart plugin only when something is missing, and never registers it', async () => {
       render(() => <ChartJSRenderer component={chartComponent()} />);
       const config = await lastConfig();
-      expect(config.plugins).toHaveLength(1);
+      expect(config.plugins.map((plugin: any) => plugin.id)).toEqual(['mcpuiMissingValues', 'mcp-ui-theme']);
       expect(config.plugins[0].id).toBe('mcpuiMissingValues');
       expect(typeof config.plugins[0].afterDatasetsDraw).toBe('function');
       expect(chartHarness.Chart.register).not.toHaveBeenCalled();
@@ -206,8 +206,8 @@ describe('<ChartJSRenderer> missing values and unit', () => {
         // The chart keeps payload values unchanged; its dataset copy isolates
         // the host from Chart.js's automatic color mutation.
         expect(config.type).toBe(type);
-        expect(Object.keys(config).sort()).toEqual(['data', 'options', 'type']);
-        expect(config).not.toHaveProperty('plugins');
+        expect(Object.keys(config).sort()).toEqual(['data', 'options', 'plugins', 'type']);
+        expect(config.plugins.map((plugin: any) => plugin.id)).toEqual(['mcp-ui-theme']);
         expect(config.data).toEqual(params.data);
         expect(config.data.datasets[0]).not.toHaveProperty('spanGaps');
         expect(config.options).toEqual({
@@ -239,7 +239,7 @@ describe('<ChartJSRenderer> missing values and unit', () => {
       });
       const { container } = render(() => <ChartJSRenderer component={component} />);
       const config = await lastConfig();
-      expect(config.plugins).toHaveLength(1);
+      expect(config.plugins.map((plugin: any) => plugin.id)).toEqual(['mcpuiMissingValues', 'mcp-ui-theme']);
       expect(container.querySelector('[data-mcp-chart-note="no-data"]')?.textContent).toBe('No data for Cost.');
     });
   });
@@ -379,7 +379,7 @@ describe('<ChartJSRenderer> missing values and unit', () => {
       render(() => <ChartJSRenderer component={component} />);
       const config = await lastConfig();
       expect(config.options.plugins.tooltip.callbacks.label).toBeTypeOf('function');
-      expect(config).not.toHaveProperty('plugins');
+      expect(config.plugins.map((plugin: any) => plugin.id)).toEqual(['mcp-ui-theme']);
       expect(config.data).toEqual((component.params as any).data);
     });
 

@@ -136,6 +136,7 @@ export const AutocompleteFormField: Component<AutocompleteFormFieldProps> = (pro
   // Base input class
   const baseInputClass = () => `
     w-full px-3 py-2 border rounded-md
+    text-[color:var(--mcp-ui-fg,inherit)]
     focus:ring-2 focus:ring-[color:var(--mcp-ui-focus,var(--color-blue-500))] focus:border-[color:var(--mcp-ui-focus,var(--color-blue-500))]
     disabled:bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-100,#f3f4f6))] disabled:cursor-not-allowed
     ${props.error

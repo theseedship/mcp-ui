@@ -2,7 +2,7 @@
 
 This fixture mounts the real `ChatPrompt`, table `UIResourceRenderer`,
 `ExpandableWrapper`, `PortalDropdownMenu`, `ScratchpadPanel`, and
-`AutocompleteDropdown`. It includes a required-field form, native selects,
+`AutocompleteDropdown` and `AutocompleteFormField`. It includes a required-field form, native selects,
 an explicit validation error, a disabled submit control, and an open
 scratchpad options filter. It checks actual Chromium `getComputedStyle` values,
 not jsdom's incomplete CSS implementation. Tailwind v4 and the package's plain
@@ -40,7 +40,9 @@ components and both portal surfaces, a live token change while the menu
 remains open, source-local dark mode, removal of inherited tokens while
 portals stay open, canonical muted/control-border/focus/hover tokens,
 full shadows, and restoration of the same expanded content without
-duplication. Its colors are arbitrary test
+duplication. Typed input/textarea text and both autocomplete field branches
+are checked with host tokens and no `.dark` class, including muted input
+precedence and its focus transition. Its colors are arbitrary test
 values, not a recommended theme palette. Omit the flag to replay only the
 frozen default-style baseline. `MCP_THEME_RESULT_PATH` optionally writes the
 current computed-style samples for investigating differences.
