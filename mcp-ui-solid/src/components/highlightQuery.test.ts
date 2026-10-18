@@ -9,7 +9,7 @@
 import { describe, it, expect } from 'vitest'
 import { highlightQuery } from './UIResourceRenderer'
 
-const MARK_OPEN = '<mark class="bg-yellow-200 dark:bg-[#222F49] text-inherit rounded px-0.5">'
+const MARK_OPEN = '<mark class="bg-[color:var(--mcp-ui-highlight,var(--color-yellow-200))] dark:bg-[color:var(--mcp-ui-highlight,#222F49)] text-inherit rounded px-0.5">'
 
 describe('highlightQuery — no-op cases', () => {
   it('returns the html unchanged for an empty query', () => {

@@ -269,6 +269,13 @@ describe('drawMissingBarStubs on stacked bars', () => {
 });
 
 describe('drawNoDataText', () => {
+  it('uses an optional text color without changing its default fallback', () => {
+    const { ctx } = fakeCtx();
+    drawNoDataText({ ctx, chartArea: AREA }, 'No data', undefined, '#123456');
+    expect(ctx.fillStyle).toBe('#123456');
+    drawNoDataText({ ctx, chartArea: AREA }, 'No data');
+    expect(ctx.fillStyle).toBe(NO_DATA_TEXT_COLOR);
+  });
   it('centres the text in the chart area, in 12px grey', () => {
     const { ctx, calls } = fakeCtx();
     drawNoDataText({ ctx, chartArea: AREA }, 'No chart data', 'Inter');
@@ -293,6 +300,20 @@ describe('drawNoDataText', () => {
 });
 
 describe('createMissingValuesPlugin', () => {
+  it('reads a changing text-color getter on each draw and restores the default when absent', () => {
+    let color: string | undefined = '#123456';
+    const plugin = createMissingValuesPlugin({ allMissing: true, getNoDataText: () => 'No data', getTextColor: () => color });
+    const { ctx } = fakeCtx();
+    const chart = fakeChart(ctx, [], []);
+    plugin.afterDatasetsDraw(chart);
+    expect(ctx.fillStyle).toBe('#123456');
+    color = '#abcdef';
+    plugin.afterDatasetsDraw(chart);
+    expect(ctx.fillStyle).toBe('#abcdef');
+    color = undefined;
+    plugin.afterDatasetsDraw(chart);
+    expect(ctx.fillStyle).toBe(NO_DATA_TEXT_COLOR);
+  });
   it('draws the stubs, and the no-data text only when every series is missing', () => {
     const lazy = vi.fn(() => 'nothing');
     const make = (allMissing: boolean) =>

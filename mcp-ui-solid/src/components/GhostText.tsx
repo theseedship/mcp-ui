@@ -58,7 +58,7 @@ export const GhostText: Component<GhostTextProps> = (props) => {
 
   return (
     <div
-      class={`mcp-ghost-text-container ${props.class || ''}`}
+      class={`mcp-ui-root mcp-ghost-text-container ${props.class || ''}`}
       style={{
         position: 'relative',
         display: 'inline-block',
@@ -91,7 +91,7 @@ export const GhostText: Component<GhostTextProps> = (props) => {
           <span
             class={`mcp-ghost-text ${props.ghostClass || ''}`}
             style={{
-              color: '#9ca3af',
+              color: 'var(--mcp-ui-fg-subtle, #9ca3af)',
               opacity: '0.7'
             }}
           >
@@ -110,8 +110,8 @@ export const GhostText: Component<GhostTextProps> = (props) => {
             top: '50%',
             transform: 'translateY(-50%)',
             'font-size': '0.75rem',
-            color: '#6b7280',
-            'background-color': 'rgba(255, 255, 255, 0.9)',
+            color: 'var(--mcp-ui-fg-muted, #6b7280)',
+            'background-color': 'var(--mcp-ui-surface, rgba(255, 255, 255, 0.9))',
             padding: '2px 6px',
             'border-radius': '4px',
             'pointer-events': 'none'
@@ -137,8 +137,8 @@ export const GhostText: Component<GhostTextProps> = (props) => {
               display: 'inline-block',
               width: '12px',
               height: '12px',
-              border: '2px solid #e5e7eb',
-              'border-top-color': '#3b82f6',
+              border: '2px solid var(--mcp-ui-border, #e5e7eb)',
+              'border-top-color': 'var(--mcp-ui-accent, #3b82f6)',
               'border-radius': '50%',
               animation: 'mcp-spin 0.6s linear infinite'
             }}
@@ -230,7 +230,7 @@ export interface GhostTextInputProps {
  */
 export const GhostTextInput: Component<GhostTextInputProps> = (props) => {
   return (
-    <div class="mcp-ghost-text-input-wrapper" style={{ position: 'relative' }}>
+    <div class="mcp-ui-root mcp-ghost-text-input-wrapper" style={{ position: 'relative' }}>
       <GhostText
         inputValue={props.value}
         ghostText={props.ghostText}

@@ -92,7 +92,7 @@ describe('UIResourceRenderer math integration', () => {
     expect(link?.getAttribute('href')).toBe('https://example.test/docs')
     expect(link?.getAttribute('target')).toBe('_blank')
     expect(link?.getAttribute('rel')).toBe('noopener noreferrer')
-    expect(link?.className).toBe('text-blue-600 dark:text-blue-400 hover:underline')
+    expect(link?.className).toBe('text-[color:var(--mcp-ui-accent,var(--color-blue-600))] dark:text-[color:var(--mcp-ui-accent,var(--color-blue-400))] hover:underline')
     expect(container.querySelector('[data-citation-page="7"]')).not.toBeNull()
   })
 

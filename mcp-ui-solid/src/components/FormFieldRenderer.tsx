@@ -64,14 +64,14 @@ export const FormFieldRenderer: Component<FormFieldRendererProps> = (props) => {
 
   const baseInputClass = () => `
     w-full px-3 py-2 border rounded-md
-    focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-    disabled:bg-gray-100 disabled:cursor-not-allowed
+    focus:ring-2 focus:ring-[color:var(--mcp-ui-focus,var(--color-blue-500))] focus:border-[color:var(--mcp-ui-focus,var(--color-blue-500))]
+    disabled:bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-100,#f3f4f6))] disabled:cursor-not-allowed
     ${props.error
-      ? 'border-red-500 focus:ring-red-500'
-      : 'border-gray-300 dark:border-gray-600'}
-    dark:bg-gray-700 dark:text-white
+      ? 'border-[color:var(--mcp-ui-danger-border,var(--color-red-500))] focus:ring-[color:var(--mcp-ui-focus,var(--color-red-500))]'
+      : 'border-[color:var(--mcp-ui-border-control,var(--color-gray-300,#d1d5db))] dark:border-[color:var(--mcp-ui-border-control,var(--color-gray-600,#4b5563))]'}
+    dark:bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-700,#374151))] dark:text-[color:var(--mcp-ui-fg,var(--color-white,#fff))]
     ${isUnsupported() ? 'opacity-50' : ''}
-    ${isMuted() ? 'bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400' : ''}
+    ${isMuted() ? 'bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-50,#f9fafb))] dark:bg-[color:var(--mcp-ui-surface-muted,color-mix(in_oklab,var(--color-gray-700,#374151)_50%,transparent))] text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]' : ''}
   `
 
   const fieldId = () => `field-${props.field.name}`
@@ -83,20 +83,20 @@ export const FormFieldRenderer: Component<FormFieldRendererProps> = (props) => {
       <Show when={props.field.label && props.field.type !== 'checkbox'}>
         <label
           for={fieldId()}
-          class={`block text-sm font-medium ${isUnsupported() ? 'text-gray-400 dark:text-gray-500' : isMuted() ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300'}`}
+          class={`block text-sm font-medium ${isUnsupported() ? 'text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))] dark:text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))]' : isMuted() ? 'text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))] dark:text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))]' : 'text-[color:var(--mcp-ui-fg,var(--color-gray-700,#374151))] dark:text-[color:var(--mcp-ui-fg,var(--color-gray-300,#d1d5db))]'}`}
         >
           <Show when={sourceBadge()}>
             <span class="mr-1" title={strings[sourceBadge()!.titleKey]}>{sourceBadge()!.icon}</span>
           </Show>
           {props.field.label}
           <Show when={props.field.required || status() === 'required'}>
-            <span class="text-red-500 ml-1" aria-hidden="true">*</span>
+            <span class="text-[color:var(--mcp-ui-danger,var(--color-red-500))] ml-1" aria-hidden="true">*</span>
           </Show>
           <Show when={isUnsupported()}>
-            <span class="ml-2 text-[10px] font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 px-1.5 py-0.5 rounded">{strings.fieldNotSupported}</span>
+            <span class="ml-2 text-[10px] font-medium bg-[color:var(--mcp-ui-warning-soft,var(--color-orange-100))] dark:bg-[color:var(--mcp-ui-warning-soft,color-mix(in_oklab,var(--color-orange-900)_30%,transparent))] text-[color:var(--mcp-ui-warning,var(--color-orange-600))] dark:text-[color:var(--mcp-ui-warning,var(--color-orange-400))] px-1.5 py-0.5 rounded">{strings.fieldNotSupported}</span>
           </Show>
           <Show when={status() === 'unknown'}>
-            <span class="ml-2 text-[10px] font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 px-1.5 py-0.5 rounded">?</span>
+            <span class="ml-2 text-[10px] font-medium bg-[color:var(--mcp-ui-warning-soft,var(--color-yellow-100))] dark:bg-[color:var(--mcp-ui-warning-soft,color-mix(in_oklab,var(--color-yellow-900)_30%,transparent))] text-[color:var(--mcp-ui-warning,var(--color-yellow-600))] dark:text-[color:var(--mcp-ui-warning,var(--color-yellow-400))] px-1.5 py-0.5 rounded">?</span>
           </Show>
         </label>
       </Show>
@@ -217,12 +217,12 @@ export const FormFieldRenderer: Component<FormFieldRendererProps> = (props) => {
               disabled={props.disabled}
               aria-invalid={!!props.error}
               aria-describedby={props.error ? errorId() : undefined}
-              class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
+              class="w-4 h-4 rounded border-[color:var(--mcp-ui-border-control,var(--color-gray-300,#d1d5db))] text-[color:var(--mcp-ui-accent,var(--color-blue-600))] focus:ring-[color:var(--mcp-ui-focus,var(--color-blue-500))] dark:border-[color:var(--mcp-ui-border-control,var(--color-gray-600,#4b5563))] dark:bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-700,#374151))]"
             />
-            <span class="text-sm text-gray-700 dark:text-gray-300">
+            <span class="text-sm text-[color:var(--mcp-ui-fg,var(--color-gray-700,#374151))] dark:text-[color:var(--mcp-ui-fg,var(--color-gray-300,#d1d5db))]">
               {props.field.checkboxLabel || props.field.label}
               <Show when={props.field.required}>
-                <span class="text-red-500 ml-1" aria-hidden="true">*</span>
+                <span class="text-[color:var(--mcp-ui-danger,var(--color-red-500))] ml-1" aria-hidden="true">*</span>
               </Show>
             </span>
           </label>
@@ -270,9 +270,9 @@ export const FormFieldRenderer: Component<FormFieldRendererProps> = (props) => {
                     checked={props.value === option.value}
                     onChange={() => props.onChange(option.value)}
                     disabled={props.disabled || option.disabled}
-                    class="w-4 h-4 border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600"
+                    class="w-4 h-4 border-[color:var(--mcp-ui-border-control,var(--color-gray-300,#d1d5db))] text-[color:var(--mcp-ui-accent,var(--color-blue-600))] focus:ring-[color:var(--mcp-ui-focus,var(--color-blue-500))] dark:border-[color:var(--mcp-ui-border-control,var(--color-gray-600,#4b5563))]"
                   />
-                  <span class="text-sm text-gray-700 dark:text-gray-300">
+                  <span class="text-sm text-[color:var(--mcp-ui-fg,var(--color-gray-700,#374151))] dark:text-[color:var(--mcp-ui-fg,var(--color-gray-300,#d1d5db))]">
                     {option.label}
                   </span>
                 </label>
@@ -294,9 +294,9 @@ export const FormFieldRenderer: Component<FormFieldRendererProps> = (props) => {
               max={props.field.max}
               step={props.field.step || 1}
               disabled={isFieldDisabled()}
-              class="flex-1 h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer accent-blue-600"
+              class="flex-1 h-2 bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-200,#e5e7eb))] dark:bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-600,#4b5563))] rounded-lg appearance-none cursor-pointer accent-[color:var(--mcp-ui-accent,var(--color-blue-600))]"
             />
-            <span class="text-sm font-mono text-gray-700 dark:text-gray-300 min-w-[3rem] text-right">{props.value ?? props.field.min ?? 0}</span>
+            <span class="text-sm font-mono text-[color:var(--mcp-ui-fg,var(--color-gray-700,#374151))] dark:text-[color:var(--mcp-ui-fg,var(--color-gray-300,#d1d5db))] min-w-[3rem] text-right">{props.value ?? props.field.min ?? 0}</span>
           </div>
         </Match>
 
@@ -314,19 +314,19 @@ export const FormFieldRenderer: Component<FormFieldRendererProps> = (props) => {
               aria-checked={!!props.value}
               onClick={() => props.onChange(!props.value)}
               disabled={isFieldDisabled()}
-              class={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${props.value ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'} ${isFieldDisabled() ? 'opacity-50 cursor-not-allowed' : ''}`}
+              class={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${props.value ? 'bg-[color:var(--mcp-ui-accent,var(--color-blue-600))]' : 'bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-300,#d1d5db))] dark:bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-600,#4b5563))]'} ${isFieldDisabled() ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              <span class={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${props.value ? 'translate-x-4' : 'translate-x-0.5'}`} />
+              <span class={`inline-block h-3.5 w-3.5 transform rounded-full bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] transition-transform ${props.value ? 'translate-x-4' : 'translate-x-0.5'}`} />
             </button>
-            <span class="text-sm text-gray-700 dark:text-gray-300">{props.field.checkboxLabel || props.field.label}</span>
+            <span class="text-sm text-[color:var(--mcp-ui-fg,var(--color-gray-700,#374151))] dark:text-[color:var(--mcp-ui-fg,var(--color-gray-300,#d1d5db))]">{props.field.checkboxLabel || props.field.label}</span>
           </label>
         </Match>
 
         {/* Fieldset/Group */}
         <Match when={props.field.type === 'fieldset'}>
-          <fieldset class="border border-gray-200 dark:border-gray-600 rounded-lg p-3">
-            <legend class="text-xs font-medium text-gray-500 dark:text-gray-400 px-1">{props.field.label}</legend>
-            <p class="text-xs text-gray-400">{props.field.helpText || strings.fieldGroupContainer}</p>
+          <fieldset class="border border-[color:var(--mcp-ui-border-control,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border-control,var(--color-gray-600,#4b5563))] rounded-lg p-3">
+            <legend class="text-xs font-medium text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))] px-1">{props.field.label}</legend>
+            <p class="text-xs text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]">{props.field.helpText || strings.fieldGroupContainer}</p>
           </fieldset>
         </Match>
 
@@ -342,7 +342,7 @@ export const FormFieldRenderer: Component<FormFieldRendererProps> = (props) => {
             disabled={props.disabled}
             class={baseInputClass()}
           />
-          <p class="text-xs text-amber-500 mt-0.5">
+          <p class="text-xs text-[color:var(--mcp-ui-warning,var(--color-amber-500))] mt-0.5">
             {formatMCPUIString(strings.fieldUnknownType, { type: props.field.type })}
           </p>
         </Match>
@@ -350,27 +350,27 @@ export const FormFieldRenderer: Component<FormFieldRendererProps> = (props) => {
 
       <Show when={props.field.statusReason}>
         <p class={`text-xs ${
-          isUnsupported() ? 'text-orange-500 dark:text-orange-400'
-          : status() === 'unknown' ? 'text-yellow-500 dark:text-yellow-400'
-          : status() === 'required' ? 'text-blue-500 dark:text-blue-400'
-          : 'text-gray-500 dark:text-gray-400'
+          isUnsupported() ? 'text-[color:var(--mcp-ui-warning,var(--color-orange-500))] dark:text-[color:var(--mcp-ui-warning,var(--color-orange-400))]'
+          : status() === 'unknown' ? 'text-[color:var(--mcp-ui-warning,var(--color-yellow-500))] dark:text-[color:var(--mcp-ui-warning,var(--color-yellow-400))]'
+          : status() === 'required' ? 'text-[color:var(--mcp-ui-accent,var(--color-blue-500))] dark:text-[color:var(--mcp-ui-accent,var(--color-blue-400))]'
+          : 'text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]'
         }`}>
           {props.field.statusReason}
         </p>
       </Show>
 
       <Show when={props.field.displayHint && props.field.prefill != null}>
-        <p class={`text-xs italic ${isMuted() ? 'text-gray-400 dark:text-gray-500' : 'text-gray-500 dark:text-gray-400'}`}>
+        <p class={`text-xs italic ${isMuted() ? 'text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))] dark:text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))]' : 'text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]'}`}>
           {props.field.displayHint}
         </p>
       </Show>
 
       <Show when={props.field.helpText && !props.error && !props.field.statusReason && !props.field.displayHint}>
-        <p class="text-xs text-gray-500 dark:text-gray-400">{props.field.helpText}</p>
+        <p class="text-xs text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]">{props.field.helpText}</p>
       </Show>
 
       <Show when={props.error}>
-        <p id={errorId()} role="alert" class="text-xs text-red-600 dark:text-red-400">
+        <p id={errorId()} role="alert" class="text-xs text-[color:var(--mcp-ui-danger,var(--color-red-600))] dark:text-[color:var(--mcp-ui-danger,var(--color-red-400))]">
           {props.error}
         </p>
       </Show>
@@ -423,12 +423,12 @@ const MultiSelectField: Component<{
         <div class="flex flex-wrap gap-1 mb-1">
           <For each={props.value}>
             {(val) => (
-              <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-[color:var(--mcp-ui-accent-soft,var(--color-blue-100))] dark:bg-[color:var(--mcp-ui-accent-soft,color-mix(in_oklab,var(--color-blue-900)_30%,transparent))] text-[color:var(--mcp-ui-accent,var(--color-blue-700))] dark:text-[color:var(--mcp-ui-accent,var(--color-blue-300))] rounded-full">
                 {getLabel(val)}
                 <button
                   type="button"
                   onClick={() => removeChip(val)}
-                  class="hover:text-blue-900 dark:hover:text-blue-100"
+                  class="hover:text-[color:var(--mcp-ui-accent,var(--color-blue-900))] dark:hover:text-[color:var(--mcp-ui-accent,var(--color-blue-100))]"
                   aria-label={formatMCPUIString(strings.removeItem, { name: getLabel(val) })}
                 >
                   &times;
@@ -446,12 +446,12 @@ const MultiSelectField: Component<{
         disabled={props.disabled}
         class={`${props.baseClass} text-left flex items-center justify-between`}
       >
-        <span class={props.value.length ? 'text-gray-900 dark:text-white' : 'text-gray-400'}>
+        <span class={props.value.length ? 'text-[color:var(--mcp-ui-fg,var(--color-gray-900,#111827))] dark:text-[color:var(--mcp-ui-fg,var(--color-white,#fff))]' : 'text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]'}>
           {props.value.length
             ? formatMCPUIString(strings.fieldSelectedCount, { count: props.value.length })
             : props.field.placeholder || strings.fieldSelectPlaceholder}
         </span>
-        <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg class="w-4 h-4 text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
         </svg>
       </button>
@@ -459,18 +459,18 @@ const MultiSelectField: Component<{
       {/* Dropdown with filter */}
       <Show when={open()}>
         <div
-          class="absolute z-50 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg"
+          class="absolute z-50 mt-1 w-full bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-800,#1f2937))] border border-[color:var(--mcp-ui-border-control,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border-control,var(--color-gray-600,#4b5563))] rounded-md shadow-[var(--mcp-ui-shadow,var(--shadow-lg))]"
           style={{ "max-height": "320px", display: "flex", "flex-direction": "column" }}
         >
           {/* Search filter */}
           <Show when={(props.field.options?.length || 0) > 10}>
-            <div class="p-2 border-b border-gray-200 dark:border-gray-600 flex-shrink-0">
+            <div class="p-2 border-b border-[color:var(--mcp-ui-border-control,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border-control,var(--color-gray-600,#4b5563))] flex-shrink-0">
               <input
                 type="text"
                 value={filter()}
                 onInput={(e) => setFilter(e.currentTarget.value)}
                 placeholder={strings.filterPlaceholder}
-                class="w-full px-2 py-1 text-sm border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:border-blue-400 outline-none"
+                class="w-full px-2 py-1 text-sm border border-[color:var(--mcp-ui-border-control,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border-control,var(--color-gray-600,#4b5563))] rounded bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-700,#374151))] text-[color:var(--mcp-ui-fg,var(--color-gray-900,#111827))] dark:text-[color:var(--mcp-ui-fg,var(--color-white,#fff))] focus:border-[color:var(--mcp-ui-focus,var(--color-blue-400))] outline-none"
                 autofocus
               />
             </div>
@@ -479,19 +479,19 @@ const MultiSelectField: Component<{
           <div style={{ "overflow-y": "auto", "flex": "1", "-webkit-overflow-scrolling": "touch" }}>
             <For each={filteredOptions()}>
               {(option) => (
-                <label class="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-sm">
+                <label class="flex items-center gap-2 px-3 py-2 hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-100,#f3f4f6))] dark:hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-700,#374151))] cursor-pointer text-sm">
                   <input
                     type="checkbox"
                     checked={(props.value || []).includes(option.value)}
                     onChange={() => toggle(option.value)}
-                    class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600"
+                    class="w-4 h-4 rounded border-[color:var(--mcp-ui-border-control,var(--color-gray-300,#d1d5db))] text-[color:var(--mcp-ui-accent,var(--color-blue-600))] focus:ring-[color:var(--mcp-ui-focus,var(--color-blue-500))] dark:border-[color:var(--mcp-ui-border-control,var(--color-gray-600,#4b5563))]"
                   />
-                  <span class="text-gray-900 dark:text-white">{option.label}</span>
+                  <span class="text-[color:var(--mcp-ui-fg,var(--color-gray-900,#111827))] dark:text-[color:var(--mcp-ui-fg,var(--color-white,#fff))]">{option.label}</span>
                 </label>
               )}
             </For>
             <Show when={filteredOptions().length === 0}>
-              <p class="px-3 py-2 text-sm text-gray-400">{strings.fieldNoMatches}</p>
+              <p class="px-3 py-2 text-sm text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]">{strings.fieldNoMatches}</p>
             </Show>
           </div>
         </div>
@@ -681,8 +681,8 @@ const AutocompleteField: Component<{
     <div class="relative">
       {/* Resolving indicator */}
       <Show when={resolving()}>
-        <div class="flex items-center gap-1 mb-1 text-xs text-gray-400">
-          <span class="animate-spin h-3 w-3 border border-gray-400 border-t-transparent rounded-full" />
+        <div class="flex items-center gap-1 mb-1 text-xs text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]">
+          <span class="animate-spin h-3 w-3 border border-[color:var(--mcp-ui-border-control,var(--color-gray-400,#9ca3af))] border-t-transparent rounded-full" />
           {strings.fieldResolving}
         </div>
       </Show>
@@ -692,12 +692,12 @@ const AutocompleteField: Component<{
         <div class="flex flex-wrap gap-1 mb-1">
           <For each={selectedValues()}>
             {(val) => (
-              <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-[color:var(--mcp-ui-accent-soft,var(--color-blue-100))] dark:bg-[color:var(--mcp-ui-accent-soft,color-mix(in_oklab,var(--color-blue-900)_30%,transparent))] text-[color:var(--mcp-ui-accent,var(--color-blue-700))] dark:text-[color:var(--mcp-ui-accent,var(--color-blue-300))] rounded-full">
                 {getLabel(val)}
                 <button
                   type="button"
                   onClick={() => removeChip(val)}
-                  class="hover:text-blue-900 dark:hover:text-blue-100"
+                  class="hover:text-[color:var(--mcp-ui-accent,var(--color-blue-900))] dark:hover:text-[color:var(--mcp-ui-accent,var(--color-blue-100))]"
                   aria-label={formatMCPUIString(strings.removeItem, { name: getLabel(val) })}
                 >
                   &times;
@@ -723,7 +723,7 @@ const AutocompleteField: Component<{
       />
 
       <Show when={isOpen() && suggestions().length > 0}>
-        <div class="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg max-h-72 overflow-y-auto">
+        <div class="absolute z-20 mt-1 w-full bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-800,#1f2937))] border border-[color:var(--mcp-ui-border-control,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border-control,var(--color-gray-600,#4b5563))] rounded-md shadow-[var(--mcp-ui-shadow,var(--shadow-lg))] max-h-72 overflow-y-auto">
           <For each={suggestions()}>
             {(item) => {
               const isSelected = () => isMultiple() && selectedValues().includes(item.value)
@@ -732,8 +732,8 @@ const AutocompleteField: Component<{
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => selectSuggestion(item)}
-                  class={`w-full text-left px-3 py-2 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 ${
-                    isSelected() ? 'text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/10' : 'text-gray-900 dark:text-white'
+                  class={`w-full text-left px-3 py-2 text-sm hover:bg-[color:var(--mcp-ui-accent-soft,var(--color-blue-50))] dark:hover:bg-[color:var(--mcp-ui-accent-soft,color-mix(in_oklab,var(--color-blue-900)_20%,transparent))] ${
+                    isSelected() ? 'text-[color:var(--mcp-ui-accent,var(--color-blue-600))] dark:text-[color:var(--mcp-ui-accent,var(--color-blue-400))] bg-[color:var(--mcp-ui-accent-soft,color-mix(in_oklab,var(--color-blue-50)_50%,transparent))] dark:bg-[color:var(--mcp-ui-accent-soft,color-mix(in_oklab,var(--color-blue-900)_10%,transparent))]' : 'text-[color:var(--mcp-ui-fg,var(--color-gray-900,#111827))] dark:text-[color:var(--mcp-ui-fg,var(--color-white,#fff))]'
                   }`}
                   disabled={isSelected()}
                 >
@@ -791,9 +791,9 @@ const TagsField: Component<{
         <div class="flex flex-wrap gap-1 mb-1">
           <For each={props.value || []}>
             {(tag) => (
-              <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-[color:var(--mcp-ui-accent-soft,var(--color-blue-100))] dark:bg-[color:var(--mcp-ui-accent-soft,color-mix(in_oklab,var(--color-blue-900)_30%,transparent))] text-[color:var(--mcp-ui-accent,var(--color-blue-700))] dark:text-[color:var(--mcp-ui-accent,var(--color-blue-300))] rounded-full">
                 {tag}
-                <button type="button" onClick={() => removeTag(tag)} class="hover:text-blue-900 dark:hover:text-blue-100" aria-label={formatMCPUIString(strings.removeItem, { name: tag })}>&times;</button>
+                <button type="button" onClick={() => removeTag(tag)} class="hover:text-[color:var(--mcp-ui-accent,var(--color-blue-900))] dark:hover:text-[color:var(--mcp-ui-accent,var(--color-blue-100))]" aria-label={formatMCPUIString(strings.removeItem, { name: tag })}>&times;</button>
               </span>
             )}
           </For>

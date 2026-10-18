@@ -24,6 +24,7 @@ import {
   createMemo,
   createUniqueId,
   onCleanup,
+  onMount,
   createSignal,
   untrack,
   Show,
@@ -46,6 +47,187 @@ import { PART_TO_WHOLE_CHART_TYPES, summarizeChartMissing } from '../utils/missi
 import { useTelemetry } from '../context/MCPUITelemetryContext';
 import { useMCPUIConfig } from '../context/MCPUIConfigContext';
 import { formatMCPUIString, useMCPUIStrings } from '../context/MCPUIStringsContext';
+import { observeTheme, readThemeTokens } from '../utils/theme';
+
+const CHART_THEME_TOKENS = [
+  ...Array.from({ length: 8 }, (_, i) => `--mcp-ui-chart-${i + 1}`),
+  '--mcp-ui-chart-grid',
+  '--mcp-ui-chart-axis',
+  '--mcp-ui-chart-label',
+  '--mcp-ui-surface', '--mcp-ui-fg', '--mcp-ui-border',
+] as const;
+
+/** A per-instance adapter: never changes Chart.defaults or the caller's data. */
+function createChartTheme(
+  params: ChartComponentParams,
+  baseOptions: any,
+  root: HTMLElement,
+  chartConfig: any
+) {
+  let tokens = readThemeTokens(root, CHART_THEME_TOKENS);
+  const originalDatasets = params.data.datasets.map((dataset) => ({ ...dataset }));
+  let engineColors: Array<{ backgroundColor: any; borderColor: any }> | undefined;
+  const paths: Array<{ path: string[]; token: string }> = [
+    { path: ['plugins', 'legend', 'labels', 'color'], token: '--mcp-ui-chart-label' },
+    { path: ['plugins', 'tooltip', 'backgroundColor'], token: '--mcp-ui-surface' },
+    { path: ['plugins', 'tooltip', 'titleColor'], token: '--mcp-ui-fg' },
+    { path: ['plugins', 'tooltip', 'bodyColor'], token: '--mcp-ui-fg' },
+    { path: ['plugins', 'tooltip', 'footerColor'], token: '--mcp-ui-fg' },
+    { path: ['plugins', 'tooltip', 'borderColor'], token: '--mcp-ui-border' },
+  ];
+  const configuredScales = Object.keys(baseOptions.scales ?? {});
+  const scales = configuredScales.length ? configuredScales :
+    params.type === 'radar' || params.type === 'polarArea' ? ['r'] :
+      params.type === 'pie' || params.type === 'doughnut' ? [] : ['x', 'y'];
+  const knownScales = new Set<string>();
+  const addScalePaths = (names: string[]) => { for (const scale of names) {
+    if (knownScales.has(scale)) continue;
+    knownScales.add(scale);
+    for (const [part, token] of [
+      ['grid', '--mcp-ui-chart-grid'],
+      ['border', '--mcp-ui-chart-axis'],
+      ['ticks', '--mcp-ui-chart-label'],
+      ['title', '--mcp-ui-chart-label'],
+      ...(scale === 'r'
+        ? [
+            ['angleLines', '--mcp-ui-chart-grid'],
+            ['pointLabels', '--mcp-ui-chart-label'],
+          ]
+        : []),
+    ])
+      paths.push({ path: ['scales', scale, part, 'color'], token });
+  } };
+  addScalePaths(scales);
+  const read = (value: any, path: string[]) => path.reduce((part, key) => part?.[key], value);
+  const owned = new Set<string>();
+  const applyOptions = (options: any) => {
+    for (const { path, token } of paths) {
+      // Explicit caller options, including plugin/scale opt-outs, always win.
+      if (read(baseOptions, path) !== undefined) continue;
+      if (token === '--mcp-ui-chart-label' && (params.options as any)?.color !== undefined)
+        continue;
+      let blocked = false;
+      for (let i = 1; i < path.length; i++) {
+        const part = read(baseOptions, path.slice(0, i));
+        if (part === false || part === null) blocked = true;
+      }
+      if (blocked) continue;
+      const key = path.join('.');
+      const color = tokens[token];
+      if (!color && !owned.has(key)) continue;
+      let target = options;
+      for (const part of path.slice(0, -1)) {
+        // Copy along the changed path only, retaining untouched caller branches.
+        target[part] = { ...target[part] };
+        target = target[part];
+      }
+      if (color) {
+        target[path.at(-1)!] = color;
+        owned.add(key);
+      } else {
+        delete target[path.at(-1)!];
+        owned.delete(key);
+      }
+    }
+  };
+  const plugin = {
+    id: 'mcp-ui-theme',
+    beforeInit(chart: any) {
+      // Config has normalized implicit/default axes now. Never invent x/y
+      // beside a caller's named axes just to give them a color.
+      addScalePaths(Object.keys(chart.config.options.scales ?? {}));
+      applyOptions(chart.config.options);
+    },
+    // Global Colors runs first. Capture its actual output rather than copying
+    // a version-specific 7-color palette (or changing its opt-out semantics).
+    beforeLayout(chart: any) {
+      const datasets = chart.data.datasets;
+      engineColors ??= datasets.map((dataset: any) => ({
+        backgroundColor: Array.isArray(dataset.backgroundColor)
+          ? [...dataset.backgroundColor]
+          : dataset.backgroundColor,
+        borderColor: Array.isArray(dataset.borderColor)
+          ? [...dataset.borderColor]
+          : dataset.borderColor,
+      }));
+      const callerOptions = params.options as any;
+      let pointOffset = 0;
+      datasets.forEach((dataset: any, index: number) => {
+        const original = originalDatasets[index];
+        const baseline = engineColors![index];
+        if (!original || !baseline) return;
+        const datasetType = (original as any).type ?? params.type;
+        const perPoint = ['pie', 'doughnut', 'polarArea'].includes(datasetType);
+        const elementKinds = datasetType === 'bar' ? ['bar'] : perPoint ? ['arc'] :
+          datasetType === 'line' || datasetType === 'radar' ? ['line', 'point'] : ['point'];
+        const hasSeriesToken = perPoint
+          ? dataset.data.some((_: unknown, i: number) => tokens[`--mcp-ui-chart-${((pointOffset + i) % 8) + 1}`])
+          : Boolean(tokens[`--mcp-ui-chart-${(index % 8) + 1}`]);
+        for (const field of ['backgroundColor', 'borderColor'] as const) {
+          if (original[field] !== undefined) continue;
+          const callerDatasetColor = callerOptions?.datasets?.[datasetType]?.[field];
+          if (callerDatasetColor !== undefined) {
+            // Chart.js's global Colors plugin does not check options.datasets
+            // and can mask this explicit paint with its generated dataset field.
+            // Retain the caller paint when adapting this palette slot, but keep
+            // the engine baseline unchanged when no series token is requested.
+            const color = hasSeriesToken ? callerDatasetColor : baseline[field];
+            if (color !== undefined) dataset[field] = color;
+            else delete dataset[field];
+            continue;
+          }
+          // A caller's border must not suppress a host fill (or vice versa),
+          // nor may options for an unrelated chart/element type mask this one.
+          if (callerOptions?.[field] !== undefined ||
+            elementKinds.some((kind) => callerOptions?.elements?.[kind]?.[field] !== undefined)) continue;
+          // Pie-like charts have no automatic per-point border palette.
+          if (perPoint && field === 'borderColor') continue;
+          if (perPoint) {
+            const previous = baseline[field];
+            const colors = dataset.data.map(
+              (_: unknown, i: number) =>
+                tokens[`--mcp-ui-chart-${((pointOffset + i) % 8) + 1}`] ??
+                (Array.isArray(previous) ? previous[i % previous.length] : previous)
+            );
+            dataset[field] = colors.some(
+              (_: unknown, i: number) => tokens[`--mcp-ui-chart-${((pointOffset + i) % 8) + 1}`]
+            )
+              ? colors
+              : previous;
+          } else {
+            const color = tokens[`--mcp-ui-chart-${(index % 8) + 1}`];
+            if (color || baseline[field] !== undefined) dataset[field] = color ?? baseline[field];
+            else delete dataset[field];
+          }
+        }
+        if (perPoint) pointOffset += dataset.data.length;
+      });
+    },
+  };
+  let installed = false;
+  const install = (chart?: any) => {
+    if (installed || !CHART_THEME_TOKENS.some((name) => tokens[name])) return;
+    installed = true;
+    const source = chart?.data ?? chartConfig.data;
+    const data = { ...source, datasets: source.datasets.map((dataset: any) => ({ ...dataset })) };
+    if (chart) chart.data = data;
+    else chartConfig.data = data;
+    chartConfig.plugins = [...(chartConfig.plugins ?? []), plugin];
+  };
+  install();
+  return {
+    applyOptions,
+    refresh(chart: any) {
+      const next = readThemeTokens(root, CHART_THEME_TOKENS);
+      if (CHART_THEME_TOKENS.every((name) => next[name] === tokens[name])) return;
+      tokens = next;
+      install(chart);
+      addScalePaths(Object.keys(chart.scales ?? chart.config.options.scales ?? {}));
+      applyOptions(chart.config.options);
+      chart.update('none');
+    },
+  };
+}
 
 // Lazy load Chart.js to avoid bundling if not used
 let ChartJS: any = null;
@@ -315,8 +497,19 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
   const [zoomPlugin, setZoomPlugin] = createSignal<unknown | null>(null);
   const [isZoomed, setIsZoomed] = createSignal(false);
   let canvasRef: HTMLCanvasElement | undefined;
+  let themeRoot: HTMLDivElement | undefined;
   let chartInstance: any;
+  let chartTheme: ReturnType<typeof createChartTheme> | undefined;
   let renderVersion = 0;
+
+  onMount(() => {
+    if (themeRoot) {
+      const stop = observeTheme(themeRoot, () => {
+        if (chartInstance) chartTheme?.refresh(chartInstance);
+      });
+      onCleanup(stop);
+    }
+  });
 
   const params = () => props.component.params as ChartComponentParams;
   const telemetry = useTelemetry();
@@ -458,8 +651,7 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
    * here (host policy × surface × chart type, and the peer actually loaded),
    * and the chart is what is currently being shown.
    */
-  const zoomControlsShown = () =>
-    Boolean(zoomOptions()) && activeView() === 'chart' && !error();
+  const zoomControlsShown = () => Boolean(zoomOptions()) && activeView() === 'chart' && !error();
 
   /**
    * Zoom the chart by a fixed ratio, about its centre.
@@ -585,7 +777,10 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
 
       const chartConfig: any = {
         type: chartParams.type,
-        data: chartParams.data,
+        // The Colors plugin writes its generated palette onto datasets. Never
+        // let that turn a shared payload into caller-supplied colors for the
+        // next renderer, nor mutate data owned by a host application.
+        data: { ...chartParams.data, datasets: chartParams.data.datasets.map((dataset) => ({ ...dataset })) },
         options: baseOptions,
       };
 
@@ -636,8 +831,22 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
             allMissing: chartMissing.allMissing,
             getNoDataText: () => strings.chartNoData,
             getFontFamily: () => Chart?.defaults?.font?.family,
+            getTextColor: () => (chartParams.options as any)?.color ??
+              readThemeTokens(themeRoot, ['--mcp-ui-chart-label'])['--mcp-ui-chart-label'],
           }),
         ];
+      }
+
+      if (themeRoot) {
+        // Keep the unthemed source separate: live updates must not mistake our
+        // own previously applied colors for explicit caller customization.
+        const originalOptions = {
+          ...baseOptions,
+          plugins: { ...baseOptions.plugins },
+          scales: baseOptions.scales ? { ...baseOptions.scales } : undefined,
+        };
+        chartTheme = createChartTheme(chartParams, originalOptions, themeRoot, chartConfig);
+        chartTheme.applyOptions(baseOptions);
       }
 
       // Create new chart
@@ -692,110 +901,139 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
       <ContextAwareChartLayout
         render={(isExpanded) => (
           <div
-            class={`relative w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden p-4 group ${
+            ref={themeRoot}
+            class={`mcp-ui-root relative w-full bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-800,#1f2937))] rounded-lg shadow-[var(--mcp-ui-shadow,var(--shadow-sm))] border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))] overflow-hidden p-4 group ${
               isExpanded() ? 'flex-1 min-h-0 flex flex-col' : ''
             } ${params().className || ''}`}
           >
-        <div class="flex items-center justify-between gap-3 mb-3 flex-shrink-0">
-          <div class="min-w-0">
-            <Show when={params().title}>
-              <h3 class="text-sm font-semibold text-gray-900 dark:text-white">{params().title}</h3>
-            </Show>
-          </div>
-          <div class="flex items-center gap-2">
-            <div
-              class="inline-flex rounded-md border border-gray-200 p-0.5 dark:border-gray-600"
-              role="group"
-              aria-label={strings.chartViewSelector}
-            >
-              <button
-                type="button"
-                aria-pressed={activeView() === 'chart'}
-                class={`rounded px-2 py-1 text-xs font-medium transition-colors ${
-                  activeView() === 'chart'
-                    ? 'bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900'
-                    : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
-                }`}
-                onClick={() => setActiveView('chart')}
-              >
-                {strings.chartView}
-              </button>
-              <button
-                type="button"
-                aria-pressed={activeView() === 'data'}
-                class={`rounded px-2 py-1 text-xs font-medium transition-colors ${
-                  activeView() === 'data'
-                    ? 'bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900'
-                    : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
-                }`}
-                onClick={() => setActiveView('data')}
-              >
-                {strings.chartDataView}
-              </button>
-            </div>
-            {/* Zoom controls — permanently visible (not hover-revealed like
+            <div class="flex items-center justify-between gap-3 mb-3 flex-shrink-0">
+              <div class="min-w-0">
+                <Show when={params().title}>
+                  <h3 class="text-sm font-semibold text-[color:var(--mcp-ui-fg,var(--color-gray-900,#111827))] dark:text-[color:var(--mcp-ui-fg,var(--color-white,#fff))]">
+                    {params().title}
+                  </h3>
+                </Show>
+              </div>
+              <div class="flex items-center gap-2">
+                <div
+                  class="inline-flex rounded-md border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] p-0.5 dark:border-[color:var(--mcp-ui-border,var(--color-gray-600,#4b5563))]"
+                  role="group"
+                  aria-label={strings.chartViewSelector}
+                >
+                  <button
+                    type="button"
+                    aria-pressed={activeView() === 'chart'}
+                    class={`rounded px-2 py-1 text-xs font-medium transition-colors ${
+                      activeView() === 'chart'
+                        ? 'bg-[color:var(--mcp-ui-accent,var(--color-gray-900,#111827))] text-[color:var(--mcp-ui-accent-fg,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-accent,var(--color-gray-100,#f3f4f6))] dark:text-[color:var(--mcp-ui-accent-fg,var(--color-gray-900,#111827))]'
+                        : 'text-[color:var(--mcp-ui-fg-muted,var(--color-gray-600,#4b5563))] hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-100,#f3f4f6))] dark:text-[color:var(--mcp-ui-fg,var(--color-gray-300,#d1d5db))] dark:hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-700,#374151))]'
+                    }`}
+                    onClick={() => setActiveView('chart')}
+                  >
+                    {strings.chartView}
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={activeView() === 'data'}
+                    class={`rounded px-2 py-1 text-xs font-medium transition-colors ${
+                      activeView() === 'data'
+                        ? 'bg-[color:var(--mcp-ui-accent,var(--color-gray-900,#111827))] text-[color:var(--mcp-ui-accent-fg,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-accent,var(--color-gray-100,#f3f4f6))] dark:text-[color:var(--mcp-ui-accent-fg,var(--color-gray-900,#111827))]'
+                        : 'text-[color:var(--mcp-ui-fg-muted,var(--color-gray-600,#4b5563))] hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-100,#f3f4f6))] dark:text-[color:var(--mcp-ui-fg,var(--color-gray-300,#d1d5db))] dark:hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-700,#374151))]'
+                    }`}
+                    onClick={() => setActiveView('data')}
+                  >
+                    {strings.chartDataView}
+                  </button>
+                </div>
+                {/* Zoom controls — permanently visible (not hover-revealed like
                 the export button) for as long as this chart is zoomable at
                 all. Zoom in/out come FIRST and unconditionally: they are the
                 only keyboard route into a feature whose gestures are all
                 pointer gestures, on a canvas that takes no focus. Reset joins
                 them only once the chart is actually off its initial viewport,
                 so the toolbar stays quiet on a chart nobody moved. */}
-            <Show when={zoomControlsShown()}>
-              <div class="inline-flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => handleZoomBy(1 / CHART_ZOOM_BUTTON_FACTOR)}
-                  class="opacity-60 hover:opacity-100 px-2 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-all shadow-sm"
-                  title={strings.zoomOut}
-                  aria-label={strings.zoomOut}
-                >
-                  <svg
-                    class="w-3 h-3 text-gray-500 dark:text-gray-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM13.5 10.5h-6"
-                    />
-                  </svg>
-                </button>
+                <Show when={zoomControlsShown()}>
+                  <div class="inline-flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleZoomBy(1 / CHART_ZOOM_BUTTON_FACTOR)}
+                      class="opacity-60 hover:opacity-100 px-2 py-1 bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-800,#1f2937))] border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-600,#4b5563))] rounded-full hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-100,#f3f4f6))] dark:hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-700,#374151))] transition-all shadow-[var(--mcp-ui-shadow,var(--shadow-sm))]"
+                      title={strings.zoomOut}
+                      aria-label={strings.zoomOut}
+                    >
+                      <svg
+                        class="w-3 h-3 text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM13.5 10.5h-6"
+                        />
+                      </svg>
+                    </button>
 
-                <button
-                  type="button"
-                  onClick={() => handleZoomBy(CHART_ZOOM_BUTTON_FACTOR)}
-                  class="opacity-60 hover:opacity-100 px-2 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-all shadow-sm"
-                  title={strings.zoomIn}
-                  aria-label={strings.zoomIn}
-                >
-                  <svg
-                    class="w-3 h-3 text-gray-500 dark:text-gray-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM10.5 7.5v6m3-3h-6"
-                    />
-                  </svg>
-                </button>
+                    <button
+                      type="button"
+                      onClick={() => handleZoomBy(CHART_ZOOM_BUTTON_FACTOR)}
+                      class="opacity-60 hover:opacity-100 px-2 py-1 bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-800,#1f2937))] border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-600,#4b5563))] rounded-full hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-100,#f3f4f6))] dark:hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-700,#374151))] transition-all shadow-[var(--mcp-ui-shadow,var(--shadow-sm))]"
+                      title={strings.zoomIn}
+                      aria-label={strings.zoomIn}
+                    >
+                      <svg
+                        class="w-3 h-3 text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM10.5 7.5v6m3-3h-6"
+                        />
+                      </svg>
+                    </button>
 
-                <Show when={isZoomed()}>
+                    <Show when={isZoomed()}>
+                      <button
+                        type="button"
+                        onClick={handleResetZoom}
+                        class="opacity-60 hover:opacity-100 px-2 py-1 bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-800,#1f2937))] border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-600,#4b5563))] rounded-full hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-100,#f3f4f6))] dark:hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-700,#374151))] transition-all shadow-[var(--mcp-ui-shadow,var(--shadow-sm))]"
+                        title={strings.zoomReset}
+                        aria-label={strings.zoomReset}
+                      >
+                        <svg
+                          class="w-3 h-3 text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                          />
+                        </svg>
+                      </button>
+                    </Show>
+                  </div>
+                </Show>
+                <Show when={exportEnabled()}>
                   <button
                     type="button"
-                    onClick={handleResetZoom}
-                    class="opacity-60 hover:opacity-100 px-2 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-all shadow-sm"
-                    title={strings.zoomReset}
-                    aria-label={strings.zoomReset}
+                    onClick={handleExportPNG}
+                    disabled={activeView() !== 'chart' || isLoading() || Boolean(error())}
+                    class="opacity-0 group-hover:opacity-60 hover:!opacity-100 disabled:!opacity-30 disabled:cursor-not-allowed px-2 py-1 bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-800,#1f2937))] border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-600,#4b5563))] rounded-full hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-100,#f3f4f6))] dark:hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-700,#374151))] transition-all shadow-[var(--mcp-ui-shadow,var(--shadow-sm))]"
+                    title={strings.chartDownloadPng}
+                    aria-label={strings.chartDownloadPngAria}
                   >
                     <svg
-                      class="w-3 h-3 text-gray-500 dark:text-gray-400"
+                      class="w-3 h-3 text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -804,169 +1042,148 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
                         stroke-linecap="round"
                         stroke-linejoin="round"
                         stroke-width="2"
-                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                        d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                       />
                     </svg>
                   </button>
                 </Show>
               </div>
-            </Show>
-            <Show when={exportEnabled()}>
-              <button
-                type="button"
-                onClick={handleExportPNG}
-                disabled={activeView() !== 'chart' || isLoading() || Boolean(error())}
-                class="opacity-0 group-hover:opacity-60 hover:!opacity-100 disabled:!opacity-30 disabled:cursor-not-allowed px-2 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-all shadow-sm"
-                title={strings.chartDownloadPng}
-                aria-label={strings.chartDownloadPngAria}
-              >
-                <svg
-                  class="w-3 h-3 text-gray-500 dark:text-gray-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-              </button>
-            </Show>
-          </div>
-        </div>
+            </div>
 
-        <p id={descriptionId} class="sr-only">
-          {title()}. {strings.chartDataSummary}
-        </p>
+            <p id={descriptionId} class="sr-only">
+              {title()}. {strings.chartDataSummary}
+            </p>
 
-        {/* Fallback ladder (P2.5): degrade to a series table on render error
+            {/* Fallback ladder (P2.5): degrade to a series table on render error
             instead of a bare "Chart Error" message. */}
-        <Show when={error() && activeView() === 'chart'}>
-          <DegradedFallback
-            message={formatMCPUIString(strings.chartRenderFailed, { error: String(error()) })}
-            caption={strings.chartDegradedCaption}
-            {...tableData()}
-          />
-        </Show>
+            <Show when={error() && activeView() === 'chart'}>
+              <DegradedFallback
+                message={formatMCPUIString(strings.chartRenderFailed, { error: String(error()) })}
+                caption={strings.chartDegradedCaption}
+                {...tableData()}
+              />
+            </Show>
 
-        <Show when={activeView() === 'data'}>
-          <div
-            class={`w-full overflow-auto rounded border border-gray-200 dark:border-gray-700 ${
-              isExpanded() ? 'flex-1 min-h-0' : ''
-            }`}
-            style={
-              isExpanded()
-                ? undefined
-                : { height: params().height || '250px', 'max-height': '70vh' }
-            }
-          >
-            <table class="w-full border-collapse text-left text-sm">
-              <caption class="sr-only">
-                {title()} — {strings.chartDataTable}
-              </caption>
-              <thead class="bg-gray-50 dark:bg-gray-900/40">
-                <tr>
-                  <For each={tableData().columns}>
-                    {(column) => (
-                      <th scope="col" class="px-3 py-2 font-medium text-gray-900 dark:text-gray-100">
-                        {column}
-                      </th>
-                    )}
-                  </For>
-                </tr>
-              </thead>
-              <tbody>
-                <For each={tableData().rows}>
-                  {(row, rowIndex) => (
-                    <tr class="border-t border-gray-100 dark:border-gray-700">
+            <Show when={activeView() === 'data'}>
+              <div
+                class={`w-full overflow-auto rounded border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))] ${
+                  isExpanded() ? 'flex-1 min-h-0' : ''
+                }`}
+                style={
+                  isExpanded()
+                    ? undefined
+                    : { height: params().height || '250px', 'max-height': '70vh' }
+                }
+              >
+                <table class="w-full border-collapse text-left text-sm">
+                  <caption class="sr-only">
+                    {title()} — {strings.chartDataTable}
+                  </caption>
+                  <thead class="bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-50,#f9fafb))] dark:bg-[color:var(--mcp-ui-surface,color-mix(in_oklab,var(--color-gray-900,#111827)_40%,transparent))]">
+                    <tr>
                       <For each={tableData().columns}>
-                        {(_column, index) => (
-                          <td class="px-3 py-2 text-gray-700 dark:text-gray-300">
-                            <Show
-                              when={tableData().missing[rowIndex()]?.[index()]}
-                              fallback={String(row[index()] ?? '')}
-                            >
-                              <MissingValueMark />
-                            </Show>
-                          </td>
+                        {(column) => (
+                          <th
+                            scope="col"
+                            class="px-3 py-2 font-medium text-[color:var(--mcp-ui-fg,var(--color-gray-900,#111827))] dark:text-[color:var(--mcp-ui-fg,var(--color-gray-100,#f3f4f6))]"
+                          >
+                            {column}
+                          </th>
                         )}
                       </For>
                     </tr>
-                  )}
-                </For>
-                <Show when={tableData().rows.length === 0}>
-                  <tr>
-                    <td
-                      colSpan={Math.max(1, tableData().columns.length)}
-                      class="px-3 py-6 text-center text-gray-500 dark:text-gray-400"
-                    >
-                      {strings.chartNoData}
-                    </td>
-                  </tr>
-                </Show>
-              </tbody>
-            </table>
-          </div>
-          <Show when={anyMissingCell()}>
-            <MissingValueLegend class="mt-2" />
-          </Show>
-        </Show>
-
-        <div
-          class={`relative w-full ${isExpanded() ? 'flex-1 min-h-0' : ''}`}
-          style={
-            error() || activeView() === 'data'
-              ? { display: 'none' }
-              : isExpanded()
-                ? { height: '100%', display: 'block' }
-                : { height: params().height || '250px', display: 'block' }
-          }
-        >
-          <canvas
-            ref={canvasRef}
-            role="img"
-            aria-label={title()}
-            aria-describedby={notesShown() ? `${descriptionId} ${notesId}` : descriptionId}
-            aria-hidden={activeView() !== 'chart' || Boolean(error())}
-          />
-          <Show when={isLoading() && activeView() === 'chart'}>
-            <div class="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-gray-800/80">
-              <div class="flex flex-col items-center gap-2">
-                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-                <span class="text-sm text-gray-500 dark:text-gray-400">{strings.chartLoading}</span>
+                  </thead>
+                  <tbody>
+                    <For each={tableData().rows}>
+                      {(row, rowIndex) => (
+                        <tr class="border-t border-[color:var(--mcp-ui-border,var(--color-gray-100,#f3f4f6))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))]">
+                          <For each={tableData().columns}>
+                            {(_column, index) => (
+                              <td class="px-3 py-2 text-[color:var(--mcp-ui-fg,var(--color-gray-700,#374151))] dark:text-[color:var(--mcp-ui-fg,var(--color-gray-300,#d1d5db))]">
+                                <Show
+                                  when={tableData().missing[rowIndex()]?.[index()]}
+                                  fallback={String(row[index()] ?? '')}
+                                >
+                                  <MissingValueMark />
+                                </Show>
+                              </td>
+                            )}
+                          </For>
+                        </tr>
+                      )}
+                    </For>
+                    <Show when={tableData().rows.length === 0}>
+                      <tr>
+                        <td
+                          colSpan={Math.max(1, tableData().columns.length)}
+                          class="px-3 py-6 text-center text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]"
+                        >
+                          {strings.chartNoData}
+                        </td>
+                      </tr>
+                    </Show>
+                  </tbody>
+                </table>
               </div>
-            </div>
-          </Show>
-        </div>
+              <Show when={anyMissingCell()}>
+                <MissingValueLegend class="mt-2" />
+              </Show>
+            </Show>
 
-        {/* Missing values (v6.24.0): how THIS chart type shows them, and which
+            <div
+              class={`relative w-full ${isExpanded() ? 'flex-1 min-h-0' : ''}`}
+              style={
+                error() || activeView() === 'data'
+                  ? { display: 'none' }
+                  : isExpanded()
+                    ? { height: '100%', display: 'block' }
+                    : { height: params().height || '250px', display: 'block' }
+              }
+            >
+              <canvas
+                ref={canvasRef}
+                role="img"
+                aria-label={title()}
+                aria-describedby={notesShown() ? `${descriptionId} ${notesId}` : descriptionId}
+                aria-hidden={activeView() !== 'chart' || Boolean(error())}
+              />
+              <Show when={isLoading() && activeView() === 'chart'}>
+                <div class="absolute inset-0 flex items-center justify-center bg-[color:var(--mcp-ui-surface,color-mix(in_oklab,var(--color-white,#fff)_80%,transparent))] dark:bg-[color:var(--mcp-ui-surface,color-mix(in_oklab,var(--color-gray-800,#1f2937)_80%,transparent))]">
+                  <div class="flex flex-col items-center gap-2">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-[color:var(--mcp-ui-accent-border,var(--color-blue-600))]" />
+                    <span class="text-sm text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]">
+                      {strings.chartLoading}
+                    </span>
+                  </div>
+                </div>
+              </Show>
+            </div>
+
+            {/* Missing values (v6.24.0): how THIS chart type shows them, and which
             series have no data at all. Linked from the canvas, so a screen
             reader hears the convention with the chart. */}
-        <Show when={notesShown()}>
-          <div
-            data-mcp-chart-notes=""
-            id={notesId}
-            class="mt-2 space-y-0.5 text-xs text-gray-600 dark:text-gray-400"
-          >
-            <Show when={conventionNoteShown()}>
-              <p data-mcp-chart-note={noteKind()}>
-                {noteKind() === 'bars'
-                  ? strings.chartMissingBars
-                  : noteKind() === 'omitted'
-                    ? strings.chartMissingPoints
-                    : strings.chartMissingGaps}
-              </p>
+            <Show when={notesShown()}>
+              <div
+                data-mcp-chart-notes=""
+                id={notesId}
+                class="mt-2 space-y-0.5 text-xs text-[color:var(--mcp-ui-fg-muted,var(--color-gray-600,#4b5563))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]"
+              >
+                <Show when={conventionNoteShown()}>
+                  <p data-mcp-chart-note={noteKind()}>
+                    {noteKind() === 'bars'
+                      ? strings.chartMissingBars
+                      : noteKind() === 'omitted'
+                        ? strings.chartMissingPoints
+                        : strings.chartMissingGaps}
+                  </p>
+                </Show>
+                <Show when={missingSummary().fullyMissing.some(Boolean)}>
+                  <p data-mcp-chart-note="no-data">
+                    {formatMCPUIString(strings.chartSeriesNoData, { series: noDataSeries() })}
+                  </p>
+                </Show>
+              </div>
             </Show>
-            <Show when={missingSummary().fullyMissing.some(Boolean)}>
-              <p data-mcp-chart-note="no-data">
-                {formatMCPUIString(strings.chartSeriesNoData, { series: noDataSeries() })}
-              </p>
-            </Show>
-          </div>
-        </Show>
           </div>
         )}
       />

@@ -5,6 +5,44 @@ SolidJS components + chat toolkit for MCP-generated UI. Part of the [MCP UI ecos
 [![npm version](https://img.shields.io/npm/v/@seed-ship/mcp-ui-solid.svg)](https://www.npmjs.com/package/@seed-ship/mcp-ui-solid)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+## What's New in v6.25.0
+
+Inherited `--mcp-ui-*` CSS tokens theme prompts, resource/table chrome,
+scratchpads, form controls, autocomplete and chart/graph chrome. Body portals
+follow their local host theme; mounted Chart.js/G6 instances update without
+losing their identity. Existing colors remain the defaults.
+
+## Theming
+
+Set variables on an ancestor; no provider or extra stylesheet is required
+for the Tailwind-based components. Keep scanning this package's `src/**/*.{ts,tsx}`
+with Tailwind v4 and your existing class-based `.dark` variant.
+
+```css
+.app-theme {
+  --mcp-ui-surface: #ffffff;
+  --mcp-ui-surface-muted: #f1f5f9;
+  --mcp-ui-fg: #0f172a;
+  --mcp-ui-fg-muted: #475569;
+  --mcp-ui-border: #cbd5e1;
+  --mcp-ui-accent: #1d4ed8;
+}
+.dark .app-theme {
+  --mcp-ui-surface: #0f172a;
+  --mcp-ui-surface-muted: #1e293b;
+  --mcp-ui-fg: #f8fafc;
+  --mcp-ui-fg-muted: #cbd5e1;
+  --mcp-ui-border: #64748b;
+  --mcp-ui-accent: #93c5fd;
+}
+```
+
+The library deliberately does not redeclare public tokens on nested roots:
+an ancestor's tokens keep inheriting. Each use falls back to its original
+color, preserving the existing light/dark distinctions. Optional autocomplete
+CSS is still imported as before. See [the complete token reference, portal
+behavior, contrast limits and migration coverage](./docs/THEMING.md).
+
 ## What's New in v6.24.0
 
 Explicit missing values in charts and tables, and a `unit` per chart. A `null`

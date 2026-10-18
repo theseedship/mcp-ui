@@ -22,6 +22,7 @@
 
 import { Component, JSX, Show, createSignal, createEffect, onCleanup } from 'solid-js'
 import { Portal } from 'solid-js/web'
+import { bindPortalTheme } from '../utils/theme'
 
 export interface PortalDropdownMenuProps {
   /**
@@ -111,7 +112,10 @@ export const PortalDropdownMenu: Component<PortalDropdownMenuProps> = (props) =>
     <Show when={props.open}>
       <Portal>
         <div
-          ref={menuRef}
+          ref={(element) => {
+            menuRef = element
+            bindPortalTheme(element, () => props.trigger)
+          }}
           role="menu"
           data-mcp-ui-portal="menu"
           style={{
@@ -121,7 +125,7 @@ export const PortalDropdownMenu: Component<PortalDropdownMenuProps> = (props) =>
             'z-index': 9999,
             width: `${props.width ?? 144}px`,
           }}
-          class={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg py-1 text-sm ${props.class ?? ''}`}
+          class={`mcp-ui-root bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-800,#1f2937))] border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-600,#4b5563))] rounded-lg shadow-[var(--mcp-ui-shadow,var(--shadow-lg))] py-1 text-sm ${props.class ?? ''}`}
         >
           {props.children}
         </div>

@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.25.0] - 2026-10-18
+
+### Added
+
+- Inherited `--mcp-ui-*` CSS theme tokens with per-use original color fallbacks
+  for prompts, resource/table chrome, scratchpads, form controls, autocomplete,
+  expanded dialogs, export menus and chart/graph chrome. No required provider,
+  new dependency, global root defaults or component prop changes.
+- Body portal theme synchronization, including local `.dark`, live ancestor
+  token changes and removal; fullscreen content retains its original DOM.
+- Scoped Chart.js/G6 series, grid, axis, label and tooltip tokens with live
+  updates and explicit caller color precedence; original engine defaults are
+  retained when no host tokens are supplied.
+- Frozen 6.24.0 Chromium computed-style comparisons, host/portal regressions,
+  static Tailwind class checks and theming documentation with coverage limits.
+
 ## [6.24.0] - 2026-10-03
 
 Explicit missing values in charts and tables, and a unit per chart — lot 1 of

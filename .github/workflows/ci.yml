@@ -57,3 +57,15 @@ jobs:
 
       - name: Test
         run: pnpm test
+
+      # Browser tooling is isolated from the published package and its lockfile.
+      - name: Install theme regression tooling
+        run: npm install --prefix "$RUNNER_TEMP/mcp-ui-theme-tools" --no-package-lock --ignore-scripts playwright@1.63.0 @tailwindcss/vite@4.3.3 tailwindcss@4.3.3
+
+      - name: Install theme regression browser
+        run: npm exec --prefix "$RUNNER_TEMP/mcp-ui-theme-tools" -- playwright install --with-deps chromium
+
+      - name: Check default and host theme colors in Chromium
+        env:
+          MCP_THEME_BROWSER_DEPS: ${{ runner.temp }}/mcp-ui-theme-tools/node_modules
+        run: node mcp-ui-solid/tests/theme/browser.mjs --host

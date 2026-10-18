@@ -37,7 +37,7 @@
 }
 
 .mcp-ghost-text {
-  color: #9ca3af;
+  color: var(--mcp-ui-fg-subtle, #9ca3af);
   opacity: 0.7;
 }
 
@@ -47,11 +47,11 @@
   top: 50%;
   transform: translateY(-50%);
   font-size: 0.75rem;
-  color: #6b7280;
-  background-color: rgba(255, 255, 255, 0.95);
+  color: var(--mcp-ui-fg-muted, #6b7280);
+  background-color: var(--mcp-ui-surface, rgba(255, 255, 255, 0.95));
   padding: 2px 8px;
   border-radius: 4px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--mcp-ui-border, #e5e7eb);
   pointer-events: none;
   animation: mcp-hint-fade-in 150ms ease;
 }
@@ -86,10 +86,10 @@
   left: 0;
   right: 0;
   z-index: 50;
-  background-color: #ffffff;
-  border: 1px solid #e5e7eb;
+  background-color: var(--mcp-ui-surface, #ffffff);
+  border: 1px solid var(--mcp-ui-border, #e5e7eb);
   border-radius: 6px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--mcp-ui-shadow, 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06));
   overflow: hidden;
   animation: mcp-dropdown-enter 150ms ease;
 }
@@ -120,11 +120,11 @@
 }
 
 .mcp-autocomplete-option:hover {
-  background-color: #f3f4f6;
+  background-color: var(--mcp-ui-surface-hover, #f3f4f6);
 }
 
 .mcp-autocomplete-option-selected {
-  background-color: #eff6ff !important;
+  background-color: var(--mcp-ui-accent-soft, #eff6ff) !important;
 }
 
 .mcp-autocomplete-option-disabled {
@@ -159,7 +159,7 @@
 .mcp-autocomplete-option-label {
   display: block;
   font-size: 0.875rem;
-  color: #374151;
+  color: var(--mcp-ui-fg, #374151);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -168,7 +168,7 @@
 .mcp-autocomplete-option-description {
   display: block;
   font-size: 0.75rem;
-  color: #6b7280;
+  color: var(--mcp-ui-fg-muted, #6b7280);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -177,14 +177,14 @@
 
 .mcp-autocomplete-highlight {
   font-weight: 600;
-  color: #1d4ed8;
+  color: var(--mcp-ui-accent, #1d4ed8);
 }
 
 .mcp-autocomplete-loading,
 .mcp-autocomplete-empty {
   padding: 12px 16px;
   font-size: 0.875rem;
-  color: #6b7280;
+  color: var(--mcp-ui-fg-muted, #6b7280);
 }
 
 .mcp-autocomplete-loading {
@@ -199,10 +199,10 @@
 
 .mcp-autocomplete-footer {
   padding: 6px 12px;
-  border-top: 1px solid #e5e7eb;
-  background-color: #f9fafb;
+  border-top: 1px solid var(--mcp-ui-border, #e5e7eb);
+  background-color: var(--mcp-ui-surface-muted, #f9fafb);
   font-size: 0.75rem;
-  color: #6b7280;
+  color: var(--mcp-ui-fg-muted, #6b7280);
 }
 
 /* =============================================================================
@@ -211,107 +211,107 @@
 
 @media (prefers-color-scheme: dark) {
   .mcp-ghost-text {
-    color: #6b7280;
+    color: var(--mcp-ui-fg-muted, #6b7280);
   }
 
   .mcp-ghost-text-hint {
-    background-color: rgba(31, 41, 55, 0.95);
-    border-color: #374151;
-    color: #9ca3af;
+    background-color: var(--mcp-ui-surface, rgba(31, 41, 55, 0.95));
+    border-color: var(--mcp-ui-border, #374151);
+    color: var(--mcp-ui-fg-subtle, #9ca3af);
   }
 
   .mcp-autocomplete-dropdown {
-    background-color: #1f2937;
-    border-color: #374151;
+    background-color: var(--mcp-ui-surface, #1f2937);
+    border-color: var(--mcp-ui-border, #374151);
   }
 
   .mcp-autocomplete-option:hover {
-    background-color: #374151;
+    background-color: var(--mcp-ui-surface-hover, #374151);
   }
 
   .mcp-autocomplete-option-selected {
-    background-color: #1e3a5f !important;
+    background-color: var(--mcp-ui-accent-soft, #1e3a5f) !important;
   }
 
   .mcp-autocomplete-option-label {
-    color: #e5e7eb;
+    color: var(--mcp-ui-fg, #e5e7eb);
   }
 
   .mcp-autocomplete-option-description {
-    color: #9ca3af;
+    color: var(--mcp-ui-fg-subtle, #9ca3af);
   }
 
   .mcp-autocomplete-highlight {
-    color: #60a5fa;
+    color: var(--mcp-ui-accent, #60a5fa);
   }
 
   .mcp-autocomplete-loading,
   .mcp-autocomplete-empty {
-    color: #9ca3af;
+    color: var(--mcp-ui-fg-subtle, #9ca3af);
   }
 
   .mcp-autocomplete-footer {
-    background-color: #111827;
-    border-color: #374151;
-    color: #9ca3af;
+    background-color: var(--mcp-ui-surface-muted, #111827);
+    border-color: var(--mcp-ui-border, #374151);
+    color: var(--mcp-ui-fg-subtle, #9ca3af);
   }
 
   .mcp-autocomplete-footer kbd {
-    background-color: #374151;
-    color: #d1d5db;
+    background-color: var(--mcp-ui-surface-hover, #374151);
+    color: var(--mcp-ui-fg, #d1d5db);
   }
 }
 
 /* Explicit dark mode class support */
 .dark .mcp-ghost-text {
-  color: #6b7280;
+  color: var(--mcp-ui-fg-muted, #6b7280);
 }
 
 .dark .mcp-ghost-text-hint {
-  background-color: rgba(31, 41, 55, 0.95);
-  border-color: #374151;
-  color: #9ca3af;
+  background-color: var(--mcp-ui-surface, rgba(31, 41, 55, 0.95));
+  border-color: var(--mcp-ui-border, #374151);
+  color: var(--mcp-ui-fg-subtle, #9ca3af);
 }
 
 .dark .mcp-autocomplete-dropdown {
-  background-color: #1f2937;
-  border-color: #374151;
+  background-color: var(--mcp-ui-surface, #1f2937);
+  border-color: var(--mcp-ui-border, #374151);
 }
 
 .dark .mcp-autocomplete-option:hover {
-  background-color: #374151;
+  background-color: var(--mcp-ui-surface-hover, #374151);
 }
 
 .dark .mcp-autocomplete-option-selected {
-  background-color: #1e3a5f !important;
+  background-color: var(--mcp-ui-accent-soft, #1e3a5f) !important;
 }
 
 .dark .mcp-autocomplete-option-label {
-  color: #e5e7eb;
+  color: var(--mcp-ui-fg, #e5e7eb);
 }
 
 .dark .mcp-autocomplete-option-description {
-  color: #9ca3af;
+  color: var(--mcp-ui-fg-subtle, #9ca3af);
 }
 
 .dark .mcp-autocomplete-highlight {
-  color: #60a5fa;
+  color: var(--mcp-ui-accent, #60a5fa);
 }
 
 .dark .mcp-autocomplete-loading,
 .dark .mcp-autocomplete-empty {
-  color: #9ca3af;
+  color: var(--mcp-ui-fg-subtle, #9ca3af);
 }
 
 .dark .mcp-autocomplete-footer {
-  background-color: #111827;
-  border-color: #374151;
-  color: #9ca3af;
+  background-color: var(--mcp-ui-surface-muted, #111827);
+  border-color: var(--mcp-ui-border, #374151);
+  color: var(--mcp-ui-fg-subtle, #9ca3af);
 }
 
 .dark .mcp-autocomplete-footer kbd {
-  background-color: #374151;
-  color: #d1d5db;
+  background-color: var(--mcp-ui-surface-hover, #374151);
+  color: var(--mcp-ui-fg, #d1d5db);
 }
 
 /* =============================================================================
@@ -327,12 +327,12 @@
 }
 
 .mcp-autocomplete-options::-webkit-scrollbar-thumb {
-  background-color: #d1d5db;
+  background-color: var(--mcp-ui-surface-hover, #d1d5db);
   border-radius: 3px;
 }
 
 .dark .mcp-autocomplete-options::-webkit-scrollbar-thumb {
-  background-color: #4b5563;
+  background-color: var(--mcp-ui-surface-hover, #4b5563);
 }
 
 /* =============================================================================
@@ -341,7 +341,7 @@
 
 /* Focus styles */
 .mcp-autocomplete-option:focus {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid var(--mcp-ui-focus, #3b82f6);
   outline-offset: -2px;
 }
 

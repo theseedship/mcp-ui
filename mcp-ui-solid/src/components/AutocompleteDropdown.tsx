@@ -162,10 +162,10 @@ export const AutocompleteDropdown: Component<AutocompleteDropdownProps> = (props
     left: '0',
     right: '0',
     'z-index': '50',
-    'background-color': '#ffffff',
-    border: '1px solid #e5e7eb',
+    'background-color': 'var(--mcp-ui-surface, #ffffff)',
+    border: '1px solid var(--mcp-ui-border, #e5e7eb)',
     'border-radius': '6px',
-    'box-shadow': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+    'box-shadow': 'var(--mcp-ui-shadow, 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06))',
     'max-height': props.maxHeight || '240px',
     overflow: 'auto',
     ...positionStyles()
@@ -174,7 +174,7 @@ export const AutocompleteDropdown: Component<AutocompleteDropdownProps> = (props
   return (
     <Show when={props.isOpen}>
       <div
-        class={`mcp-autocomplete-dropdown ${props.class || ''}`}
+        class={`mcp-ui-root mcp-autocomplete-dropdown ${props.class || ''}`}
         style={containerStyles()}
         role="listbox"
         aria-label={strings.autocompleteSuggestions}
@@ -185,7 +185,7 @@ export const AutocompleteDropdown: Component<AutocompleteDropdownProps> = (props
             class="mcp-autocomplete-loading"
             style={{
               padding: '12px 16px',
-              color: '#6b7280',
+              color: 'var(--mcp-ui-fg-muted, #6b7280)',
               'font-size': '0.875rem',
               display: 'flex',
               'align-items': 'center',
@@ -197,8 +197,8 @@ export const AutocompleteDropdown: Component<AutocompleteDropdownProps> = (props
                 display: 'inline-block',
                 width: '14px',
                 height: '14px',
-                border: '2px solid #e5e7eb',
-                'border-top-color': '#3b82f6',
+                border: '2px solid var(--mcp-ui-border, #e5e7eb)',
+                'border-top-color': 'var(--mcp-ui-accent, #3b82f6)',
                 'border-radius': '50%',
                 animation: 'mcp-spin 0.6s linear infinite'
               }}
@@ -213,7 +213,7 @@ export const AutocompleteDropdown: Component<AutocompleteDropdownProps> = (props
             class="mcp-autocomplete-empty"
             style={{
               padding: '12px 16px',
-              color: '#9ca3af',
+              color: 'var(--mcp-ui-fg-subtle, #9ca3af)',
               'font-size': '0.875rem',
               'text-align': 'center'
             }}
@@ -242,8 +242,8 @@ export const AutocompleteDropdown: Component<AutocompleteDropdownProps> = (props
                     style={{
                       padding: '8px 16px',
                       cursor: isDisabled() ? 'not-allowed' : 'pointer',
-                      'background-color': isSelected() ? '#eff6ff' : 'transparent',
-                      color: isDisabled() ? '#9ca3af' : '#374151',
+                      'background-color': isSelected() ? 'var(--mcp-ui-accent-soft, #eff6ff)' : 'transparent',
+                      color: isDisabled() ? 'var(--mcp-ui-fg-subtle, #9ca3af)' : 'var(--mcp-ui-fg, #374151)',
                       'font-size': '0.875rem',
                       transition: 'background-color 150ms ease'
                     }}
@@ -283,14 +283,14 @@ export const AutocompleteDropdown: Component<AutocompleteDropdownProps> = (props
             class="mcp-autocomplete-footer"
             style={{
               padding: '6px 12px',
-              'border-top': '1px solid #e5e7eb',
-              'background-color': '#f9fafb',
+              'border-top': '1px solid var(--mcp-ui-border, #e5e7eb)',
+              'background-color': 'var(--mcp-ui-surface-muted, #f9fafb)',
               'font-size': '0.75rem',
-              color: '#6b7280'
+              color: 'var(--mcp-ui-fg-muted, #6b7280)'
             }}
           >
             <kbd style={{
-              'background-color': '#e5e7eb',
+              'background-color': 'var(--mcp-ui-surface-hover, #e5e7eb)',
               padding: '1px 4px',
               'border-radius': '2px',
               'font-family': 'inherit',
@@ -298,7 +298,7 @@ export const AutocompleteDropdown: Component<AutocompleteDropdownProps> = (props
             }}>↑</kbd>
             {' '}
             <kbd style={{
-              'background-color': '#e5e7eb',
+              'background-color': 'var(--mcp-ui-surface-hover, #e5e7eb)',
               padding: '1px 4px',
               'border-radius': '2px',
               'font-family': 'inherit',
@@ -306,7 +306,7 @@ export const AutocompleteDropdown: Component<AutocompleteDropdownProps> = (props
             }}>↓</kbd>
             {strings.autocompleteHintNavigate}
             <kbd style={{
-              'background-color': '#e5e7eb',
+              'background-color': 'var(--mcp-ui-surface-hover, #e5e7eb)',
               padding: '1px 4px',
               'border-radius': '2px',
               'font-family': 'inherit',
@@ -314,7 +314,7 @@ export const AutocompleteDropdown: Component<AutocompleteDropdownProps> = (props
             }}>Enter</kbd>
             {strings.autocompleteHintSelect}
             <kbd style={{
-              'background-color': '#e5e7eb',
+              'background-color': 'var(--mcp-ui-surface-hover, #e5e7eb)',
               padding: '1px 4px',
               'border-radius': '2px',
               'font-family': 'inherit',

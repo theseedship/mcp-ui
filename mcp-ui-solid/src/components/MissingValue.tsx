@@ -38,7 +38,7 @@ export const MissingValueMark: Component = () => {
   const strings = useMCPUIStrings()
   return (
     <span data-mcp-missing-value="">
-      <span aria-hidden="true" class="text-gray-400 dark:text-gray-500">
+      <span aria-hidden="true" class="text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))] dark:text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))]">
         {MISSING_VALUE_MARKER}
       </span>
       <span style={VISUALLY_HIDDEN_STYLE}>{strings.missingValue}</span>
@@ -53,7 +53,7 @@ export const MissingValueLegend: Component<{ class?: string }> = (props) => {
     <p
       data-mcp-missing-legend=""
       role="note"
-      class={`text-xs text-gray-500 dark:text-gray-400 ${props.class ?? ''}`}
+      class={`text-xs text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))] ${props.class ?? ''}`}
     >
       {formatMCPUIString(strings.missingValueLegend, { marker: MISSING_VALUE_MARKER })}
     </p>

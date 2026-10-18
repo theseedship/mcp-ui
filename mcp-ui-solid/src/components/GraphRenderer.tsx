@@ -20,10 +20,7 @@
 
 import { Component, createSignal, onCleanup, onMount, Show, For } from 'solid-js';
 import type { UIComponent } from '../types';
-import type {
-  GraphComponentParams,
-  GraphLayout,
-} from '@seed-ship/mcp-ui-spec';
+import type { GraphComponentParams, GraphLayout } from '@seed-ship/mcp-ui-spec';
 import { ExpandableWrapper, useExpanded } from './ExpandableWrapper';
 import { PortalDropdownMenu } from './PortalDropdownMenu';
 import { DegradedFallback } from './DegradedFallback';
@@ -31,6 +28,40 @@ import { graphToDegradedTable } from '../utils/degraded-projections';
 import { escapeHtml } from '../utils/escape-html';
 import { useTelemetry } from '../context/MCPUITelemetryContext';
 import { formatMCPUIString, useMCPUIStrings } from '../context/MCPUIStringsContext';
+import { observeTheme, readThemeTokens } from '../utils/theme';
+
+const GRAPH_THEME_TOKENS = [
+  ...Array.from({ length: 8 }, (_, i) => `--mcp-ui-chart-${i + 1}`),
+  '--mcp-ui-chart-grid',
+  '--mcp-ui-chart-axis',
+  '--mcp-ui-chart-label',
+] as const;
+
+/** G6's option mappers outrank datum.style, so explicitly retain the latter. */
+function graphThemeOptions(p: GraphComponentParams, tokens: Record<string, string | undefined>) {
+  const nodeIndices = new Map(p.nodes.map((node, index) => [node.id, index]));
+  return {
+    node: {
+      style: (datum: any) => {
+        const index = nodeIndices.get(datum.id) ?? 0;
+        const fill = tokens[`--mcp-ui-chart-${(index % 8) + 1}`];
+        return {
+          ...(fill ? { fill } : {}),
+          ...(tokens['--mcp-ui-chart-axis'] ? { stroke: tokens['--mcp-ui-chart-axis'] } : {}),
+          ...(tokens['--mcp-ui-chart-label'] ? { labelFill: tokens['--mcp-ui-chart-label'] } : {}),
+          ...datum.style,
+        };
+      },
+    },
+    edge: {
+      style: (datum: any) => ({
+        ...(tokens['--mcp-ui-chart-grid'] ? { stroke: tokens['--mcp-ui-chart-grid'] } : {}),
+        ...(tokens['--mcp-ui-chart-label'] ? { labelFill: tokens['--mcp-ui-chart-label'] } : {}),
+        ...datum.style,
+      }),
+    },
+  };
+}
 
 // Module-scoped lazy import promise — first call triggers the dynamic
 // import, subsequent calls reuse the resolved module.
@@ -94,7 +125,8 @@ function resolveLayout(params: GraphComponentParams): { type: string; [key: stri
  */
 export function buildGraphConfig(
   p: GraphComponentParams,
-  container?: HTMLElement
+  container?: HTMLElement,
+  tokens: Record<string, string | undefined> = {}
 ): Record<string, unknown> {
   const config: Record<string, unknown> = {
     container,
@@ -102,6 +134,9 @@ export function buildGraphConfig(
     layout: resolveLayout(p),
     behaviors: resolveBehaviors(p),
   };
+  if (GRAPH_THEME_TOKENS.some((name) => tokens[name])) {
+    Object.assign(config, graphThemeOptions(p, tokens));
+  }
 
   if (p.rendererPref === 'svg') {
     console.warn(
@@ -122,7 +157,14 @@ export function buildGraphConfig(
           if (!item) return '';
           const label = item.label ?? item.id ?? '';
           const data = item.data ? JSON.stringify(item.data) : '';
-          return `<div style="padding:4px 8px"><strong>${escapeHtml(String(label))}</strong>${
+          // G6 may position HTML outside our subtree. Resolve effective host
+          // values at hover time, rather than relying on portal inheritance.
+          const theme = readThemeTokens(container, ['--mcp-ui-surface', '--mcp-ui-fg', '--mcp-ui-border']);
+          const styles = ['padding:4px 8px'];
+          if (theme['--mcp-ui-surface']) styles.push(`background-color:${theme['--mcp-ui-surface']}`);
+          if (theme['--mcp-ui-fg']) styles.push(`color:${theme['--mcp-ui-fg']}`);
+          if (theme['--mcp-ui-border']) styles.push(`border:1px solid ${theme['--mcp-ui-border']}`);
+          return `<div style="${escapeHtml(styles.join(';'))}"><strong>${escapeHtml(String(label))}</strong>${
             data ? `<br><span style="font-size:11px;opacity:0.7">${escapeHtml(data)}</span>` : ''
           }</div>`;
         },
@@ -234,70 +276,40 @@ export const GraphRenderer: Component<GraphRendererProps> = (props) => {
   // Loosely typed because G6 is a peer-optional — we don't pull its
   // types into the bundle just to type a transient local handle.
   let graphInstance: any | undefined;
+  let stopTheme: (() => void) | undefined;
+  let disposed = false;
 
   onMount(async () => {
     const g6Available = await isG6Available();
+    if (disposed) return;
     setAvailable(g6Available);
     if (!g6Available || !containerRef) return;
 
     try {
       const { Graph } = await g6ModulePromise!;
+      if (disposed || !containerRef) return;
       const p = params();
-      const config: Record<string, unknown> = {
-        container: containerRef,
-        data: { nodes: p.nodes, edges: p.edges ?? [] },
-        layout: resolveLayout(p),
-        behaviors: resolveBehaviors(p),
-      };
+      let tokens = readThemeTokens(containerRef, GRAPH_THEME_TOKENS);
+      const config = buildGraphConfig(p, containerRef, tokens);
 
-      // G6 v5's `renderer` is a factory `(layer) => IRenderer`, NOT a string
-      // (that was the v4 contract). Passing the string `'canvas'` / `'svg'`
-      // makes G6 throw `renderer is not a function` — and because the default
-      // path also passed the string `'canvas'`, EVERY graph crashed, not just
-      // the svg one.
-      //
-      // Fix: omit `renderer` entirely. G6 then uses its built-in canvas
-      // renderer (documented default `() => new CanvasRenderer()`), which is
-      // what we want for every graph.
-      //
-      // `rendererPref: 'svg'` is NOT wired yet: a real G6 v5 SVG renderer
-      // needs the `@antv/g-svg` factory, which is a *transitive* dep of
-      // `@antv/g6` (not a declared peer) and isn't statically resolvable at
-      // build time. Rather than ship a fragile/unresolvable import, we treat
-      // svg as "not yet supported" and fall back to the canvas default with a
-      // one-time warning. Tracked for a follow-up that wires the factory
-      // behind a proper optional-peer resolution. (Never pass a string here.)
-      if (p.rendererPref === 'svg') {
-        console.warn(
-          '[MCP-UI] GraphRenderer: rendererPref "svg" is not yet supported; using the default canvas renderer.'
-        );
-      }
-      if (p.fitView !== false) {
-        config.autoFit = 'view';
-      }
-      if (p.tooltip !== false) {
-        // Built-in tooltip plugin — shows label + a compact dump of
-        // node.data on hover. Consumers can opt out with `tooltip: false`.
-        config.plugins = [
-          {
-            type: 'tooltip',
-            getContent: (_evt: unknown, items: any[]) => {
-              const item = items?.[0];
-              if (!item) return '';
-              const label = item.label ?? item.id ?? '';
-              const data = item.data ? JSON.stringify(item.data) : '';
-              return `<div style="padding:4px 8px"><strong>${escapeHtml(String(label))}</strong>${
-                data
-                  ? `<br><span style="font-size:11px;opacity:0.7">${escapeHtml(data)}</span>`
-                  : ''
-              }</div>`;
-            },
-          },
-        ];
-      }
       graphInstance = new (Graph as any)(config);
       await graphInstance.render();
+      if (disposed) return;
+      const syncTheme = () => {
+        if (!graphInstance || disposed) return;
+        const next = readThemeTokens(containerRef, GRAPH_THEME_TOKENS);
+        if (GRAPH_THEME_TOKENS.every((name) => next[name] === tokens[name])) return;
+        tokens = next;
+        graphInstance.setOptions(graphThemeOptions(p, tokens));
+        // draw() updates styles without rerunning force layout or auto-fit.
+        void Promise.resolve(graphInstance.draw()).catch(() => {});
+      };
+      stopTheme = observeTheme(containerRef, syncTheme);
+      // Rendering/layout is async: a host may have switched themes while it
+      // was in flight, before the observer could be attached.
+      syncTheme();
     } catch (err) {
+      if (disposed) return;
       const message = err instanceof Error ? err.message : strings.graphRenderError;
       setError(message);
       // Fallback ladder (P2.5): the native G6 render threw — emit telemetry
@@ -314,6 +326,8 @@ export const GraphRenderer: Component<GraphRendererProps> = (props) => {
   });
 
   onCleanup(() => {
+    disposed = true;
+    stopTheme?.();
     try {
       graphInstance?.destroy();
     } catch {
@@ -365,17 +379,17 @@ export const GraphRenderer: Component<GraphRendererProps> = (props) => {
           when={available() === false}
           fallback={
             // Loading skeleton while we determine peer availability
-            <div class="w-full p-4 bg-gray-50 dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 rounded-lg animate-pulse">
-              <div class="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
-              <div class="h-3 w-48 bg-gray-200 dark:bg-gray-700 rounded" />
+            <div class="w-full p-4 bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-50,#f9fafb))] dark:bg-[color:var(--mcp-ui-surface,color-mix(in_oklab,var(--color-gray-800,#1f2937)_40%,transparent))] border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))] rounded-lg animate-pulse">
+              <div class="h-4 w-32 bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-200,#e5e7eb))] dark:bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-700,#374151))] rounded mb-2" />
+              <div class="h-3 w-48 bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-200,#e5e7eb))] dark:bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-700,#374151))] rounded" />
             </div>
           }
         >
-          <div class="w-full p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-            <p class="text-sm font-medium text-yellow-900 dark:text-yellow-100">
+          <div class="w-full p-4 bg-[color:var(--mcp-ui-warning-soft,var(--color-yellow-50))] dark:bg-[color:var(--mcp-ui-warning-soft,color-mix(in_oklab,var(--color-yellow-900)_20%,transparent))] border border-[color:var(--mcp-ui-warning-border,var(--color-yellow-200))] dark:border-[color:var(--mcp-ui-warning-border,var(--color-yellow-800))] rounded-lg">
+            <p class="text-sm font-medium text-[color:var(--mcp-ui-warning,var(--color-yellow-900))] dark:text-[color:var(--mcp-ui-warning,var(--color-yellow-100))]">
               {strings.graphUnavailable}
             </p>
-            <p class="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
+            <p class="text-xs text-[color:var(--mcp-ui-warning,var(--color-yellow-700))] dark:text-[color:var(--mcp-ui-warning,var(--color-yellow-300))] mt-1">
               Install <code>@antv/g6</code> peer dependency to render <code>type: "graph"</code>{' '}
               components.
             </p>
@@ -400,7 +414,7 @@ export const GraphRenderer: Component<GraphRendererProps> = (props) => {
               ref={exportTriggerRef}
               type="button"
               onClick={() => setExportMenuOpen((v) => !v)}
-              class="px-2 py-1 text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+              class="px-2 py-1 text-xs bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-800,#1f2937))] border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-600,#4b5563))] rounded shadow-[var(--mcp-ui-shadow,var(--shadow-sm))] hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-50,#f9fafb))] dark:hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-700,#374151))] text-[color:var(--mcp-ui-fg,var(--color-gray-700,#374151))] dark:text-[color:var(--mcp-ui-fg,var(--color-gray-300,#d1d5db))]"
               title={strings.graphExport}
               aria-label={strings.graphExport}
               aria-haspopup="menu"
@@ -438,10 +452,12 @@ export const GraphRenderer: Component<GraphRendererProps> = (props) => {
                   <button
                     type="button"
                     onClick={item.onClick}
-                    class="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border-b border-gray-100 dark:border-gray-700 last:border-b-0"
+                    class="w-full text-left px-3 py-2 hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-100,#f3f4f6))] dark:hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-700,#374151))] text-[color:var(--mcp-ui-fg,var(--color-gray-700,#374151))] dark:text-[color:var(--mcp-ui-fg,var(--color-gray-300,#d1d5db))] border-b border-[color:var(--mcp-ui-border,var(--color-gray-100,#f3f4f6))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))] last:border-b-0"
                   >
                     <div class="font-medium">{item.label}</div>
-                    <div class="text-[10px] text-gray-500 dark:text-gray-400">{item.hint}</div>
+                    <div class="text-[10px] text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]">
+                      {item.hint}
+                    </div>
                   </button>
                 )}
               </For>
@@ -451,7 +467,7 @@ export const GraphRenderer: Component<GraphRendererProps> = (props) => {
           {/* Native G6 canvas — hidden once a render error degrades us. */}
           <div
             ref={containerRef}
-            class={`bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden ${
+            class={`mcp-ui-root bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-800,#1f2937))] rounded-lg shadow-[var(--mcp-ui-shadow,var(--shadow-sm))] border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))] overflow-hidden ${
               error() ? 'hidden' : ''
             } ${isExpanded() ? 'flex-1 min-h-0' : ''}`}
             style={

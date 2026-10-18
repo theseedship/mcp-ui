@@ -275,7 +275,7 @@ describe('ChatPrompt', () => {
       ))
 
       const deleteBtn = getByText('Delete')
-      expect(deleteBtn.className).toContain('bg-red-600')
+      expect(deleteBtn.className).toContain('bg-[color:var(--mcp-ui-danger,')
     })
   })
 
@@ -348,7 +348,9 @@ describe('ChatPrompt', () => {
         <ChatPrompt config={formConfig} onSubmit={() => {}} />
       ))
 
-      const asterisks = container.querySelectorAll('.text-red-500')
+      const asterisks = [...container.querySelectorAll('span')].filter(
+        (element) => element.textContent === '*' && element.className.includes('--mcp-ui-danger'),
+      )
       expect(asterisks.length).toBeGreaterThan(0)
     })
   })

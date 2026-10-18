@@ -233,17 +233,12 @@ describe('ExpandableWrapper', () => {
     fireEvent.click(getByLabelText('Expand'))
 
     const dialog = getByRole('dialog')
-    // Modal panel should have dark mode background class
-    const panel = dialog.querySelector('.dark\\:bg-gray-800')
-    expect(panel).not.toBeNull()
-
-    // Header title should have dark mode text class
-    const title = dialog.querySelector('.dark\\:text-white')
-    expect(title).not.toBeNull()
-
-    // Header border should have dark mode class
-    const header = dialog.querySelector('.dark\\:border-gray-700')
-    expect(header).not.toBeNull()
+    const panel = dialog.firstElementChild
+    expect(panel?.className).toContain('dark:bg-[color:var(--mcp-ui-surface,')
+    const title = dialog.querySelector('h2')
+    expect(title?.className).toContain('dark:text-[color:var(--mcp-ui-fg,')
+    const header = panel?.firstElementChild
+    expect(header?.className).toContain('dark:border-[color:var(--mcp-ui-border,')
   })
 
   it('prevents body scroll when expanded', async () => {

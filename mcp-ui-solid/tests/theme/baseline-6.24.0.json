@@ -1,0 +1,1213 @@
+{
+  "identity": {
+    "commit": "54e100d5dec1af8cea7673537f399b4f696b151b",
+    "browser": "153.0.8010.12",
+    "tailwind": "4.3.3"
+  },
+  "samples": {
+    "light": {
+      "prompt": {
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderTopColor": "oklch(0.928 0.006 264.531)",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 10px 15px -3px, rgba(0, 0, 0, 0.1) 0px 4px 6px -4px",
+        "outlineColor": "rgb(0, 0, 0)"
+      },
+      "promptTitle": {
+        "color": "oklch(0.21 0.034 264.665)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderTopColor": "oklch(0.21 0.034 264.665)",
+        "boxShadow": "none",
+        "outlineColor": "oklch(0.21 0.034 264.665)"
+      },
+      "promptChoice": {
+        "color": "oklch(0.21 0.034 264.665)",
+        "backgroundColor": "oklch(0.985 0.002 247.839)",
+        "borderTopColor": "oklch(0.928 0.006 264.531)",
+        "boxShadow": "none",
+        "outlineColor": "oklch(0.21 0.034 264.665)"
+      },
+      "table": {
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderTopColor": "rgb(0, 0, 0)",
+        "boxShadow": "none",
+        "outlineColor": "rgb(0, 0, 0)"
+      },
+      "tableHead": {
+        "color": "oklch(0.551 0.027 264.364)",
+        "backgroundColor": "oklch(0.967 0.003 264.542)",
+        "borderTopColor": "oklch(0.928 0.006 264.531)",
+        "boxShadow": "none",
+        "outlineColor": "oklch(0.551 0.027 264.364)"
+      },
+      "tableCell": {
+        "color": "oklch(0.373 0.034 259.733)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderTopColor": "oklch(0.373 0.034 259.733)",
+        "boxShadow": "none",
+        "outlineColor": "oklch(0.373 0.034 259.733)"
+      },
+      "tableSearch": {
+        "color": "oklch(0.21 0.034 264.665)",
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderTopColor": "oklch(0.928 0.006 264.531)",
+        "boxShadow": "none",
+        "outlineColor": "oklch(0.21 0.034 264.665)"
+      },
+      "expandButton": {
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderTopColor": "oklch(0.928 0.006 264.531)",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 1px 3px 0px, rgba(0, 0, 0, 0.1) 0px 1px 2px -1px",
+        "outlineColor": "rgb(0, 0, 0)"
+      },
+      "scratchpad": {
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderTopColor": "oklch(0.928 0.006 264.531)",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 10px 15px -3px, rgba(0, 0, 0, 0.1) 0px 4px 6px -4px",
+        "outlineColor": "rgb(0, 0, 0)"
+      },
+      "autocomplete": {
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderTopColor": "rgb(229, 231, 235)",
+        "boxShadow": "rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.06) 0px 2px 4px -1px",
+        "outlineColor": "rgb(0, 0, 0)"
+      },
+      "autocompleteSelected": {
+        "color": "rgb(55, 65, 81)",
+        "backgroundColor": "rgb(239, 246, 255)",
+        "borderTopColor": "rgb(55, 65, 81)",
+        "boxShadow": "none",
+        "outlineColor": "rgb(55, 65, 81)"
+      },
+      "autocompleteLabel": {
+        "color": "rgb(55, 65, 81)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderTopColor": "rgb(55, 65, 81)",
+        "boxShadow": "none",
+        "outlineColor": "rgb(55, 65, 81)"
+      },
+      "autocompleteHighlight": {
+        "color": "rgb(29, 78, 216)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderTopColor": "rgb(29, 78, 216)",
+        "boxShadow": "none",
+        "outlineColor": "rgb(29, 78, 216)"
+      },
+      "form": {
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderTopColor": "oklch(0.928 0.006 264.531)",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 10px 15px -3px, rgba(0, 0, 0, 0.1) 0px 4px 6px -4px",
+        "outlineColor": "rgb(0, 0, 0)"
+      },
+      "formLabel": {
+        "color": "oklch(0.373 0.034 259.733)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderTopColor": "oklch(0.373 0.034 259.733)",
+        "boxShadow": "none",
+        "outlineColor": "oklch(0.373 0.034 259.733)"
+      },
+      "requiredMarker": {
+        "color": "oklch(0.637 0.237 25.331)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderTopColor": "oklch(0.637 0.237 25.331)",
+        "boxShadow": "none",
+        "outlineColor": "oklch(0.637 0.237 25.331)"
+      },
+      "requiredInput": {
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderTopColor": "oklch(0.872 0.01 258.338)",
+        "boxShadow": "none",
+        "outlineColor": "rgb(0, 0, 0)"
+      },
+      "formSelect": {
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderTopColor": "oklch(0.872 0.01 258.338)",
+        "boxShadow": "none",
+        "outlineColor": "rgb(0, 0, 0)"
+      },
+      "formHelp": {
+        "color": "oklch(0.551 0.027 264.364)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderTopColor": "oklch(0.551 0.027 264.364)",
+        "boxShadow": "none",
+        "outlineColor": "oklch(0.551 0.027 264.364)"
+      },
+      "disabledSubmit": {
+        "color": "rgb(255, 255, 255)",
+        "backgroundColor": "oklch(0.707 0.022 261.325)",
+        "borderTopColor": "rgb(255, 255, 255)",
+        "boxShadow": "none",
+        "outlineColor": "rgb(255, 255, 255)"
+      },
+      "errorInput": {
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderTopColor": "oklch(0.637 0.237 25.331)",
+        "boxShadow": "none",
+        "outlineColor": "rgb(0, 0, 0)"
+      },
+      "errorText": {
+        "color": "oklch(0.577 0.245 27.325)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderTopColor": "oklch(0.577 0.245 27.325)",
+        "boxShadow": "none",
+        "outlineColor": "oklch(0.577 0.245 27.325)"
+      },
+      "scratchpadSelect": {
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderTopColor": "oklch(0.872 0.01 258.338)",
+        "boxShadow": "none",
+        "outlineColor": "rgb(0, 0, 0)"
+      },
+      "scratchpadFilter": {
+        "color": "oklch(0.551 0.027 264.364)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderTopColor": "oklch(0.872 0.01 258.338)",
+        "boxShadow": "none",
+        "outlineColor": "oklch(0.551 0.027 264.364)"
+      }
+    },
+    "lightFocus": {
+      "requiredInput": {
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderTopColor": "oklch(0.623 0.214 259.815)",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklch(0.623 0.214 259.815) 0px 0px 0px 2px, rgba(0, 0, 0, 0) 0px 0px 0px 0px",
+        "outlineColor": "rgb(16, 16, 16)"
+      }
+    },
+    "lightErrorFocus": {
+      "errorInput": {
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderTopColor": "oklch(0.623 0.214 259.815)",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklch(0.637 0.237 25.331) 0px 0px 0px 2px, rgba(0, 0, 0, 0) 0px 0px 0px 0px",
+        "outlineColor": "rgb(16, 16, 16)"
+      }
+    },
+    "lightChoiceHover": {
+      "choice": {
+        "color": "oklch(0.21 0.034 264.665)",
+        "backgroundColor": "oklch(0.97 0.014 254.604)",
+        "borderTopColor": "oklch(0.809 0.105 251.813)",
+        "boxShadow": "none",
+        "outlineColor": "oklch(0.21 0.034 264.665)"
+      }
+    },
+    "lightFilterOpen": {
+      "panel": {
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderTopColor": "oklch(0.928 0.006 264.531)",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 10px 15px -3px, rgba(0, 0, 0, 0.1) 0px 4px 6px -4px",
+        "outlineColor": "rgb(0, 0, 0)"
+      },
+      "option": {
+        "color": "oklch(0.21 0.034 264.665)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderTopColor": "oklch(0.21 0.034 264.665)",
+        "boxShadow": "none",
+        "outlineColor": "oklch(0.21 0.034 264.665)"
+      }
+    },
+    "lightMenu": {
+      "menu": {
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderTopColor": "oklch(0.928 0.006 264.531)",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 10px 15px -3px, rgba(0, 0, 0, 0.1) 0px 4px 6px -4px",
+        "outlineColor": "rgb(0, 0, 0)"
+      }
+    },
+    "lightMenuToggledDark": {
+      "menu": {
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "oklch(0.278 0.033 256.848)",
+        "borderTopColor": "oklch(0.446 0.03 256.802)",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 10px 15px -3px, rgba(0, 0, 0, 0.1) 0px 4px 6px -4px",
+        "outlineColor": "rgb(0, 0, 0)"
+      }
+    },
+    "lightDialog": {
+      "dialog": {
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "oklab(0 0 0 / 0.5)",
+        "borderTopColor": "rgb(0, 0, 0)",
+        "boxShadow": "none",
+        "outlineColor": "rgb(16, 16, 16)"
+      },
+      "panel": {
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderTopColor": "rgb(0, 0, 0)",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 20px 25px -5px, rgba(0, 0, 0, 0.1) 0px 8px 10px -6px",
+        "outlineColor": "rgb(0, 0, 0)"
+      },
+      "title": {
+        "color": "oklch(0.21 0.034 264.665)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderTopColor": "oklch(0.21 0.034 264.665)",
+        "boxShadow": "none",
+        "outlineColor": "oklch(0.21 0.034 264.665)"
+      }
+    },
+    "lightDialogToggledDark": {
+      "dialog": {
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "oklab(0 0 0 / 0.5)",
+        "borderTopColor": "rgb(0, 0, 0)",
+        "boxShadow": "none",
+        "outlineColor": "rgb(16, 16, 16)"
+      },
+      "panel": {
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "oklch(0.278 0.033 256.848)",
+        "borderTopColor": "rgb(0, 0, 0)",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 20px 25px -5px, rgba(0, 0, 0, 0.1) 0px 8px 10px -6px",
+        "outlineColor": "rgb(0, 0, 0)"
+      },
+      "title": {
+        "color": "rgb(255, 255, 255)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderTopColor": "rgb(255, 255, 255)",
+        "boxShadow": "none",
+        "outlineColor": "rgb(255, 255, 255)"
+      }
+    },
+    "dark": {
+      "prompt": {
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "oklch(0.278 0.033 256.848)",
+        "borderTopColor": "oklch(0.373 0.034 259.733)",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 10px 15px -3px, rgba(0, 0, 0, 0.1) 0px 4px 6px -4px",
+        "outlineColor": "rgb(0, 0, 0)"
+      },
+      "promptTitle": {
+        "color": "rgb(255, 255, 255)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderTopColor": "rgb(255, 255, 255)",
+        "boxShadow": "none",
+        "outlineColor": "rgb(255, 255, 255)"
+      },
+      "promptChoice": {
+        "color": "rgb(255, 255, 255)",
+        "backgroundColor": "oklch(0.373 0.034 259.733)",
+        "borderTopColor": "oklch(0.446 0.03 256.802)",
+        "boxShadow": "none",
+        "outlineColor": "rgb(255, 255, 255)"
+      },
+      "table": {
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderTopColor": "rgb(0, 0, 0)",
+        "boxShadow": "none",
+        "outlineColor": "rgb(0, 0, 0)"
+      },
+      "tableHead": {
+        "color": "oklch(0.707 0.022 261.325)",
+        "backgroundColor": "oklch(0.21 0.034 264.665)",
+        "borderTopColor": "oklch(0.373 0.034 259.733)",
+        "boxShadow": "none",
+        "outlineColor": "oklch(0.707 0.022 261.325)"
+      },
+      "tableCell": {
+        "color": "oklch(0.928 0.006 264.531)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderTopColor": "oklch(0.928 0.006 264.531)",
+        "boxShadow": "none",
+        "outlineColor": "oklch(0.928 0.006 264.531)"
+      },
+      "tableSearch": {
+        "color": "rgb(255, 255, 255)",
+        "backgroundColor": "oklch(0.373 0.034 259.733)",
+        "borderTopColor": "oklch(0.446 0.03 256.802)",
+        "boxShadow": "none",
+        "outlineColor": "rgb(255, 255, 255)"
+      },
+      "expandButton": {
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "oklch(0.278 0.033 256.848)",
+        "borderTopColor": "oklch(0.446 0.03 256.802)",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 1px 3px 0px, rgba(0, 0, 0, 0.1) 0px 1px 2px -1px",
+        "outlineColor": "rgb(0, 0, 0)"
+      },
+      "scratchpad": {
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "oklch(0.278 0.033 256.848)",
+        "borderTopColor": "oklch(0.373 0.034 259.733)",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 10px 15px -3px, rgba(0, 0, 0, 0.1) 0px 4px 6px -4px",
+        "outlineColor": "rgb(0, 0, 0)"
+      },
+      "autocomplete": {
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderTopColor": "rgb(229, 231, 235)",
+        "boxShadow": "rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.06) 0px 2px 4px -1px",
+        "outlineColor": "rgb(0, 0, 0)"
+      },
+      "autocompleteSelected": {
+        "color": "rgb(55, 65, 81)",
+        "backgroundColor": "rgb(30, 58, 95)",
+        "borderTopColor": "rgb(55, 65, 81)",
+        "boxShadow": "none",
+        "outlineColor": "rgb(55, 65, 81)"
+      },
+      "autocompleteLabel": {
+        "color": "rgb(229, 231, 235)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderTopColor": "rgb(229, 231, 235)",
+        "boxShadow": "none",
+        "outlineColor": "rgb(229, 231, 235)"
+      },
+      "autocompleteHighlight": {
+        "color": "rgb(96, 165, 250)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderTopColor": "rgb(96, 165, 250)",
+        "boxShadow": "none",
+        "outlineColor": "rgb(96, 165, 250)"
+      },
+      "form": {
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "oklch(0.278 0.033 256.848)",
+        "borderTopColor": "oklch(0.373 0.034 259.733)",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 10px 15px -3px, rgba(0, 0, 0, 0.1) 0px 4px 6px -4px",
+        "outlineColor": "rgb(0, 0, 0)"
+      },
+      "formLabel": {
+        "color": "oklch(0.872 0.01 258.338)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderTopColor": "oklch(0.872 0.01 258.338)",
+        "boxShadow": "none",
+        "outlineColor": "oklch(0.872 0.01 258.338)"
+      },
+      "requiredMarker": {
+        "color": "oklch(0.637 0.237 25.331)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderTopColor": "oklch(0.637 0.237 25.331)",
+        "boxShadow": "none",
+        "outlineColor": "oklch(0.637 0.237 25.331)"
+      },
+      "requiredInput": {
+        "color": "rgb(255, 255, 255)",
+        "backgroundColor": "oklch(0.373 0.034 259.733)",
+        "borderTopColor": "oklch(0.446 0.03 256.802)",
+        "boxShadow": "none",
+        "outlineColor": "rgb(255, 255, 255)"
+      },
+      "formSelect": {
+        "color": "rgb(255, 255, 255)",
+        "backgroundColor": "oklch(0.373 0.034 259.733)",
+        "borderTopColor": "oklch(0.446 0.03 256.802)",
+        "boxShadow": "none",
+        "outlineColor": "rgb(255, 255, 255)"
+      },
+      "formHelp": {
+        "color": "oklch(0.707 0.022 261.325)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderTopColor": "oklch(0.707 0.022 261.325)",
+        "boxShadow": "none",
+        "outlineColor": "oklch(0.707 0.022 261.325)"
+      },
+      "disabledSubmit": {
+        "color": "rgb(255, 255, 255)",
+        "backgroundColor": "oklch(0.707 0.022 261.325)",
+        "borderTopColor": "rgb(255, 255, 255)",
+        "boxShadow": "none",
+        "outlineColor": "rgb(255, 255, 255)"
+      },
+      "errorInput": {
+        "color": "rgb(255, 255, 255)",
+        "backgroundColor": "oklch(0.373 0.034 259.733)",
+        "borderTopColor": "oklch(0.637 0.237 25.331)",
+        "boxShadow": "none",
+        "outlineColor": "rgb(255, 255, 255)"
+      },
+      "errorText": {
+        "color": "oklch(0.704 0.191 22.216)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderTopColor": "oklch(0.704 0.191 22.216)",
+        "boxShadow": "none",
+        "outlineColor": "oklch(0.704 0.191 22.216)"
+      },
+      "scratchpadSelect": {
+        "color": "rgb(255, 255, 255)",
+        "backgroundColor": "oklch(0.373 0.034 259.733)",
+        "borderTopColor": "oklch(0.446 0.03 256.802)",
+        "boxShadow": "none",
+        "outlineColor": "rgb(255, 255, 255)"
+      },
+      "scratchpadFilter": {
+        "color": "oklch(0.707 0.022 261.325)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderTopColor": "oklch(0.446 0.03 256.802)",
+        "boxShadow": "none",
+        "outlineColor": "oklch(0.707 0.022 261.325)"
+      }
+    },
+    "darkFocus": {
+      "requiredInput": {
+        "color": "rgb(255, 255, 255)",
+        "backgroundColor": "oklch(0.373 0.034 259.733)",
+        "borderTopColor": "oklch(0.623 0.214 259.815)",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklch(0.623 0.214 259.815) 0px 0px 0px 2px, rgba(0, 0, 0, 0) 0px 0px 0px 0px",
+        "outlineColor": "rgb(16, 16, 16)"
+      }
+    },
+    "darkErrorFocus": {
+      "errorInput": {
+        "color": "rgb(255, 255, 255)",
+        "backgroundColor": "oklch(0.373 0.034 259.733)",
+        "borderTopColor": "oklch(0.623 0.214 259.815)",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklch(0.637 0.237 25.331) 0px 0px 0px 2px, rgba(0, 0, 0, 0) 0px 0px 0px 0px",
+        "outlineColor": "rgb(16, 16, 16)"
+      }
+    },
+    "darkChoiceHover": {
+      "choice": {
+        "color": "rgb(255, 255, 255)",
+        "backgroundColor": "oklab(0.379 -0.0113991 -0.145554 / 0.3)",
+        "borderTopColor": "oklch(0.546 0.245 262.881)",
+        "boxShadow": "none",
+        "outlineColor": "rgb(255, 255, 255)"
+      }
+    },
+    "darkFilterOpen": {
+      "panel": {
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "oklch(0.278 0.033 256.848)",
+        "borderTopColor": "oklch(0.446 0.03 256.802)",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 10px 15px -3px, rgba(0, 0, 0, 0.1) 0px 4px 6px -4px",
+        "outlineColor": "rgb(0, 0, 0)"
+      },
+      "option": {
+        "color": "rgb(255, 255, 255)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderTopColor": "rgb(255, 255, 255)",
+        "boxShadow": "none",
+        "outlineColor": "rgb(255, 255, 255)"
+      }
+    },
+    "darkMenu": {
+      "menu": {
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "oklch(0.278 0.033 256.848)",
+        "borderTopColor": "oklch(0.446 0.03 256.802)",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 10px 15px -3px, rgba(0, 0, 0, 0.1) 0px 4px 6px -4px",
+        "outlineColor": "rgb(0, 0, 0)"
+      }
+    },
+    "darkMenuToggledLight": {
+      "menu": {
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderTopColor": "oklch(0.928 0.006 264.531)",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 10px 15px -3px, rgba(0, 0, 0, 0.1) 0px 4px 6px -4px",
+        "outlineColor": "rgb(0, 0, 0)"
+      }
+    },
+    "darkDialog": {
+      "dialog": {
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "oklab(0 0 0 / 0.5)",
+        "borderTopColor": "rgb(0, 0, 0)",
+        "boxShadow": "none",
+        "outlineColor": "rgb(16, 16, 16)"
+      },
+      "panel": {
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "oklch(0.278 0.033 256.848)",
+        "borderTopColor": "rgb(0, 0, 0)",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 20px 25px -5px, rgba(0, 0, 0, 0.1) 0px 8px 10px -6px",
+        "outlineColor": "rgb(0, 0, 0)"
+      },
+      "title": {
+        "color": "rgb(255, 255, 255)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderTopColor": "rgb(255, 255, 255)",
+        "boxShadow": "none",
+        "outlineColor": "rgb(255, 255, 255)"
+      }
+    },
+    "darkDialogToggledLight": {
+      "dialog": {
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "oklab(0 0 0 / 0.5)",
+        "borderTopColor": "rgb(0, 0, 0)",
+        "boxShadow": "none",
+        "outlineColor": "rgb(16, 16, 16)"
+      },
+      "panel": {
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderTopColor": "rgb(0, 0, 0)",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 20px 25px -5px, rgba(0, 0, 0, 0.1) 0px 8px 10px -6px",
+        "outlineColor": "rgb(0, 0, 0)"
+      },
+      "title": {
+        "color": "oklch(0.21 0.034 264.665)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderTopColor": "oklch(0.21 0.034 264.665)",
+        "boxShadow": "none",
+        "outlineColor": "oklch(0.21 0.034 264.665)"
+      }
+    }
+  },
+  "contrast": {
+    "light": {
+      "promptTitle": {
+        "ratio": 17.75,
+        "foreground": [
+          16,
+          24,
+          40
+        ],
+        "background": [
+          255,
+          255,
+          255
+        ]
+      },
+      "formLabel": {
+        "ratio": 10.3,
+        "foreground": [
+          54,
+          65,
+          83
+        ],
+        "background": [
+          255,
+          255,
+          255
+        ]
+      },
+      "formHelp": {
+        "ratio": 4.84,
+        "foreground": [
+          106,
+          114,
+          130
+        ],
+        "background": [
+          255,
+          255,
+          255
+        ]
+      },
+      "requiredInput": {
+        "ratio": 21,
+        "foreground": [
+          0,
+          0,
+          0
+        ],
+        "background": [
+          255,
+          255,
+          255
+        ]
+      },
+      "scratchpadSelect": {
+        "ratio": 21,
+        "foreground": [
+          0,
+          0,
+          0
+        ],
+        "background": [
+          255,
+          255,
+          255
+        ]
+      },
+      "autocompleteLabel": {
+        "ratio": 9.47,
+        "foreground": [
+          55,
+          65,
+          81
+        ],
+        "background": [
+          239,
+          246,
+          255
+        ]
+      },
+      "autocompleteHighlight": {
+        "ratio": 6.16,
+        "foreground": [
+          29,
+          78,
+          216
+        ],
+        "background": [
+          239,
+          246,
+          255
+        ]
+      }
+    },
+    "dark": {
+      "promptTitle": {
+        "ratio": 14.67,
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "background": [
+          30,
+          41,
+          57
+        ]
+      },
+      "formLabel": {
+        "ratio": 9.96,
+        "foreground": [
+          209,
+          213,
+          220
+        ],
+        "background": [
+          30,
+          41,
+          57
+        ]
+      },
+      "formHelp": {
+        "ratio": 5.64,
+        "foreground": [
+          153,
+          161,
+          175
+        ],
+        "background": [
+          30,
+          41,
+          57
+        ]
+      },
+      "requiredInput": {
+        "ratio": 10.3,
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "background": [
+          54,
+          65,
+          83
+        ]
+      },
+      "scratchpadSelect": {
+        "ratio": 10.3,
+        "foreground": [
+          255,
+          255,
+          255
+        ],
+        "background": [
+          54,
+          65,
+          83
+        ]
+      },
+      "autocompleteLabel": {
+        "ratio": 9.29,
+        "foreground": [
+          229,
+          231,
+          235
+        ],
+        "background": [
+          30,
+          58,
+          95
+        ]
+      },
+      "autocompleteHighlight": {
+        "ratio": 4.52,
+        "foreground": [
+          96,
+          165,
+          250
+        ],
+        "background": [
+          30,
+          58,
+          95
+        ]
+      }
+    }
+  },
+  "controlContrast": {
+    "light": {
+      "default": {
+        "requiredInput": {
+          "disabled": false,
+          "border": {
+            "visible": true,
+            "width": "1px",
+            "color": "oklch(0.872 0.01 258.338)",
+            "foreground": [
+              209,
+              213,
+              220
+            ],
+            "adjacent": [
+              255,
+              255,
+              255
+            ],
+            "ratio": 1.47
+          }
+        },
+        "formSelect": {
+          "disabled": false,
+          "border": {
+            "visible": true,
+            "width": "1px",
+            "color": "oklch(0.872 0.01 258.338)",
+            "foreground": [
+              209,
+              213,
+              220
+            ],
+            "adjacent": [
+              255,
+              255,
+              255
+            ],
+            "ratio": 1.47
+          }
+        },
+        "scratchpadSelect": {
+          "disabled": false,
+          "border": {
+            "visible": true,
+            "width": "1px",
+            "color": "oklch(0.872 0.01 258.338)",
+            "foreground": [
+              209,
+              213,
+              220
+            ],
+            "adjacent": [
+              255,
+              255,
+              255
+            ],
+            "ratio": 1.47
+          }
+        },
+        "tableSearch": {
+          "disabled": false,
+          "border": {
+            "visible": true,
+            "width": "1px",
+            "color": "oklch(0.928 0.006 264.531)",
+            "foreground": [
+              229,
+              231,
+              235
+            ],
+            "adjacent": [
+              255,
+              255,
+              255
+            ],
+            "ratio": 1.24
+          }
+        },
+        "choice": {
+          "disabled": false,
+          "border": {
+            "visible": true,
+            "width": "1px",
+            "color": "oklch(0.928 0.006 264.531)",
+            "foreground": [
+              229,
+              231,
+              235
+            ],
+            "adjacent": [
+              255,
+              255,
+              255
+            ],
+            "ratio": 1.24
+          }
+        }
+      },
+      "focus": {
+        "requiredInput": {
+          "disabled": false,
+          "border": {
+            "visible": true,
+            "width": "1px",
+            "color": "oklch(0.623 0.214 259.815)",
+            "foreground": [
+              43,
+              127,
+              255
+            ],
+            "adjacent": [
+              255,
+              255,
+              255
+            ],
+            "ratio": 3.76
+          },
+          "focused": true,
+          "ring": {
+            "visible": true,
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklch(0.623 0.214 259.815) 0px 0px 0px 2px, rgba(0, 0, 0, 0) 0px 0px 0px 0px",
+            "color": "oklch(62.3% 0.214 259.815)",
+            "foreground": [
+              43,
+              127,
+              255
+            ],
+            "adjacent": [
+              255,
+              255,
+              255
+            ],
+            "ratio": 3.76
+          },
+          "outline": {
+            "visible": true,
+            "width": "1px",
+            "style": "auto",
+            "color": "rgb(16, 16, 16)",
+            "foreground": [
+              16,
+              16,
+              16
+            ],
+            "adjacent": [
+              255,
+              255,
+              255
+            ],
+            "ratio": 19.03
+          }
+        }
+      },
+      "errorFocus": {
+        "errorInput": {
+          "disabled": false,
+          "border": {
+            "visible": true,
+            "width": "1px",
+            "color": "oklch(0.623 0.214 259.815)",
+            "foreground": [
+              43,
+              127,
+              255
+            ],
+            "adjacent": [
+              255,
+              255,
+              255
+            ],
+            "ratio": 3.76
+          },
+          "focused": true,
+          "ring": {
+            "visible": true,
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklch(0.637 0.237 25.331) 0px 0px 0px 2px, rgba(0, 0, 0, 0) 0px 0px 0px 0px",
+            "color": "oklch(63.7% 0.237 25.331)",
+            "foreground": [
+              251,
+              44,
+              54
+            ],
+            "adjacent": [
+              255,
+              255,
+              255
+            ],
+            "ratio": 3.81
+          },
+          "outline": {
+            "visible": true,
+            "width": "1px",
+            "style": "auto",
+            "color": "rgb(16, 16, 16)",
+            "foreground": [
+              16,
+              16,
+              16
+            ],
+            "adjacent": [
+              255,
+              255,
+              255
+            ],
+            "ratio": 19.03
+          }
+        }
+      }
+    },
+    "dark": {
+      "default": {
+        "requiredInput": {
+          "disabled": false,
+          "border": {
+            "visible": true,
+            "width": "1px",
+            "color": "oklch(0.446 0.03 256.802)",
+            "foreground": [
+              74,
+              85,
+              101
+            ],
+            "adjacent": [
+              30,
+              41,
+              57
+            ],
+            "ratio": 1.94
+          }
+        },
+        "formSelect": {
+          "disabled": false,
+          "border": {
+            "visible": true,
+            "width": "1px",
+            "color": "oklch(0.446 0.03 256.802)",
+            "foreground": [
+              74,
+              85,
+              101
+            ],
+            "adjacent": [
+              30,
+              41,
+              57
+            ],
+            "ratio": 1.94
+          }
+        },
+        "scratchpadSelect": {
+          "disabled": false,
+          "border": {
+            "visible": true,
+            "width": "1px",
+            "color": "oklch(0.446 0.03 256.802)",
+            "foreground": [
+              74,
+              85,
+              101
+            ],
+            "adjacent": [
+              30,
+              41,
+              57
+            ],
+            "ratio": 1.94
+          }
+        },
+        "tableSearch": {
+          "disabled": false,
+          "border": {
+            "visible": true,
+            "width": "1px",
+            "color": "oklch(0.446 0.03 256.802)",
+            "foreground": [
+              74,
+              85,
+              101
+            ],
+            "adjacent": [
+              30,
+              41,
+              57
+            ],
+            "ratio": 1.94
+          }
+        },
+        "choice": {
+          "disabled": false,
+          "border": {
+            "visible": true,
+            "width": "1px",
+            "color": "oklch(0.446 0.03 256.802)",
+            "foreground": [
+              74,
+              85,
+              101
+            ],
+            "adjacent": [
+              30,
+              41,
+              57
+            ],
+            "ratio": 1.94
+          }
+        }
+      },
+      "focus": {
+        "requiredInput": {
+          "disabled": false,
+          "border": {
+            "visible": true,
+            "width": "1px",
+            "color": "oklch(0.623 0.214 259.815)",
+            "foreground": [
+              43,
+              127,
+              255
+            ],
+            "adjacent": [
+              30,
+              41,
+              57
+            ],
+            "ratio": 3.9
+          },
+          "focused": true,
+          "ring": {
+            "visible": true,
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklch(0.623 0.214 259.815) 0px 0px 0px 2px, rgba(0, 0, 0, 0) 0px 0px 0px 0px",
+            "color": "oklch(62.3% 0.214 259.815)",
+            "foreground": [
+              43,
+              127,
+              255
+            ],
+            "adjacent": [
+              30,
+              41,
+              57
+            ],
+            "ratio": 3.9
+          },
+          "outline": {
+            "visible": true,
+            "width": "1px",
+            "style": "auto",
+            "color": "rgb(16, 16, 16)",
+            "foreground": [
+              16,
+              16,
+              16
+            ],
+            "adjacent": [
+              30,
+              41,
+              57
+            ],
+            "ratio": 1.3
+          }
+        }
+      },
+      "errorFocus": {
+        "errorInput": {
+          "disabled": false,
+          "border": {
+            "visible": true,
+            "width": "1px",
+            "color": "oklch(0.623 0.214 259.815)",
+            "foreground": [
+              43,
+              127,
+              255
+            ],
+            "adjacent": [
+              255,
+              255,
+              255
+            ],
+            "ratio": 3.76
+          },
+          "focused": true,
+          "ring": {
+            "visible": true,
+            "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklch(0.637 0.237 25.331) 0px 0px 0px 2px, rgba(0, 0, 0, 0) 0px 0px 0px 0px",
+            "color": "oklch(63.7% 0.237 25.331)",
+            "foreground": [
+              251,
+              44,
+              54
+            ],
+            "adjacent": [
+              255,
+              255,
+              255
+            ],
+            "ratio": 3.81
+          },
+          "outline": {
+            "visible": true,
+            "width": "1px",
+            "style": "auto",
+            "color": "rgb(16, 16, 16)",
+            "foreground": [
+              16,
+              16,
+              16
+            ],
+            "adjacent": [
+              255,
+              255,
+              255
+            ],
+            "ratio": 19.03
+          }
+        }
+      }
+    }
+  },
+  "chartPalette": {
+    "version": "4.5.1",
+    "background": "white",
+    "measurements": [
+      {
+        "color": "rgb(54, 162, 235)",
+        "opaqueOnWhite": 2.79,
+        "halfAlphaOnWhite": 1.65
+      },
+      {
+        "color": "rgb(255, 99, 132)",
+        "opaqueOnWhite": 2.85,
+        "halfAlphaOnWhite": 1.71
+      },
+      {
+        "color": "rgb(255, 159, 64)",
+        "opaqueOnWhite": 2.04,
+        "halfAlphaOnWhite": 1.43
+      },
+      {
+        "color": "rgb(255, 205, 86)",
+        "opaqueOnWhite": 1.49,
+        "halfAlphaOnWhite": 1.22
+      },
+      {
+        "color": "rgb(75, 192, 192)",
+        "opaqueOnWhite": 2.19,
+        "halfAlphaOnWhite": 1.48
+      },
+      {
+        "color": "rgb(153, 102, 255)",
+        "opaqueOnWhite": 3.68,
+        "halfAlphaOnWhite": 1.85
+      },
+      {
+        "color": "rgb(201, 203, 207)",
+        "opaqueOnWhite": 1.62,
+        "halfAlphaOnWhite": 1.26
+      }
+    ],
+    "scope": "Supplementary engine Colors-plugin palette only; no rendered chart, series adjacency, or host canvas validation"
+  }
+}

@@ -63,13 +63,13 @@ const STATUS_BADGES: Record<
   ScratchpadState['status'],
   { labelKey: StatusLabelKey; class: string }
 > = {
-  loading: { labelKey: 'statusLoading', class: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' },
-  ready: { labelKey: 'statusActionAvailable', class: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400' },
-  waiting_human: { labelKey: 'statusYourTurn', class: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 animate-pulse' },
-  processing: { labelKey: 'statusProcessing', class: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
-  complete: { labelKey: 'statusComplete', class: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' },
+  loading: { labelKey: 'statusLoading', class: 'bg-[color:var(--mcp-ui-warning-soft,var(--color-yellow-100))] text-[color:var(--mcp-ui-warning,var(--color-yellow-700))] dark:bg-[color:var(--mcp-ui-warning-soft,color-mix(in_oklab,var(--color-yellow-900)_30%,transparent))] dark:text-[color:var(--mcp-ui-warning,var(--color-yellow-400))]' },
+  ready: { labelKey: 'statusActionAvailable', class: 'bg-[color:var(--mcp-ui-info-soft,var(--color-cyan-100))] text-[color:var(--mcp-ui-info,var(--color-cyan-700))] dark:bg-[color:var(--mcp-ui-info-soft,color-mix(in_oklab,var(--color-cyan-900)_30%,transparent))] dark:text-[color:var(--mcp-ui-info,var(--color-cyan-400))]' },
+  waiting_human: { labelKey: 'statusYourTurn', class: 'bg-[color:var(--mcp-ui-accent-soft,var(--color-blue-100))] text-[color:var(--mcp-ui-accent,var(--color-blue-700))] dark:bg-[color:var(--mcp-ui-accent-soft,color-mix(in_oklab,var(--color-blue-900)_30%,transparent))] dark:text-[color:var(--mcp-ui-accent,var(--color-blue-400))] animate-pulse' },
+  processing: { labelKey: 'statusProcessing', class: 'bg-[color:var(--mcp-ui-secondary-soft,var(--color-purple-100))] text-[color:var(--mcp-ui-secondary,var(--color-purple-700))] dark:bg-[color:var(--mcp-ui-secondary-soft,color-mix(in_oklab,var(--color-purple-900)_30%,transparent))] dark:text-[color:var(--mcp-ui-secondary,var(--color-purple-400))]' },
+  complete: { labelKey: 'statusComplete', class: 'bg-[color:var(--mcp-ui-success-soft,var(--color-green-100))] text-[color:var(--mcp-ui-success,var(--color-green-600))] dark:bg-[color:var(--mcp-ui-success-soft,color-mix(in_oklab,var(--color-green-900)_30%,transparent))] dark:text-[color:var(--mcp-ui-success,var(--color-green-400))]' },
   // The error badge reuses the existing `scratchpadError` key ('Error').
-  error: { labelKey: 'scratchpadError', class: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' },
+  error: { labelKey: 'scratchpadError', class: 'bg-[color:var(--mcp-ui-danger-soft,var(--color-red-100))] text-[color:var(--mcp-ui-danger,var(--color-red-600))] dark:bg-[color:var(--mcp-ui-danger-soft,color-mix(in_oklab,var(--color-red-900)_30%,transparent))] dark:text-[color:var(--mcp-ui-danger,var(--color-red-400))]' },
 }
 
 export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
@@ -188,21 +188,24 @@ export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
 
   return (
     <div
-      class={`w-full bg-white dark:bg-gray-800 rounded-xl border shadow-lg overflow-visible ${
+      class={`mcp-ui-root w-full bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-800,#1f2937))] rounded-xl border shadow-[var(--mcp-ui-shadow,var(--shadow-lg))] overflow-visible ${
         props.state.status === 'waiting_human'
-          ? 'border-blue-300 dark:border-blue-600'
-          : 'border-gray-200 dark:border-gray-700'
+          ? 'border-[color:var(--mcp-ui-accent-border,var(--color-blue-300))] dark:border-[color:var(--mcp-ui-accent-border,var(--color-blue-600))]'
+          : 'border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))]'
       } ${props.pinned ? 'sticky top-0 z-40' : ''}`}
-      style={{ animation: 'scratchpad-slide-down 0.2s ease-out' }}
+      style={{
+        animation: 'scratchpad-slide-down 0.2s ease-out',
+        'scrollbar-color': 'var(--mcp-ui-scrollbar-thumb,auto) var(--mcp-ui-scrollbar-track,transparent)',
+      }}
     >
       {/* Header */}
       <div
-        class={`flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700 ${isCollapsible() ? 'cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-750' : ''}`}
+        class={`flex items-center justify-between px-4 py-3 border-b border-[color:var(--mcp-ui-border,var(--color-gray-100,#f3f4f6))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))] ${isCollapsible() ? 'cursor-pointer select-none hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-50,#f9fafb))] dark:hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-750))]' : ''}`}
         onClick={() => isCollapsible() && setCollapsed(!collapsed())}
       >
         <div class="flex items-center gap-2">
           <span class="text-base">&#128221;</span>
-          <h3 class="text-sm font-semibold text-gray-900 dark:text-white">{props.state.title}</h3>
+          <h3 class="text-sm font-semibold text-[color:var(--mcp-ui-fg,var(--color-gray-900,#111827))] dark:text-[color:var(--mcp-ui-fg,var(--color-white,#fff))]">{props.state.title}</h3>
           {/* AgentStatusBadge — auto-detected from agent_card sections (v4.1.0) */}
           {(() => {
             const agentSection = props.state.sections.find(s => s.type === 'agent_card')
@@ -212,7 +215,7 @@ export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
             return <AgentStatusBadge agentName={ac.name} status={ac.status || 'idle'} />
           })()}
           <Show when={isCollapsible()}>
-            <svg class={`w-3.5 h-3.5 text-gray-400 transition-transform ${collapsed() ? '-rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg class={`w-3.5 h-3.5 text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))] transition-transform ${collapsed() ? '-rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
             </svg>
           </Show>
@@ -220,7 +223,7 @@ export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
         <div class="flex items-center gap-2">
           <span class={`px-2 py-0.5 text-xs font-medium rounded-full ${badge().class}`}>{strings[badge().labelKey]}</span>
           <Show when={isClosable() && props.onClose}>
-            <button onClick={(e) => { e.stopPropagation(); props.onClose?.() }} class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" aria-label={strings.scratchpadClose}>
+            <button onClick={(e) => { e.stopPropagation(); props.onClose?.() }} class="p-1 text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))] hover:text-[color:var(--mcp-ui-fg-muted,var(--color-gray-600,#4b5563))] dark:hover:text-[color:var(--mcp-ui-fg,var(--color-gray-300,#d1d5db))] rounded-full hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-100,#f3f4f6))] dark:hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-700,#374151))] transition-colors" aria-label={strings.scratchpadClose}>
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
           </Show>
@@ -232,18 +235,18 @@ export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
         <div style={{ "max-height": props.maxHeight || "500px", "overflow-y": "auto" }}>
           {/* Turn history header */}
           <Show when={props.state.turnHistory && props.state.turnHistory.length > 0}>
-            <div class="px-4 py-2 border-b border-gray-100 dark:border-gray-700 flex flex-wrap items-center gap-1.5">
+            <div class="px-4 py-2 border-b border-[color:var(--mcp-ui-border,var(--color-gray-100,#f3f4f6))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))] flex flex-wrap items-center gap-1.5">
               <For each={props.state.turnHistory}>
                 {(turn, i) => (
                   <>
                     <Show when={i() > 0}>
-                      <svg class="w-3 h-3 text-gray-300 dark:text-gray-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+                      <svg class="w-3 h-3 text-[color:var(--mcp-ui-fg-muted,var(--color-gray-300,#d1d5db))] dark:text-[color:var(--mcp-ui-fg-muted,var(--color-gray-600,#4b5563))] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
                     </Show>
                     <span class={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                      turn.status === 'done' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                      : turn.status === 'active' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
-                      : turn.status === 'skipped' ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 line-through'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-400'
+                      turn.status === 'done' ? 'bg-[color:var(--mcp-ui-success-soft,var(--color-green-100))] dark:bg-[color:var(--mcp-ui-success-soft,color-mix(in_oklab,var(--color-green-900)_30%,transparent))] text-[color:var(--mcp-ui-success,var(--color-green-700))] dark:text-[color:var(--mcp-ui-success,var(--color-green-400))]'
+                      : turn.status === 'active' ? 'bg-[color:var(--mcp-ui-accent-soft,var(--color-blue-100))] dark:bg-[color:var(--mcp-ui-accent-soft,color-mix(in_oklab,var(--color-blue-900)_30%,transparent))] text-[color:var(--mcp-ui-accent,var(--color-blue-700))] dark:text-[color:var(--mcp-ui-accent,var(--color-blue-400))]'
+                      : turn.status === 'skipped' ? 'bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-100,#f3f4f6))] dark:bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-700,#374151))] text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))] line-through'
+                      : 'bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-100,#f3f4f6))] dark:bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-700,#374151))] text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]'
                     }`}>
                       {turn.status === 'done' ? '✅' : turn.status === 'active' ? '●' : '○'} {turn.label}
                       <Show when={turn.summary}><span class="ml-1 font-normal opacity-75">— {turn.summary}</span></Show>
@@ -255,7 +258,7 @@ export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
           </Show>
 
           {/* Sections */}
-          <div class="divide-y divide-gray-100 dark:divide-gray-700">
+          <div class="divide-y divide-[color:var(--mcp-ui-border,var(--color-gray-100,#f3f4f6))] dark:divide-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))]">
             <For each={props.state.sections}>
               {(section) => (
                 <SectionRenderer
@@ -273,13 +276,13 @@ export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
 
           {/* Agent messages */}
           <Show when={props.state.agentMessages.length > 0}>
-            <div class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 space-y-2">
+            <div class="px-4 py-3 border-t border-[color:var(--mcp-ui-border,var(--color-gray-100,#f3f4f6))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))] space-y-2">
               <For each={props.state.agentMessages}>
                 {(msg) => (
                   <div class={`flex items-start gap-2 text-sm rounded-lg px-3 py-2 ${
-                    msg.type === 'warning' ? 'bg-amber-50 dark:bg-amber-900/10 text-amber-700 dark:text-amber-400'
-                    : msg.type === 'question' ? 'bg-blue-50 dark:bg-blue-900/10 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800'
-                    : 'bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400'
+                    msg.type === 'warning' ? 'bg-[color:var(--mcp-ui-warning-soft,var(--color-amber-50))] dark:bg-[color:var(--mcp-ui-warning-soft,color-mix(in_oklab,var(--color-amber-900)_10%,transparent))] text-[color:var(--mcp-ui-warning,var(--color-amber-700))] dark:text-[color:var(--mcp-ui-warning,var(--color-amber-400))]'
+                    : msg.type === 'question' ? 'bg-[color:var(--mcp-ui-accent-soft,var(--color-blue-50))] dark:bg-[color:var(--mcp-ui-accent-soft,color-mix(in_oklab,var(--color-blue-900)_10%,transparent))] text-[color:var(--mcp-ui-accent,var(--color-blue-700))] dark:text-[color:var(--mcp-ui-accent,var(--color-blue-400))] border border-[color:var(--mcp-ui-accent-border,var(--color-blue-200))] dark:border-[color:var(--mcp-ui-accent-border,var(--color-blue-800))]'
+                    : 'bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-50,#f9fafb))] dark:bg-[color:var(--mcp-ui-surface-muted,color-mix(in_oklab,var(--color-gray-700,#374151)_50%,transparent))] text-[color:var(--mcp-ui-fg-muted,var(--color-gray-600,#4b5563))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]'
                   }`}>
                     <span class="flex-shrink-0 mt-0.5">{msg.type === 'warning' ? '⚠️' : msg.type === 'question' ? '❓' : 'ℹ️'}</span>
                     <p>{msg.text}</p>
@@ -291,19 +294,19 @@ export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
 
           {/* Preview */}
           <Show when={preview()}>
-            <div class="px-4 py-3 border-t border-gray-100 dark:border-gray-700">
+            <div class="px-4 py-3 border-t border-[color:var(--mcp-ui-border,var(--color-gray-100,#f3f4f6))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))]">
               <Show when={preview()!.count === 0} fallback={
                 <>
                   <div class="flex items-center gap-2 mb-2">
-                    <span class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{strings.scratchpadPreview}</span>
-                    <span class="px-1.5 py-0.5 text-xs font-bold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded">{preview()!.count.toLocaleString(strings.locale)}</span>
+                    <span class="text-xs font-medium text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))] uppercase tracking-wide">{strings.scratchpadPreview}</span>
+                    <span class="px-1.5 py-0.5 text-xs font-bold bg-[color:var(--mcp-ui-accent-soft,var(--color-blue-100))] dark:bg-[color:var(--mcp-ui-accent-soft,color-mix(in_oklab,var(--color-blue-900)_30%,transparent))] text-[color:var(--mcp-ui-accent,var(--color-blue-700))] dark:text-[color:var(--mcp-ui-accent,var(--color-blue-300))] rounded">{preview()!.count.toLocaleString(strings.locale)}</span>
                   </div>
-                  <p class="text-sm text-gray-700 dark:text-gray-300">{preview()!.summary}</p>
+                  <p class="text-sm text-[color:var(--mcp-ui-fg,var(--color-gray-700,#374151))] dark:text-[color:var(--mcp-ui-fg,var(--color-gray-300,#d1d5db))]">{preview()!.summary}</p>
                   <Show when={preview()!.rows && preview()!.rows!.length > 0}>
                     <div class="mt-2 overflow-x-auto">
                       <table class="min-w-full text-xs">
-                        <thead><tr><For each={Object.keys(preview()!.rows![0])}>{(k) => <th class="px-2 py-1 text-left font-medium text-gray-500 dark:text-gray-400">{k}</th>}</For></tr></thead>
-                        <tbody><For each={preview()!.rows!.slice(0, 5)}>{(row) => <tr class="border-t border-gray-100 dark:border-gray-700"><For each={Object.values(row)}>{(v) => <td class="px-2 py-1 text-gray-700 dark:text-gray-300">{String(v)}</td>}</For></tr>}</For></tbody>
+                        <thead><tr><For each={Object.keys(preview()!.rows![0])}>{(k) => <th class="px-2 py-1 text-left font-medium text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]">{k}</th>}</For></tr></thead>
+                        <tbody><For each={preview()!.rows!.slice(0, 5)}>{(row) => <tr class="border-t border-[color:var(--mcp-ui-border,var(--color-gray-100,#f3f4f6))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))]"><For each={Object.values(row)}>{(v) => <td class="px-2 py-1 text-[color:var(--mcp-ui-fg,var(--color-gray-700,#374151))] dark:text-[color:var(--mcp-ui-fg,var(--color-gray-300,#d1d5db))]">{String(v)}</td>}</For></tr>}</For></tbody>
                       </table>
                     </div>
                   </Show>
@@ -311,8 +314,8 @@ export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
               }>
                 <div class="flex flex-col items-center gap-2 py-4 text-center">
                   <span class="text-2xl">&#128269;</span>
-                  <p class="text-sm text-gray-500 dark:text-gray-400">{strings.scratchpadNoResults}</p>
-                  <button type="button" onClick={() => props.onAction?.('refine_filters')} class="px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors">{strings.scratchpadModifyFilters}</button>
+                  <p class="text-sm text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]">{strings.scratchpadNoResults}</p>
+                  <button type="button" onClick={() => props.onAction?.('refine_filters')} class="px-3 py-1.5 text-xs font-medium text-[color:var(--mcp-ui-accent,var(--color-blue-600))] dark:text-[color:var(--mcp-ui-accent,var(--color-blue-400))] hover:bg-[color:var(--mcp-ui-accent-soft,var(--color-blue-50))] dark:hover:bg-[color:var(--mcp-ui-accent-soft,color-mix(in_oklab,var(--color-blue-900)_20%,transparent))] rounded-lg transition-colors">{strings.scratchpadModifyFilters}</button>
                 </div>
               </Show>
             </div>
@@ -320,13 +323,13 @@ export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
 
           {/* Error state with retry */}
           <Show when={props.state.status === 'error' && props.state.error}>
-            <div class="px-4 py-3 border-t border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10">
-              <div class="flex items-start gap-2 text-sm text-red-700 dark:text-red-400">
+            <div class="px-4 py-3 border-t border-[color:var(--mcp-ui-danger-border,var(--color-red-100))] dark:border-[color:var(--mcp-ui-danger-border,color-mix(in_oklab,var(--color-red-900)_30%,transparent))] bg-[color:var(--mcp-ui-danger-soft,var(--color-red-50))] dark:bg-[color:var(--mcp-ui-danger-soft,color-mix(in_oklab,var(--color-red-900)_10%,transparent))]">
+              <div class="flex items-start gap-2 text-sm text-[color:var(--mcp-ui-danger,var(--color-red-700))] dark:text-[color:var(--mcp-ui-danger,var(--color-red-400))]">
                 <span class="flex-shrink-0 mt-0.5">⚠️</span>
                 <div class="flex-1">
                   <p class="font-medium">{props.state.error!.message}</p>
                   <Show when={props.state.error!.code}>
-                    <p class="text-xs text-red-500 dark:text-red-500 mt-0.5">
+                    <p class="text-xs text-[color:var(--mcp-ui-danger,var(--color-red-500))] dark:text-[color:var(--mcp-ui-danger,var(--color-red-500))] mt-0.5">
                       {formatMCPUIString(strings.scratchpadErrorCode, { code: props.state.error!.code! })}
                     </p>
                   </Show>
@@ -335,13 +338,13 @@ export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
               <div class="flex gap-2 mt-2">
                 <Show when={props.state.error!.retryable !== false}>
                   <button type="button" onClick={() => props.onRetry?.()}
-                    class="px-3 py-1.5 text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors flex items-center gap-1">
+                    class="px-3 py-1.5 text-sm font-medium rounded-lg bg-[color:var(--mcp-ui-danger,var(--color-red-600))] text-[color:var(--mcp-ui-accent-fg,var(--color-white,#fff))] hover:bg-[color:var(--mcp-ui-danger-hover,var(--color-red-700))] transition-colors flex items-center gap-1">
                     &#128260; {strings.retry}
                   </button>
                 </Show>
                 <Show when={props.onClose}>
                   <button type="button" onClick={() => props.onClose?.()}
-                    class="px-3 py-1.5 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    class="px-3 py-1.5 text-sm font-medium rounded-lg border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-600,#4b5563))] text-[color:var(--mcp-ui-fg,var(--color-gray-700,#374151))] dark:text-[color:var(--mcp-ui-fg,var(--color-gray-300,#d1d5db))] hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-100,#f3f4f6))] dark:hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-700,#374151))] transition-colors">
                     {strings.scratchpadClose}
                   </button>
                 </Show>
@@ -351,11 +354,11 @@ export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
 
           {/* Search button when waiting_human */}
           <Show when={props.state.status === 'waiting_human' && hasFilters()}>
-            <div class="px-4 py-3 border-t border-gray-100 dark:border-gray-700">
+            <div class="px-4 py-3 border-t border-[color:var(--mcp-ui-border,var(--color-gray-100,#f3f4f6))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))]">
               <button
                 type="button"
                 onClick={() => handleAction('search', { filters: props.state.filters })}
-                class="w-full px-4 py-2.5 text-sm font-semibold rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                class="w-full px-4 py-2.5 text-sm font-semibold rounded-lg text-[color:var(--mcp-ui-accent-fg,var(--color-white,#fff))] bg-[color:var(--mcp-ui-accent,var(--color-blue-600))] hover:bg-[color:var(--mcp-ui-accent-hover,var(--color-blue-700))] transition-colors flex items-center justify-center gap-2"
               >
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                 {strings.scratchpadSearch}
@@ -371,7 +374,7 @@ export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
 
       {/* Debug overlay */}
       <Show when={props.debugOverlay}>
-        <div class="absolute bottom-1 right-1 px-2 py-1 text-[9px] font-mono bg-black/80 text-green-400 rounded z-50 pointer-events-none">
+        <div class="absolute bottom-1 right-1 px-2 py-1 text-[9px] font-mono bg-[color:var(--mcp-ui-overlay,color-mix(in_oklab,var(--color-black,#000)_80%,transparent))] text-[color:var(--mcp-ui-success,var(--color-green-400))] rounded z-50 pointer-events-none">
           {props.state.id} | ev:{eventCount()} | sec:{props.state.sections?.length || 0} | {props.state.status} | last:{lastEvent()}
         </div>
       </Show>
@@ -402,11 +405,11 @@ const SectionRenderer: Component<{
 }> = (props) => {
   return (
     <div class="px-4 py-3 animate-[slideDown_0.2s_ease-out]">
-      <h4 class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">{props.section.title}</h4>
+      <h4 class="text-xs font-medium text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))] uppercase tracking-wide mb-2">{props.section.title}</h4>
       <Switch>
         <Match when={props.section.type === 'data'}><DataSection content={parseContent(props.section.content)} /></Match>
         <Match when={props.section.type === 'filter'}><InteractiveFilterSection content={parseContent(props.section.content)} filters={props.filters} onFilterChange={props.onFilterChange} /></Match>
-        <Match when={props.section.type === 'message'}><p class="text-sm text-gray-700 dark:text-gray-300">{String(props.section.content)}</p></Match>
+        <Match when={props.section.type === 'message'}><p class="text-sm text-[color:var(--mcp-ui-fg,var(--color-gray-700,#374151))] dark:text-[color:var(--mcp-ui-fg,var(--color-gray-300,#d1d5db))]">{String(props.section.content)}</p></Match>
         <Match when={props.section.type === 'action'}><ActionSection content={parseContent(props.section.content)} onAction={props.onAction} /></Match>
         <Match when={props.section.type === 'steps'}><EnrichedStepsSection content={parseContent(props.section.content)} onAction={props.onAction} onFilterChange={props.onFilterChange} /></Match>
         <Match when={props.section.type === 'form'}><EmbeddedFormSection content={parseContent(props.section.content)} sectionId={props.section.id} onAction={props.onAction} onSubmit={props.onSubmit} debugTrace={props.debugTrace} /></Match>
@@ -425,7 +428,7 @@ const SectionRenderer: Component<{
         <Match when={props.section.type === 'split_stepper'}><SplitStepper content={parseContent(props.section.content) as SplitStepperContent} /></Match>
         <Match when={props.section.type === 'agent_handoff'}><AgentHandoff content={parseContent(props.section.content) as AgentHandoffContent} /></Match>
         <Match when={props.section.type === 'briefing_diff'}><BriefingDiff content={parseContent(props.section.content) as BriefingDiffContent} /></Match>
-        <Match when={true}><pre class="text-xs text-gray-500 overflow-auto">{JSON.stringify(props.section.content, null, 2)}</pre></Match>
+        <Match when={true}><pre class="text-xs text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] overflow-auto">{JSON.stringify(props.section.content, null, 2)}</pre></Match>
       </Switch>
     </div>
   )
@@ -437,7 +440,7 @@ const DataSection: Component<{ content: unknown }> = (props) => {
   const entries = () => typeof props.content === 'object' && props.content ? Object.entries(props.content as Record<string, unknown>) : []
   return (
     <div class="space-y-1">
-      <For each={entries()}>{([k, v]) => <div class="flex gap-2 text-xs"><span class="text-gray-500 dark:text-gray-400 font-mono min-w-[120px]">{k}:</span><span class="text-gray-900 dark:text-white">{Array.isArray(v) ? v.join(', ') : String(v)}</span></div>}</For>
+      <For each={entries()}>{([k, v]) => <div class="flex gap-2 text-xs"><span class="text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))] font-mono min-w-[120px]">{k}:</span><span class="text-[color:var(--mcp-ui-fg,var(--color-gray-900,#111827))] dark:text-[color:var(--mcp-ui-fg,var(--color-white,#fff))]">{Array.isArray(v) ? v.join(', ') : String(v)}</span></div>}</For>
     </div>
   )
 }
@@ -491,37 +494,37 @@ const InteractiveFilterSection: Component<{
             <div class="relative">
               <Show when={hasValue()} fallback={
                 <button type="button" onClick={() => { setEditingKey(key); setEditValue('') }}
-                  class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium border border-dashed border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 rounded-full hover:border-blue-400 hover:text-blue-500 transition-colors">
+                  class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium border border-dashed border-[color:var(--mcp-ui-border,var(--color-gray-300,#d1d5db))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-600,#4b5563))] text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))] rounded-full hover:border-[color:var(--mcp-ui-accent-border,var(--color-blue-400))] hover:text-[color:var(--mcp-ui-accent,var(--color-blue-500))] transition-colors">
                   + {def()?.label || key}
                 </button>
               }>
-                <span class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">
+                <span class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-[color:var(--mcp-ui-accent-soft,var(--color-blue-100))] dark:bg-[color:var(--mcp-ui-accent-soft,color-mix(in_oklab,var(--color-blue-900)_30%,transparent))] text-[color:var(--mcp-ui-accent,var(--color-blue-700))] dark:text-[color:var(--mcp-ui-accent,var(--color-blue-300))] rounded-full">
                   <button type="button" onClick={() => { setEditingKey(key); setEditValue(String(value() || '')) }} class="hover:underline">
-                    <span class="text-blue-500 dark:text-blue-400">{def()?.label || key}:</span> {Array.isArray(value()) ? (value() as string[]).join(', ') : String(value())}
+                    <span class="text-[color:var(--mcp-ui-accent,var(--color-blue-500))] dark:text-[color:var(--mcp-ui-accent,var(--color-blue-400))]">{def()?.label || key}:</span> {Array.isArray(value()) ? (value() as string[]).join(', ') : String(value())}
                   </button>
                   <Show when={props.onFilterChange}>
-                    <button type="button" onClick={() => removeFilter(key)} class="ml-0.5 hover:text-blue-900 dark:hover:text-blue-100" aria-label={formatMCPUIString(strings.removeItem, { name: key })}>&times;</button>
+                    <button type="button" onClick={() => removeFilter(key)} class="ml-0.5 hover:text-[color:var(--mcp-ui-accent,var(--color-blue-900))] dark:hover:text-[color:var(--mcp-ui-accent,var(--color-blue-100))]" aria-label={formatMCPUIString(strings.removeItem, { name: key })}>&times;</button>
                   </Show>
                 </span>
               </Show>
 
               {/* Inline editor */}
               <Show when={editingKey() === key}>
-                <div class="absolute z-50 mt-1 left-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg p-2 min-w-[200px]">
+                <div class="absolute z-50 mt-1 left-0 bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-800,#1f2937))] border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-600,#4b5563))] rounded-lg shadow-[var(--mcp-ui-shadow,var(--shadow-lg))] p-2 min-w-[200px]">
                   <Show when={def()?.options} fallback={
                     <form onSubmit={(e) => { e.preventDefault(); setFilter(key, editValue()) }} class="flex gap-1">
                       <input type="text" value={editValue()} onInput={(e) => setEditValue(e.currentTarget.value)} placeholder={def()?.placeholder || key} autofocus
-                        class="flex-1 px-2 py-1 text-sm border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:border-blue-400 outline-none" />
-                      <button type="submit" class="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">{strings.ok}</button>
-                      <button type="button" onClick={() => setEditingKey(null)} class="px-2 py-1 text-xs text-gray-500 hover:text-gray-700">{strings.cancel}</button>
+                        class="flex-1 px-2 py-1 text-sm border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-600,#4b5563))] rounded bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-700,#374151))] text-[color:var(--mcp-ui-fg,var(--color-gray-900,#111827))] dark:text-[color:var(--mcp-ui-fg,var(--color-white,#fff))] focus:border-[color:var(--mcp-ui-focus,var(--color-blue-400))] outline-none" />
+                      <button type="submit" class="px-2 py-1 text-xs bg-[color:var(--mcp-ui-accent,var(--color-blue-600))] text-[color:var(--mcp-ui-accent-fg,var(--color-white,#fff))] rounded hover:bg-[color:var(--mcp-ui-accent-hover,var(--color-blue-700))]">{strings.ok}</button>
+                      <button type="button" onClick={() => setEditingKey(null)} class="px-2 py-1 text-xs text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] hover:text-[color:var(--mcp-ui-fg,var(--color-gray-700,#374151))]">{strings.cancel}</button>
                     </form>
                   }>
                     <div class="max-h-48 overflow-y-auto">
                       <For each={def().options as Array<{ value: string; label: string }>}>
                         {(opt) => (
                           <button type="button" onClick={() => setFilter(key, opt.value)}
-                            class={`w-full text-left px-2 py-1.5 text-sm rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 ${
-                              String(value()) === opt.value ? 'text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/10' : 'text-gray-900 dark:text-white'
+                            class={`w-full text-left px-2 py-1.5 text-sm rounded hover:bg-[color:var(--mcp-ui-accent-soft,var(--color-blue-50))] dark:hover:bg-[color:var(--mcp-ui-accent-soft,color-mix(in_oklab,var(--color-blue-900)_20%,transparent))] ${
+                              String(value()) === opt.value ? 'text-[color:var(--mcp-ui-accent,var(--color-blue-600))] dark:text-[color:var(--mcp-ui-accent,var(--color-blue-400))] bg-[color:var(--mcp-ui-accent-soft,color-mix(in_oklab,var(--color-blue-50)_50%,transparent))] dark:bg-[color:var(--mcp-ui-accent-soft,color-mix(in_oklab,var(--color-blue-900)_10%,transparent))]' : 'text-[color:var(--mcp-ui-fg,var(--color-gray-900,#111827))] dark:text-[color:var(--mcp-ui-fg,var(--color-white,#fff))]'
                             }`}>
                             {opt.label}
                             <Show when={String(value()) === opt.value}><span class="ml-1">✓</span></Show>
@@ -529,7 +532,7 @@ const InteractiveFilterSection: Component<{
                         )}
                       </For>
                     </div>
-                    <button type="button" onClick={() => setEditingKey(null)} class="mt-1 w-full px-2 py-1 text-xs text-gray-500 hover:text-gray-700 text-center">{strings.cancel}</button>
+                    <button type="button" onClick={() => setEditingKey(null)} class="mt-1 w-full px-2 py-1 text-xs text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] hover:text-[color:var(--mcp-ui-fg,var(--color-gray-700,#374151))] text-center">{strings.cancel}</button>
                   </Show>
                 </div>
               </Show>
@@ -538,7 +541,7 @@ const InteractiveFilterSection: Component<{
         }}
       </For>
       <Show when={allKeys().length === 0}>
-        <p class="text-xs text-gray-400 italic">{strings.scratchpadNoFilters}</p>
+        <p class="text-xs text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))] italic">{strings.scratchpadNoFilters}</p>
       </Show>
     </div>
   )
@@ -707,21 +710,21 @@ const EmbeddedFormSection: Component<{
   return (
     <>
     <Show when={!showToast()} fallback={
-      <div class="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-sm">
-        <span class="flex-1 text-blue-800 dark:text-blue-200 font-medium">
+      <div class="flex items-center gap-3 p-3 bg-[color:var(--mcp-ui-accent-soft,var(--color-blue-50))] dark:bg-[color:var(--mcp-ui-accent-soft,color-mix(in_oklab,var(--color-blue-900)_20%,transparent))] border border-[color:var(--mcp-ui-accent-border,var(--color-blue-200))] dark:border-[color:var(--mcp-ui-accent-border,var(--color-blue-800))] rounded-lg text-sm">
+        <span class="flex-1 text-[color:var(--mcp-ui-accent,var(--color-blue-800))] dark:text-[color:var(--mcp-ui-accent,var(--color-blue-200))] font-medium">
           {config().fields.map((f: any) => f.displayHint || f.prefill).join(', ')}
         </span>
-        <span class="text-blue-600 dark:text-blue-300">{countdown()}s...</span>
+        <span class="text-[color:var(--mcp-ui-accent,var(--color-blue-600))] dark:text-[color:var(--mcp-ui-accent,var(--color-blue-300))]">{countdown()}s...</span>
         <button type="button" onClick={() => { setExpanded(true); cancelCountdown(); setUserInteracted(true) }}
-          class="text-blue-600 dark:text-blue-400 underline text-xs">{strings.scratchpadEdit}</button>
+          class="text-[color:var(--mcp-ui-accent,var(--color-blue-600))] dark:text-[color:var(--mcp-ui-accent,var(--color-blue-400))] underline text-xs">{strings.scratchpadEdit}</button>
         <button type="button" onClick={() => { cancelCountdown(); setUserInteracted(true) }}
-          class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">&times;</button>
+          class="text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))] hover:text-[color:var(--mcp-ui-fg-muted,var(--color-gray-600,#4b5563))] dark:hover:text-[color:var(--mcp-ui-fg,var(--color-gray-300,#d1d5db))]">&times;</button>
       </div>
     }>
     <form id={`scratchpad-form-${props.sectionId}`} onSubmit={handleSubmit} class="flex flex-col gap-3">
       {/* Proposal 3: prefill summary */}
       <Show when={prefillSummary().prefilled > 0}>
-        <p class="text-xs text-gray-500 dark:text-gray-400">
+        <p class="text-xs text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]">
           {formatMCPUIString(
             prefillSummary().prefilled === 1 ? strings.formPrefilledOne : strings.formPrefilledMany,
             { count: prefillSummary().prefilled, total: prefillSummary().total }
@@ -739,8 +742,8 @@ const EmbeddedFormSection: Component<{
         )}
       </For>
       <Show when={countdown() != null}>
-        <div class="flex items-center gap-3 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md text-sm">
-          <span class="text-blue-700 dark:text-blue-300">
+        <div class="flex items-center gap-3 p-2 bg-[color:var(--mcp-ui-accent-soft,var(--color-blue-50))] dark:bg-[color:var(--mcp-ui-accent-soft,color-mix(in_oklab,var(--color-blue-900)_20%,transparent))] border border-[color:var(--mcp-ui-accent-border,var(--color-blue-200))] dark:border-[color:var(--mcp-ui-accent-border,var(--color-blue-800))] rounded-md text-sm">
+          <span class="text-[color:var(--mcp-ui-accent,var(--color-blue-700))] dark:text-[color:var(--mcp-ui-accent,var(--color-blue-300))]">
             {formatMCPUIString(strings.formSubmitCountdown, {
               label: config().submitLabel,
               seconds: countdown()!,
@@ -749,14 +752,14 @@ const EmbeddedFormSection: Component<{
           <button
             type="button"
             onClick={() => { cancelCountdown(); setUserInteracted(true) }}
-            class="text-blue-600 dark:text-blue-400 underline hover:text-blue-800 dark:hover:text-blue-200"
+            class="text-[color:var(--mcp-ui-accent,var(--color-blue-600))] dark:text-[color:var(--mcp-ui-accent,var(--color-blue-400))] underline hover:text-[color:var(--mcp-ui-accent,var(--color-blue-800))] dark:hover:text-[color:var(--mcp-ui-accent,var(--color-blue-200))]"
           >
             {strings.cancel}
           </button>
         </div>
       </Show>
       <div class="flex justify-end">
-        <button type="submit" class="px-4 py-2 text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors">
+        <button type="submit" class="px-4 py-2 text-sm font-medium rounded-lg text-[color:var(--mcp-ui-accent-fg,var(--color-white,#fff))] bg-[color:var(--mcp-ui-accent,var(--color-blue-600))] hover:bg-[color:var(--mcp-ui-accent-hover,var(--color-blue-700))] transition-colors">
           {config().submitLabel}
         </button>
       </div>
@@ -807,28 +810,28 @@ const FormDebugTrace: Component<{
   const serverDebug = () => (props.rawContent as any)?._debug
 
   return (
-    <div class="mt-2 border border-gray-200 dark:border-gray-700 rounded-md text-xs font-mono">
+    <div class="mt-2 border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))] rounded-md text-xs font-mono">
       <button
         type="button"
         onClick={() => setOpen(!open())}
-        class="w-full px-3 py-1.5 text-left text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-1"
+        class="w-full px-3 py-1.5 text-left text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))] hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-50,#f9fafb))] dark:hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-800,#1f2937))] flex items-center gap-1"
       >
         <span>{open() ? '\u25BE' : '\u25B8'}</span>
         Debug trace ({prefilledCount()}/{props.fields.length} prefilled)
       </button>
       <Show when={open()}>
-        <div class="px-3 pb-3 space-y-2 text-gray-600 dark:text-gray-400 border-t border-gray-200 dark:border-gray-700 pt-2">
+        <div class="px-3 pb-3 space-y-2 text-[color:var(--mcp-ui-fg-muted,var(--color-gray-600,#4b5563))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))] border-t border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))] pt-2">
           <div>Fields: {props.fields.length} total, {prefilledCount()} prefilled</div>
 
           <For each={props.fields}>
             {(field: any) => (
-              <div class="pl-2 border-l-2 border-gray-200 dark:border-gray-600 space-y-0.5">
-                <div class="text-gray-800 dark:text-gray-200 font-medium">{field.name}:</div>
+              <div class="pl-2 border-l-2 border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-600,#4b5563))] space-y-0.5">
+                <div class="text-[color:var(--mcp-ui-fg,var(--color-gray-800,#1f2937))] dark:text-[color:var(--mcp-ui-fg,var(--color-gray-200,#e5e7eb))] font-medium">{field.name}:</div>
                 <Show when={field.prefill != null}>
                   <div>  prefill: {JSON.stringify(field.prefill)}</div>
                 </Show>
                 <Show when={!field.prefill}>
-                  <div class="text-amber-500">  prefill: (none)</div>
+                  <div class="text-[color:var(--mcp-ui-warning,var(--color-amber-500))]">  prefill: (none)</div>
                 </Show>
                 <Show when={field.source}><div>  source: {field.source}</div></Show>
                 <Show when={field.displayHint}><div>  displayHint: "{field.displayHint}"</div></Show>
@@ -840,7 +843,7 @@ const FormDebugTrace: Component<{
                     const v = props.submittedValues![field.name]
                     const hasValue = v !== undefined && v !== '' && !(Array.isArray(v) && v.length === 0)
                     return (
-                      <div class={hasValue ? 'text-green-600 dark:text-green-400' : 'text-gray-400'}>
+                      <div class={hasValue ? 'text-[color:var(--mcp-ui-success,var(--color-green-600))] dark:text-[color:var(--mcp-ui-success,var(--color-green-400))]' : 'text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]'}>
                         {'\u2192'} submitted: {hasValue ? `${JSON.stringify(v)} \u2713` : '(empty)'}
                       </div>
                     )
@@ -850,15 +853,15 @@ const FormDebugTrace: Component<{
             )}
           </For>
 
-          <div class="pt-1 border-t border-gray-200 dark:border-gray-600">
+          <div class="pt-1 border-t border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-600,#4b5563))]">
             autoSubmit: {props.autoSubmitDelay ? 'true' : 'false'}
             {props.autoSubmitDelay ? ` (${props.autoSubmitDelay}ms)` : ''}
             <div>  reason: {autoSubmitReason()}</div>
           </div>
 
           <Show when={serverDebug()}>
-            <div class="pt-1 border-t border-gray-200 dark:border-gray-600">
-              <div class="font-medium text-gray-800 dark:text-gray-200">Server _debug:</div>
+            <div class="pt-1 border-t border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-600,#4b5563))]">
+              <div class="font-medium text-[color:var(--mcp-ui-fg,var(--color-gray-800,#1f2937))] dark:text-[color:var(--mcp-ui-fg,var(--color-gray-200,#e5e7eb))]">Server _debug:</div>
               <Show when={serverDebug()?.resolvers}>
                 <For each={serverDebug().resolvers}>
                   {(r: any) => (
@@ -872,17 +875,17 @@ const FormDebugTrace: Component<{
                 <div class="pl-2">routing: {serverDebug().routing.topic} via {serverDebug().routing.method} ({serverDebug().routing.ms}ms)</div>
               </Show>
               <Show when={serverDebug()?.missingFields}>
-                <div class="pl-2 text-amber-500">missing: {serverDebug().missingFields.join(', ')}</div>
+                <div class="pl-2 text-[color:var(--mcp-ui-warning,var(--color-amber-500))]">missing: {serverDebug().missingFields.join(', ')}</div>
               </Show>
             </div>
           </Show>
 
-          <div class="pt-1 border-t border-gray-200 dark:border-gray-600">
-            <button type="button" onClick={() => setShowRaw(!showRaw())} class="text-blue-500 hover:text-blue-700 underline">
+          <div class="pt-1 border-t border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-600,#4b5563))]">
+            <button type="button" onClick={() => setShowRaw(!showRaw())} class="text-[color:var(--mcp-ui-accent,var(--color-blue-500))] hover:text-[color:var(--mcp-ui-accent,var(--color-blue-700))] underline">
               {showRaw() ? strings.scratchpadHideRaw : strings.scratchpadShowRaw}
             </button>
             <Show when={showRaw()}>
-              <pre class="mt-1 p-2 bg-gray-50 dark:bg-gray-900 rounded max-h-48 overflow-auto text-[10px]">
+              <pre class="mt-1 p-2 bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-50,#f9fafb))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-900,#111827))] rounded max-h-48 overflow-auto text-[10px]">
                 {JSON.stringify(props.rawContent, null, 2)}
               </pre>
             </Show>
@@ -910,16 +913,16 @@ const EnrichedStepsSection: Component<{
     <div class="space-y-3">
       <For each={stepsData().steps}>
         {(step: any) => (
-          <div class={`rounded-lg ${step.status === 'active' ? 'bg-blue-50/50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 p-3 animate-pulse' : 'px-1'}`}>
+          <div class={`rounded-lg ${step.status === 'active' ? 'bg-[color:var(--mcp-ui-accent-soft,color-mix(in_oklab,var(--color-blue-50)_50%,transparent))] dark:bg-[color:var(--mcp-ui-accent-soft,color-mix(in_oklab,var(--color-blue-900)_10%,transparent))] border border-[color:var(--mcp-ui-accent-border,var(--color-blue-200))] dark:border-[color:var(--mcp-ui-accent-border,var(--color-blue-800))] p-3 animate-pulse' : 'px-1'}`}>
             <div class={`flex items-center gap-2 text-sm font-medium ${
-              step.status === 'done' ? 'text-green-600 dark:text-green-400'
-              : step.status === 'active' ? 'text-blue-600 dark:text-blue-400'
-              : 'text-gray-400'
+              step.status === 'done' ? 'text-[color:var(--mcp-ui-success,var(--color-green-600))] dark:text-[color:var(--mcp-ui-success,var(--color-green-400))]'
+              : step.status === 'active' ? 'text-[color:var(--mcp-ui-accent,var(--color-blue-600))] dark:text-[color:var(--mcp-ui-accent,var(--color-blue-400))]'
+              : 'text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]'
             }`}>
               <span>{step.status === 'done' ? '✅' : step.status === 'active' ? '●' : '○'}</span>
               {step.label}
               <Show when={step.description && step.status === 'active'}>
-                <span class="text-xs font-normal text-gray-500 dark:text-gray-400">— {step.description}</span>
+                <span class="text-xs font-normal text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]">— {step.description}</span>
               </Show>
             </div>
 
@@ -942,7 +945,7 @@ const EnrichedStepsSection: Component<{
       <Show when={stepsData().steps.some((s: any) => s.status === 'active')}>
         <div class="flex justify-end">
           <button type="button" onClick={() => props.onAction?.('next_step', { step: stepsData().currentStep })}
-            class="px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors flex items-center gap-1">
+            class="px-3 py-1.5 text-sm font-medium text-[color:var(--mcp-ui-accent,var(--color-blue-600))] dark:text-[color:var(--mcp-ui-accent,var(--color-blue-400))] hover:bg-[color:var(--mcp-ui-accent-soft,var(--color-blue-50))] dark:hover:bg-[color:var(--mcp-ui-accent-soft,color-mix(in_oklab,var(--color-blue-900)_20%,transparent))] rounded-lg transition-colors flex items-center gap-1">
             {strings.scratchpadNextStep} <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
           </button>
         </div>
@@ -969,13 +972,13 @@ const ActionSection: Component<{
     <div>
       {/* Confirm checkpoint: title + preview (v4.1.0) */}
       <Show when={data().title}>
-        <p class="text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">{data().title}</p>
+        <p class="text-sm font-medium text-[color:var(--mcp-ui-fg,var(--color-gray-800,#1f2937))] dark:text-[color:var(--mcp-ui-fg,var(--color-gray-200,#e5e7eb))] mb-2">{data().title}</p>
       </Show>
       <Show when={data().preview}>
         {(preview) => (
-          <div class="mb-2 p-2 rounded bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs text-gray-600 dark:text-gray-400">
+          <div class="mb-2 p-2 rounded bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-50,#f9fafb))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-800,#1f2937))] border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))] text-xs text-[color:var(--mcp-ui-fg-muted,var(--color-gray-600,#4b5563))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]">
             <Show when={preview().count != null}>
-              <span class="font-medium text-gray-800 dark:text-gray-200">{preview().count}</span> {strings.scratchpadItems}
+              <span class="font-medium text-[color:var(--mcp-ui-fg,var(--color-gray-800,#1f2937))] dark:text-[color:var(--mcp-ui-fg,var(--color-gray-200,#e5e7eb))]">{preview().count}</span> {strings.scratchpadItems}
             </Show>
             <Show when={preview().summary}>
               <span class="ml-1">&mdash; {preview().summary}</span>
@@ -986,16 +989,16 @@ const ActionSection: Component<{
       <Show when={data().validation && data().validation.confidence != null}>
         <div class="mb-2 flex items-center gap-2 text-xs">
           <span classList={{
-            'text-green-600 dark:text-green-400': data().validation.confidence >= 0.8,
-            'text-amber-600 dark:text-amber-400': data().validation.confidence >= 0.5 && data().validation.confidence < 0.8,
-            'text-red-600 dark:text-red-400': data().validation.confidence < 0.5,
+            'text-[color:var(--mcp-ui-success,var(--color-green-600))] dark:text-[color:var(--mcp-ui-success,var(--color-green-400))]': data().validation.confidence >= 0.8,
+            'text-[color:var(--mcp-ui-warning,var(--color-amber-600))] dark:text-[color:var(--mcp-ui-warning,var(--color-amber-400))]': data().validation.confidence >= 0.5 && data().validation.confidence < 0.8,
+            'text-[color:var(--mcp-ui-danger,var(--color-red-600))] dark:text-[color:var(--mcp-ui-danger,var(--color-red-400))]': data().validation.confidence < 0.5,
           }}>
             {formatMCPUIString(strings.verifiedConfidence, {
               pct: Math.round(data().validation.confidence * 100),
             })}
           </span>
           <Show when={data().validation.hallucinated?.length > 0}>
-            <span class="text-amber-600">
+            <span class="text-[color:var(--mcp-ui-warning,var(--color-amber-600))]">
               {formatMCPUIString(strings.verifiedUnverifiedCount, {
                 count: data().validation.hallucinated.length,
               })}
@@ -1010,10 +1013,10 @@ const ActionSection: Component<{
           {(item) => (
             <button type="button" on:click={() => props.onAction?.(item.value || item.action || item.label, item)}
               class={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
-                item.variant === 'primary' ? 'bg-blue-600 text-white hover:bg-blue-700'
-                : item.variant === 'danger' ? 'bg-red-600 text-white hover:bg-red-700'
-                : item.variant === 'secondary' ? 'border border-blue-300 dark:border-blue-600 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20'
-                : 'border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                item.variant === 'primary' ? 'bg-[color:var(--mcp-ui-accent,var(--color-blue-600))] text-[color:var(--mcp-ui-accent-fg,var(--color-white,#fff))] hover:bg-[color:var(--mcp-ui-accent-hover,var(--color-blue-700))]'
+                : item.variant === 'danger' ? 'bg-[color:var(--mcp-ui-danger,var(--color-red-600))] text-[color:var(--mcp-ui-accent-fg,var(--color-white,#fff))] hover:bg-[color:var(--mcp-ui-danger-hover,var(--color-red-700))]'
+                : item.variant === 'secondary' ? 'border border-[color:var(--mcp-ui-accent-border,var(--color-blue-300))] dark:border-[color:var(--mcp-ui-accent-border,var(--color-blue-600))] text-[color:var(--mcp-ui-accent,var(--color-blue-700))] dark:text-[color:var(--mcp-ui-accent,var(--color-blue-300))] hover:bg-[color:var(--mcp-ui-accent-soft,var(--color-blue-50))] dark:hover:bg-[color:var(--mcp-ui-accent-soft,color-mix(in_oklab,var(--color-blue-900)_20%,transparent))]'
+                : 'border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-600,#4b5563))] text-[color:var(--mcp-ui-fg,var(--color-gray-700,#374151))] dark:text-[color:var(--mcp-ui-fg,var(--color-gray-300,#d1d5db))] hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-100,#f3f4f6))] dark:hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-700,#374151))]'
               }`}>
               <Show when={item.icon}><span class="mr-1">{item.icon}</span></Show>
               {item.label}
@@ -1035,10 +1038,10 @@ const UnderstandingSection: Component<{ content: unknown }> = (props) => {
 
   const confidenceClass = (conf?: string) => {
     switch (conf) {
-      case 'high': return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-      case 'medium': return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
-      case 'low': return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
-      default: return 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+      case 'high': return 'bg-[color:var(--mcp-ui-success-soft,var(--color-green-100))] dark:bg-[color:var(--mcp-ui-success-soft,color-mix(in_oklab,var(--color-green-900)_30%,transparent))] text-[color:var(--mcp-ui-success,var(--color-green-700))] dark:text-[color:var(--mcp-ui-success,var(--color-green-400))]'
+      case 'medium': return 'bg-[color:var(--mcp-ui-warning-soft,var(--color-yellow-100))] dark:bg-[color:var(--mcp-ui-warning-soft,color-mix(in_oklab,var(--color-yellow-900)_30%,transparent))] text-[color:var(--mcp-ui-warning,var(--color-yellow-700))] dark:text-[color:var(--mcp-ui-warning,var(--color-yellow-400))]'
+      case 'low': return 'bg-[color:var(--mcp-ui-danger-soft,var(--color-red-100))] dark:bg-[color:var(--mcp-ui-danger-soft,color-mix(in_oklab,var(--color-red-900)_30%,transparent))] text-[color:var(--mcp-ui-danger,var(--color-red-700))] dark:text-[color:var(--mcp-ui-danger,var(--color-red-400))]'
+      default: return 'bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-100,#f3f4f6))] dark:bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-700,#374151))] text-[color:var(--mcp-ui-fg-muted,var(--color-gray-600,#4b5563))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]'
     }
   }
 
@@ -1051,7 +1054,7 @@ const UnderstandingSection: Component<{ content: unknown }> = (props) => {
               <span class={`px-1.5 py-0.5 text-xs font-medium rounded ${confidenceClass(det.confidence)}`}>
                 {det.label}
               </span>
-              <span class="text-gray-900 dark:text-white">{det.value}</span>
+              <span class="text-[color:var(--mcp-ui-fg,var(--color-gray-900,#111827))] dark:text-[color:var(--mcp-ui-fg,var(--color-white,#fff))]">{det.value}</span>
             </div>
           )}
         </For>
@@ -1060,7 +1063,7 @@ const UnderstandingSection: Component<{ content: unknown }> = (props) => {
         <div class="space-y-1">
           <For each={data().warnings}>
             {(w: string) => (
-              <div class="flex items-start gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+              <div class="flex items-start gap-1.5 text-xs text-[color:var(--mcp-ui-warning,var(--color-amber-600))] dark:text-[color:var(--mcp-ui-warning,var(--color-amber-400))]">
                 <span class="flex-shrink-0">⚠️</span>
                 <span>{w}</span>
               </div>
@@ -1123,15 +1126,15 @@ const FeedbackSection: Component<{
 
   return (
     <div class="space-y-3">
-      <p class="text-sm text-gray-700 dark:text-gray-300">{data().question}</p>
+      <p class="text-sm text-[color:var(--mcp-ui-fg,var(--color-gray-700,#374151))] dark:text-[color:var(--mcp-ui-fg,var(--color-gray-300,#d1d5db))]">{data().question}</p>
 
       {/* Already submitted — show micro-badge */}
       <Show when={submitted()}>
-        <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+        <div class="flex items-center gap-2 text-xs text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]">
           <span classList={{
-            'text-green-600': submitted() === 'approve',
-            'text-red-600': submitted() === 'reject',
-            'text-blue-600': submitted() !== 'approve' && submitted() !== 'reject',
+            'text-[color:var(--mcp-ui-success,var(--color-green-600))]': submitted() === 'approve',
+            'text-[color:var(--mcp-ui-danger,var(--color-red-600))]': submitted() === 'reject',
+            'text-[color:var(--mcp-ui-accent,var(--color-blue-600))]': submitted() !== 'approve' && submitted() !== 'reject',
           }}>
             {submitted() === 'approve' ? '\u2705' : submitted() === 'reject' ? '\u274C' : '\uD83D\uDCAC'} {submittedLabel()}
           </span>
@@ -1148,9 +1151,9 @@ const FeedbackSection: Component<{
             {(option) => (
               <button type="button" on:click={() => handleOption(option)}
                 class={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex items-center gap-1 ${
-                  option.variant === 'primary' ? 'bg-blue-600 text-white hover:bg-blue-700'
-                  : option.variant === 'danger' ? 'bg-red-600 text-white hover:bg-red-700'
-                  : 'border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  option.variant === 'primary' ? 'bg-[color:var(--mcp-ui-accent,var(--color-blue-600))] text-[color:var(--mcp-ui-accent-fg,var(--color-white,#fff))] hover:bg-[color:var(--mcp-ui-accent-hover,var(--color-blue-700))]'
+                  : option.variant === 'danger' ? 'bg-[color:var(--mcp-ui-danger,var(--color-red-600))] text-[color:var(--mcp-ui-accent-fg,var(--color-white,#fff))] hover:bg-[color:var(--mcp-ui-danger-hover,var(--color-red-700))]'
+                  : 'border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-600,#4b5563))] text-[color:var(--mcp-ui-fg,var(--color-gray-700,#374151))] dark:text-[color:var(--mcp-ui-fg,var(--color-gray-300,#d1d5db))] hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-100,#f3f4f6))] dark:hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-700,#374151))]'
                 }`}>
                 <Show when={option.icon}><span>{option.icon}</span></Show>
                 {option.label}
@@ -1162,9 +1165,9 @@ const FeedbackSection: Component<{
           <div class="flex gap-1">
             <input type="text" value={comment()} onInput={(e) => setComment(e.currentTarget.value)}
               placeholder={data().placeholder} autofocus={showComment()}
-              class="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:border-blue-400 outline-none" />
+              class="flex-1 px-3 py-2 text-sm border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-600,#4b5563))] rounded-lg bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-700,#374151))] text-[color:var(--mcp-ui-fg,var(--color-gray-900,#111827))] dark:text-[color:var(--mcp-ui-fg,var(--color-white,#fff))] focus:border-[color:var(--mcp-ui-focus,var(--color-blue-400))] outline-none" />
             <button type="button" on:click={() => { setSubmitted('comment'); setSubmittedLabel(''); props.onAction?.('feedback', { option: 'comment', comment: comment(), agentId: data().agentId, stepId: data().stepId }) }}
-              class="px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">{strings.scratchpadSend}</button>
+              class="px-3 py-2 text-sm bg-[color:var(--mcp-ui-accent,var(--color-blue-600))] text-[color:var(--mcp-ui-accent-fg,var(--color-white,#fff))] rounded-lg hover:bg-[color:var(--mcp-ui-accent-hover,var(--color-blue-700))]">{strings.scratchpadSend}</button>
           </div>
         </Show>
       </Show>
@@ -1193,26 +1196,26 @@ const PromptSection: Component<{
   return (
     <div class="space-y-2">
       <Show when={data().originalQuery}>
-        <p class="text-xs text-gray-500 dark:text-gray-400 italic">"{data().originalQuery}"</p>
+        <p class="text-xs text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))] italic">"{data().originalQuery}"</p>
       </Show>
       <div class="space-y-1">
         <For each={Object.entries(data().extracted)}>
           {([key, value]) => (
             <div class="flex gap-2 text-sm">
-              <span class="text-gray-500 dark:text-gray-400 font-medium min-w-[80px]">{key}:</span>
-              <span class="text-gray-900 dark:text-white">{String(value)}</span>
+              <span class="text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))] font-medium min-w-[80px]">{key}:</span>
+              <span class="text-[color:var(--mcp-ui-fg,var(--color-gray-900,#111827))] dark:text-[color:var(--mcp-ui-fg,var(--color-white,#fff))]">{String(value)}</span>
             </div>
           )}
         </For>
       </div>
       <Show when={data().plan}>
-        <div class="mt-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/10 rounded-lg text-sm text-blue-700 dark:text-blue-300">
+        <div class="mt-2 px-3 py-2 bg-[color:var(--mcp-ui-accent-soft,var(--color-blue-50))] dark:bg-[color:var(--mcp-ui-accent-soft,color-mix(in_oklab,var(--color-blue-900)_10%,transparent))] rounded-lg text-sm text-[color:var(--mcp-ui-accent,var(--color-blue-700))] dark:text-[color:var(--mcp-ui-accent,var(--color-blue-300))]">
           <span class="font-medium">{strings.scratchpadPlan}</span> {data().plan}
         </div>
       </Show>
       <Show when={data().editable}>
         <button type="button" onClick={() => props.onAction?.('edit_prompt', data())}
-          class="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
+          class="text-xs text-[color:var(--mcp-ui-accent,var(--color-blue-600))] dark:text-[color:var(--mcp-ui-accent,var(--color-blue-400))] hover:underline flex items-center gap-1">
           &#9998; {strings.scratchpadModify}
         </button>
       </Show>
@@ -1247,15 +1250,15 @@ const StepperProgressSection: Component<{ content: unknown }> = (props) => {
       <div class="space-y-2">
         <For each={data().steps}>
           {(step) => (
-            <div class={`flex items-start gap-2 text-sm ${step.status === 'active' ? 'font-medium' : ''} ${step.status === 'pending' ? 'text-gray-400' : 'text-gray-700 dark:text-gray-300'}`}>
+            <div class={`flex items-start gap-2 text-sm ${step.status === 'active' ? 'font-medium' : ''} ${step.status === 'pending' ? 'text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]' : 'text-[color:var(--mcp-ui-fg,var(--color-gray-700,#374151))] dark:text-[color:var(--mcp-ui-fg,var(--color-gray-300,#d1d5db))]'}`}>
               <span class="flex-shrink-0">{statusIcon(step.status)}</span>
               <div>
                 <span>{step.label}</span>
                 <Show when={step.summary}>
-                  <span class="ml-1 text-xs text-gray-500 dark:text-gray-400">— {step.summary}</span>
+                  <span class="ml-1 text-xs text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]">— {step.summary}</span>
                 </Show>
                 <Show when={step.duration_ms}>
-                  <span class="ml-1 text-xs text-gray-400">({step.duration_ms}ms)</span>
+                  <span class="ml-1 text-xs text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]">({step.duration_ms}ms)</span>
                 </Show>
               </div>
             </div>
@@ -1268,13 +1271,13 @@ const StepperProgressSection: Component<{ content: unknown }> = (props) => {
           {(step, i) => (
             <>
               <Show when={i() > 0}>
-                <svg class="w-3 h-3 text-gray-300 dark:text-gray-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+                <svg class="w-3 h-3 text-[color:var(--mcp-ui-fg-muted,var(--color-gray-300,#d1d5db))] dark:text-[color:var(--mcp-ui-fg-muted,var(--color-gray-600,#4b5563))] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
               </Show>
               <div class={`flex items-center gap-1 px-2 py-1 rounded text-xs ${
-                step.status === 'done' ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400'
-                : step.status === 'active' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-medium animate-pulse'
-                : step.status === 'error' ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'
-                : 'text-gray-400'
+                step.status === 'done' ? 'bg-[color:var(--mcp-ui-success-soft,var(--color-green-50))] dark:bg-[color:var(--mcp-ui-success-soft,color-mix(in_oklab,var(--color-green-900)_20%,transparent))] text-[color:var(--mcp-ui-success,var(--color-green-700))] dark:text-[color:var(--mcp-ui-success,var(--color-green-400))]'
+                : step.status === 'active' ? 'bg-[color:var(--mcp-ui-accent-soft,var(--color-blue-50))] dark:bg-[color:var(--mcp-ui-accent-soft,color-mix(in_oklab,var(--color-blue-900)_20%,transparent))] text-[color:var(--mcp-ui-accent,var(--color-blue-700))] dark:text-[color:var(--mcp-ui-accent,var(--color-blue-400))] font-medium animate-pulse'
+                : step.status === 'error' ? 'bg-[color:var(--mcp-ui-danger-soft,var(--color-red-50))] dark:bg-[color:var(--mcp-ui-danger-soft,color-mix(in_oklab,var(--color-red-900)_20%,transparent))] text-[color:var(--mcp-ui-danger,var(--color-red-700))] dark:text-[color:var(--mcp-ui-danger,var(--color-red-400))]'
+                : 'text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]'
               }`}>
                 <span>{statusIcon(step.status)}</span>
                 <span>{step.label}</span>
@@ -1308,14 +1311,14 @@ const ErrorSectionRenderer: Component<{
   const isWarning = () => data().severity === 'warning'
 
   return (
-    <div class={`rounded-lg px-3 py-2 text-sm ${isWarning() ? 'bg-amber-50 dark:bg-amber-900/10 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800' : 'bg-red-50 dark:bg-red-900/10 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800'}`}>
+    <div class={`rounded-lg px-3 py-2 text-sm ${isWarning() ? 'bg-[color:var(--mcp-ui-warning-soft,var(--color-amber-50))] dark:bg-[color:var(--mcp-ui-warning-soft,color-mix(in_oklab,var(--color-amber-900)_10%,transparent))] text-[color:var(--mcp-ui-warning,var(--color-amber-700))] dark:text-[color:var(--mcp-ui-warning,var(--color-amber-400))] border border-[color:var(--mcp-ui-warning-border,var(--color-amber-200))] dark:border-[color:var(--mcp-ui-warning-border,var(--color-amber-800))]' : 'bg-[color:var(--mcp-ui-danger-soft,var(--color-red-50))] dark:bg-[color:var(--mcp-ui-danger-soft,color-mix(in_oklab,var(--color-red-900)_10%,transparent))] text-[color:var(--mcp-ui-danger,var(--color-red-700))] dark:text-[color:var(--mcp-ui-danger,var(--color-red-400))] border border-[color:var(--mcp-ui-danger-border,var(--color-red-200))] dark:border-[color:var(--mcp-ui-danger-border,var(--color-red-800))]'}`}>
       <div class="flex items-start gap-2">
         <span class="flex-shrink-0">{isWarning() ? '⚠️' : '❌'}</span>
         <div class="flex-1">
           <p>{data().message}</p>
           <div class="flex gap-2 mt-2">
             <Show when={data().retryAction}>
-              <button type="button" onClick={() => props.onAction?.(data().retryAction!)} class={`px-2 py-1 text-xs font-medium rounded ${isWarning() ? 'bg-amber-600 text-white hover:bg-amber-700' : 'bg-red-600 text-white hover:bg-red-700'} transition-colors`}>&#128260; {data().retryLabel}</button>
+              <button type="button" onClick={() => props.onAction?.(data().retryAction!)} class={`px-2 py-1 text-xs font-medium rounded ${isWarning() ? 'bg-[color:var(--mcp-ui-warning,var(--color-amber-600))] text-[color:var(--mcp-ui-accent-fg,var(--color-white,#fff))] hover:bg-[color:var(--mcp-ui-warning-hover,var(--color-amber-700))]' : 'bg-[color:var(--mcp-ui-danger,var(--color-red-600))] text-[color:var(--mcp-ui-accent-fg,var(--color-white,#fff))] hover:bg-[color:var(--mcp-ui-danger-hover,var(--color-red-700))]'} transition-colors`}>&#128260; {data().retryLabel}</button>
             </Show>
             <Show when={data().details}>
               <button type="button" onClick={() => setShowDetails(!showDetails())} class="px-2 py-1 text-xs opacity-70 hover:opacity-100">&#9654; {strings.scratchpadDetails}</button>
@@ -1341,11 +1344,11 @@ const SourceCardSection: Component<{ content: unknown }> = (props) => {
   const statusIcon = () => ({ queried: '✅', available: '📦', error: '❌' } as Record<string, string>)[data().status] || '📦'
 
   return (
-    <div class="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
+    <div class="rounded-lg border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))] px-3 py-2">
       <div class="flex items-center justify-between mb-1.5">
-        <span class="text-sm font-medium text-gray-900 dark:text-white">{statusIcon()} {data().name}</span>
+        <span class="text-sm font-medium text-[color:var(--mcp-ui-fg,var(--color-gray-900,#111827))] dark:text-[color:var(--mcp-ui-fg,var(--color-white,#fff))]">{statusIcon()} {data().name}</span>
         <Show when={data().row_count !== undefined}>
-          <span class="text-xs font-bold text-blue-600 dark:text-blue-400">
+          <span class="text-xs font-bold text-[color:var(--mcp-ui-accent,var(--color-blue-600))] dark:text-[color:var(--mcp-ui-accent,var(--color-blue-400))]">
             {formatMCPUIString(strings.scratchpadResultCount, {
               count: data().row_count?.toLocaleString(strings.locale) ?? '',
             })}
@@ -1355,14 +1358,14 @@ const SourceCardSection: Component<{ content: unknown }> = (props) => {
       <div class="flex flex-wrap gap-1.5 mb-1">
         <For each={data().capabilities}>
           {(cap: any) => (
-            <span class={`text-[10px] px-1.5 py-0.5 rounded ${cap.supported ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'}`}>
+            <span class={`text-[10px] px-1.5 py-0.5 rounded ${cap.supported ? 'bg-[color:var(--mcp-ui-success-soft,var(--color-green-100))] dark:bg-[color:var(--mcp-ui-success-soft,color-mix(in_oklab,var(--color-green-900)_30%,transparent))] text-[color:var(--mcp-ui-success,var(--color-green-700))] dark:text-[color:var(--mcp-ui-success,var(--color-green-400))]' : 'bg-[color:var(--mcp-ui-danger-soft,var(--color-red-100))] dark:bg-[color:var(--mcp-ui-danger-soft,color-mix(in_oklab,var(--color-red-900)_30%,transparent))] text-[color:var(--mcp-ui-danger,var(--color-red-600))] dark:text-[color:var(--mcp-ui-danger,var(--color-red-400))]'}`}>
               {cap.supported ? '✅' : '❌'} {cap.label}
             </span>
           )}
         </For>
       </div>
       <Show when={data().freshness || data().latency_ms}>
-        <p class="text-[10px] text-gray-400">{[data().freshness, data().latency_ms ? `${data().latency_ms}ms` : ''].filter(Boolean).join(' · ')}</p>
+        <p class="text-[10px] text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]">{[data().freshness, data().latency_ms ? `${data().latency_ms}ms` : ''].filter(Boolean).join(' · ')}</p>
       </Show>
     </div>
   )
@@ -1386,9 +1389,9 @@ const DiffSection: Component<{ content: unknown }> = (props) => {
       <table class="min-w-full text-xs">
         <thead>
           <tr>
-            <th class="px-2 py-1 text-left text-gray-500 dark:text-gray-400"></th>
-            <th class="px-2 py-1 text-left font-medium text-blue-600 dark:text-blue-400">{data().left.label}</th>
-            <th class="px-2 py-1 text-left font-medium text-purple-600 dark:text-purple-400">{data().right.label}</th>
+            <th class="px-2 py-1 text-left text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]"></th>
+            <th class="px-2 py-1 text-left font-medium text-[color:var(--mcp-ui-accent,var(--color-blue-600))] dark:text-[color:var(--mcp-ui-accent,var(--color-blue-400))]">{data().left.label}</th>
+            <th class="px-2 py-1 text-left font-medium text-[color:var(--mcp-ui-secondary,var(--color-purple-600))] dark:text-[color:var(--mcp-ui-secondary,var(--color-purple-400))]">{data().right.label}</th>
           </tr>
         </thead>
         <tbody>
@@ -1398,10 +1401,10 @@ const DiffSection: Component<{ content: unknown }> = (props) => {
               const rVal = () => data().right.rows[0]?.[key]
               const isDiff = () => String(lVal()) !== String(rVal()) && data().highlight.includes(key)
               return (
-                <tr class={`border-t border-gray-100 dark:border-gray-700 ${isDiff() ? 'bg-yellow-50 dark:bg-yellow-900/10' : ''}`}>
-                  <td class="px-2 py-1 font-mono text-gray-500 dark:text-gray-400">{key}</td>
-                  <td class="px-2 py-1 text-gray-900 dark:text-white">{lVal() !== undefined ? String(lVal()) : '—'}</td>
-                  <td class="px-2 py-1 text-gray-900 dark:text-white">{rVal() !== undefined ? String(rVal()) : '—'}</td>
+                <tr class={`border-t border-[color:var(--mcp-ui-border,var(--color-gray-100,#f3f4f6))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))] ${isDiff() ? 'bg-[color:var(--mcp-ui-warning-soft,var(--color-yellow-50))] dark:bg-[color:var(--mcp-ui-warning-soft,color-mix(in_oklab,var(--color-yellow-900)_10%,transparent))]' : ''}`}>
+                  <td class="px-2 py-1 font-mono text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]">{key}</td>
+                  <td class="px-2 py-1 text-[color:var(--mcp-ui-fg,var(--color-gray-900,#111827))] dark:text-[color:var(--mcp-ui-fg,var(--color-white,#fff))]">{lVal() !== undefined ? String(lVal()) : '—'}</td>
+                  <td class="px-2 py-1 text-[color:var(--mcp-ui-fg,var(--color-gray-900,#111827))] dark:text-[color:var(--mcp-ui-fg,var(--color-white,#fff))]">{rVal() !== undefined ? String(rVal()) : '—'}</td>
                 </tr>
               )
             }}

@@ -97,7 +97,8 @@ describe('<ChartJSRenderer> missing values and unit', () => {
 
       expect(Object.keys(config).sort()).toEqual(['data', 'options', 'type']);
       expect(config.type).toBe('bar');
-      expect(config.data).toBe(params.data);
+      expect(config.data).toEqual(params.data);
+      expect(config.data).not.toBe(params.data);
       expect(config).not.toHaveProperty('plugins');
       expect(config.options).toEqual({
         responsive: true,
@@ -202,11 +203,12 @@ describe('<ChartJSRenderer> missing values and unit', () => {
         ));
         const config = await lastConfig();
 
-        // The chart is built, with the payload's own data object and nothing added.
+        // The chart keeps payload values unchanged; its dataset copy isolates
+        // the host from Chart.js's automatic color mutation.
         expect(config.type).toBe(type);
         expect(Object.keys(config).sort()).toEqual(['data', 'options', 'type']);
         expect(config).not.toHaveProperty('plugins');
-        expect(config.data).toBe(params.data);
+        expect(config.data).toEqual(params.data);
         expect(config.data.datasets[0]).not.toHaveProperty('spanGaps');
         expect(config.options).toEqual({
           responsive: true,
@@ -378,7 +380,7 @@ describe('<ChartJSRenderer> missing values and unit', () => {
       const config = await lastConfig();
       expect(config.options.plugins.tooltip.callbacks.label).toBeTypeOf('function');
       expect(config).not.toHaveProperty('plugins');
-      expect(config.data).toBe((component.params as any).data);
+      expect(config.data).toEqual((component.params as any).data);
     });
 
     it.each([false, null])(

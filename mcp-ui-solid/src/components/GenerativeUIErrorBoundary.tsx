@@ -66,11 +66,11 @@ function DefaultErrorFallback(props: {
 }) {
   const strings = useMCPUIStrings()
   return (
-    <div class="w-full h-full bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+    <div class="w-full h-full bg-[color:var(--mcp-ui-warning-soft,var(--color-yellow-50))] dark:bg-[color:var(--mcp-ui-warning-soft,color-mix(in_oklab,var(--color-yellow-900)_20%,transparent))] border border-[color:var(--mcp-ui-warning-border,var(--color-yellow-200))] dark:border-[color:var(--mcp-ui-warning-border,var(--color-yellow-800))] rounded-lg p-4">
       <div class="flex items-start gap-3">
         <div class="flex-shrink-0">
           <svg
-            class="w-5 h-5 text-yellow-600 dark:text-yellow-400"
+            class="w-5 h-5 text-[color:var(--mcp-ui-warning,var(--color-yellow-600))] dark:text-[color:var(--mcp-ui-warning,var(--color-yellow-400))]"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -84,24 +84,24 @@ function DefaultErrorFallback(props: {
           </svg>
         </div>
         <div class="flex-1 min-w-0">
-          <p class="text-sm font-medium text-yellow-900 dark:text-yellow-100">
+          <p class="text-sm font-medium text-[color:var(--mcp-ui-warning,var(--color-yellow-900))] dark:text-[color:var(--mcp-ui-warning,var(--color-yellow-100))]">
             {strings.errorBoundaryTitle}
           </p>
-          <p class="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
+          <p class="text-xs text-[color:var(--mcp-ui-warning,var(--color-yellow-700))] dark:text-[color:var(--mcp-ui-warning,var(--color-yellow-300))] mt-1">
             {formatMCPUIString(strings.errorBoundaryMeta, {
               type: props.componentType || strings.unknown,
               id: props.componentId?.slice(0, 8) || strings.unknown,
             })}
           </p>
           <Show when={import.meta.env.DEV}>
-            <p class="text-xs text-yellow-600 dark:text-yellow-400 mt-2 font-mono">
+            <p class="text-xs text-[color:var(--mcp-ui-warning,var(--color-yellow-600))] dark:text-[color:var(--mcp-ui-warning,var(--color-yellow-400))] mt-2 font-mono">
               {props.error.message}
             </p>
           </Show>
           <Show when={props.allowRetry}>
             <button
               onClick={props.onRetry}
-              class="mt-3 text-xs font-medium text-yellow-800 dark:text-yellow-200 hover:text-yellow-900 dark:hover:text-yellow-100 underline"
+              class="mt-3 text-xs font-medium text-[color:var(--mcp-ui-warning,var(--color-yellow-800))] dark:text-[color:var(--mcp-ui-warning,var(--color-yellow-200))] hover:text-[color:var(--mcp-ui-warning,var(--color-yellow-900))] dark:hover:text-[color:var(--mcp-ui-warning,var(--color-yellow-100))] underline"
             >
               {strings.errorBoundaryRetry}
             </button>

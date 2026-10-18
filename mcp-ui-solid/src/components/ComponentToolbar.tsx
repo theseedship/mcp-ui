@@ -58,7 +58,7 @@ export const ComponentToolbar: Component<ComponentToolbarProps> = (props) => {
   }
 
   return (
-    <div class={`absolute ${positionClasses()} z-10 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity`}>
+    <div class={`mcp-ui-root absolute ${positionClasses()} z-10 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity`}>
       <For each={props.actions}>
         {(action) => <ToolbarButton action={action} />}
       </For>
@@ -81,15 +81,15 @@ const ToolbarButton: Component<{ action: ToolbarAction }> = (props) => {
   const iconPath = () => showCheck() ? ICONS.check : ICONS[props.action.icon]
   const isActive = () => props.action.active
   const colorClass = () => {
-    if (showCheck()) return 'text-green-500'
-    if (isActive()) return 'text-blue-500 dark:text-blue-400'
-    return 'text-gray-500 dark:text-gray-400'
+    if (showCheck()) return 'text-[color:var(--mcp-ui-success,var(--color-green-500))]'
+    if (isActive()) return 'text-[color:var(--mcp-ui-accent,var(--color-blue-500))] dark:text-[color:var(--mcp-ui-accent,var(--color-blue-400))]'
+    return 'text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]'
   }
 
   return (
     <button
       onClick={handleClick}
-      class={`p-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-all shadow-sm`}
+      class={`p-1.5 bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-800,#1f2937))] border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-600,#4b5563))] rounded-full hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-100,#f3f4f6))] dark:hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-700,#374151))] transition-all shadow-[var(--mcp-ui-shadow,var(--shadow-sm))]`}
       title={props.action.label}
       aria-label={props.action.label}
       data-mcp-ui-action={props.action.icon}

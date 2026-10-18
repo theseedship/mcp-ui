@@ -5,7 +5,7 @@
  * accessibly (visually-hidden `strings.missingValue`); one legend under the
  * table explains the glyph; sorting puts missing values last; search never
  * matches them; exports are untouched; a table WITHOUT a missing cell renders
- * exactly the DOM of 6.23.0.
+ * the same structural DOM as 6.23.0, apart from theme-token classes.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -343,13 +343,33 @@ describe('exports are unchanged', () => {
   })
 })
 
-describe('a table without missing cells is byte-identical to 6.23.0', () => {
+describe('a table without missing cells is structurally identical to 6.23.0 apart from theme classes', () => {
   // `table-dom-6.23.0.json` was captured from the 6.23.0 renderer (before this
   // change) with the three payloads below; random ids are normalised.
   const baseline = JSON.parse(
     readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '../../test-support/fixtures/table-dom-6.23.0.json'), 'utf8')
   ) as Record<'plain' | 'paged' | 'virt', string>
+  // Keep the immutable baseline intact. Only reverse the explicit 6.25 theme
+  // migration inside class attributes; text, DOM, attributes and other classes
+  // must still match. Both sides receive the same class-whitespace treatment.
   const norm = (html: string) => html.replace(/table-[a-z0-9]{7}/g, 'table-ID')
+    .replace(/class="([^"]*)"/g, (_attribute, classes: string) => {
+      const normalized = classes.split(/\s+/).filter((token) => token &&
+        token !== 'mcp-ui-root' && token !== '[background-color:var(--mcp-ui-bg)]')
+        .map((token) => {
+          const utility = /^((?:[\w-]+:)*)(ring-offset|bg|text|border|divide|ring|outline|accent|fill|stroke|placeholder)-\[color:var\(--mcp-ui-[\w-]+,(.*)\)\]$/.exec(token)
+          if (utility) {
+            const [, variants, kind, fallback] = utility
+            const palette = /^var\(--color-([a-z]+(?:-\d+)?)(?:,#[\da-fA-F]+)?\)$/.exec(fallback!)
+            if (palette) return `${variants}${kind}-${palette[1]}`
+            const alpha = /^color-mix\(in_oklab,var\(--color-([a-z]+(?:-\d+)?)(?:,#[\da-fA-F]+)?\)_(\d+)%,transparent\)$/.exec(fallback!)
+            if (alpha) return `${variants}${kind}-${alpha[1]}/${alpha[2]}`
+          }
+          const shadow = /^shadow-\[var\(--mcp-ui-shadow,var\(--shadow-(sm|md|lg|xl|2xl)\)\)\]$/.exec(token)
+          return shadow ? `shadow-${shadow[1]}` : token
+        })
+      return `class="${normalized.join(' ')}"`
+    })
   const cols = [
     { key: 'name', label: 'Name' }, { key: 'n', label: 'N' }, { key: 'ok', label: 'Ok' },
     { key: 'link', label: 'Link' }, { key: 'md', label: 'Md' },
@@ -362,21 +382,32 @@ describe('a table without missing cells is byte-identical to 6.23.0', () => {
   const mk = (extra: Record<string, unknown>, r: Array<Record<string, unknown>> = rows) =>
     ({ id: 't', type: 'table', position: { colStart: 1, colSpan: 12 }, params: { title: 'T', columns: cols, rows: r, ...extra } }) as unknown as UIComponent
 
+  it('normalizes only known theme classes, preserving non-theme classes, attributes and literal content', () => {
+    const text = 'mcp-ui-root [background-color:var(--mcp-ui-bg)]'
+    const legacy = `<a href="/a" class="text-blue-600 dark:bg-gray-800/50 shadow-sm keep">${text}</a>`
+    const themed = `<a href="/a" class="mcp-ui-root text-[color:var(--mcp-ui-accent,var(--color-blue-600))] dark:bg-[color:var(--mcp-ui-surface,color-mix(in_oklab,var(--color-gray-800,#1f2937)_50%,transparent))] shadow-[var(--mcp-ui-shadow,var(--shadow-sm))] [background-color:var(--mcp-ui-bg)] keep">${text}</a>`
+    expect(norm(themed)).toBe(norm(legacy))
+    expect(norm(themed)).toContain(`>${text}</a>`)
+    expect(norm(themed.replace('href="/a"', 'href="/b"'))).not.toBe(norm(legacy))
+    expect(norm(themed.replace(' keep"', ' different"'))).not.toBe(norm(legacy))
+    expect(norm(themed.replace('</a>', '</a><span>extra</span>'))).not.toBe(norm(legacy))
+  })
+
   it('plain table', () => {
     const { container } = view(mk({}))
-    expect(norm(container.innerHTML)).toBe(baseline.plain)
+    expect(norm(container.innerHTML)).toBe(norm(baseline.plain))
   })
 
   it('paginated table', () => {
     const many = Array.from({ length: 30 }, (_, i) => ({ name: `row-${i}`, n: i, ok: true, link: 'a', md: 'b' }))
     const { container } = view(mk({ chatPageSize: 10 }, many))
-    expect(norm(container.innerHTML)).toBe(baseline.paged)
+    expect(norm(container.innerHTML)).toBe(norm(baseline.paged))
   })
 
   it('virtualized table', async () => {
     const { container } = view(mk({ virtualize: true }))
     await waitFor(() => expect(container.querySelector('tbody[style]')).not.toBeNull())
-    expect(norm(container.innerHTML)).toBe(baseline.virt)
+    expect(norm(container.innerHTML)).toBe(norm(baseline.virt))
   })
 })
 

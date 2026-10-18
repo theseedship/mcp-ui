@@ -1,0 +1,8 @@
+@import 'tailwindcss';
+@import 'theme-source/styles/index.css';
+@custom-variant dark (&:where(.dark, .dark *));
+/* SOURCE_ROOT is replaced by the runner, so baseline and migrated CSS scan their own source. */
+@source 'SOURCE_ROOT';
+body { margin: 0; font-family: sans-serif; }
+main { padding: 24px; max-width: 900px; }
+section { margin-bottom: 24px; }
