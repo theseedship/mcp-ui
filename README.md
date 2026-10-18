@@ -9,6 +9,12 @@ A collection of TypeScript packages for building generative, streaming user inte
 
 ## What's New
 
+**6.25.1 (`mcp-ui-solid`):** raises the published DOMPurify security floor and
+updates Solid/Seroval and build-tool dependency resolutions. Includes a real
+server-rendering/serialization compatibility smoke test. One unpatched
+development-tooling advisory remains documented in the
+[security dependency notes](./mcp-ui-solid/docs/SECURITY-DEPENDENCIES.md).
+
 **6.25.0 (`mcp-ui-solid`):** inherited CSS theme tokens for prompts, resource
 tables, scratchpads, form controls, autocomplete and chart/graph chrome;
 body portals and mounted canvas renderers follow live host theme changes.
@@ -104,7 +110,7 @@ native chart/data switching, and chart/table/graph catalogue parity.
 See the [integration handoff](./mcp-ui-solid/docs/briefs/VISUALIZATION-FOUNDATION-2026-09-14.md).
 This work does not add automatic MCP selection or shared host filters.
 
-**Current line — `mcp-ui-solid` 6.25.0** (post-`5.0.0`, audit-driven visual-renderer
+**Current line — `mcp-ui-solid` 6.25.1** (post-`5.0.0`, audit-driven visual-renderer
 & streaming hardening; `mcp-ui-spec` 5.7.0). Highlights from 6.18.0 — see
 [`mcp-ui-solid/CHANGELOG.md`](./mcp-ui-solid/CHANGELOG.md) for the full list
 including 6.19.0:
@@ -162,7 +168,7 @@ This monorepo contains three packages published under `@seed-ship/`:
 
 | Package | Version | Description |
 |---------|---------|-------------|
-| [`@seed-ship/mcp-ui-solid`](./mcp-ui-solid) | 6.25.0 | SolidJS components for rendering MCP-generated UI |
+| [`@seed-ship/mcp-ui-solid`](./mcp-ui-solid) | 6.25.1 | SolidJS components for rendering MCP-generated UI |
 | [`@seed-ship/mcp-ui-spec`](./mcp-ui-spec) | 5.7.0 | JSON schemas and Zod validators |
 | [`@seed-ship/mcp-ui-cli`](./mcp-ui-cli) | 5.0.1 | CLI for validation and type generation |
 

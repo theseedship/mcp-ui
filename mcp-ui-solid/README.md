@@ -5,6 +5,15 @@ SolidJS components + chat toolkit for MCP-generated UI. Part of the [MCP UI ecos
 [![npm version](https://img.shields.io/npm/v/@seed-ship/mcp-ui-solid.svg)](https://www.npmjs.com/package/@seed-ship/mcp-ui-solid)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+## What's New in v6.25.1
+
+DOMPurify now requires `^3.4.17`. The workspace uses the compatible Solid
+1.9.17 patch with corrected Seroval and build-tool dependency resolutions,
+covered by a real server-rendering/serialization smoke test. These workspace
+overrides do not update an application's own Solid/Seroval lockfile.
+See [security dependency notes](./docs/SECURITY-DEPENDENCIES.md) for host
+upgrade guidance and the remaining unpatched development-tooling advisory.
+
 ## What's New in v6.25.0
 
 Inherited `--mcp-ui-*` CSS tokens theme prompts, resource/table chrome,

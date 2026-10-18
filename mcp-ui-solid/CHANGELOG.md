@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.25.1] - 2026-10-18
+
+### Security
+
+- Raise the published DOMPurify floor to `^3.4.17` (lockfile: 3.4.17), covering
+  both reported `IN_PLACE` advisories and subsequent upstream hardening. The
+  library's existing string-based sanitization profiles remain unchanged.
+- Update workspace Solid to 1.9.17 and Seroval/Seroval plugins to 1.6.11,
+  using Solid's supported 1.6.x dependency range instead of the stale 1.5.x
+  override. Add real asynchronous SSR and JSON serialization compatibility tests.
+- Update build/test resolutions to `source-map-js` 1.2.2 and `brace-expansion`
+  5.0.12. Audit falls from nine advisories to one remaining HIGH advisory in
+  the distinct, unpatched development dependency `braces` 3.0.3. No audit ignore
+  or advisory dismissal is added; see `docs/SECURITY-DEPENDENCIES.md`.
+- Workspace overrides do not propagate to consuming applications. Hosts must
+  separately update their Solid/Seroval lockfiles; the public Solid peer range
+  and component APIs are unchanged.
+
 ## [6.25.0] - 2026-10-18
 
 ### Added
