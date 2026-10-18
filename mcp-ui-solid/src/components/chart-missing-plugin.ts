@@ -209,6 +209,8 @@ export interface MissingValuesPluginOptions {
   getNoDataText: () => string;
   /** Lazy: `Chart.defaults.font.family`, when the build exposes it. */
   getFontFamily?: () => string | undefined;
+  /** Lazy host theme override; omission retains the historical grey. */
+  getTextColor?: () => string | undefined;
 }
 
 /** A dataset colour for entry `index`, as a string, or `undefined`. */
@@ -297,7 +299,7 @@ export function drawMissingBarStubs(chart: any): void {
 }
 
 /** Draws `text` centred in the chart area (a chart with nothing to plot). */
-export function drawNoDataText(chart: any, text: string, fontFamily?: string): void {
+export function drawNoDataText(chart: any, text: string, fontFamily?: string, color?: string): void {
   const ctx = chart?.ctx;
   const area = chart?.chartArea;
   if (!ctx || !area || !text) return;
@@ -305,7 +307,7 @@ export function drawNoDataText(chart: any, text: string, fontFamily?: string): v
   const cy = (area.top + (area.bottom ?? area.top + (area.height ?? 0))) / 2;
   ctx.save();
   ctx.font = `12px ${fontFamily || 'sans-serif'}`;
-  ctx.fillStyle = NO_DATA_TEXT_COLOR;
+  ctx.fillStyle = color || NO_DATA_TEXT_COLOR;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(text, cx, cy);
@@ -324,7 +326,7 @@ export function createMissingValuesPlugin(options: MissingValuesPluginOptions) {
       try {
         drawMissingBarStubs(chart);
         if (options.allMissing) {
-          drawNoDataText(chart, options.getNoDataText(), options.getFontFamily?.());
+          drawNoDataText(chart, options.getNoDataText(), options.getFontFamily?.(), options.getTextColor?.());
         }
       } catch {
         // Cosmetic layer: never break the chart.

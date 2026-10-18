@@ -6,6 +6,7 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
+import * as ts from 'typescript'
 
 describe('ChartRenderer reactivity', () => {
   const source = readFileSync(
@@ -27,13 +28,29 @@ describe('ChartRenderer reactivity', () => {
   })
 
   it('has ChartJSRenderer as Show children (not in fallback)', () => {
-    // ChartJSRenderer is between </Show>'s closing tag of the fallback and the outer </Show>
-    // i.e. it's the children of <Show when={useNative()}>, rendered when native is true
-    const showIdx = source.indexOf('when={useNative()}')
-    expect(showIdx).toBeGreaterThan(-1)
-    // The entire Show block should contain ChartJSRenderer
-    const afterShow = source.slice(showIdx, showIdx + 3000)
-    expect(afterShow).toContain('<ChartJSRenderer')
+    // Parse structure rather than a character window: fallback class names can
+    // grow without moving the native renderer out of the reactive branch.
+    const ast = ts.createSourceFile('UIResourceRenderer.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
+    const nativeShows: ts.JsxElement[] = []
+    const visit = (node: ts.Node) => {
+      if (ts.isJsxElement(node) && node.openingElement.tagName.getText(ast) === 'Show' &&
+        node.openingElement.attributes.properties.some((attribute) =>
+          ts.isJsxAttribute(attribute) && attribute.name.getText(ast) === 'when' &&
+          attribute.initializer && ts.isJsxExpression(attribute.initializer) &&
+          attribute.initializer.expression?.getText(ast) === 'useNative()')) {
+        nativeShows.push(node)
+      }
+      ts.forEachChild(node, visit)
+    }
+    visit(ast)
+    expect(nativeShows).toHaveLength(1)
+    const show = nativeShows[0]!
+    expect(show.children.some((child) =>
+      ts.isJsxSelfClosingElement(child) && child.tagName.getText(ast) === 'ChartJSRenderer')).toBe(true)
+    const fallback = show.openingElement.attributes.properties.find((attribute) =>
+      ts.isJsxAttribute(attribute) && attribute.name.getText(ast) === 'fallback')
+    expect(fallback).toBeDefined()
+    expect(fallback!.getText(ast)).not.toContain('<ChartJSRenderer')
   })
 
   it('has quickchart.io URL in the iframe fallback', () => {

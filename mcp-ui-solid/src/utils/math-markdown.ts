@@ -104,7 +104,7 @@ function isCurrencyLike(raw: string, tex: string, following: string): boolean {
   return closerLooksLikeLaterOpener
 }
 
-const CELL_LINK_ATTRIBUTES = 'target="_blank" rel="noopener noreferrer" class="text-blue-600 dark:text-blue-400 hover:underline"'
+const CELL_LINK_ATTRIBUTES = 'target="_blank" rel="noopener noreferrer" class="text-[color:var(--mcp-ui-accent,var(--color-blue-600))] dark:text-[color:var(--mcp-ui-accent,var(--color-blue-400))] hover:underline"'
 
 function cellLinkExtension(): MarkedExtension {
   return {

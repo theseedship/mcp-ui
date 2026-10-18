@@ -136,12 +136,13 @@ export const AutocompleteFormField: Component<AutocompleteFormFieldProps> = (pro
   // Base input class
   const baseInputClass = () => `
     w-full px-3 py-2 border rounded-md
-    focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-    disabled:bg-gray-100 disabled:cursor-not-allowed
+    text-[color:var(--mcp-ui-fg,inherit)]
+    focus:ring-2 focus:ring-[color:var(--mcp-ui-focus,var(--color-blue-500))] focus:border-[color:var(--mcp-ui-focus,var(--color-blue-500))]
+    disabled:bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-100,#f3f4f6))] disabled:cursor-not-allowed
     ${props.error
-      ? 'border-red-500 focus:ring-red-500'
-      : 'border-gray-300 dark:border-gray-600'}
-    dark:bg-gray-700 dark:text-white
+      ? 'border-[color:var(--mcp-ui-danger-border,var(--color-red-500))] focus:ring-[color:var(--mcp-ui-focus,var(--color-red-500))]'
+      : 'border-[color:var(--mcp-ui-border-control,var(--color-gray-300,#d1d5db))] dark:border-[color:var(--mcp-ui-border-control,var(--color-gray-600,#4b5563))]'}
+    dark:bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-700,#374151))] dark:text-[color:var(--mcp-ui-fg,var(--color-white,#fff))]
   `
 
   const fieldId = () => `field-${props.field.name}`
@@ -166,11 +167,11 @@ export const AutocompleteFormField: Component<AutocompleteFormFieldProps> = (pro
         <Show when={props.field.label}>
           <label
             for={fieldId()}
-            class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+            class="block text-sm font-medium text-[color:var(--mcp-ui-fg,var(--color-gray-700,#374151))] dark:text-[color:var(--mcp-ui-fg,var(--color-gray-300,#d1d5db))]"
           >
             {props.field.label}
             <Show when={props.field.required}>
-              <span class="text-red-500 ml-1" aria-hidden="true">*</span>
+              <span class="text-[color:var(--mcp-ui-danger,var(--color-red-500))] ml-1" aria-hidden="true">*</span>
             </Show>
           </label>
         </Show>
@@ -273,14 +274,14 @@ export const AutocompleteFormField: Component<AutocompleteFormFieldProps> = (pro
 
         {/* Help text */}
         <Show when={props.field.helpText && !props.error}>
-          <p class="text-xs text-gray-500 dark:text-gray-400">
+          <p class="text-xs text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]">
             {props.field.helpText}
           </p>
         </Show>
 
         {/* Error message */}
         <Show when={props.error}>
-          <p id={errorId()} role="alert" class="text-xs text-red-600 dark:text-red-400">
+          <p id={errorId()} role="alert" class="text-xs text-[color:var(--mcp-ui-danger,var(--color-red-600))] dark:text-[color:var(--mcp-ui-danger,var(--color-red-400))]">
             {props.error}
           </p>
         </Show>

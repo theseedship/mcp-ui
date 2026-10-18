@@ -178,7 +178,7 @@ describe('parseMathMarkdown', () => {
     const cellLink = cell.querySelector('a')
     expect(cellLink?.getAttribute('target')).toBe('_blank')
     expect(cellLink?.getAttribute('rel')).toBe('noopener noreferrer')
-    expect(cellLink?.className).toBe('text-blue-600 dark:text-blue-400 hover:underline')
+    expect(cellLink?.className).toBe('text-[color:var(--mcp-ui-accent,var(--color-blue-600))] dark:text-[color:var(--mcp-ui-accent,var(--color-blue-400))] hover:underline')
 
     const prose = document.createElement('div')
     prose.innerHTML = parseMathMarkdown(source, math, 'prose')

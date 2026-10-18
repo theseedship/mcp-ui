@@ -64,22 +64,22 @@ export const DegradedFallback: Component<DegradedFallbackProps> = (props) => {
 
   return (
     <div
-      class="w-full rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-900/20"
+      class="w-full rounded-lg border border-[color:var(--mcp-ui-warning-border,var(--color-amber-200))] bg-[color:var(--mcp-ui-warning-soft,var(--color-amber-50))] p-3 dark:border-[color:var(--mcp-ui-warning-border,var(--color-amber-800))] dark:bg-[color:var(--mcp-ui-warning-soft,color-mix(in_oklab,var(--color-amber-900)_20%,transparent))]"
       role="alert"
     >
-      <p class="text-sm font-medium text-amber-900 dark:text-amber-100">{props.message}</p>
-      <p class="mt-0.5 text-xs text-amber-700 dark:text-amber-300">
+      <p class="text-sm font-medium text-[color:var(--mcp-ui-warning,var(--color-amber-900))] dark:text-[color:var(--mcp-ui-warning,var(--color-amber-100))]">{props.message}</p>
+      <p class="mt-0.5 text-xs text-[color:var(--mcp-ui-warning,var(--color-amber-700))] dark:text-[color:var(--mcp-ui-warning,var(--color-amber-300))]">
         {props.caption ?? strings.degradedCaption}
       </p>
 
       <Show when={hasTable()}>
-        <div class="mt-2 max-h-64 overflow-auto rounded border border-amber-200 dark:border-amber-800">
+        <div class="mt-2 max-h-64 overflow-auto rounded border border-[color:var(--mcp-ui-warning-border,var(--color-amber-200))] dark:border-[color:var(--mcp-ui-warning-border,var(--color-amber-800))]">
           <table class="w-full border-collapse text-left text-xs">
-            <thead class="sticky top-0 bg-amber-100 dark:bg-amber-900/40">
+            <thead class="sticky top-0 bg-[color:var(--mcp-ui-warning-soft,var(--color-amber-100))] dark:bg-[color:var(--mcp-ui-warning-soft,color-mix(in_oklab,var(--color-amber-900)_40%,transparent))]">
               <tr>
                 <For each={props.columns}>
                   {(col) => (
-                    <th class="px-2 py-1 font-medium text-amber-900 dark:text-amber-100">{col}</th>
+                    <th class="px-2 py-1 font-medium text-[color:var(--mcp-ui-warning,var(--color-amber-900))] dark:text-[color:var(--mcp-ui-warning,var(--color-amber-100))]">{col}</th>
                   )}
                 </For>
               </tr>
@@ -87,10 +87,10 @@ export const DegradedFallback: Component<DegradedFallbackProps> = (props) => {
             <tbody>
               <For each={shownRows()}>
                 {(row, rowIndex) => (
-                  <tr class="border-t border-amber-100 dark:border-amber-800/60">
+                  <tr class="border-t border-[color:var(--mcp-ui-warning-border,var(--color-amber-100))] dark:border-[color:var(--mcp-ui-warning-border,color-mix(in_oklab,var(--color-amber-800)_60%,transparent))]">
                     <For each={props.columns}>
                       {(_col, i) => (
-                        <td class="px-2 py-1 text-amber-800 dark:text-amber-200">
+                        <td class="px-2 py-1 text-[color:var(--mcp-ui-warning,var(--color-amber-800))] dark:text-[color:var(--mcp-ui-warning,var(--color-amber-200))]">
                           <Show when={isMissing(rowIndex(), i())} fallback={String(row[i()] ?? '')}>
                             <MissingValueMark />
                           </Show>
@@ -107,7 +107,7 @@ export const DegradedFallback: Component<DegradedFallbackProps> = (props) => {
           <MissingValueLegend class="mt-2" />
         </Show>
         <Show when={hiddenCount() > 0}>
-          <p class="mt-1 text-[10px] text-amber-600 dark:text-amber-400">
+          <p class="mt-1 text-[10px] text-[color:var(--mcp-ui-warning,var(--color-amber-600))] dark:text-[color:var(--mcp-ui-warning,var(--color-amber-400))]">
             {formatMCPUIString(strings.degradedMoreRows, { count: hiddenCount() })}
           </p>
         </Show>

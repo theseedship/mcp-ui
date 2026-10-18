@@ -62,17 +62,17 @@ const ActionButton: Component<{
   const variantClass = () => {
     switch (props.action.variant) {
       case 'primary':
-        return 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500'
+        return 'bg-[color:var(--mcp-ui-accent,var(--color-blue-600))] text-[color:var(--mcp-ui-accent-fg,var(--color-white,#fff))] hover:bg-[color:var(--mcp-ui-accent-hover,var(--color-blue-700))] focus:ring-[color:var(--mcp-ui-focus,var(--color-blue-500))]'
       case 'secondary':
-        return 'bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600 focus:ring-gray-500'
+        return 'bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-200,#e5e7eb))] text-[color:var(--mcp-ui-fg,var(--color-gray-800,#1f2937))] hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-300,#d1d5db))] dark:bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-700,#374151))] dark:text-[color:var(--mcp-ui-fg,var(--color-white,#fff))] dark:hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-600,#4b5563))] focus:ring-[color:var(--mcp-ui-focus,var(--color-gray-500,#6b7280))]'
       case 'outline':
-        return 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:ring-gray-500'
+        return 'border border-[color:var(--mcp-ui-border,var(--color-gray-300,#d1d5db))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-600,#4b5563))] text-[color:var(--mcp-ui-fg,var(--color-gray-700,#374151))] dark:text-[color:var(--mcp-ui-fg,var(--color-gray-300,#d1d5db))] hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-50,#f9fafb))] dark:hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-700,#374151))] focus:ring-[color:var(--mcp-ui-focus,var(--color-gray-500,#6b7280))]'
       case 'ghost':
-        return 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:ring-gray-500'
+        return 'text-[color:var(--mcp-ui-fg,var(--color-gray-700,#374151))] dark:text-[color:var(--mcp-ui-fg,var(--color-gray-300,#d1d5db))] hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-100,#f3f4f6))] dark:hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-700,#374151))] focus:ring-[color:var(--mcp-ui-focus,var(--color-gray-500,#6b7280))]'
       case 'danger':
-        return 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500'
+        return 'bg-[color:var(--mcp-ui-danger,var(--color-red-600))] text-[color:var(--mcp-ui-accent-fg,var(--color-white,#fff))] hover:bg-[color:var(--mcp-ui-danger-hover,var(--color-red-700))] focus:ring-[color:var(--mcp-ui-focus,var(--color-red-500))]'
       default:
-        return 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500'
+        return 'bg-[color:var(--mcp-ui-accent,var(--color-blue-600))] text-[color:var(--mcp-ui-accent-fg,var(--color-white,#fff))] hover:bg-[color:var(--mcp-ui-accent-hover,var(--color-blue-700))] focus:ring-[color:var(--mcp-ui-focus,var(--color-blue-500))]'
     }
   }
 

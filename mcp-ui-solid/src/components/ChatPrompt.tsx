@@ -86,22 +86,22 @@ export const ChatPrompt: Component<ChatPromptProps> = (props) => {
 
   return (
     <div
-      class="w-full max-w-2xl mx-auto mb-2 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg overflow-visible"
+      class="mcp-ui-root w-full max-w-2xl mx-auto mb-2 bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-800,#1f2937))] rounded-xl border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))] shadow-[var(--mcp-ui-shadow,var(--shadow-lg))] overflow-visible"
       style={{ animation: 'chat-prompt-slide-up 0.2s ease-out' }}
       role="dialog"
       aria-label={props.config.title}
     >
       {/* Header */}
-      <div class="flex items-center justify-between px-4 py-2.5 border-b border-gray-100 dark:border-gray-700">
-        <p class="text-sm font-medium text-gray-900 dark:text-white">{props.config.title}</p>
+      <div class="flex items-center justify-between px-4 py-2.5 border-b border-[color:var(--mcp-ui-border,var(--color-gray-100,#f3f4f6))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))]">
+        <p class="text-sm font-medium text-[color:var(--mcp-ui-fg,var(--color-gray-900,#111827))] dark:text-[color:var(--mcp-ui-fg,var(--color-white,#fff))]">{props.config.title}</p>
         <button
           onClick={() => {
             props.onDismiss?.()
             props.onSubmit({ type: props.config.type, value: '', label: '', dismissed: true })
           }}
           class={props.dismissLabel
-            ? 'px-3 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors'
-            : 'p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors'
+            ? 'px-3 py-1 text-xs font-medium text-[color:var(--mcp-ui-accent,var(--color-blue-600))] dark:text-[color:var(--mcp-ui-accent,var(--color-blue-400))] hover:bg-[color:var(--mcp-ui-accent-soft,var(--color-blue-50))] dark:hover:bg-[color:var(--mcp-ui-accent-soft,color-mix(in_oklab,var(--color-blue-900)_20%,transparent))] rounded-lg transition-colors'
+            : 'p-1 text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))] hover:text-[color:var(--mcp-ui-fg-muted,var(--color-gray-600,#4b5563))] dark:hover:text-[color:var(--mcp-ui-fg,var(--color-gray-300,#d1d5db))] rounded-full hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-100,#f3f4f6))] dark:hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-700,#374151))] transition-colors'
           }
           aria-label={props.dismissLabel || strings.dismiss}
         >
@@ -172,7 +172,7 @@ const ChoiceBody: Component<{
   }
 
   const buttonClass = () => {
-    const base = 'px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-blue-50 hover:border-blue-300 dark:hover:bg-blue-900/30 dark:hover:border-blue-600 transition-colors text-left'
+    const base = 'px-4 py-2 text-sm font-medium rounded-lg border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-600,#4b5563))] bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-50,#f9fafb))] dark:bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-700,#374151))] text-[color:var(--mcp-ui-fg,var(--color-gray-900,#111827))] dark:text-[color:var(--mcp-ui-fg,var(--color-white,#fff))] hover:bg-[color:var(--mcp-ui-accent-soft,var(--color-blue-50))] hover:border-[color:var(--mcp-ui-accent-border,var(--color-blue-300))] dark:hover:bg-[color:var(--mcp-ui-accent-soft,color-mix(in_oklab,var(--color-blue-900)_30%,transparent))] dark:hover:border-[color:var(--mcp-ui-accent-border,var(--color-blue-600))] transition-colors text-left'
     const extra = props.config.buttonClass
     return extra ? `${base} ${extra}` : base
   }
@@ -195,7 +195,7 @@ const ChoiceBody: Component<{
                   </Show>
                   {option.label}
                   <Show when={option.description}>
-                    <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-normal">{option.description}</span>
+                    <span class="block text-xs text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))] mt-0.5 font-normal">{option.description}</span>
                   </Show>
                 </>
               }
@@ -222,21 +222,21 @@ const ConfirmBody: Component<{
   return (
     <div>
       <Show when={props.config.message}>
-        <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">{props.config.message}</p>
+        <p class="text-sm text-[color:var(--mcp-ui-fg-muted,var(--color-gray-600,#4b5563))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))] mb-3">{props.config.message}</p>
       </Show>
       <div class="flex gap-2 justify-end">
         <button
           onClick={props.onCancel}
-          class="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          class="px-4 py-2 text-sm font-medium rounded-lg border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-600,#4b5563))] text-[color:var(--mcp-ui-fg,var(--color-gray-700,#374151))] dark:text-[color:var(--mcp-ui-fg,var(--color-gray-300,#d1d5db))] hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-100,#f3f4f6))] dark:hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-700,#374151))] transition-colors"
         >
           {props.config.cancelLabel || strings.cancel}
         </button>
         <button
           onClick={props.onConfirm}
-          class={`px-4 py-2 text-sm font-medium rounded-lg text-white transition-colors ${
+          class={`px-4 py-2 text-sm font-medium rounded-lg text-[color:var(--mcp-ui-accent-fg,var(--color-white,#fff))] transition-colors ${
             isDanger()
-              ? 'bg-red-600 hover:bg-red-700'
-              : 'bg-blue-600 hover:bg-blue-700'
+              ? 'bg-[color:var(--mcp-ui-danger,var(--color-red-600))] hover:bg-[color:var(--mcp-ui-danger-hover,var(--color-red-700))]'
+              : 'bg-[color:var(--mcp-ui-accent,var(--color-blue-600))] hover:bg-[color:var(--mcp-ui-accent-hover,var(--color-blue-700))]'
           }`}
         >
           {props.config.confirmLabel || strings.confirm}
@@ -380,11 +380,11 @@ const FormBody: Component<{
 
       {/* Live preview */}
       <Show when={previewText() || previewLoading()}>
-        <div class="px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 text-sm">
+        <div class="px-3 py-2 bg-[color:var(--mcp-ui-accent-soft,var(--color-blue-50))] dark:bg-[color:var(--mcp-ui-accent-soft,color-mix(in_oklab,var(--color-blue-900)_20%,transparent))] rounded-lg border border-[color:var(--mcp-ui-accent-border,var(--color-blue-200))] dark:border-[color:var(--mcp-ui-accent-border,var(--color-blue-800))] text-sm">
           <Show when={previewLoading()} fallback={
-            <p class="text-blue-700 dark:text-blue-300">{previewText()}</p>
+            <p class="text-[color:var(--mcp-ui-accent,var(--color-blue-700))] dark:text-[color:var(--mcp-ui-accent,var(--color-blue-300))]">{previewText()}</p>
           }>
-            <p class="text-blue-400 animate-pulse">{strings.promptLoadingPreview}</p>
+            <p class="text-[color:var(--mcp-ui-accent,var(--color-blue-400))] animate-pulse">{strings.promptLoadingPreview}</p>
           </Show>
         </div>
       </Show>
@@ -393,7 +393,7 @@ const FormBody: Component<{
         <button
           type="submit"
           disabled={!isValid()}
-          class="px-4 py-2 text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+          class="px-4 py-2 text-sm font-medium rounded-lg text-[color:var(--mcp-ui-accent-fg,var(--color-white,#fff))] bg-[color:var(--mcp-ui-accent,var(--color-blue-600))] hover:bg-[color:var(--mcp-ui-accent-hover,var(--color-blue-700))] disabled:bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-400,#9ca3af))] disabled:cursor-not-allowed transition-colors"
         >
           {props.config.submitLabel || strings.submit}
         </button>

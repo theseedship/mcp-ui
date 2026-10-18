@@ -98,7 +98,7 @@ function CopyButton(props: { getText: () => string; title?: string; position?: '
   return (
     <button
       onClick={handleCopy}
-      class={`${positionClasses()} opacity-60 hover:opacity-100 px-2 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-all shadow-sm z-10`}
+      class={`${positionClasses()} opacity-60 hover:opacity-100 px-2 py-1 bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-800,#1f2937))] border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-600,#4b5563))] rounded-full hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-100,#f3f4f6))] dark:hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-700,#374151))] transition-all shadow-[var(--mcp-ui-shadow,var(--shadow-sm))] z-10`}
       title={props.title || strings.copy}
       aria-label={props.title || strings.copy}
       data-mcp-ui-action="copy"
@@ -107,12 +107,12 @@ function CopyButton(props: { getText: () => string; title?: string; position?: '
       <Show
         when={!copied()}
         fallback={
-          <svg class="w-3 h-3 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg class="w-3 h-3 text-[color:var(--mcp-ui-success,var(--color-green-500))]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
           </svg>
         }
       >
-        <svg class="w-3 h-3 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg class="w-3 h-3 text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
         </svg>
       </Show>
@@ -259,8 +259,8 @@ function ChartRenderer(props: {
   // Guard: if data or datasets missing, show error instead of crashing Chart.js
   if (!params()?.data?.datasets) {
     return (
-      <div class="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-        <p class="text-red-500 dark:text-red-400 text-sm">{strings.chartInvalidData}</p>
+      <div class="p-4 bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-800,#1f2937))] rounded-lg border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))]">
+        <p class="text-[color:var(--mcp-ui-danger,var(--color-red-500))] dark:text-[color:var(--mcp-ui-danger,var(--color-red-400))] text-sm">{strings.chartInvalidData}</p>
       </div>
     )
   }
@@ -338,7 +338,7 @@ function ChartRenderer(props: {
     <Show
       when={useNative()}
       fallback={
-        <div class="relative w-full h-full min-h-[300px] bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="relative w-full h-full min-h-[300px] bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-800,#1f2937))] rounded-lg shadow-[var(--mcp-ui-shadow,var(--shadow-sm))] border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))] overflow-hidden">
           {/* P1.7 — Chart.js missing and quickchart fallback not allowed:
               show the chart data as a local table instead of an implicit
               call to quickchart.io. */}
@@ -357,15 +357,15 @@ function ChartRenderer(props: {
 
           <Show when={isLoading()}>
             <div class="absolute inset-0 flex items-center justify-center">
-              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-[color:var(--mcp-ui-accent-border,var(--color-blue-600))]" />
             </div>
           </Show>
 
           <Show when={error()}>
             <div class="absolute inset-0 flex items-center justify-center p-4">
               <div class="text-center">
-                <p class="text-red-600 dark:text-red-400 text-sm font-medium">{strings.chartError}</p>
-                <p class="text-gray-600 dark:text-gray-400 text-xs mt-1">{error()}</p>
+                <p class="text-[color:var(--mcp-ui-danger,var(--color-red-600))] dark:text-[color:var(--mcp-ui-danger,var(--color-red-400))] text-sm font-medium">{strings.chartError}</p>
+                <p class="text-[color:var(--mcp-ui-fg-muted,var(--color-gray-600,#4b5563))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))] text-xs mt-1">{error()}</p>
               </div>
             </div>
           </Show>
@@ -373,7 +373,7 @@ function ChartRenderer(props: {
           <Show when={iframeUrl() && !error()}>
             <div class="w-full h-full p-4">
               <Show when={params()?.title}>
-                <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+                <h3 class="text-sm font-semibold text-[color:var(--mcp-ui-fg,var(--color-gray-900,#111827))] dark:text-[color:var(--mcp-ui-fg,var(--color-white,#fff))] mb-3">
                   {params()?.title}
                 </h3>
               </Show>
@@ -414,7 +414,7 @@ function ChartRenderer(props: {
  * Smart cell value renderer that handles markdown links and other formats
  */
 /** Class list carried by every `<mark>` that `highlightQuery` injects. */
-const HIGHLIGHT_MARK_CLASS = 'bg-yellow-200 dark:bg-[#222F49] text-inherit rounded px-0.5'
+const HIGHLIGHT_MARK_CLASS = 'bg-[color:var(--mcp-ui-highlight,var(--color-yellow-200))] dark:bg-[color:var(--mcp-ui-highlight,#222F49)] text-inherit rounded px-0.5'
 
 /**
  * Wrap matches of `query` in `<mark>` tags within an HTML string.
@@ -553,12 +553,12 @@ function defaultCitationChip(
   const safeDocName = encodeURIComponent(fileName || '')
   const label = fileName ? `${fileName} - ${pageNum}` : `${pageNum}`
   if (!verified) {
-    return `<span class="citation-ref inline-flex items-center gap-0.5 align-middle opacity-60"><span class="text-gray-500 line-through">[${label}]</span></span>`
+    return `<span class="citation-ref inline-flex items-center gap-0.5 align-middle opacity-60"><span class="text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] line-through">[${label}]</span></span>`
   }
   return [
     '<span class="citation-ref inline-flex items-center gap-0.5 align-middle">',
-    `<span class="text-gray-500">[${label}]</span>`,
-    '<button class="inline-flex items-center ml-0.5 px-1 py-0.5 text-xs bg-gray-800 hover:bg-gray-700 border border-gray-600 hover:border-teal-500 rounded cursor-pointer transition-colors align-middle"',
+    `<span class="text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))]">[${label}]</span>`,
+    '<button class="inline-flex items-center ml-0.5 px-1 py-0.5 text-xs bg-[color:var(--mcp-ui-surface,var(--color-gray-800,#1f2937))] hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-700,#374151))] border border-[color:var(--mcp-ui-border,var(--color-gray-600,#4b5563))] hover:border-[color:var(--mcp-ui-info-border,var(--color-teal-500))] rounded cursor-pointer transition-colors align-middle"',
     ` data-citation-page="${pageNum}"`,
     ` data-citation-doc="${safeDocName}"`,
     ' data-citation-verified="true"',
@@ -616,7 +616,7 @@ export function renderCellValue(value: any, citationCtx?: CitationCtx, mathRende
       const label = value.name || value.label || value.title || value.url
       const sanitizedLabel = sanitizeHtml(String(label))
       const sanitizedUrl = sanitizeHtml(String(value.url))
-      const anchor = `<a href="${sanitizedUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-600 dark:text-blue-400 hover:underline">${sanitizedLabel}</a>`
+      const anchor = `<a href="${sanitizedUrl}" target="_blank" rel="noopener noreferrer" class="text-[color:var(--mcp-ui-accent,var(--color-blue-600))] dark:text-[color:var(--mcp-ui-accent,var(--color-blue-400))] hover:underline">${sanitizedLabel}</a>`
       // Re-sanitize the composed anchor: sanitizing the bare `url` string
       // leaves quotes and `javascript:` untouched, so a crafted value could
       // otherwise break out of the attribute or smuggle a scriptable href.
@@ -675,7 +675,7 @@ export function renderCellValue(value: any, citationCtx?: CitationCtx, mathRende
     // Replace all markdown links with HTML links
     const htmlValue = strValue.replace(
       /\[([^\]]+)\]\(([^)]+)\)/g,
-      '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-blue-600 dark:text-blue-400 hover:underline">$1</a>'
+      '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-[color:var(--mcp-ui-accent,var(--color-blue-600))] dark:text-[color:var(--mcp-ui-accent,var(--color-blue-400))] hover:underline">$1</a>'
     )
     return sanitizeHtml(htmlValue, SANITIZE_PROFILES.cellLink)
   }
@@ -1035,13 +1035,13 @@ function TableRenderer(props: {
 
   // Standard table body (non-virtualized) — uses client pagination when active
   const StandardTableBody = () => (
-    <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+    <tbody class="bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-800,#1f2937))] divide-y divide-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:divide-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))]">
       <For each={clientVisibleRows().slice(0, DEFAULT_RESOURCE_LIMITS.maxTableRows)}>
         {(row: any, i) => (
-          <tr class={`hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${i() % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50/30 dark:bg-gray-800/50'}`}>
+          <tr class={`hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-50,#f9fafb))] dark:hover:bg-[color:var(--mcp-ui-surface-hover,color-mix(in_oklab,var(--color-gray-700,#374151)_50%,transparent))] transition-colors ${i() % 2 === 0 ? 'bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-800,#1f2937))]' : 'bg-[color:var(--mcp-ui-surface-muted,color-mix(in_oklab,var(--color-gray-50,#f9fafb)_30%,transparent))] dark:bg-[color:var(--mcp-ui-surface,color-mix(in_oklab,var(--color-gray-800,#1f2937)_50%,transparent))]'}`}>
             <For each={tableParams.columns}>
               {(column: any) => (
-                <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-200 whitespace-normal break-words leading-relaxed first:pl-6 last:pr-6">
+                <td class="px-6 py-4 text-sm text-[color:var(--mcp-ui-fg,var(--color-gray-700,#374151))] dark:text-[color:var(--mcp-ui-fg,var(--color-gray-200,#e5e7eb))] whitespace-normal break-words leading-relaxed first:pl-6 last:pr-6">
                   <Show
                     when={!isMissingCellValue(row[column.key])}
                     fallback={<MissingValueMark />}
@@ -1069,7 +1069,7 @@ function TableRenderer(props: {
 
     return (
       <tbody
-        class="bg-white dark:bg-gray-800 relative"
+        class="bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-800,#1f2937))] relative"
         style={{ height: `${totalSize}px` }}
       >
         <For each={items}>
@@ -1077,7 +1077,7 @@ function TableRenderer(props: {
             const row = tableParams.rows[virtualRow.index]
             return (
               <tr
-                class={`hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors absolute left-0 right-0 ${virtualRow.index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50/30 dark:bg-gray-800/50'}`}
+                class={`hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-50,#f9fafb))] dark:hover:bg-[color:var(--mcp-ui-surface-hover,color-mix(in_oklab,var(--color-gray-700,#374151)_50%,transparent))] transition-colors absolute left-0 right-0 ${virtualRow.index % 2 === 0 ? 'bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-800,#1f2937))]' : 'bg-[color:var(--mcp-ui-surface-muted,color-mix(in_oklab,var(--color-gray-50,#f9fafb)_30%,transparent))] dark:bg-[color:var(--mcp-ui-surface,color-mix(in_oklab,var(--color-gray-800,#1f2937)_50%,transparent))]'}`}
                 style={{
                   height: `${rowHeight}px`,
                   transform: `translateY(${virtualRow.start}px)`
@@ -1085,7 +1085,7 @@ function TableRenderer(props: {
               >
                 <For each={tableParams.columns}>
                   {(column: any) => (
-                    <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-200 whitespace-normal break-words leading-relaxed first:pl-6 last:pr-6">
+                    <td class="px-6 py-4 text-sm text-[color:var(--mcp-ui-fg,var(--color-gray-700,#374151))] dark:text-[color:var(--mcp-ui-fg,var(--color-gray-200,#e5e7eb))] whitespace-normal break-words leading-relaxed first:pl-6 last:pr-6">
                       <Show
                         when={!isMissingCellValue(row[column.key])}
                         fallback={<MissingValueMark />}
@@ -1105,7 +1105,7 @@ function TableRenderer(props: {
 
   return (
     <ExpandableWrapper title={tableParams.title || strings.tableTitle} copyData={getTableCSV()} copyLabel={strings.tableCopyCsv} toolbarVariant={props.toolbarVariant} onExpandedChange={setSelfExpanded}>
-      <div class={`relative w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden group ${
+      <div class={`relative w-full bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-800,#1f2937))] rounded-lg shadow-[var(--mcp-ui-shadow,var(--shadow-sm))] border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))] overflow-hidden group ${
         isExpanded() ? 'flex-1 min-h-0 flex flex-col' : 'h-full'
       } ${tableParams.className || ''}`}>
         <Show when={exportable} fallback={<CopyButton getText={getTableCSV} title={strings.tableCopyCsv} position="top-right" />}>
@@ -1113,13 +1113,13 @@ function TableRenderer(props: {
             <button
               ref={exportTriggerRef}
               onClick={() => setShowExportMenu(!showExportMenu())}
-              class="opacity-60 hover:opacity-100 px-2 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-all shadow-sm"
+              class="opacity-60 hover:opacity-100 px-2 py-1 bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-800,#1f2937))] border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-600,#4b5563))] rounded-full hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-100,#f3f4f6))] dark:hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-700,#374151))] transition-all shadow-[var(--mcp-ui-shadow,var(--shadow-sm))]"
               title={strings.tableExport}
               aria-label={strings.tableExport}
               aria-haspopup="menu"
               aria-expanded={showExportMenu()}
             >
-              <svg class="w-3 h-3 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg class="w-3 h-3 text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
             </button>
@@ -1130,23 +1130,23 @@ function TableRenderer(props: {
               width={144}
             >
               <Show when={(exportFormats as string[]).includes('tsv')}>
-                <button onClick={() => handleExport('tsv')} class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">{strings.tableCopyTsv}</button>
+                <button onClick={() => handleExport('tsv')} class="w-full text-left px-3 py-1.5 hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-100,#f3f4f6))] dark:hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-700,#374151))] text-[color:var(--mcp-ui-fg,var(--color-gray-700,#374151))] dark:text-[color:var(--mcp-ui-fg,var(--color-gray-300,#d1d5db))]">{strings.tableCopyTsv}</button>
               </Show>
               <Show when={(exportFormats as string[]).includes('csv')}>
-                <button onClick={() => handleExport('csv')} class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">{strings.tableDownloadCsv}</button>
+                <button onClick={() => handleExport('csv')} class="w-full text-left px-3 py-1.5 hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-100,#f3f4f6))] dark:hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-700,#374151))] text-[color:var(--mcp-ui-fg,var(--color-gray-700,#374151))] dark:text-[color:var(--mcp-ui-fg,var(--color-gray-300,#d1d5db))]">{strings.tableDownloadCsv}</button>
               </Show>
               <Show when={(exportFormats as string[]).includes('json')}>
-                <button onClick={() => handleExport('json')} class="w-full text-left px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300">{strings.tableDownloadJson}</button>
+                <button onClick={() => handleExport('json')} class="w-full text-left px-3 py-1.5 hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-100,#f3f4f6))] dark:hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-700,#374151))] text-[color:var(--mcp-ui-fg,var(--color-gray-700,#374151))] dark:text-[color:var(--mcp-ui-fg,var(--color-gray-300,#d1d5db))]">{strings.tableDownloadJson}</button>
               </Show>
             </PortalDropdownMenu>
           </div>
         </Show>
         <div class={`p-4 ${isExpanded() ? 'flex-1 min-h-0 flex flex-col' : ''}`}>
           <Show when={tableParams.title}>
-            <h3 id={`${tableId}-title`} class="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex-shrink-0">
+            <h3 id={`${tableId}-title`} class="text-sm font-semibold text-[color:var(--mcp-ui-fg,var(--color-gray-900,#111827))] dark:text-[color:var(--mcp-ui-fg,var(--color-white,#fff))] mb-3 flex-shrink-0">
               {tableParams.title}
               <Show when={isVirtualizing()}>
-                <span class="ml-2 text-xs font-normal text-gray-400">
+                <span class="ml-2 text-xs font-normal text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]">
                   {formatMCPUIString(strings.tableVirtualizedRows, { count: tableParams.rows?.length ?? 0 })}
                 </span>
               </Show>
@@ -1156,25 +1156,25 @@ function TableRenderer(props: {
           {/* Search input (v4.3.3) */}
           <Show when={isSearchable()}>
             <div class="relative mb-3">
-              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-sm">{'\uD83D\uDD0D'}</span>
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))] pointer-events-none text-sm">{'\uD83D\uDD0D'}</span>
               <input
                 type="text"
                 value={searchQuery()}
                 onInput={(e) => handleSearch(e.currentTarget.value)}
                 placeholder={searchPlaceholder()}
-                class="w-full max-w-xs min-w-[200px] pl-8 pr-8 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 outline-none"
+                class="w-full max-w-xs min-w-[200px] pl-8 pr-8 py-1.5 text-sm border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-600,#4b5563))] rounded-md bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-700,#374151))] text-[color:var(--mcp-ui-fg,var(--color-gray-900,#111827))] dark:text-[color:var(--mcp-ui-fg,var(--color-white,#fff))] placeholder-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))] focus:border-[color:var(--mcp-ui-focus,var(--color-blue-400))] focus:ring-1 focus:ring-[color:var(--mcp-ui-focus,var(--color-blue-400))] outline-none"
               />
               <Show when={searchQuery()}>
                 <button
                   type="button"
                   onClick={() => { handleSearch(''); setSearchQuery(''); setDebouncedQuery('') }}
-                  class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-sm"
+                  class="absolute right-2 top-1/2 -translate-y-1/2 text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))] hover:text-[color:var(--mcp-ui-fg-muted,var(--color-gray-600,#4b5563))] dark:hover:text-[color:var(--mcp-ui-fg,var(--color-gray-300,#d1d5db))] text-sm"
                   aria-label={strings.tableClearSearch}
                 >&times;</button>
               </Show>
             </div>
             <Show when={debouncedQuery() && filteredRows().length !== sortedRows().length}>
-              <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">
+              <p class="text-xs text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))] mb-2">
                 {formatMCPUIString(
                   filteredRows().length === 1 ? strings.tableSearchResultsOne : strings.tableSearchResultsMany,
                   { count: filteredRows().length, total: sortedRows().length }
@@ -1213,16 +1213,16 @@ function TableRenderer(props: {
             tabindex="0"
           >
             <table
-              class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 border-separate border-spacing-0"
+              class="min-w-full divide-y divide-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:divide-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))] border-separate border-spacing-0"
               aria-labelledby={tableParams.title ? `${tableId}-title` : undefined}
             >
-              <thead class="bg-gray-100 dark:bg-gray-900 sticky top-0 z-10">
+              <thead class="bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-100,#f3f4f6))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-900,#111827))] sticky top-0 z-10">
                 <tr>
                   <For each={tableParams.columns}>
                     {(column: any) => (
                       <th
                         scope="col"
-                        class="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700 first:pl-6 last:pr-6 bg-gray-100 dark:bg-gray-900 cursor-pointer select-none hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+                        class="px-6 py-3 text-left text-xs font-semibold text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))] uppercase tracking-wider border-b border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))] first:pl-6 last:pr-6 bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-100,#f3f4f6))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-900,#111827))] cursor-pointer select-none hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-200,#e5e7eb))] dark:hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-800,#1f2937))] transition-colors"
                         style={column.width ? { width: column.width } : {}}
                         on:click={() => handleSort(column.key)}
                         title={formatMCPUIString(strings.sortBy, { column: column.label })}
@@ -1233,7 +1233,7 @@ function TableRenderer(props: {
                             class="text-[10px] leading-none"
                             classList={{
                               'opacity-30': sortKey() !== column.key,
-                              'opacity-100 text-blue-600 dark:text-blue-400': sortKey() === column.key,
+                              'opacity-100 text-[color:var(--mcp-ui-accent,var(--color-blue-600))] dark:text-[color:var(--mcp-ui-accent,var(--color-blue-400))]': sortKey() === column.key,
                             }}
                           >
                             {sortIndicator(column.key)}
@@ -1257,7 +1257,7 @@ function TableRenderer(props: {
 
           {/* Server-side pagination (legacy) */}
           <Show when={tableParams.pagination}>
-            <div class="mt-3 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+            <div class="mt-3 flex items-center justify-between text-xs text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]">
               <span>
                 {formatMCPUIString(strings.tableServerPageRange, {
                   start: tableParams.pagination.currentPage * tableParams.pagination.pageSize + 1,
@@ -1273,14 +1273,14 @@ function TableRenderer(props: {
 
           {/* Client-side pagination (v4.3.7) */}
           <Show when={needsClientPagination()}>
-            <div class="mt-3 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+            <div class="mt-3 flex items-center justify-between text-xs text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]">
               <span>
                 {clientRangeStart()}&ndash;{clientRangeEnd()} / {filteredRows().length.toLocaleString(strings.locale)}
               </span>
               <div class="flex items-center gap-2">
                 <button
                   type="button"
-                  class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  class="px-2 py-1 rounded hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-100,#f3f4f6))] dark:hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-700,#374151))] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   disabled={clientPage() === 0}
                   onClick={() => setClientPage(p => p - 1)}
                   aria-label={strings.paginationPrevious}
@@ -1291,7 +1291,7 @@ function TableRenderer(props: {
                 <span aria-live="polite">{clientPage() + 1} / {clientTotalPages()}</span>
                 <button
                   type="button"
-                  class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  class="px-2 py-1 rounded hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-100,#f3f4f6))] dark:hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-700,#374151))] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   disabled={clientPage() >= clientTotalPages() - 1}
                   onClick={() => setClientPage(p => p + 1)}
                   aria-label={strings.paginationNext}
@@ -1302,7 +1302,7 @@ function TableRenderer(props: {
                 {/* Page size selector — fullscreen only */}
                 <Show when={isExpanded() && filteredRows().length > 10}>
                   <select
-                    class="ml-2 px-1 py-0.5 text-xs border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                    class="ml-2 px-1 py-0.5 text-xs border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-600,#4b5563))] rounded bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-700,#374151))] text-[color:var(--mcp-ui-fg,var(--color-gray-700,#374151))] dark:text-[color:var(--mcp-ui-fg,var(--color-gray-300,#d1d5db))]"
                     value={clientPageSize()}
                     onChange={(e) => handlePageSizeChange(Number(e.currentTarget.value))}
                     aria-label={strings.paginationPageSize}
@@ -1312,7 +1312,7 @@ function TableRenderer(props: {
                       {(opt) => <option value={opt.value}>{opt.label}</option>}
                     </For>
                   </select>
-                  <span class="text-gray-400">{strings.perPageSuffix}</span>
+                  <span class="text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]">{strings.perPageSuffix}</span>
                 </Show>
               </div>
             </div>
@@ -1339,17 +1339,17 @@ function MetricRenderer(props: { component: UIComponent }) {
   }
 
   return (
-    <div class="relative w-full h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 group">
+    <div class="relative w-full h-full bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-800,#1f2937))] rounded-lg shadow-[var(--mcp-ui-shadow,var(--shadow-sm))] border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))] p-4 group">
       <CopyButton getText={getMetricText} title={strings.copyMetric} position="top-right" />
       <div class="flex flex-col h-full justify-between">
         <div>
-          <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+          <p class="text-xs font-medium text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))] uppercase tracking-wide">
             {metricParams.title}
           </p>
           <div class="mt-2 flex items-baseline">
-            <p class="text-2xl font-semibold text-gray-900 dark:text-white">{metricParams.value}</p>
+            <p class="text-2xl font-semibold text-[color:var(--mcp-ui-fg,var(--color-gray-900,#111827))] dark:text-[color:var(--mcp-ui-fg,var(--color-white,#fff))]">{metricParams.value}</p>
             <Show when={metricParams.unit}>
-              <span class="ml-2 text-sm font-medium text-gray-500 dark:text-gray-400">
+              <span class="ml-2 text-sm font-medium text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]">
                 {metricParams.unit}
               </span>
             </Show>
@@ -1360,10 +1360,10 @@ function MetricRenderer(props: { component: UIComponent }) {
           <div class="mt-3 flex items-center">
             <span
               class={`text-sm font-medium ${metricParams.trend.direction === 'up'
-                ? 'text-green-600 dark:text-green-400'
+                ? 'text-[color:var(--mcp-ui-success,var(--color-green-600))] dark:text-[color:var(--mcp-ui-success,var(--color-green-400))]'
                 : metricParams.trend.direction === 'down'
-                  ? 'text-red-600 dark:text-red-400'
-                  : 'text-gray-600 dark:text-gray-400'
+                  ? 'text-[color:var(--mcp-ui-danger,var(--color-red-600))] dark:text-[color:var(--mcp-ui-danger,var(--color-red-400))]'
+                  : 'text-[color:var(--mcp-ui-fg-muted,var(--color-gray-600,#4b5563))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]'
                 }`}
             >
               {metricParams.trend.direction === 'up'
@@ -1377,7 +1377,7 @@ function MetricRenderer(props: { component: UIComponent }) {
         </Show>
 
         <Show when={metricParams.subtitle}>
-          <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">{metricParams.subtitle}</p>
+          <p class="mt-2 text-xs text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]">{metricParams.subtitle}</p>
         </Show>
       </div>
     </div>
@@ -1468,7 +1468,7 @@ function TextRenderer(props: { component: UIComponent }) {
     <Show
       when={imageData()}
       fallback={
-        <div class="relative w-full h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 group">
+        <div class="relative w-full h-full bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-800,#1f2937))] rounded-lg shadow-[var(--mcp-ui-shadow,var(--shadow-sm))] border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))] p-4 group">
           <CopyButton getText={getTextContent} title={strings.copyText} position="top-right" />
           <SafeHtml
             class={`prose prose-sm dark:prose-invert max-w-none ${textParams.className || ''}`}
@@ -1483,13 +1483,13 @@ function TextRenderer(props: { component: UIComponent }) {
           <img
             src={data().imageUrl}
             alt={data().alt}
-            class="max-w-full max-h-[400px] object-contain rounded shadow-sm hover:opacity-90 transition-opacity"
+            class="max-w-full max-h-[400px] object-contain rounded shadow-[var(--mcp-ui-shadow,var(--shadow-sm))] hover:opacity-90 transition-opacity"
             loading="lazy"
           />
         )
         return (
-        <div class="w-full h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col">
-          <div class="flex-1 flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-900 min-h-[200px]">
+        <div class="w-full h-full bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-800,#1f2937))] rounded-lg shadow-[var(--mcp-ui-shadow,var(--shadow-sm))] border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))] overflow-hidden flex flex-col">
+          <div class="flex-1 flex items-center justify-center p-4 bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-50,#f9fafb))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-900,#111827))] min-h-[200px]">
             {/* The anchor only exists when the link URL passed `safeUrl` — a
                 `javascript:` link degrades to a plain, unlinked image. */}
             <Show when={data().linkUrl} fallback={image()}>
@@ -1500,8 +1500,8 @@ function TextRenderer(props: { component: UIComponent }) {
               )}
             </Show>
           </div>
-          <div class="p-3 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-            <p class="text-sm text-gray-600 dark:text-gray-400 text-center italic">{data().credit}</p>
+          <div class="p-3 border-t border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))] bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-800,#1f2937))]">
+            <p class="text-sm text-[color:var(--mcp-ui-fg-muted,var(--color-gray-600,#4b5563))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))] text-center italic">{data().credit}</p>
           </div>
         </div>
         )
@@ -1522,10 +1522,10 @@ function IframeRenderer(props: { component: UIComponent }) {
   // the `credentialless` decision.
   const trustOptions = () => ({ customTrustedDomains: config.customTrustedIframeDomains })
   return (
-    <div class="w-full h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col">
+    <div class="w-full h-full bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-800,#1f2937))] rounded-lg shadow-[var(--mcp-ui-shadow,var(--shadow-sm))] border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))] overflow-hidden flex flex-col">
       <Show when={params.title}>
-        <div class="px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-          <h3 class="text-sm font-semibold text-gray-900 dark:text-white">{params.title}</h3>
+        <div class="px-4 py-2 border-b border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))] bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-50,#f9fafb))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-900,#111827))]">
+          <h3 class="text-sm font-semibold text-[color:var(--mcp-ui-fg,var(--color-gray-900,#111827))] dark:text-[color:var(--mcp-ui-fg,var(--color-white,#fff))]">{params.title}</h3>
         </div>
       </Show>
       <iframe
@@ -1548,7 +1548,7 @@ function IframeRenderer(props: { component: UIComponent }) {
         }
         loading="lazy"
       />
-      <IframeFallbackLink url={params.url} class="border-t border-gray-200 dark:border-gray-700" />
+      <IframeFallbackLink url={params.url} class="border-t border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))]" />
     </div>
   )
 }
@@ -1561,13 +1561,13 @@ function ImageRenderer(props: { component: UIComponent }) {
   const params = props.component.params as any
 
   return (
-    <figure class={`w-full h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col ${params.className || ''}`}>
-      <div class="flex-1 flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-900 min-h-[200px]">
+    <figure class={`w-full h-full bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-800,#1f2937))] rounded-lg shadow-[var(--mcp-ui-shadow,var(--shadow-sm))] border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))] overflow-hidden flex flex-col ${params.className || ''}`}>
+      <div class="flex-1 flex items-center justify-center p-4 bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-50,#f9fafb))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-900,#111827))] min-h-[200px]">
         <a
           href={safeUrl(params.url)}
           target="_blank"
           rel="noopener noreferrer"
-          class="cursor-zoom-in focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded"
+          class="cursor-zoom-in focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[color:var(--mcp-ui-focus,var(--color-blue-500))] rounded"
           aria-label={formatMCPUIString(strings.imageViewFullSize, {
             alt: params.alt || strings.imageAltFallback,
           })}
@@ -1575,14 +1575,14 @@ function ImageRenderer(props: { component: UIComponent }) {
           <img
             src={safeUrl(params.url, { allowDataImage: true })}
             alt={params.alt || strings.imageAlt}
-            class="max-w-full max-h-[500px] object-contain rounded shadow-sm hover:opacity-95 transition-opacity"
+            class="max-w-full max-h-[500px] object-contain rounded shadow-[var(--mcp-ui-shadow,var(--shadow-sm))] hover:opacity-95 transition-opacity"
             loading="lazy"
           />
         </a>
       </div>
       <Show when={params.caption}>
-        <figcaption class="p-3 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-          <p class="text-sm text-gray-600 dark:text-gray-400 text-center">{params.caption}</p>
+        <figcaption class="p-3 border-t border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))] bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-800,#1f2937))]">
+          <p class="text-sm text-[color:var(--mcp-ui-fg-muted,var(--color-gray-600,#4b5563))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))] text-center">{params.caption}</p>
         </figcaption>
       </Show>
     </figure>
@@ -1605,10 +1605,10 @@ function LinkRenderer(props: { component: UIComponent }) {
         label: params.label || strings.linkLabel,
         description: params.description || params.url,
       })}
-      class={`flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors group h-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${params.className || ''}`}
+      class={`flex items-center gap-3 p-4 bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-800,#1f2937))] rounded-lg shadow-[var(--mcp-ui-shadow,var(--shadow-sm))] border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))] hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-50,#f9fafb))] dark:hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-700,#374151))] transition-colors group h-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[color:var(--mcp-ui-focus,var(--color-blue-500))] ${params.className || ''}`}
       onClick={(e) => e.stopPropagation()}
     >
-      <div class="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-full text-blue-600 dark:text-blue-400 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/50 shrink-0 transition-colors" aria-hidden="true">
+      <div class="p-2 bg-[color:var(--mcp-ui-accent-soft,var(--color-blue-50))] dark:bg-[color:var(--mcp-ui-accent-soft,color-mix(in_oklab,var(--color-blue-900)_30%,transparent))] rounded-full text-[color:var(--mcp-ui-accent,var(--color-blue-600))] dark:text-[color:var(--mcp-ui-accent,var(--color-blue-400))] group-hover:bg-[color:var(--mcp-ui-accent-soft,var(--color-blue-100))] dark:group-hover:bg-[color:var(--mcp-ui-accent-soft,color-mix(in_oklab,var(--color-blue-900)_50%,transparent))] shrink-0 transition-colors" aria-hidden="true">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           class="w-5 h-5"
@@ -1624,16 +1624,16 @@ function LinkRenderer(props: { component: UIComponent }) {
         </svg>
       </div>
       <div class="flex-1 min-w-0">
-        <h4 class="text-sm font-medium text-gray-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+        <h4 class="text-sm font-medium text-[color:var(--mcp-ui-fg,var(--color-gray-900,#111827))] dark:text-[color:var(--mcp-ui-fg,var(--color-white,#fff))] truncate group-hover:text-[color:var(--mcp-ui-accent,var(--color-blue-600))] dark:group-hover:text-[color:var(--mcp-ui-accent,var(--color-blue-400))] transition-colors">
           {params.label || params.url}
         </h4>
         <Show when={params.description}>
-          <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{params.description}</p>
+          <p class="text-xs text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))] truncate">{params.description}</p>
         </Show>
       </div>
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        class="w-4 h-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 shrink-0 transition-colors"
+        class="w-4 h-4 text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))] group-hover:text-[color:var(--mcp-ui-fg-muted,var(--color-gray-600,#4b5563))] dark:group-hover:text-[color:var(--mcp-ui-fg,var(--color-gray-300,#d1d5db))] shrink-0 transition-colors"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -1758,7 +1758,7 @@ function ComponentRenderer(props: {
     if (mode === 'inline-warn') {
       return (
         <div
-          class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 text-xs text-yellow-800 dark:text-yellow-200"
+          class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-[color:var(--mcp-ui-warning-soft,var(--color-yellow-50))] dark:bg-[color:var(--mcp-ui-warning-soft,color-mix(in_oklab,var(--color-yellow-900)_20%,transparent))] border border-[color:var(--mcp-ui-warning-border,var(--color-yellow-200))] dark:border-[color:var(--mcp-ui-warning-border,var(--color-yellow-800))] text-xs text-[color:var(--mcp-ui-warning,var(--color-yellow-800))] dark:text-[color:var(--mcp-ui-warning,var(--color-yellow-200))]"
           role="alert"
           aria-label={strings.validationWarning}
           title={firstError}
@@ -1785,9 +1785,9 @@ function ComponentRenderer(props: {
 
     // mode === 'block' (default, pre-v5.4.0 behavior)
     return (
-      <div class="w-full h-full bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-        <p class="text-sm font-medium text-red-900 dark:text-red-100">{strings.validationError}</p>
-        <p class="text-xs text-red-700 dark:text-red-300 mt-1">
+      <div class="w-full h-full bg-[color:var(--mcp-ui-danger-soft,var(--color-red-50))] dark:bg-[color:var(--mcp-ui-danger-soft,color-mix(in_oklab,var(--color-red-900)_20%,transparent))] border border-[color:var(--mcp-ui-danger-border,var(--color-red-200))] dark:border-[color:var(--mcp-ui-danger-border,var(--color-red-800))] rounded-lg p-4">
+        <p class="text-sm font-medium text-[color:var(--mcp-ui-danger,var(--color-red-900))] dark:text-[color:var(--mcp-ui-danger,var(--color-red-100))]">{strings.validationError}</p>
+        <p class="text-xs text-[color:var(--mcp-ui-danger,var(--color-red-700))] dark:text-[color:var(--mcp-ui-danger,var(--color-red-300))] mt-1">
           {firstError}
         </p>
       </div>
@@ -1892,7 +1892,7 @@ function UnsupportedComponentFallback(props: { component: UIComponent }) {
   return (
     <div
       role="alert"
-      class="w-full rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-700/50 dark:bg-amber-900/20 dark:text-amber-200"
+      class="w-full rounded-lg border border-[color:var(--mcp-ui-warning-border,var(--color-amber-300))] bg-[color:var(--mcp-ui-warning-soft,var(--color-amber-50))] px-3 py-2 text-sm text-[color:var(--mcp-ui-warning,var(--color-amber-800))] dark:border-[color:var(--mcp-ui-warning-border,color-mix(in_oklab,var(--color-amber-700)_50%,transparent))] dark:bg-[color:var(--mcp-ui-warning-soft,color-mix(in_oklab,var(--color-amber-900)_20%,transparent))] dark:text-[color:var(--mcp-ui-warning,var(--color-amber-200))]"
     >
       {strings.unsupportedComponentType} <code class="font-mono">{props.component.type}</code>
     </div>
@@ -1956,10 +1956,10 @@ function ActionRenderer(props: { component: UIComponent }) {
         target={safeUrl(params.url) ? '_blank' : undefined}
         rel="noopener noreferrer"
         aria-label={params.ariaLabel || params.label}
-        class={`inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500
-          ${params.variant === 'primary' ? 'bg-blue-600 text-white hover:bg-blue-700' :
-            params.variant === 'outline' ? 'border border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800' :
-              'text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300'}
+        class={`inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[color:var(--mcp-ui-focus,var(--color-blue-500))]
+          ${params.variant === 'primary' ? 'bg-[color:var(--mcp-ui-accent,var(--color-blue-600))] text-[color:var(--mcp-ui-accent-fg,var(--color-white,#fff))] hover:bg-[color:var(--mcp-ui-accent-hover,var(--color-blue-700))]' :
+            params.variant === 'outline' ? 'border border-[color:var(--mcp-ui-border,var(--color-gray-300,#d1d5db))] text-[color:var(--mcp-ui-fg,var(--color-gray-700,#374151))] hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-50,#f9fafb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-600,#4b5563))] dark:text-[color:var(--mcp-ui-fg,var(--color-gray-300,#d1d5db))] dark:hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-800,#1f2937))]' :
+              'text-[color:var(--mcp-ui-accent,var(--color-blue-600))] hover:text-[color:var(--mcp-ui-accent,var(--color-blue-800))] dark:text-[color:var(--mcp-ui-accent,var(--color-blue-400))] dark:hover:text-[color:var(--mcp-ui-accent,var(--color-blue-300))]'}
           ${params.className || ''}`}
         onClick={handleClick}
       >
@@ -1977,12 +1977,12 @@ function ActionRenderer(props: { component: UIComponent }) {
       disabled={isDisabled()}
       aria-busy={isExecuting() && isExecutable()}
       aria-label={params.ariaLabel || params.label}
-      class={`inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500
-        ${params.variant === 'primary' ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm' :
-          params.variant === 'secondary' ? 'bg-gray-100 text-gray-900 hover:bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600' :
-            params.variant === 'outline' ? 'border border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800' :
-              params.variant === 'danger' ? 'bg-red-600 text-white hover:bg-red-700' :
-                'bg-transparent text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'}
+      class={`inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[color:var(--mcp-ui-focus,var(--color-blue-500))]
+        ${params.variant === 'primary' ? 'bg-[color:var(--mcp-ui-accent,var(--color-blue-600))] text-[color:var(--mcp-ui-accent-fg,var(--color-white,#fff))] hover:bg-[color:var(--mcp-ui-accent-hover,var(--color-blue-700))] shadow-[var(--mcp-ui-shadow,var(--shadow-sm))]' :
+          params.variant === 'secondary' ? 'bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-100,#f3f4f6))] text-[color:var(--mcp-ui-fg,var(--color-gray-900,#111827))] hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-200,#e5e7eb))] dark:bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-700,#374151))] dark:text-[color:var(--mcp-ui-fg,var(--color-white,#fff))] dark:hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-600,#4b5563))]' :
+            params.variant === 'outline' ? 'border border-[color:var(--mcp-ui-border,var(--color-gray-300,#d1d5db))] text-[color:var(--mcp-ui-fg,var(--color-gray-700,#374151))] hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-50,#f9fafb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-600,#4b5563))] dark:text-[color:var(--mcp-ui-fg,var(--color-gray-300,#d1d5db))] dark:hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-800,#1f2937))]' :
+              params.variant === 'danger' ? 'bg-[color:var(--mcp-ui-danger,var(--color-red-600))] text-[color:var(--mcp-ui-accent-fg,var(--color-white,#fff))] hover:bg-[color:var(--mcp-ui-danger-hover,var(--color-red-700))]' :
+                'bg-transparent text-[color:var(--mcp-ui-fg,var(--color-gray-700,#374151))] hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-100,#f3f4f6))] dark:text-[color:var(--mcp-ui-fg,var(--color-gray-300,#d1d5db))] dark:hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-800,#1f2937))]'}
         ${isDisabled() ? 'opacity-50 cursor-not-allowed' : ''}
         ${params.size === 'sm' ? 'px-3 py-1.5 text-xs' : params.size === 'lg' ? 'px-6 py-3 text-base' : ''}
         ${params.className || ''}`}
@@ -2017,32 +2017,32 @@ function ErrorCardRenderer(props: { error: any }) {
   }
 
   return (
-    <div class="relative w-full bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 group">
+    <div class="relative w-full bg-[color:var(--mcp-ui-danger-soft,var(--color-red-50))] dark:bg-[color:var(--mcp-ui-danger-soft,color-mix(in_oklab,var(--color-red-900)_20%,transparent))] border border-[color:var(--mcp-ui-danger-border,var(--color-red-200))] dark:border-[color:var(--mcp-ui-danger-border,var(--color-red-800))] rounded-lg p-4 group">
       <CopyButton getText={getErrorText} title={strings.copyErrorDetails} position="top-right" />
       <div class="flex items-start gap-3">
-        <div class="p-2 bg-red-100 dark:bg-red-900/40 rounded-full shrink-0">
-          <svg class="w-5 h-5 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div class="p-2 bg-[color:var(--mcp-ui-danger-soft,var(--color-red-100))] dark:bg-[color:var(--mcp-ui-danger-soft,color-mix(in_oklab,var(--color-red-900)_40%,transparent))] rounded-full shrink-0">
+          <svg class="w-5 h-5 text-[color:var(--mcp-ui-danger,var(--color-red-600))] dark:text-[color:var(--mcp-ui-danger,var(--color-red-400))]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
         </div>
         <div class="flex-1 min-w-0">
-          <h4 class="text-sm font-semibold text-red-800 dark:text-red-200">
+          <h4 class="text-sm font-semibold text-[color:var(--mcp-ui-danger,var(--color-red-800))] dark:text-[color:var(--mcp-ui-danger,var(--color-red-200))]">
             {formatMCPUIString(strings.toolErrorTitle, {
               tool: props.error.tool || strings.errorUnknownToolName,
             })}
           </h4>
-          <p class="text-sm text-red-700 dark:text-red-300 mt-1">
+          <p class="text-sm text-[color:var(--mcp-ui-danger,var(--color-red-700))] dark:text-[color:var(--mcp-ui-danger,var(--color-red-300))] mt-1">
             {props.error.message || strings.errorToolExecution}
           </p>
           <Show when={props.error.type}>
-            <p class="text-xs text-red-600 dark:text-red-400 mt-1">
+            <p class="text-xs text-[color:var(--mcp-ui-danger,var(--color-red-600))] dark:text-[color:var(--mcp-ui-danger,var(--color-red-400))] mt-1">
               {formatMCPUIString(strings.errorTypeLabel, { type: props.error.type })}
             </p>
           </Show>
           <Show when={props.error.suggestions?.length}>
             <div class="mt-3">
-              <p class="text-xs font-medium text-red-700 dark:text-red-300">{strings.errorSuggestions}</p>
-              <ul class="mt-1 text-xs text-red-600 dark:text-red-400 list-disc list-inside">
+              <p class="text-xs font-medium text-[color:var(--mcp-ui-danger,var(--color-red-700))] dark:text-[color:var(--mcp-ui-danger,var(--color-red-300))]">{strings.errorSuggestions}</p>
+              <ul class="mt-1 text-xs text-[color:var(--mcp-ui-danger,var(--color-red-600))] dark:text-[color:var(--mcp-ui-danger,var(--color-red-400))] list-disc list-inside">
                 <For each={props.error.suggestions}>
                   {(suggestion: string) => <li>{suggestion}</li>}
                 </For>
@@ -2050,7 +2050,7 @@ function ErrorCardRenderer(props: { error: any }) {
             </div>
           </Show>
           <Show when={mounted() && props.error.timestamp}>
-            <p class="text-xs text-red-500 dark:text-red-500 mt-2">
+            <p class="text-xs text-[color:var(--mcp-ui-danger,var(--color-red-500))] dark:text-[color:var(--mcp-ui-danger,var(--color-red-500))] mt-2">
               {new Date(props.error.timestamp).toLocaleString(strings.locale)}
             </p>
           </Show>
@@ -2097,10 +2097,10 @@ function UIResourceHtmlRenderer(props: { resource: any }) {
   }
 
   return (
-    <div class="w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div class="w-full bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-800,#1f2937))] rounded-lg shadow-[var(--mcp-ui-shadow,var(--shadow-sm))] border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))] overflow-hidden">
       <Show when={props.resource.metadata?.title || props.resource.uri}>
-        <div class="px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-          <h3 class="text-sm font-semibold text-gray-900 dark:text-white capitalize">
+        <div class="px-4 py-2 border-b border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))] bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-50,#f9fafb))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-900,#111827))]">
+          <h3 class="text-sm font-semibold text-[color:var(--mcp-ui-fg,var(--color-gray-900,#111827))] dark:text-[color:var(--mcp-ui-fg,var(--color-white,#fff))] capitalize">
             {resourceTitle()}
           </h3>
         </div>
@@ -2231,7 +2231,7 @@ export const UIResourceRenderer: Component<UIResourceRendererProps> = (props) =>
   return (
     <RenderProvider renderComponent={renderComponent}>
       <div
-        class={`w-full ${props.class || ''}`}
+        class={`mcp-ui-root [background-color:var(--mcp-ui-bg)] w-full ${props.class || ''}`}
         {...(isLayoutContent
           ? { 'data-mcp-ui-layout-id': outerKey() }
           : { 'data-mcp-ui-component-id': outerKey() })}

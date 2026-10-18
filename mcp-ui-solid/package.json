@@ -1,6 +1,6 @@
 {
   "name": "@seed-ship/mcp-ui-solid",
-  "version": "6.24.0",
+  "version": "6.25.0",
   "description": "SolidJS components for rendering MCP-generated UI resources",
   "type": "module",
   "files": [
@@ -11,6 +11,7 @@
     "!src/test-setup.ts",
     "README.md",
     "CHANGELOG.md",
+    "docs/THEMING.md",
     "LICENSE"
   ],
   "sideEffects": [

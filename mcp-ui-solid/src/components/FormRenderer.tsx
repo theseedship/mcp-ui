@@ -262,9 +262,9 @@ export const FormRenderer: Component<FormRendererProps> = (props) => {
   }
 
   return (
-    <div class="w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+    <div class="mcp-ui-root w-full bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-800,#1f2937))] rounded-lg shadow-[var(--mcp-ui-shadow,var(--shadow-sm))] border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))] p-4">
       <Show when={params().title}>
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        <h3 class="text-lg font-semibold text-[color:var(--mcp-ui-fg,var(--color-gray-900,#111827))] dark:text-[color:var(--mcp-ui-fg,var(--color-white,#fff))] mb-4">
           {params().title}
         </h3>
       </Show>
@@ -276,7 +276,7 @@ export const FormRenderer: Component<FormRendererProps> = (props) => {
             const prefilled = params().fields.filter((f) => f.prefill != null).length
             const total = params().fields.length
             return (
-              <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
+              <p class="text-xs text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))] mb-3">
                 {formatMCPUIString(
                   prefilled === 1 ? strings.formPrefilledOne : strings.formPrefilledMany,
                   { count: prefilled, total }
@@ -301,8 +301,8 @@ export const FormRenderer: Component<FormRendererProps> = (props) => {
         </div>
 
         <Show when={errors()._form}>
-          <div class="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
-            <p class="text-sm text-red-600 dark:text-red-400" role="alert">
+          <div class="mt-4 p-3 bg-[color:var(--mcp-ui-danger-soft,var(--color-red-50))] dark:bg-[color:var(--mcp-ui-danger-soft,color-mix(in_oklab,var(--color-red-900)_20%,transparent))] border border-[color:var(--mcp-ui-danger-border,var(--color-red-200))] dark:border-[color:var(--mcp-ui-danger-border,var(--color-red-800))] rounded-md">
+            <p class="text-sm text-[color:var(--mcp-ui-danger,var(--color-red-600))] dark:text-[color:var(--mcp-ui-danger,var(--color-red-400))]" role="alert">
               {errors()._form}
             </p>
           </div>
@@ -310,8 +310,8 @@ export const FormRenderer: Component<FormRendererProps> = (props) => {
 
         {/* Auto-submit countdown (v4.2.0) */}
         <Show when={countdown() != null}>
-          <div class="mt-4 flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
-            <span class="text-sm text-blue-700 dark:text-blue-300">
+          <div class="mt-4 flex items-center gap-3 p-3 bg-[color:var(--mcp-ui-accent-soft,var(--color-blue-50))] dark:bg-[color:var(--mcp-ui-accent-soft,color-mix(in_oklab,var(--color-blue-900)_20%,transparent))] border border-[color:var(--mcp-ui-accent-border,var(--color-blue-200))] dark:border-[color:var(--mcp-ui-accent-border,var(--color-blue-800))] rounded-md">
+            <span class="text-sm text-[color:var(--mcp-ui-accent,var(--color-blue-700))] dark:text-[color:var(--mcp-ui-accent,var(--color-blue-300))]">
               {formatMCPUIString(strings.formSubmitCountdown, {
                 label: params().submitLabel || strings.submit,
                 seconds: countdown()!,
@@ -320,22 +320,22 @@ export const FormRenderer: Component<FormRendererProps> = (props) => {
             <button
               type="button"
               onClick={() => { cancelCountdown(); setUserInteracted(true) }}
-              class="text-sm text-blue-600 dark:text-blue-400 underline hover:text-blue-800 dark:hover:text-blue-200"
+              class="text-sm text-[color:var(--mcp-ui-accent,var(--color-blue-600))] dark:text-[color:var(--mcp-ui-accent,var(--color-blue-400))] underline hover:text-[color:var(--mcp-ui-accent,var(--color-blue-800))] dark:hover:text-[color:var(--mcp-ui-accent,var(--color-blue-200))]"
             >
               {strings.cancel}
             </button>
           </div>
         </Show>
 
-        <div class="flex gap-2 pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
+        <div class="flex gap-2 pt-4 mt-4 border-t border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))]">
           <button
             type="submit"
             disabled={isSubmitting()}
-            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            class="px-4 py-2 bg-[color:var(--mcp-ui-accent,var(--color-blue-600))] text-[color:var(--mcp-ui-accent-fg,var(--color-white,#fff))] rounded-md hover:bg-[color:var(--mcp-ui-accent-hover,var(--color-blue-700))] focus:outline-none focus:ring-2 focus:ring-[color:var(--mcp-ui-focus,var(--color-blue-500))] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {isSubmitting() ? (
               <span class="flex items-center gap-2">
-                <span class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                <span class="animate-spin h-4 w-4 border-2 border-[color:var(--mcp-ui-border,var(--color-white,#fff))] border-t-transparent rounded-full" />
                 {strings.formSubmitting}
               </span>
             ) : (
@@ -347,7 +347,7 @@ export const FormRenderer: Component<FormRendererProps> = (props) => {
               type="button"
               onClick={() => initializeForm(true)}
               disabled={isSubmitting()}
-              class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              class="px-4 py-2 border border-[color:var(--mcp-ui-border,var(--color-gray-300,#d1d5db))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-600,#4b5563))] text-[color:var(--mcp-ui-fg,var(--color-gray-700,#374151))] dark:text-[color:var(--mcp-ui-fg,var(--color-gray-300,#d1d5db))] rounded-md hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-50,#f9fafb))] dark:hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-700,#374151))] focus:outline-none focus:ring-2 focus:ring-[color:var(--mcp-ui-focus,var(--color-gray-500,#6b7280))] focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {strings.formReset}
             </button>
