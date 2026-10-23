@@ -101,7 +101,13 @@ try {
     }))
   },{selection,focused})
   for (const dark of [false,true]) {
-    await page.evaluate(dark=>document.documentElement.classList.toggle('dark',dark),dark)
+    await page.evaluate(dark=>{
+      document.documentElement.classList.toggle('dark',dark)
+      // Closing the previous mode's dialog restores its trigger's focus.
+      // Default samples must not inherit that intentional focus state.
+      if(document.activeElement instanceof HTMLElement) document.activeElement.blur()
+    },dark)
+    assert.equal(await page.evaluate(()=>document.activeElement===document.body),true,'Default theme samples must start without inherited control focus')
     samples[dark?'dark':'light']=await snapshot()
     controlContrast[dark?'dark':'light']={default:await measureControls({requiredInput:selectors.requiredInput,formSelect:selectors.formSelect,scratchpadSelect:selectors.scratchpadSelect,tableSearch:selectors.tableSearch,choice:selectors.promptChoice})}
     contrast[dark?'dark':'light']=await page.evaluate(selection=>{
