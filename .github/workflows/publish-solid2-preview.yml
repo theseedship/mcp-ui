@@ -1,0 +1,210 @@
+name: Review or stage Solid 2 preview
+
+# No push, tag, pull_request or workflow_run trigger. Merging this file does
+# nothing to npm. Always dispatch the reviewed workflow on stable main.
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: 'Approved full Git SHA of the open Solid 2 preview PR'
+        required: true
+        type: string
+      ci_run_id:
+        description: 'Successful first-attempt CI run qualifying that SHA'
+        required: true
+        type: string
+      artifact_id:
+        description: 'solid2-preview-qualification artifact ID from that run'
+        required: true
+        type: string
+      tarball_sha256:
+        description: 'SHA-256 of the Solid tgz INSIDE the CI artifact, not the local build or ZIP'
+        required: true
+        type: string
+      stage:
+        description: 'Upload to npm staging (requires new approval and protected environment)'
+        type: boolean
+        default: false
+      staging_approval:
+        description: 'For stage=true only: exact STAGE sentence from a reviewed dry-run summary'
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+# Shares the stable workflow lock: never race a stable tag update from this repo.
+concurrency:
+  group: npm-release
+  queue: max
+  cancel-in-progress: false
+
+env:
+  SOURCE_SHA: ${{ inputs.source_sha }}
+  CI_RUN_ID: ${{ inputs.ci_run_id }}
+  ARTIFACT_ID: ${{ inputs.artifact_id }}
+  TARBALL_SHA256: ${{ inputs.tarball_sha256 }}
+  STAGE: ${{ inputs.stage && 'true' || 'false' }}
+  STAGE_APPROVAL: ${{ inputs.staging_approval }}
+
+jobs:
+  verify:
+    if: github.repository == 'theseedship/mcp-ui' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      reviewed_artifact_id: ${{ steps.delivery.outputs.artifact-id }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '22.23.3'
+          package-manager-cache: false
+      - name: Validate inputs before using them in API paths
+        run: |
+          set -euo pipefail
+          mkdir "$RUNNER_TEMP/solid2-metadata"
+          node scripts/solid2-preview/verify.mjs request > "$RUNNER_TEMP/solid2-metadata/request.json"
+      - name: Bind the source SHA, successful CI, PR and immutable artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api "repos/theseedship/mcp-ui/actions/runs/$CI_RUN_ID" > "$RUNNER_TEMP/solid2-metadata/run.json"
+          gh api repos/theseedship/mcp-ui/pulls/34 > "$RUNNER_TEMP/solid2-metadata/pull.json"
+          gh api "repos/theseedship/mcp-ui/actions/artifacts/$ARTIFACT_ID" > "$RUNNER_TEMP/solid2-metadata/artifact.json"
+          node scripts/solid2-preview/verify.mjs source "$RUNNER_TEMP/solid2-metadata"
+      - name: Refuse staging without an existing human-review environment
+        if: inputs.stage
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api repos/theseedship/mcp-ui/environments/npm-solid2-preview > "$RUNNER_TEMP/solid2-environment.json"
+          jq -e 'any(.protection_rules[]?; .type == "required_reviewers" and (.reviewers | length > 0))' "$RUNNER_TEMP/solid2-environment.json"
+      - name: Download only the selected successful CI artifact
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          artifact-ids: ${{ inputs.artifact_id }}
+          github-token: ${{ github.token }}
+          repository: theseedship/mcp-ui
+          run-id: ${{ inputs.ci_run_id }}
+          path: ${{ runner.temp }}/solid2-untrusted-evidence
+          digest-mismatch: error
+      - name: Verify archive, manifest, both consumers and compiled-browser proof
+        run: |
+          set -euo pipefail
+          node scripts/solid2-preview/verify.mjs archive "$RUNNER_TEMP/solid2-untrusted-evidence" "$RUNNER_TEMP/solid2-verified"
+      - name: Record the unchanged stable channel and review instructions
+        run: |
+          set -euo pipefail
+          npm view @seed-ship/mcp-ui-solid dist-tags --json --registry=https://registry.npmjs.org > "$RUNNER_TEMP/solid2-verified/latest-before.json"
+          node scripts/solid2-preview/verify.mjs latest "$RUNNER_TEMP/solid2-verified/latest-before.json" "$RUNNER_TEMP/solid2-verified/latest-before.json"
+          {
+            echo '## Solid 2 preview review — not a public release'
+            echo "Source: $SOURCE_SHA; CI: $CI_RUN_ID; artifact: $ARTIFACT_ID."
+            echo "Package: @seed-ship/mcp-ui-solid@7.0.0-solid2.0; tag: solid2; SHA-256: $TARBALL_SHA256."
+            echo 'Stable latest before this operation:'
+            jq -r .latest "$RUNNER_TEMP/solid2-verified/latest-before.json"
+            echo 'Exact sentence required for a separately approved staging dispatch:'
+            jq -r .stageApproval "$RUNNER_TEMP/solid2-metadata/request.json"
+            echo 'Review-only is the default. Staging still requires the protected environment; npm publication requires maintainer 2FA.'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Retain only verified delivery inputs
+        id: delivery
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: solid2-reviewed-input
+          path: ${{ runner.temp }}/solid2-verified/
+          if-no-files-found: error
+          retention-days: 30
+
+  stage:
+    needs: verify
+    if: inputs.stage && github.repository == 'theseedship/mcp-ui' && github.ref == 'refs/heads/main'
+    environment: npm-solid2-preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '22.23.3'
+          package-manager-cache: false
+          registry-url: https://registry.npmjs.org
+      - name: Install the reviewed staging CLI without package scripts or token
+        run: npm install --global npm@11.15.0 --ignore-scripts --registry=https://registry.npmjs.org
+      - name: Recheck source after human review, before exposing the npm token
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir "$RUNNER_TEMP/solid2-stage-metadata"
+          node scripts/solid2-preview/verify.mjs request > "$RUNNER_TEMP/solid2-stage-metadata/request.json"
+          gh api repos/theseedship/mcp-ui/environments/npm-solid2-preview > "$RUNNER_TEMP/solid2-stage-environment.json"
+          jq -e 'any(.protection_rules[]?; .type == "required_reviewers" and (.reviewers | length > 0))' "$RUNNER_TEMP/solid2-stage-environment.json"
+          gh api "repos/theseedship/mcp-ui/actions/runs/$CI_RUN_ID" > "$RUNNER_TEMP/solid2-stage-metadata/run.json"
+          gh api repos/theseedship/mcp-ui/pulls/34 > "$RUNNER_TEMP/solid2-stage-metadata/pull.json"
+          gh api "repos/theseedship/mcp-ui/actions/artifacts/$ARTIFACT_ID" > "$RUNNER_TEMP/solid2-stage-metadata/artifact.json"
+          node scripts/solid2-preview/verify.mjs source "$RUNNER_TEMP/solid2-stage-metadata"
+      - name: Download only this run's reviewed inputs
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          artifact-ids: ${{ needs.verify.outputs.reviewed_artifact_id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/solid2-reviewed
+          digest-mismatch: error
+      - name: Recheck the exact bytes and public-version state without npm credentials
+        run: |
+          set -euo pipefail
+          node scripts/solid2-preview/verify.mjs tarball "$RUNNER_TEMP/solid2-reviewed/seed-ship-mcp-ui-solid-7.0.0-solid2.0.tgz"
+          npm view @seed-ship/mcp-ui-solid dist-tags --json --registry=https://registry.npmjs.org > "$RUNNER_TEMP/solid2-stage-before.json"
+          node scripts/solid2-preview/verify.mjs latest "$RUNNER_TEMP/solid2-reviewed/latest-before.json" "$RUNNER_TEMP/solid2-stage-before.json"
+          npm view @seed-ship/mcp-ui-solid versions --json --registry=https://registry.npmjs.org > "$RUNNER_TEMP/solid2-public-versions.json"
+          jq -e 'type == "array" and index("7.0.0-solid2.0") == null' "$RUNNER_TEMP/solid2-public-versions.json"
+          mkdir "$RUNNER_TEMP/solid2-stage-empty"
+      - name: Stage only Solid with the fixed non-stable tag
+        id: npm_stage
+        # Never checkout/build/install preview sources here. No package lifecycle
+        # scripts, artifact-supplied npm config, tag input or stable release tag.
+        working-directory: ${{ runner.temp }}/solid2-stage-empty
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_IGNORE_SCRIPTS: 'true'
+          NPM_CONFIG_GLOBALCONFIG: /dev/null
+        run: |
+          set -euo pipefail
+          test -n "${NODE_AUTH_TOKEN:-}"
+          npm stage publish "$RUNNER_TEMP/solid2-reviewed/seed-ship-mcp-ui-solid-7.0.0-solid2.0.tgz" --access public --tag solid2 --ignore-scripts --registry=https://registry.npmjs.org --json | tee "$RUNNER_TEMP/solid2-stage-result.json"
+      - name: Verify latest even when the staging command failed
+        if: always() && steps.npm_stage.outcome != 'skipped'
+        run: |
+          set -euo pipefail
+          npm view @seed-ship/mcp-ui-solid dist-tags --json --registry=https://registry.npmjs.org > "$RUNNER_TEMP/solid2-stage-after.json"
+          node scripts/solid2-preview/verify.mjs latest "$RUNNER_TEMP/solid2-stage-before.json" "$RUNNER_TEMP/solid2-stage-after.json"
+      - name: Retain staging output for stage-ID review and recovery
+        if: always() && steps.npm_stage.outcome != 'skipped'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: solid2-stage-result
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/solid2-stage-result.json
+            ${{ runner.temp }}/solid2-stage-before.json
+            ${{ runner.temp }}/solid2-stage-after.json
+      - name: Hand off npm approval — do not approve automatically
+        run: |
+          {
+            echo '## npm staging is not public publication'
+            echo 'Inspect the stage ID in solid2-stage-result and npmjs.com → Staged Packages.'
+            echo 'Approve only the reviewed @seed-ship/mcp-ui-solid@7.0.0-solid2.0 upload with tag solid2, using npm 2FA.'
+            echo 'After approval verify the public version, solid2 tag and unchanged latest. No application deployment was performed.'
+          } >> "$GITHUB_STEP_SUMMARY"
