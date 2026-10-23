@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Security — development tooling only
+
+- Pin Vite 6.4.5 and Vitest 4.1.12 with their corrected tooling dependencies.
+- Preserve the public Zod 3 schema/type API and package version. The runtime
+  Zod advisory is not resolved by this update and requires separate remediation.
+
 ## [5.7.0] - 2026-10-03
 
 Explicit missing values in charts, and a unit per chart. Released together
