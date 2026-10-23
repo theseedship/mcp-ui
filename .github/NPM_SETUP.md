@@ -4,10 +4,16 @@ The `Stage npm release` workflow builds, tests, typechecks, and uploads packages
 to npm staging. **A green workflow does not mean a version is public.** A
 maintainer must approve each uploaded package on npmjs.com with 2FA.
 
+This page describes the **stable** channel. For Solid 2 use the separate
+[preview review/staging procedure](./SOLID2_PREVIEW_RELEASE.md). Do not push a
+`v7.0.0-solid2.0` tag or dispatch this stable workflow on the preview source:
+its `latest` tag and three-package loop are not suitable for a prerelease.
+
 ## Setup
 
 - Use an npm account with write access to the existing `@seed-ship` packages
-  and 2FA enabled. Staging cannot create a brand-new package.
+  and 2FA enabled. This repository's procedures target those existing packages,
+  not creation of a new package or namespace.
 - Create a granular access token granting **Read and write (stage only)** to
   the relevant packages/scope. Store it as the GitHub Actions repository
   secret `NPM_TOKEN`. Monitor its expiration; never commit or log the token.
@@ -22,8 +28,9 @@ maintainer must approve each uploaded package on npmjs.com with 2FA.
 1. Bump the changed packages and dependent workspace ranges as needed; update
    the lockfile, changelogs, and README. Package versions need not be identical.
 2. Merge the reviewed PR and verify CI on the release commit.
-3. Push a new `v*.*.*` tag pointing to that commit. Alternatively, run the
-   workflow manually on the intended branch with `check_auth_only` disabled.
+3. Push a new stable `v*.*.*` tag pointing to that stable release commit (no
+   prerelease suffix). Alternatively, run the workflow manually on stable
+   `main` with `check_auth_only` disabled, never on the Solid 2 preview branch.
 4. Check the workflow summary and upload logs. Versions already public are
    skipped; new versions are staged with the `latest` dist-tag.
 5. Open **Staged Packages** on npmjs.com, inspect the uploads, and click

@@ -164,6 +164,12 @@ does not make them public. Approve them in npmjs.com **Staged Packages** with
 2FA, Spec before Solid. See [npm release instructions](./.github/NPM_SETUP.md)
 for token setup, tags, and recovery of an interrupted release.
 
+**Solid 2 preview:** the stable package remains on Solid 1. A separate, manual
+[preview channel](./.github/SOLID2_PREVIEW_RELEASE.md) reviews the exact qualified
+`7.0.0-solid2.0` artifact before any upload, targets only `solid2`, and preserves
+`latest`. Merging its infrastructure does not publish or deploy the preview.
+Install it only in an isolated Solid 2 pilot, never over the existing Solid 1 app.
+
 This monorepo contains three packages published under `@seed-ship/`:
 
 | Package | Version | Description |
