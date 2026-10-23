@@ -9,7 +9,8 @@
  * nested components without importing UIResourceRenderer directly.
  */
 
-import { createContext, useContext, JSX } from 'solid-js'
+import { createContext, useContext } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import type { UIComponent, RendererError } from '../types'
 
 /**
@@ -64,8 +65,8 @@ export function RenderProvider(props: {
   children: JSX.Element
 }) {
   return (
-    <RenderContext.Provider value={{ renderComponent: props.renderComponent }}>
+    <RenderContext value={{ renderComponent: props.renderComponent }}>
       {props.children}
-    </RenderContext.Provider>
+    </RenderContext>
   )
 }

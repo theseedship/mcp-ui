@@ -16,7 +16,7 @@
  *   3. The published interface remains extendable and declaration-mergeable,
  *      including an augmented property passed inline to the provider
  *   4. Readers always see a resolved config at runtime: no provider, a partial
- *      through `MCPUIConfigProvider`, and a bare `MCPUIConfigContext.Provider`
+ *      through `MCPUIConfigProvider`, and a bare `MCPUIConfigContext`
  *      fed the complete value its type now asks for
  *
  * These annotations ARE the test. `tsconfig.contracts.json` puts this file in
@@ -28,7 +28,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest'
 import { render, cleanup } from '@solidjs/testing-library'
-import type { JSX } from 'solid-js'
+import type { JSX } from "@solidjs/web";
 import type { IframePolicy } from '../types'
 import {
   MCPUIConfigContext,
@@ -148,14 +148,14 @@ describe('useMCPUIConfig — always returns a resolved config', () => {
     expect(config.iframeFallbackLink).toBe(DEFAULT_MCPUI_CONFIG.iframeFallbackLink)
   })
 
-  it('reads a complete value fed straight to MCPUIConfigContext.Provider', () => {
+  it('reads a complete value fed straight to MCPUIConfigContext', () => {
     // The context is a READ surface too, so it is typed with the resolved view:
     // a host bypassing MCPUIConfigProvider hands over a complete value, which
     // is what `{ ...DEFAULT_MCPUI_CONFIG, ...mine }` is for. Passing only some
     // keys is what MCPUIConfigProvider is for (the test above).
     const complete: MCPUIConfig = { ...DEFAULT_MCPUI_CONFIG, iframeFallbackLink: 'always' }
     const config = captureConfig((probe) => (
-      <MCPUIConfigContext.Provider value={complete}>{probe()}</MCPUIConfigContext.Provider>
+      <MCPUIConfigContext value={complete}>{probe()}</MCPUIConfigContext>
     ))
     expect(config.iframeFallbackLink).toBe('always')
     expect(config.chartZoom).toBe(DEFAULT_MCPUI_CONFIG.chartZoom)
@@ -167,7 +167,7 @@ describe('useMCPUIConfig — always returns a resolved config', () => {
     // untyped host (plain JS, or a cast) must not blow a renderer up.
     const partial = { iframeFallbackLink: 'always' } as MCPUIConfigInput as MCPUIConfig
     const config = captureConfig((probe) => (
-      <MCPUIConfigContext.Provider value={partial}>{probe()}</MCPUIConfigContext.Provider>
+      <MCPUIConfigContext value={partial}>{probe()}</MCPUIConfigContext>
     ))
     expect(config.iframeFallbackLink).toBe('always')
     expect(config.chartZoom).toBe(DEFAULT_MCPUI_CONFIG.chartZoom)

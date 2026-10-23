@@ -5,7 +5,7 @@
  * Sprint 4: Form state persistence
  */
 
-import { Component, createSignal, For, Show, onMount, createEffect, onCleanup } from 'solid-js'
+import { Component, createSignal, For, Show, createEffect, onCleanup, untrack } from 'solid-js'
 import { FormFieldRenderer } from './FormFieldRenderer'
 import type { UIComponent, FormComponentParams, FormFieldParams } from '../types'
 import { useAction } from '../hooks/useAction'
@@ -60,14 +60,15 @@ export const FormRenderer: Component<FormRendererProps> = (props) => {
     invalidFormat: strings.fieldInvalidFormat,
   })
   const params = () => props.component.params as FormComponentParams
-  const [formData, setFormData] = createSignal<Record<string, any>>({})
+  const [formData, setFormData] = createSignal<Record<string, any>>(untrack(() => Object.fromEntries(
+    params().fields.map(field => [field.name, field.prefill ?? field.defaultValue ?? getFieldDefault(field.type)]),
+  )))
   const [errors, setErrors] = createSignal<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = createSignal(false)
   const { execute } = useAction()
   const telemetry = useTelemetry()
 
   // Form persistence (Sprint 4)
-  let clearPersisted: (() => void) | undefined
 
   /**
    * Get fields that are currently visible based on showWhen conditions
@@ -126,30 +127,21 @@ export const FormRenderer: Component<FormRendererProps> = (props) => {
     }
   }
 
-  // Initialize on mount
-  onMount(() => {
-    initializeForm()
-  })
-
   // Setup persistence if persistKey is provided (Sprint 4)
-  createEffect(() => {
-    const persistKey = params().persistKey
-    if (persistKey) {
-      const persistence = useFormPersistence({
-        persistKey,
-        formData,
-        setFormData,
-        excludeFields: params().excludeFromPersistence,
-        expiresIn: params().persistExpiresIn,
-      })
-      clearPersisted = persistence.clearPersisted
-    }
+  const persistence = useFormPersistence({
+    get persistKey() { return params().persistKey || '' },
+    formData,
+    setFormData,
+    get excludeFields() { return params().excludeFromPersistence },
+    get expiresIn() { return params().persistExpiresIn },
+    get storage() { return params().persistKey ? undefined : null },
   })
+  const clearPersisted = persistence.clearPersisted
 
   // Auto-submit countdown (v4.2.0)
-  createEffect(() => {
-    const delay = params().autoSubmitDelay
-    if (!delay || !allRequiredPrefilled() || userInteracted()) return
+  createEffect(() => ({ delay: params().autoSubmitDelay, prefilled: allRequiredPrefilled(),
+    interacted: userInteracted(), id: props.component.id }), ({ delay, prefilled, interacted, id }) => {
+    if (!delay || !prefilled || interacted) return
 
     let remaining = Math.ceil(delay / 1000)
     setCountdown(remaining)
@@ -159,12 +151,13 @@ export const FormRenderer: Component<FormRendererProps> = (props) => {
       if (remaining <= 0) {
         cancelCountdown()
         // Trigger submit programmatically
-        const form = document.querySelector(`#form-${props.component.id}`) as HTMLFormElement | null
+        const form = document.querySelector(`#form-${id}`) as HTMLFormElement | null
         if (form) form.requestSubmit()
       } else {
         setCountdown(remaining)
       }
     }, 1000)
+    return () => { if (countdownTimer) clearInterval(countdownTimer); countdownTimer = null }
   })
 
   const handleFieldChange = (name: string, value: any) => {
@@ -269,7 +262,7 @@ export const FormRenderer: Component<FormRendererProps> = (props) => {
         </h3>
       </Show>
 
-      <form id={`form-${props.component.id}`} onSubmit={handleSubmit} noValidate>
+      <form id={`form-${props.component.id}`} onSubmit={handleSubmit} novalidate>
         {/* Proposal 3: prefill summary */}
         <Show when={params().fields.some((f) => f.prefill != null)}>
           {(() => {

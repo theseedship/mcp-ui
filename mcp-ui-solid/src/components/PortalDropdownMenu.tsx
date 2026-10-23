@@ -20,8 +20,9 @@
  * Close affordances : click outside, Escape, programmatic via `onClose`.
  */
 
-import { Component, JSX, Show, createSignal, createEffect, onCleanup } from 'solid-js'
-import { Portal } from 'solid-js/web'
+import { Component, Show, createSignal, createEffect } from "solid-js";
+import type { JSX } from "@solidjs/web";
+import { Portal } from "@solidjs/web";
 import { bindPortalTheme } from '../utils/theme'
 
 export interface PortalDropdownMenuProps {
@@ -65,6 +66,7 @@ export interface PortalDropdownMenuProps {
 export const PortalDropdownMenu: Component<PortalDropdownMenuProps> = (props) => {
   const [position, setPosition] = createSignal({ top: 0, left: 0 })
   let menuRef: HTMLDivElement | undefined
+  bindPortalTheme(() => menuRef, () => props.trigger, () => props.open)
 
   const updatePosition = () => {
     const t = props.trigger
@@ -78,8 +80,8 @@ export const PortalDropdownMenu: Component<PortalDropdownMenuProps> = (props) =>
   }
 
   // Measure once when the menu opens, then react to viewport changes.
-  createEffect(() => {
-    if (!props.open) return
+  createEffect(() => ({ open: props.open, trigger: props.trigger, width: props.width }), ({ open }) => {
+    if (!open) return
     updatePosition()
 
     const onDown = (e: MouseEvent) => {
@@ -100,12 +102,12 @@ export const PortalDropdownMenu: Component<PortalDropdownMenuProps> = (props) =>
     window.addEventListener('scroll', onScrollOrResize, { capture: true, passive: true })
     window.addEventListener('resize', onScrollOrResize)
 
-    onCleanup(() => {
+    return () => {
       document.removeEventListener('mousedown', onDown)
       document.removeEventListener('keydown', onKey)
       window.removeEventListener('scroll', onScrollOrResize, { capture: true })
       window.removeEventListener('resize', onScrollOrResize)
-    })
+    }
   })
 
   return (
@@ -114,7 +116,6 @@ export const PortalDropdownMenu: Component<PortalDropdownMenuProps> = (props) =>
         <div
           ref={(element) => {
             menuRef = element
-            bindPortalTheme(element, () => props.trigger)
           }}
           role="menu"
           data-mcp-ui-portal="menu"

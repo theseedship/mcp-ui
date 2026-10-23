@@ -6,7 +6,7 @@
  */
 
 import { createSignal, Accessor, onCleanup } from 'solid-js'
-import { isServer } from 'solid-js/web'
+import { isServer } from "@solidjs/web";
 import type { GridPosition, ResizeConstraints } from '../types'
 
 /**
@@ -138,16 +138,6 @@ function applyConstraints(
  * Hook for handling resize of grid components
  */
 export function useResize(options: UseResizeOptions): UseResizeReturn {
-  const {
-    currentPosition,
-    onResize,
-    onResizePreview,
-    constraints = {},
-    gridContainer,
-    gridColumns = 12,
-    enabled = true
-  } = options
-
   const [isResizing, setIsResizing] = createSignal(false)
   const [resizeEdge, setResizeEdge] = createSignal<ResizeEdge | null>(null)
   const [previewPosition, setPreviewPosition] = createSignal<GridPosition | null>(null)
@@ -174,12 +164,15 @@ export function useResize(options: UseResizeOptions): UseResizeReturn {
    */
   const handlePointerMove = (e: PointerEvent) => {
     if (!isResizing() || !startPosition() || !startPointer()) return
+    if (!(options.enabled ?? true)) return
+    const constraints = options.constraints ?? {}
+    const gridColumns = options.gridColumns ?? 12
 
     const edge = resizeEdge()
     if (!edge) return
 
     // Get container for measurements
-    const container = gridContainer?.() || document.querySelector('[data-grid-container]')
+    const container = options.gridContainer?.() || document.querySelector('[data-grid-container]')
     if (!container) return
 
     const containerRect = container.getBoundingClientRect()
@@ -245,7 +238,7 @@ export function useResize(options: UseResizeOptions): UseResizeReturn {
     newPosition = applyConstraints(newPosition, constraints, gridColumns)
 
     setPreviewPosition(newPosition)
-    onResizePreview?.(newPosition)
+    options.onResizePreview?.(newPosition)
   }
 
   /**
@@ -256,7 +249,7 @@ export function useResize(options: UseResizeOptions): UseResizeReturn {
 
     const preview = previewPosition()
     if (preview) {
-      onResize(preview)
+      options.onResize(preview)
     }
 
     // Cleanup
@@ -277,16 +270,16 @@ export function useResize(options: UseResizeOptions): UseResizeReturn {
    * Start resize operation
    */
   const handleResizeStart = (e: PointerEvent, edge: ResizeEdge) => {
-    if (!enabled) return
+    if (!(options.enabled ?? true)) return
 
     e.preventDefault()
     e.stopPropagation()
 
     setIsResizing(true)
     setResizeEdge(edge)
-    setStartPosition(currentPosition())
+    setStartPosition(options.currentPosition())
     setStartPointer({ x: e.clientX, y: e.clientY })
-    setPreviewPosition(currentPosition())
+    setPreviewPosition(options.currentPosition())
 
     // Set cursor
     const cursors: Record<ResizeEdge, string> = {

@@ -4,8 +4,8 @@
  * v3.1.0: GeoJSON, choropleth, popups, multi-layer, PMTiles
  */
 
-import { Component, createEffect, onCleanup, createSignal, Show, untrack } from 'solid-js';
-import { isServer } from 'solid-js/web';
+import { Component, createEffect, onCleanup, createSignal, Show, untrack, deep } from 'solid-js';
+import { isServer } from "@solidjs/web";
 import type {
   UIComponent,
   MapComponentParams,
@@ -289,7 +289,6 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
   const strings = useMCPUIStrings();
   let mapContainer: HTMLDivElement | undefined;
   let mapInstance: any = null;
-  const [isLeafletLoaded, setIsLeafletLoaded] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
   // PMTiles is an optional overlay on top of the base map. When it fails we
   // keep the base map but surface a visible notice (audit P1.3) instead of a
@@ -307,36 +306,40 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
   // resizes (e.g. transitioning to fullscreen via ExpandableWrapper).
   // We give the DOM a tick to settle the new dimensions, then ask
   // Leaflet to reflow tiles.
-  createEffect(() => {
-    const expanded = isExpanded();
+  createEffect(isExpanded, (expanded) => {
     if (!mapInstance) return;
     // Read the signal so the effect re-runs on toggle ; the value is
     // observed for its side effects on layout.
     void expanded;
-    setTimeout(() => mapInstance?.invalidateSize?.(), 100);
+    const timer = setTimeout(() => mapInstance?.invalidateSize?.(), 100);
+    return () => clearTimeout(timer);
   });
 
   // Initialize Map
-  createEffect(async () => {
+  createEffect(() => {
+    const value = params();
+    return { p: value === undefined ? undefined : deep(value), htmlAllowed: allowHtml() };
+  }, ({ p, htmlAllowed }) => {
     if (isServer) return; // Don't run on server
+    let cancelled = false;
+    void (async () => {
 
     if (!L) {
       try {
         const module = await import('leaflet');
+        if (cancelled) return;
         L = module.default || module;
         await import('leaflet/dist/leaflet.css'); // Import CSS
-        setIsLeafletLoaded(true);
+        if (cancelled) return;
       } catch (e) {
+        if (cancelled) return;
         console.warn('Failed to load leaflet', e);
         setError(strings.mapLibraryUnavailable);
         return;
       }
-    } else {
-      setIsLeafletLoaded(true);
     }
 
-    if (isLeafletLoaded() && mapContainer && !mapInstance) {
-      const p = params();
+    if (mapContainer && !mapInstance) {
       const center = p?.center || [51.505, -0.09]; // Default to London
       const zoom = p?.zoom || 13;
 
@@ -370,7 +373,6 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
     // Update markers and view
     if (mapInstance && L) {
       try {
-        const p = params();
         const allBoundsLayers: any[] = [];
 
         // Clear existing layers (markers, cluster groups, GeoJSON)
@@ -393,9 +395,11 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
         if (shouldCluster) {
           try {
             await import('leaflet.markercluster');
+            if (cancelled) return;
             if (!clusterCssLoaded) {
               await import('leaflet.markercluster/dist/MarkerCluster.css');
               await import('leaflet.markercluster/dist/MarkerCluster.Default.css');
+              if (cancelled) return;
               clusterCssLoaded = true;
             }
             const clusterOpts: MapClusterOptions =
@@ -409,22 +413,23 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
             });
             p?.markers?.forEach((marker) => {
               const m = L.marker(marker.position);
-              bindMarkerContent(m, marker, allowHtml());
+              bindMarkerContent(m, marker, htmlAllowed);
               clusterGroup.addLayer(m);
               markers.push(m);
             });
             mapInstance.addLayer(clusterGroup);
           } catch {
+            if (cancelled) return;
             p?.markers?.forEach((marker) => {
               const m = L.marker(marker.position).addTo(mapInstance);
-              bindMarkerContent(m, marker, allowHtml());
+              bindMarkerContent(m, marker, htmlAllowed);
               markers.push(m);
             });
           }
         } else {
           p?.markers?.forEach((marker) => {
             const m = L.marker(marker.position).addTo(mapInstance);
-            bindMarkerContent(m, marker, allowHtml());
+            bindMarkerContent(m, marker, htmlAllowed);
             markers.push(m);
           });
         }
@@ -441,7 +446,7 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
             p.geojson,
             p.geojsonStyle,
             p.popup,
-            allowHtml(),
+            htmlAllowed,
             // A getter, not a value: popups read the current locale when they
             // open. Tracking the locale here would re-run this effect, which is
             // not idempotent (layer control, PMTiles layer, view reset).
@@ -461,7 +466,7 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
               layerDef.geojson,
               layerDef.style || p?.geojsonStyle,
               layerDef.popup || p?.popup,
-              allowHtml(),
+              htmlAllowed,
               () => strings.locale
             );
 
@@ -484,7 +489,14 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
         setPmtilesError(null);
         if (p?.pmtiles) {
           try {
-            const protomaps = await import(/* @vite-ignore */ 'protomaps-leaflet');
+            // Keep the namespace import visible to the host bundler. A
+            // vite-ignore bare specifier cannot resolve in production browsers.
+            const module = await import('protomaps-leaflet');
+            if (cancelled) return;
+              const protomaps = (module as { default?: typeof module }).default ?? module;
+            if (typeof protomaps?.leafletLayer !== 'function') {
+              throw new Error('The optional protomaps-leaflet peer does not expose leafletLayer().');
+            }
             const pmConfig = p.pmtiles;
 
             const paintRules =
@@ -524,6 +536,7 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
 
             pmLayer.addTo(mapInstance);
           } catch (e) {
+            if (cancelled) return;
             // P1.3 — do NOT fail silently. Keep the base map, but surface a
             // visible notice and report a renderer error via telemetry. The
             // most common cause is the optional `protomaps-leaflet` peer not
@@ -557,6 +570,7 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
           mapInstance.setView(p.center, p.zoom || mapInstance.getZoom());
         }
       } catch (err) {
+        if (cancelled) return;
         // Fallback ladder (P2.5): a Leaflet drawing failure degrades to
         // the coordinate table below instead of a blank/partial map.
         const message = err instanceof Error ? err.message : strings.mapRenderError;
@@ -570,6 +584,11 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
         });
       }
     }
+    })().catch((err) => {
+      if (cancelled) return;
+      setError(err instanceof Error ? err.message : strings.mapRenderError);
+    });
+    return () => { cancelled = true; };
   });
 
   // Cleanup
@@ -621,14 +640,16 @@ export const MapRenderer: Component<MapRendererProps> = (props) => {
               {pmtilesError()} {strings.mapBaseMapStillShown}
             </div>
           </Show>
+          {/* Leaflet owns additional classes on this element. Expansion only
+              changes our explicit styles, never its engine-owned class list. */}
           <div
             ref={mapContainer}
             style={
               isExpanded()
-                ? { height: '100%', width: '100%', 'z-index': 0 }
+                ? { height: '100%', width: '100%', 'z-index': 0, flex: '1 1 0%', 'min-height': 0 }
                 : { height: params()?.height || '400px', width: '100%', 'z-index': 0 }
             }
-            class={`relative z-0 ${isExpanded() ? 'flex-1 min-h-0' : ''}`}
+            class="relative z-0"
           />
         </Show>
       </div>

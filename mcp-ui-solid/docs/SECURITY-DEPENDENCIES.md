@@ -1,6 +1,35 @@
 # Security dependency notes
 
-## 2026-10-24 — compatible tooling fixes, runtime Zod still unresolved
+> Solid 2 work is paused by the maintainer as of 2026-10-24. The observations
+> below are dated evidence, not a claim of a current clean audit or release
+> approval. The [pause/resumption handoff](./SOLID2-PREVIEW-HANDOFF-2026-10-23.md)
+> also records the subsequent GitHub `fast-uri` alerts (#103–106), absent from
+> the pnpm feed used here, and the requirement to re-audit before resumption.
+
+## 2026-10-24 — Solid 2 preview carry-over of stable PR #38
+
+The preview integrates stable main commit
+`725f862ac76170c40ab796a1d4773b0dbb90be27` (#38), keeping its own runtime and
+compiler contract. Vitest, `@vitest/ui` and the resolved `@vitest/mocker` move
+from 4.1.11 to 4.1.12. CLI and Spec use Vite 6.4.5, while this Solid 2 renderer
+retains Vite 8.3.5 and the exact Solid/core/web/compiler RC.18 pins. The Solid 1
+compiler plugin is not reintroduced. Runtime dependencies, public schemas,
+package versions and publishing workflows are unchanged by this integration;
+Zod remains 3.25.76 and is not remediated.
+
+Fresh `pnpm audit --json` against this merged preview lockfile reports one HIGH
+advisory: runtime Zod `GHSA-mrhx-c7xc-m3w5`. The audit exits 1; this is not a
+clean audit. The seven tooling advisories targeted by #38 are absent. This is
+an independent preview audit, not a preview before/after measurement; the
+comparison in the following section belongs to stable PR #38.
+
+The merged functional preview `96715b9` passed CI `40036418438`, attempt 1,
+before the pause. Its archived qualification is historical; resumption or any
+new source requires fresh CI and artifact bindings. No Git tag, npm
+stage/publication, dist-tag change or application migration is performed by
+this branch synchronization or its pause documentation.
+
+## 2026-10-24 — stable Solid 1 tooling fixes, runtime Zod still unresolved
 
 This follow-up updates development tooling on the stable Solid 1 line. It does
 not migrate Zod, change public schemas, dismiss advisories, or publish a package.
@@ -25,8 +54,9 @@ Fresh full-workspace `pnpm audit --json` comparison on this date:
 - Updated lock: **1 high**, runtime Zod
   [`GHSA-mrhx-c7xc-m3w5`](https://github.com/advisories/GHSA-mrhx-c7xc-m3w5).
 - Audit exit status remains nonzero. This is not a clean security audit.
-- GitHub's 11 open Dependabot alerts include four occurrences of the same Zod
-  advisory across manifests/lockfile. Removing seven tooling advisory entries
+- At the stable PR #38 review, GitHub listed 11 open Dependabot alerts,
+  including four occurrences of the same Zod advisory across manifests/lockfile.
+  Removing seven tooling advisory entries
   from this lock does not by itself close GitHub alerts: merge and rescan are
   separate evidence, and package publication is separate again.
 
@@ -72,6 +102,10 @@ This compatible tooling follow-up does not adopt that resolution or claim to
 supersede the remaining Zod work. Reassess any later revision of #37 separately.
 
 ## Historical record: 6.25.1, verified 2026-10-18
+
+This is the historical Solid 1 remediation record. The separate Solid 2 preview
+uses the RC.18 runtime/web pair and renderer-owned Seroval 1.7.0; the audit counts
+below are not a fresh audit of that preview. See [preview qualification](./SOLID2-PREVIEW.md).
 
 Verified on 2026-10-18. This is a dependency-remediation record, not a claim
 that every renderer or consuming application has been security-audited.

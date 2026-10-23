@@ -1,0 +1,8 @@
+@import "tailwindcss";
+@source "../node_modules/@seed-ship/mcp-ui-solid/src";
+@custom-variant dark (&:where(.dark, .dark *));
+body { font-family: system-ui, sans-serif; margin: 0; padding: 24px; }
+main { max-width: 1100px; margin: 0 auto; }
+section { margin: 22px 0; }
+.fixture-controls { display: flex; flex-wrap: wrap; gap: 12px; padding: 12px 0; }
+.fixture-controls button { border: 1px solid #999; padding: 6px 12px; border-radius: 4px; }

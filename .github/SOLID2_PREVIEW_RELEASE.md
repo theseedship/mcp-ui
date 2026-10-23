@@ -1,5 +1,11 @@
 # Solid 2 preview: review first, npm staging only after approval
 
+> **Paused by the maintainer — 2026-10-24.** Keep `feat/solid2-preview` and
+> PR #34 open as a draft. No review-only dispatch, staging, publication,
+> migration or deployment is scheduled or authorized during this pause.
+> Begin with the [canonical pause/resumption handoff](../mcp-ui-solid/docs/SOLID2-PREVIEW-HANDOFF-2026-10-23.md)
+> after a new explicit go; do not copy historical candidate inputs below.
+
 This channel is separate from the Solid 1 stable release. Merging this
 infrastructure PR does **not** stage, publish or deploy anything. No package
 version or lockfile changes are needed here: the reviewed source branch already
@@ -12,8 +18,9 @@ contains `@seed-ship/mcp-ui-solid@7.0.0-solid2.0`.
 | Existing Solid 1 application | `6.25.1` (or a later approved stable 6.x) | `latest`, unchanged |
 | Isolated Solid 2 pilot | exact `7.0.0-solid2.0`, Solid/Web/compiler RC.18 | `solid2`, only after staging and npm approval |
 
-The workflow `publish-solid2-preview.yml` must first be reviewed and merged
-into the default branch. Dispatch it on **main**, never on the preview branch.
+The workflow `publish-solid2-preview.yml` was merged into main through #35.
+After explicit resumption and a separately approved operation, dispatch it on
+**main**, never on the preview branch.
 It checks out only the trusted infrastructure commit, not the preview source.
 It promotes the exact archive already tested in successful PR CI, rather than
 rebuilding a different package while npm credentials are available.
@@ -24,10 +31,14 @@ The existing stable workflows match prerelease tags and hardcode `latest` /
 creates neither a Git tag nor a GitHub release, so it cannot trigger them.
 Do not merge the Solid 2 runtime PR into stable main just to obtain an npm build.
 
-## First candidate: identities, not execution authorization
+## Historical first candidate: not reusable dispatch inputs
 
-The following candidate passed CI on 2026-10-23. Recheck the live PR head,
-successful run and artifact availability before each operation:
+The following initial candidate passed CI on 2026-10-23 but was superseded by
+later source updates, including #38. It is preserved as historical provenance,
+not a candidate to dispatch now. The last functional snapshot at the pause is
+`96715b9`; the canonical handoff records its separate CI/archive binding. Neither
+snapshot may be staged after resumption without rechecking the actual PR head,
+security, successful first-attempt CI and artifact availability.
 
 - Source PR: [#34](https://github.com/theseedship/mcp-ui/pull/34),
   `feat/solid2-preview`, SHA `271e92434696f14ba0fdaaa3e91b242819820a16`.
@@ -49,10 +60,11 @@ heads and merged/closed PRs fail closed; do not bypass those checks to retry.
 
 ## 1. Review-only workflow
 
-After the infrastructure PR is merged, and when a maintainer authorizes a
-review dispatch, run **Review or stage Solid 2 preview** on main with:
+Not during the pause. After explicit resumption, policy revalidation and a new
+maintainer-authorized review dispatch, use **Review or stage Solid 2 preview**
+on main with freshly verified inputs. The table below is historical only:
 
-| Input | Value for the first candidate |
+| Input | Historical first-candidate value — do not reuse |
 | --- | --- |
 | `source_sha` | `271e92434696f14ba0fdaaa3e91b242819820a16` |
 | `ci_run_id` | `40021680995` |
@@ -124,6 +136,9 @@ the upload. The staging tag is immutable; an incorrectly tagged stage needs
 maintainer rejection and correct restaging, not automatic tag repair.
 
 ## 3. Handoff to the ongoing Deposium migration
+
+This is a conditional future integration procedure, not an active migration
+task. Deposium readiness and maintainer approval determine the resumption date.
 
 Do not install the preview into the existing Solid 1 root application.
 The current target is the private isolated package `experiments/solid2-server`

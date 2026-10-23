@@ -1,3 +1,4 @@
+import { flush } from 'solid-js';
 /**
  * Tests for ExpandableWrapper component
  * P1: Expand/fullscreen for tables, charts, code
@@ -8,8 +9,8 @@ import { render, fireEvent, cleanup } from '@solidjs/testing-library'
 import { ExpandableWrapper } from './ExpandableWrapper'
 
 // Mock Portal to render inline for testing
-vi.mock('solid-js/web', async () => {
-  const actual = await vi.importActual('solid-js/web') as any
+vi.mock('@solidjs/web', async () => {
+  const actual = await vi.importActual('@solidjs/web') as any
   return {
     ...actual,
     Portal: (props: any) => props.children,
@@ -49,7 +50,7 @@ describe('ExpandableWrapper', () => {
     ))
 
     const expandBtn = getByLabelText('Expand')
-    fireEvent.click(expandBtn)
+    flush(() => fireEvent.click(expandBtn))
 
     // Modal dialog should appear
     const dialog = getByRole('dialog')
@@ -63,7 +64,7 @@ describe('ExpandableWrapper', () => {
       </ExpandableWrapper>
     ))
 
-    fireEvent.click(getByLabelText('Expand'))
+    flush(() => fireEvent.click(getByLabelText('Expand')))
     const dialog = getByRole('dialog')
     expect(dialog.getAttribute('data-mcp-ui-portal')).toBe('dialog')
   })
@@ -75,7 +76,7 @@ describe('ExpandableWrapper', () => {
       </ExpandableWrapper>
     ))
 
-    fireEvent.click(getByLabelText('Expand'))
+    flush(() => fireEvent.click(getByLabelText('Expand')))
 
     // Title should be visible in the modal header
     expect(getByText('Sales Data')).toBeDefined()
@@ -89,11 +90,11 @@ describe('ExpandableWrapper', () => {
     ))
 
     // Open
-    fireEvent.click(getByLabelText('Expand'))
+    flush(() => fireEvent.click(getByLabelText('Expand')))
     expect(queryByRole('dialog')).not.toBeNull()
 
     // Close
-    fireEvent.click(getByLabelText('Close expanded view'))
+    flush(() => fireEvent.click(getByLabelText('Close expanded view')))
 
     // Dialog should be gone
     expect(queryByRole('dialog')).toBeNull()
@@ -106,10 +107,10 @@ describe('ExpandableWrapper', () => {
       </ExpandableWrapper>
     ))
 
-    fireEvent.click(getByLabelText('Expand'))
+    flush(() => fireEvent.click(getByLabelText('Expand')))
     expect(queryByRole('dialog')).not.toBeNull()
 
-    fireEvent.keyDown(document, { key: 'Escape' })
+    flush(() => fireEvent.keyDown(document, { key: 'Escape' }))
 
     expect(queryByRole('dialog')).toBeNull()
   })
@@ -121,7 +122,7 @@ describe('ExpandableWrapper', () => {
       </ExpandableWrapper>
     ))
 
-    fireEvent.click(getByLabelText('Expand'))
+    flush(() => fireEvent.click(getByLabelText('Expand')))
 
     expect(getByLabelText('Copy TSV')).toBeDefined()
   })
@@ -133,7 +134,7 @@ describe('ExpandableWrapper', () => {
       </ExpandableWrapper>
     ))
 
-    fireEvent.click(getByLabelText('Expand'))
+    flush(() => fireEvent.click(getByLabelText('Expand')))
 
     expect(queryByLabelText('Copy to clipboard')).toBeNull()
   })
@@ -149,8 +150,8 @@ describe('ExpandableWrapper', () => {
       </ExpandableWrapper>
     ))
 
-    fireEvent.click(getByLabelText('Expand'))
-    fireEvent.click(getByLabelText('Copy to clipboard'))
+    flush(() => fireEvent.click(getByLabelText('Expand')))
+    flush(() => fireEvent.click(getByLabelText('Copy to clipboard')))
 
     expect(writeText).toHaveBeenCalledWith(testData)
   })
@@ -162,7 +163,7 @@ describe('ExpandableWrapper', () => {
       </ExpandableWrapper>
     ))
 
-    fireEvent.click(getByLabelText('Expand'))
+    flush(() => fireEvent.click(getByLabelText('Expand')))
 
     // v6.6.0: default heading comes from MCPUIStrings.expandedView (D2).
     // Also unified to a single casing — the pre-v6.6.0 code had
@@ -177,7 +178,7 @@ describe('ExpandableWrapper', () => {
       </ExpandableWrapper>
     ))
 
-    fireEvent.click(getByLabelText('Expand'))
+    flush(() => fireEvent.click(getByLabelText('Expand')))
 
     const dialog = getByRole('dialog')
     // Content area inside the modal panel should have overflow-auto
@@ -193,12 +194,12 @@ describe('ExpandableWrapper', () => {
       </ExpandableWrapper>
     ))
 
-    fireEvent.click(getByLabelText('Expand'))
+    flush(() => fireEvent.click(getByLabelText('Expand')))
     const dialog = getByRole('dialog')
     expect(dialog).toBeDefined()
 
     // Click directly on the backdrop (the dialog element itself, not the inner panel)
-    fireEvent.click(dialog)
+    flush(() => fireEvent.click(dialog))
 
     expect(queryByRole('dialog')).toBeNull()
   })
@@ -210,15 +211,15 @@ describe('ExpandableWrapper', () => {
       </ExpandableWrapper>
     ))
 
-    fireEvent.click(getByLabelText('Expand'))
+    flush(() => fireEvent.click(getByLabelText('Expand')))
     const dialog = getByRole('dialog')
 
     // A pan or a text selection presses inside the panel and releases over the
     // 16px backdrop margin. Per the UI Events spec the browser then dispatches
     // `click` on the nearest common ancestor — the backdrop — which used to
     // close the modal mid-gesture.
-    fireEvent.pointerDown(getByText('Content'))
-    fireEvent.click(dialog)
+    flush(() => fireEvent.pointerDown(getByText('Content')))
+    flush(() => fireEvent.click(dialog))
 
     expect(queryByRole('dialog')).not.toBeNull()
   })
@@ -230,7 +231,7 @@ describe('ExpandableWrapper', () => {
       </ExpandableWrapper>
     ))
 
-    fireEvent.click(getByLabelText('Expand'))
+    flush(() => fireEvent.click(getByLabelText('Expand')))
 
     const dialog = getByRole('dialog')
     const panel = dialog.firstElementChild
@@ -250,10 +251,10 @@ describe('ExpandableWrapper', () => {
 
     const originalOverflow = document.body.style.overflow
 
-    fireEvent.click(getByLabelText('Expand'))
+    flush(() => fireEvent.click(getByLabelText('Expand')))
     expect(document.body.style.overflow).toBe('hidden')
 
-    fireEvent.keyDown(document, { key: 'Escape' })
+    flush(() => fireEvent.keyDown(document, { key: 'Escape' }))
     expect(document.body.style.overflow).toBe(originalOverflow)
   })
 })
@@ -276,7 +277,7 @@ describe('ExpandableWrapper data-mcp-ui-action hooks (v6.19.0)', () => {
     // hardcoded English literal — hosts must target the data hook, not the text.
     expect(expand!.getAttribute('aria-label')).toBe('Expand')
 
-    fireEvent.click(getByLabelText('Expand'))
+    flush(() => fireEvent.click(getByLabelText('Expand')))
 
     expect(container.querySelector('button[data-mcp-ui-action="copy"]')).not.toBeNull()
     expect(container.querySelector('button[data-mcp-ui-action="close"]')).not.toBeNull()
@@ -294,7 +295,7 @@ describe('ExpandableWrapper data-mcp-ui-action hooks (v6.19.0)', () => {
     const expand = container.querySelector('button[data-mcp-ui-action="expand"]')!
     expect(expand.getAttribute('type')).toBe('button')
 
-    fireEvent.click(getByLabelText('Expand'))
+    flush(() => fireEvent.click(getByLabelText('Expand')))
 
     expect(container.querySelector('button[data-mcp-ui-action="copy"]')!.getAttribute('type')).toBe('button')
     expect(container.querySelector('button[data-mcp-ui-action="close"]')!.getAttribute('type')).toBe('button')
@@ -314,9 +315,9 @@ describe('ExpandableWrapper onExpandedChange (v6.19.0)', () => {
       </ExpandableWrapper>
     ))
     expect(seen).toEqual([false])
-    fireEvent.click(container.querySelector('button[data-mcp-ui-action="expand"]')!)
+    flush(() => fireEvent.click(container.querySelector('button[data-mcp-ui-action="expand"]')!))
     expect(seen).toEqual([false, true])
-    fireEvent.click(container.querySelector('button[data-mcp-ui-action="close"]')!)
+    flush(() => fireEvent.click(container.querySelector('button[data-mcp-ui-action="close"]')!))
     expect(seen).toEqual([false, true, false])
   })
 })

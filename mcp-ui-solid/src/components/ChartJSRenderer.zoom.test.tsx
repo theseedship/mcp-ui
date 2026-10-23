@@ -1,3 +1,4 @@
+import { flush } from 'solid-js';
 /**
  * Chart zoom gating (v6.22.0) — `chartjs-plugin-zoom` PRESENT.
  *
@@ -110,7 +111,7 @@ describe('<ChartJSRenderer> zoom — plugin installed', () => {
     await waitFor(() => expect(chartHarness.instances).toHaveLength(1));
     expect(latestZoomOptions()).toBeUndefined();
 
-    fireEvent.click(getByLabelText('Expand'));
+    flush(() => fireEvent.click(getByLabelText('Expand')));
 
     await waitFor(() => expect(chartHarness.register).toHaveBeenCalledTimes(1));
     expect(chartHarness.register).toHaveBeenCalledWith(zoomPlugin);
@@ -134,10 +135,10 @@ describe('<ChartJSRenderer> zoom — plugin installed', () => {
     const { getByLabelText } = render(() => <ChartJSRenderer component={chartComponent()} />);
     await waitFor(() => expect(chartHarness.instances).toHaveLength(1));
 
-    fireEvent.click(getByLabelText('Expand'));
+    flush(() => fireEvent.click(getByLabelText('Expand')));
     await waitFor(() => expect(latestZoomOptions()).toBeTruthy());
 
-    fireEvent.click(within(document.body).getByLabelText('Close expanded view'));
+    flush(() => fireEvent.click(within(document.body).getByLabelText('Close expanded view')));
     await waitFor(() => expect(chartHarness.instances).toHaveLength(3));
     expect(latestZoomOptions()).toBeUndefined();
   });
@@ -148,7 +149,7 @@ describe('<ChartJSRenderer> zoom — plugin installed', () => {
     ));
     await waitFor(() => expect(chartHarness.instances).toHaveLength(1));
 
-    fireEvent.click(getByLabelText('Expand'));
+    flush(() => fireEvent.click(getByLabelText('Expand')));
     await waitFor(() => expect(latestZoomOptions()).toBeTruthy());
 
     const modal = within(document.body);
@@ -162,7 +163,7 @@ describe('<ChartJSRenderer> zoom — plugin installed', () => {
     const reset = await waitFor(() => modal.getByLabelText('Reset zoom'));
     expect(reset.getAttribute('title')).toBe('Reset zoom');
 
-    fireEvent.click(reset);
+    flush(() => fireEvent.click(reset));
     expect(chart.resetZoom).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(modal.queryByLabelText('Reset zoom')).toBeNull());
     expect(queryByLabelText('Reset zoom')).toBeNull();
@@ -178,7 +179,7 @@ describe('<ChartJSRenderer> zoom — plugin installed', () => {
     ));
     await waitFor(() => expect(chartHarness.instances).toHaveLength(1));
 
-    fireEvent.click(getByLabelText('Expand'));
+    flush(() => fireEvent.click(getByLabelText('Expand')));
     await waitFor(() => expect(latestZoomOptions()).toBeTruthy());
 
     const chart = chartHarness.instances.at(-1);
@@ -198,7 +199,7 @@ describe('<ChartJSRenderer> zoom — plugin installed', () => {
     const { getByLabelText } = render(() => <ChartJSRenderer component={chartComponent()} />);
     await waitFor(() => expect(chartHarness.instances).toHaveLength(1));
 
-    fireEvent.click(getByLabelText('Expand'));
+    flush(() => fireEvent.click(getByLabelText('Expand')));
     await waitFor(() => expect(latestZoomOptions()).toBeTruthy());
 
     // Every gesture the plugin offers — wheel, drag-pan, pinch — is a pointer
@@ -209,7 +210,7 @@ describe('<ChartJSRenderer> zoom — plugin installed', () => {
     const modal = within(document.body);
     expect(modal.queryByLabelText('Reset zoom')).toBeNull();
 
-    fireEvent.click(modal.getByLabelText('Zoom in'));
+    flush(() => fireEvent.click(modal.getByLabelText('Zoom in')));
     const chart = chartHarness.instances.at(-1);
     expect(chart.zoom).toHaveBeenLastCalledWith(1.5);
     // Zooming from the toolbar is a zoom like any other: the reset appears.
@@ -217,12 +218,13 @@ describe('<ChartJSRenderer> zoom — plugin installed', () => {
 
     // Zoom out is the way back, one notch at a time: this one lands the chart
     // exactly on its initial viewport again, so the reset control goes away.
-    fireEvent.click(modal.getByLabelText('Zoom out'));
+    flush(() => fireEvent.click(modal.getByLabelText('Zoom out')));
     expect(chart.zoom).toHaveBeenLastCalledWith(1 / 1.5);
     await waitFor(() => expect(modal.queryByLabelText('Reset zoom')).toBeNull());
 
-    fireEvent.click(modal.getByLabelText('Zoom in'));
+    flush(() => fireEvent.click(modal.getByLabelText('Zoom in')));
     fireEvent.click(await waitFor(() => modal.getByLabelText('Reset zoom')));
+    flush();
     expect(chart.resetZoom).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(modal.queryByLabelText('Reset zoom')).toBeNull());
     // …but zoom in / out stay, because they are the way back in.
@@ -234,13 +236,13 @@ describe('<ChartJSRenderer> zoom — plugin installed', () => {
     const { getByLabelText } = render(() => <ChartJSRenderer component={chartComponent()} />);
     await waitFor(() => expect(chartHarness.instances).toHaveLength(1));
 
-    fireEvent.click(getByLabelText('Expand'));
+    flush(() => fireEvent.click(getByLabelText('Expand')));
     await waitFor(() => expect(latestZoomOptions()).toBeTruthy());
 
     const modal = within(document.body);
     expect(modal.getByLabelText('Zoom in')).toBeTruthy();
 
-    fireEvent.click(modal.getByText('Data'));
+    flush(() => fireEvent.click(modal.getByText('Data')));
     await waitFor(() => expect(modal.queryByLabelText('Zoom in')).toBeNull());
   });
 
@@ -329,7 +331,7 @@ describe('<ChartJSRenderer> zoom — plugin installed', () => {
     merged.zoom.onZoom({ chart });
 
     const reset = await waitFor(() => getByLabelText('Reset zoom'));
-    fireEvent.click(reset);
+    flush(() => fireEvent.click(reset));
     expect(chart.resetZoom).toHaveBeenCalledTimes(1);
   });
 
@@ -423,6 +425,7 @@ describe('<ChartJSRenderer> zoom — plugin installed', () => {
 
     expect(onZoom).toHaveBeenCalledWith({ chart });
     fireEvent.click(await waitFor(() => getByLabelText('Reset zoom')));
+    flush();
     await waitFor(() => expect(queryByLabelText('Reset zoom')).toBeNull());
 
     // Same bargain on the pan side.

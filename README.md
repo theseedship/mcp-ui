@@ -1,5 +1,15 @@
 # MCP UI Components
 
+> **Solid 2 work paused — 2026-10-24.** The work is preserved on
+> `feat/solid2-preview`; PR #34 stays open as a draft. No migration, merge,
+> preview staging/publication or deployment is scheduled. Resume only after a
+> new maintainer decision using the [pause and resumption handoff](./mcp-ui-solid/docs/SOLID2-PREVIEW-HANDOFF-2026-10-23.md).
+
+> This branch is the isolated **Solid 2 preview**, `7.0.0-solid2.0`, not a
+> published release. Production Solid 1 stays on `6.25.1`. Do not install this
+> branch into a Solid 1 application or trigger the stable publishing workflows.
+> See [the preview qualification and integration guide](./mcp-ui-solid/docs/SOLID2-PREVIEW.md).
+
 > **UI component library for Model Context Protocol (MCP) servers**
 
 A collection of TypeScript packages for building generative, streaming user interfaces powered by MCP servers and LLMs.
@@ -14,10 +24,12 @@ updates Solid/Seroval and build-tool dependency resolutions. Includes a real
 server-rendering/serialization compatibility smoke test. This is the historical
 release record, not a claim that the current dependency audit is clean.
 
-**Security follow-up (unreleased, 2026-10-24):** compatible Vite 6.4.5 and
-Vitest 4.1.12 tooling updates remove seven advisory entries from the workspace
-audit. Runtime Zod remains affected and needs a separately qualified API/version
-decision before publication. See the
+**Security follow-up (unreleased, 2026-10-24):** stable PR #38 updates Vite to
+6.4.5 and Vitest to 4.1.12; its Solid 1 audit removes seven advisory entries.
+This preview carries Vitest 4.1.12 and the CLI/Spec Vite fixes while retaining
+Vite 8.3.5 and the exact Solid 2 RC.18 toolchain. The stable audit counts are not
+a fresh preview audit. Runtime Zod remains affected and needs a separately
+qualified API/version decision before publication. See the
 [current security dependency notes](./mcp-ui-solid/docs/SECURITY-DEPENDENCIES.md).
 
 **6.25.0 (`mcp-ui-solid`):** inherited CSS theme tokens for prompts, resource

@@ -1,3 +1,4 @@
+import { flush } from 'solid-js';
 /**
  * MapRenderer — locale changes (v6.20.0).
  *
@@ -12,9 +13,10 @@
  */
 
 import { describe, it, expect, vi } from 'vitest'
-import { render, waitFor } from '@solidjs/testing-library'
+import { render, waitFor, fireEvent } from '@solidjs/testing-library'
 import { createSignal } from 'solid-js'
 import { MapRenderer } from './MapRenderer'
+import { ExpandableWrapper } from './ExpandableWrapper'
 import { MCPUIStringsProvider, type MCPUIStrings } from '../context/MCPUIStringsContext'
 import type { MapComponentParams } from '../types'
 
@@ -41,8 +43,10 @@ vi.mock('leaflet', () => {
   mapInstance.fitBounds = () => mapInstance
   return {
     default: {
-      map: () => {
+      map: (element: HTMLElement) => {
         leafletCalls.map += 1
+        element.classList.add('leaflet-container', 'leaflet-touch')
+        element.dataset.nativeMapId = String(leafletCalls.map)
         return mapInstance
       },
       tileLayer: () => ({ addTo: () => ({}) }),
@@ -125,9 +129,9 @@ describe('MapRenderer — locale changes (v6.20.0)', () => {
     expect(typeof content).toBe('function')
     expect(content()).toContain('1,234.5')
 
-    setStrings({ locale: 'de-DE' })
+    flush(() => setStrings({ locale: 'de-DE' }))
     await new Promise((resolve) => setTimeout(resolve, 30))
-    setStrings({ locale: 'de-DE', expand: 'Vergrößern' })
+    flush(() => setStrings({ locale: 'de-DE', expand: 'Vergrößern' }))
     await new Promise((resolve) => setTimeout(resolve, 30))
 
     expect(content()).toContain('1.234,5')
@@ -169,7 +173,7 @@ describe('MapRenderer — locale changes (v6.20.0)', () => {
     }
     expect(setup.map).toBe(mapsBefore + 1)
 
-    setStrings({ locale: 'de-DE' })
+    flush(() => setStrings({ locale: 'de-DE' }))
     await new Promise((resolve) => setTimeout(resolve, 30))
     expect({
       map: leafletCalls.map,
@@ -178,4 +182,25 @@ describe('MapRenderer — locale changes (v6.20.0)', () => {
       geoJSON: leafletCalls.geoJSONOptions.length,
     }).toEqual(setup)
   })
+})
+
+it('retains Leaflet-owned classes and the same map across two outer fullscreen cycles', async () => {
+  const mapsBefore = leafletCalls.map
+  const params = { markers: [], attribution: '', height: '300px' } as MapComponentParams
+  const view = render(() => <ExpandableWrapper title="Map ownership"><MapRenderer params={params} /></ExpandableWrapper>)
+  await waitFor(() => expect(view.container.querySelector('.leaflet-container')).not.toBeNull())
+  const native = view.container.querySelector('.leaflet-container') as HTMLElement
+  const id = native.dataset.nativeMapId
+  const opener = view.container.querySelector(':scope > .mcp-ui-root > button[data-mcp-ui-action="expand"]')!
+  for (let cycle = 0; cycle < 2; cycle++) {
+    flush(() => fireEvent.click(opener))
+    expect(native.closest('[role="dialog"]')).not.toBeNull()
+    expect(native.classList.contains('leaflet-container')).toBe(true)
+    expect(native.classList.contains('leaflet-touch')).toBe(true)
+    flush(() => fireEvent.keyDown(document, { key: 'Escape' }))
+    expect(view.container.querySelector('.leaflet-container')).toBe(native)
+    expect(native.classList.contains('leaflet-touch')).toBe(true)
+    expect(native.dataset.nativeMapId).toBe(id)
+  }
+  expect(leafletCalls.map).toBe(mapsBefore + 1)
 })

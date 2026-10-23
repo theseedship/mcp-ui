@@ -1,4 +1,4 @@
-import { createEffect, onCleanup } from 'solid-js'
+import { createEffect } from 'solid-js'
 
 const THEME_PREFIX = '--mcp-ui-'
 
@@ -55,15 +55,21 @@ export function observeTheme(element: HTMLElement, callback: () => void): () => 
  * custom properties and dark state from its stationary anchor, and keep them
  * synchronized for the lifetime of the Solid owner. Geometry stays unchanged.
  */
-export function bindPortalTheme(portal: HTMLElement, source: () => HTMLElement | undefined): void {
-  createEffect(() => {
-    const anchor = source()
+export function bindPortalTheme(
+  portal: HTMLElement | (() => HTMLElement | undefined),
+  source: () => HTMLElement | undefined,
+  enabled: () => boolean = () => true,
+): void {
+  // Install in the component owner, never from a ref callback. Resolve the DOM
+  // ref in the imperative phase, after the conditional portal has committed.
+  createEffect(() => ({ anchor: source(), enabled: enabled() }), ({ anchor, enabled }) => {
+    const element = typeof portal === 'function' ? portal() : portal
     const view = anchor?.ownerDocument.defaultView
-    if (!anchor || !view) return
+    if (!enabled || !element || !anchor || !view) return
     const copied = new Set<string>()
     const sync = () => {
       const style = view.getComputedStyle(anchor)
-      const inherited = portal.parentElement ? view.getComputedStyle(portal.parentElement) : undefined
+      const inherited = element.parentElement ? view.getComputedStyle(element.parentElement) : undefined
       const names = new Set(copied)
       for (const computed of [style, inherited]) {
         if (!computed) continue
@@ -81,21 +87,21 @@ export function bindPortalTheme(portal: HTMLElement, source: () => HTMLElement |
         else if (inherited?.getPropertyValue(name).trim()) values.set(name, 'initial')
       }
       for (const name of copied) {
-        if (!values.has(name)) portal.style.removeProperty(name)
+        if (!values.has(name)) element.style.removeProperty(name)
       }
       copied.clear()
       for (const [name, value] of values) {
-        if (portal.style.getPropertyValue(name) !== value) portal.style.setProperty(name, value)
+        if (element.style.getPropertyValue(name) !== value) element.style.setProperty(name, value)
         copied.add(name)
       }
-      portal.classList.toggle('dark', anchor.closest('.dark') !== null)
+      element.classList.toggle('dark', anchor.closest('.dark') !== null)
     }
     sync()
     const stop = observeTheme(anchor, sync)
-    onCleanup(() => {
+    return () => {
       stop()
-      for (const name of copied) portal.style.removeProperty(name)
-      portal.classList.remove('dark')
-    })
+      for (const name of copied) element.style.removeProperty(name)
+      element.classList.remove('dark')
+    }
   })
 }

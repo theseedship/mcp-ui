@@ -19,8 +19,9 @@
  *    scope.
  */
 
-import { createContext, useContext, type ParentComponent, type JSX } from 'solid-js'
-import { createStore, produce } from 'solid-js/store'
+import { createContext, useContext, flush, untrack, type ParentComponent } from 'solid-js'
+import type { JSX } from '@solidjs/web'
+import { createStore } from 'solid-js'
 import type { ScratchpadState, ScratchpadEvent, ScratchpadSection } from '../types/chat-bus'
 
 // ─── Handle shape ─────────────────────────────────────────────
@@ -54,40 +55,44 @@ export function createScratchpadStore(): ScratchpadStoreHandle {
     pinned: boolean
   }>({ current: null, pinned: false })
 
-  const dispatch = (event: ScratchpadEvent): void => {
-    if (event.action === 'create') {
-      console.info(
-        `%c[MCP-UI] dispatchScratchpad%c create id=${event.id} sections=${event.sections?.length || 0} status=${event.status || 'loading'}${event.pinned ? ' pinned' : ''}`,
-        'color: #10b981; font-weight: bold',
-        'color: inherit'
-      )
-      setScratchpadStore({
-        current: {
-          id: event.id,
-          title: event.title || '',
-          sections: event.sections || [],
-          filters: event.filters || {},
-          preview: event.preview,
-          agentMessages: event.agentMessages || [],
-          status: event.status || 'loading',
-          previewEndpoint: (event as any).previewEndpoint,
-          previewDebounce: (event as any).previewDebounce,
-          previewMethod: (event as any).previewMethod,
-          previewHeaders: (event as any).previewHeaders,
-          turn: (event as any).turn,
-          totalTurns: (event as any).totalTurns,
-          turnHistory: (event as any).turnHistory,
-        },
-        pinned: event.pinned || false,
-      })
-    } else if (event.action === 'update') {
-      console.info(
-        `%c[MCP-UI] dispatchScratchpad%c update id=${event.id} sectionMode=${event.sectionMode || 'replace'} sections=${event.sections?.length || 0} status=${event.status || '-'}`,
-        'color: #3b82f6; font-weight: bold',
-        'color: inherit'
-      )
-      setScratchpadStore(
-        produce((s) => {
+  // SSE/parser callbacks expose a synchronous imperative handle. Flush only
+  // this public boundary, not ordinary reactive event handlers.
+  const dispatch = (event: ScratchpadEvent): void =>
+    flush(() => {
+      if (event.action === 'create') {
+        console.info(
+          `%c[MCP-UI] dispatchScratchpad%c create id=${event.id} sections=${event.sections?.length || 0} status=${event.status || 'loading'}${event.pinned ? ' pinned' : ''}`,
+          'color: #10b981; font-weight: bold',
+          'color: inherit'
+        )
+        setScratchpadStore((draft) => {
+          Object.assign(draft, {
+            current: {
+              id: event.id,
+              title: event.title || '',
+              sections: event.sections || [],
+              filters: event.filters || {},
+              preview: event.preview,
+              agentMessages: event.agentMessages || [],
+              status: event.status || 'loading',
+              previewEndpoint: (event as any).previewEndpoint,
+              previewDebounce: (event as any).previewDebounce,
+              previewMethod: (event as any).previewMethod,
+              previewHeaders: (event as any).previewHeaders,
+              turn: (event as any).turn,
+              totalTurns: (event as any).totalTurns,
+              turnHistory: (event as any).turnHistory,
+            },
+            pinned: event.pinned || false,
+          })
+        })
+      } else if (event.action === 'update') {
+        console.info(
+          `%c[MCP-UI] dispatchScratchpad%c update id=${event.id} sectionMode=${event.sectionMode || 'replace'} sections=${event.sections?.length || 0} status=${event.status || '-'}`,
+          'color: #3b82f6; font-weight: bold',
+          'color: inherit'
+        )
+        setScratchpadStore((s) => {
           if (!s.current || s.current.id !== event.id) {
             console.warn(
               `[MCP-UI] dispatchScratchpad: update for id=${event.id} but current is ${s.current?.id || 'null'}. Ignoring.`
@@ -131,22 +136,30 @@ export function createScratchpadStore(): ScratchpadStoreHandle {
           if ((event as any).turnHistory) s.current.turnHistory = (event as any).turnHistory
           if ((event as any).turn != null) s.current.turn = (event as any).turn
         })
-      )
-    } else if (event.action === 'close') {
-      console.info(
-        `%c[MCP-UI] dispatchScratchpad%c close id=${event.id}`,
-        'color: #6b7280; font-weight: bold',
-        'color: inherit'
-      )
-      setScratchpadStore({ current: null, pinned: false })
-    }
-  }
+      } else if (event.action === 'close') {
+        console.info(
+          `%c[MCP-UI] dispatchScratchpad%c close id=${event.id}`,
+          'color: #6b7280; font-weight: bold',
+          'color: inherit'
+        )
+        setScratchpadStore((draft) => {
+          draft.current = null
+          draft.pinned = false
+        })
+      }
+    })
 
   return {
     dispatch,
     state: () => scratchpadStore.current,
     pinned: () => scratchpadStore.pinned,
-    close: () => setScratchpadStore({ current: null, pinned: false }),
+    close: () =>
+      flush(() =>
+        setScratchpadStore((draft) => {
+          draft.current = null
+          draft.pinned = false
+        })
+      ),
   }
 }
 
@@ -180,7 +193,7 @@ export function dispatchScratchpad(event: ScratchpadEvent): void {
  * @experimental
  * @since v5.2.0
  */
-export const ScratchpadStoreContext = createContext<ScratchpadStoreHandle | undefined>(undefined)
+export const ScratchpadStoreContext = createContext<ScratchpadStoreHandle | null>(null)
 
 /**
  * Provide a scoped `ScratchpadStoreHandle` to a SolidJS subtree. Children
@@ -208,10 +221,8 @@ export const ScratchpadStoreContext = createContext<ScratchpadStoreHandle | unde
 export const ScratchpadStoreProvider: ParentComponent<{
   store?: ScratchpadStoreHandle
 }> = (props): JSX.Element => {
-  const store = props.store ?? createScratchpadStore()
-  return (
-    <ScratchpadStoreContext.Provider value={store}>{props.children}</ScratchpadStoreContext.Provider>
-  )
+  const store = untrack(() => props.store) ?? createScratchpadStore()
+  return <ScratchpadStoreContext value={store}>{props.children}</ScratchpadStoreContext>
 }
 
 // ─── Reactive hook (context-aware) ────────────────────────────

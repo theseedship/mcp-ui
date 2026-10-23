@@ -5,7 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [7.0.0-solid2.0] - Unreleased preview
+
+- Port runtime, DOM renderer, JSX compiler and testing to the exact Solid 2
+  RC.18 toolchain; leave the stable Solid 1 line and MCP schemas unchanged.
+- Adapt compute/apply effects, ownership, cleanup, context fallbacks, draft
+  stores and imperative store/controller observation boundaries.
+- Replace the Solid 1 virtualizer adapter with a lazy optional TanStack core
+  bridge, qualified against the real core including disposal and two instances.
+- Keep browser engines lazy and guard late imports after unmount; cancel fetch
+  readers and reconnect timers on streaming stop/disposal.
+- Preserve portal DOM identity and local live themes, use hydration-stable table
+  ids, and revalidate changed component payloads in a tracked computation.
+- Add migration regressions and a clean-tarball Solid 2 consumer harness. This
+  preview is a local artefact and review branch, not an npm release.
+
+### Security — preview development tooling
+
+- Carry the compatible tooling fixes from stable PR #38 into this preview:
+  Vitest and `@vitest/ui` 4.1.12, with `@vitest/mocker` 4.1.12 in the lockfile.
+  Retain Vite 8.3.5 and the exact Solid 2 RC.18 runtime/compiler pair; CLI and
+  Spec use Vite 6.4.5. No preview runtime, schema or package version changes.
+- Runtime Zod remains 3.25.76 with its advisory unresolved. Stable audit counts
+  below are not a fresh audit of this preview lockfile.
+
+## [Unreleased] — stable Solid 1 line
 
 ### Security — development tooling only
 
