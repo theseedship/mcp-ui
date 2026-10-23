@@ -10,7 +10,7 @@
  * - User-friendly fallback UI
  */
 
-import { Component, Errored, createSignal, createEffect, Show, onSettled } from 'solid-js'
+import { Component, Errored, createSignal, createEffect, Show, onSettled, untrack } from 'solid-js'
 import { isServer } from "@solidjs/web";
 import { createLogger } from '../utils/logger'
 import type { RendererError, ComponentType } from '../types'
@@ -132,7 +132,7 @@ export const GenerativeUIErrorBoundary: Component<GenerativeUIErrorBoundaryProps
   const handleError = (error: Error) => {
     // SSR-safe: Calculate render duration
     const renderDuration = !isServer && typeof performance !== 'undefined'
-      ? performance.now() - renderStartTime()
+      ? performance.now() - untrack(renderStartTime)
       : 0
 
     // SSR-safe: Get client-only context
@@ -150,7 +150,7 @@ export const GenerativeUIErrorBoundary: Component<GenerativeUIErrorBoundaryProps
       errorMessage: error.message,
       errorStack: error.stack,
       renderDuration,
-      retryCount: retryKey(),
+      retryCount: untrack(retryKey),
       timestamp: new Date().toISOString(),
       userAgent,
       viewport,
@@ -201,6 +201,9 @@ export const GenerativeUIErrorBoundary: Component<GenerativeUIErrorBoundaryProps
     <Errored
       fallback={(error, reset) => {
         createEffect(error, value => handleError(value as Error))
+        // Effects keep matching owner allocations, but their apply phase is
+        // skipped on the server. Preserve the synchronous SSR notification.
+        if (isServer) untrack(() => handleError(error() as Error))
         const retry = () => { handleRetry(); reset() }
 
         return (
@@ -213,7 +216,7 @@ export const GenerativeUIErrorBoundary: Component<GenerativeUIErrorBoundaryProps
               onRetry={retry}
             />
           }>
-            {fallback => fallback()(error() as Error, props.allowRetry ? retry : undefined)}
+            {fallback => <>{fallback()(error() as Error, props.allowRetry ? retry : undefined)}</>}
           </Show>
         )
       }}

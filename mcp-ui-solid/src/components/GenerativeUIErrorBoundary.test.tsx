@@ -3,10 +3,15 @@ import { cleanup, fireEvent, render } from '@solidjs/testing-library'
 import { flush } from 'solid-js'
 import { GenerativeUIErrorBoundary } from './GenerativeUIErrorBoundary'
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  vi.restoreAllMocks()
+})
 
 describe('GenerativeUIErrorBoundary Solid 2 recovery', () => {
   it('reports the error and resets its boundary when Retry Rendering is clicked', () => {
+    const warn = vi.spyOn(console, 'warn')
+    const error = vi.spyOn(console, 'error')
     let attempts = 0
     const Child = () => {
       if (attempts++ === 0) throw new Error('first render failed')
@@ -24,9 +29,12 @@ describe('GenerativeUIErrorBoundary Solid 2 recovery', () => {
     fireEvent.click(getByRole('button', { name: 'Retry Rendering' }))
     flush()
     expect(getByText('Recovered content')).toBeTruthy()
+    expect([...warn.mock.calls, ...error.mock.calls].flat().join('\n')).not.toMatch(/\[STRICT_READ/)
   })
 
   it('keeps the public custom fallback Error and retry callback contract', () => {
+    const warn = vi.spyOn(console, 'warn')
+    const error = vi.spyOn(console, 'error')
     let attempts = 0
     const Child = () => {
       if (attempts++ === 0) throw new Error('custom failure')
@@ -45,5 +53,6 @@ describe('GenerativeUIErrorBoundary Solid 2 recovery', () => {
     fireEvent.click(getByText('custom failure'))
     flush()
     expect(getByText('Custom recovery')).toBeTruthy()
+    expect([...warn.mock.calls, ...error.mock.calls].flat().join('\n')).not.toMatch(/\[STRICT_READ/)
   })
 })

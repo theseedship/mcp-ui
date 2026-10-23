@@ -97,7 +97,7 @@ library. See the [actual host config](https://github.com/theseedship/mcp-ui/blob
 [Vite's nested CommonJS guidance](https://vite.dev/config/dep-optimization-options#optimizedeps-exclude).
 
 Current local source results (Node 24.19.0 / pnpm 8.15.0): build and all three
-typecheck targets pass; 142 Vitest files, 2,413 passed and one existing GraphRenderer
+typecheck targets pass; 143 Vitest files, 2,414 passed and one existing GraphRenderer
 placeholder skip. Lint passes with zero errors and 424 warnings (Spec 1, CLI 2,
 Solid 421), compared with 425 in the unchanged baseline. The Node harness
 suites are separate from those Vitest counts. Hosted CI is a separate gate.
@@ -109,6 +109,8 @@ separately imports all ten public entries without the Solid compiler/source
 condition. There are 14 Node harness/static-loader tests in three suites.
 Unexpected runtime/ownership/hydration errors and real external requests are
 rejected; one exact intentional SSE fixture error is recorded, not suppressed.
+The negative server error-boundary test deliberately retains its contained-error
+diagnostic and verifies that both fallback and host notification occur once.
 Native Canvas2D readback and large test-bundle warnings remain visible.
 
 Actual source-condition engines exercised: Chart.js including finite zoom/reset,
