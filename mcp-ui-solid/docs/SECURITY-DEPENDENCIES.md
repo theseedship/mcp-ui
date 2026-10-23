@@ -1,5 +1,11 @@
 # Security dependency notes
 
+> Solid 2 work is paused by the maintainer as of 2026-10-24. The observations
+> below are dated evidence, not a claim of a current clean audit or release
+> approval. The [pause/resumption handoff](./SOLID2-PREVIEW-HANDOFF-2026-10-23.md)
+> also records the subsequent GitHub `fast-uri` alerts (#103–106), absent from
+> the pnpm feed used here, and the requirement to re-audit before resumption.
+
 ## 2026-10-24 — Solid 2 preview carry-over of stable PR #38
 
 The preview integrates stable main commit
@@ -17,10 +23,11 @@ clean audit. The seven tooling advisories targeted by #38 are absent. This is
 an independent preview audit, not a preview before/after measurement; the
 comparison in the following section belongs to stable PR #38.
 
-Qualification and archive metadata for the old preview head are historical;
-the merged preview requires fresh CI and artifacts. No Git tag, npm
+The merged functional preview `96715b9` passed CI `40036418438`, attempt 1,
+before the pause. Its archived qualification is historical; resumption or any
+new source requires fresh CI and artifact bindings. No Git tag, npm
 stage/publication, dist-tag change or application migration is performed by
-this branch synchronization.
+this branch synchronization or its pause documentation.
 
 ## 2026-10-24 — stable Solid 1 tooling fixes, runtime Zod still unresolved
 

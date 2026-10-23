@@ -1,5 +1,10 @@
 # MCP UI Components
 
+> **Solid 2 work paused — 2026-10-24.** The work is preserved on
+> `feat/solid2-preview`; PR #34 stays open as a draft. No migration, merge,
+> preview staging/publication or deployment is scheduled. Resume only after a
+> new maintainer decision using the [pause and resumption handoff](./mcp-ui-solid/docs/SOLID2-PREVIEW-HANDOFF-2026-10-23.md).
+
 > This branch is the isolated **Solid 2 preview**, `7.0.0-solid2.0`, not a
 > published release. Production Solid 1 stays on `6.25.1`. Do not install this
 > branch into a Solid 1 application or trigger the stable publishing workflows.

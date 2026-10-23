@@ -1,12 +1,20 @@
 # Solid 2 preview qualification
 
-Status: locally qualified preview on the documented matrix, not published. This branch is not
-the Solid 1 production line. No release, tag, npm staging or deployment is
-authorized by this document.
+Status: **paused by the maintainer on 2026-10-24**, with no target resumption
+date. Work is preserved on `feat/solid2-preview` and open draft PR #34, not on
+the Solid 1 production line. The matrix below records historical qualification,
+not permission to migrate, merge, release, tag, stage npm or deploy.
+
+Start with the canonical [pause and resumption handoff](./SOLID2-PREVIEW-HANDOFF-2026-10-23.md).
+It supersedes any earlier next-step language in this workbench. Do not resume
+automatically, keep the branch, and rerun the stated gates after a new human go.
 
 ## Source and packaging decision
 
-- Source: main `c107b89c862505ab51253c0a28505c70a6e39886`.
+- Initial Solid 1 baseline: `c107b89c862505ab51253c0a28505c70a6e39886`.
+- Last integrated stable main: `725f862ac76170c40ab796a1d4773b0dbb90be27`
+  (#38). Last qualified functional preview: `96715b9746b259d26219b24a503e92a7106275a4`.
+  Later pause-documentation commits are not the source of that CI archive.
 - Stable npm `latest` verified on 2026-10-23: `6.25.1`.
 - Isolated branch: `feat/solid2-preview`; proposed local version
   `7.0.0-solid2.0`. Same package name, separate artifact/channel only.
@@ -25,11 +33,13 @@ authorized by this document.
 | @solidjs/vite-plugin | 3.0.0-next.51 |
 | Vite | 8.3.5 |
 | @solidjs/testing-library | 1.0.0-rc.2 |
-| Vitest / @vitest/ui | 4.1.11 |
+| Vitest / @vitest/ui | 4.1.12 |
 | jsdom | 27.2.0 |
 | @tanstack/virtual-core | 3.13.18 |
 
-These published versions were checked on 2026-10-23. The scoped Vite plugin
+These are the frozen workbench pins at the pause, not future upgrade advice.
+Vitest was updated with stable PR #38; all other listed pins are retained.
+The scoped Vite plugin
 replaces the old wrapper; the runtime, renderer and JSX types move together.
 The old Seroval override is removed because the renderer owns its matching
 Seroval/Seroval-plugins 1.7.0 serialization dependencies. The Solid 1 virtualizer
@@ -96,11 +106,13 @@ not a runtime alias, forced interoperability shim or an engine dependency of the
 library. See the [actual host config](https://github.com/theseedship/mcp-ui/blob/feat/solid2-preview/mcp-ui-solid/tests/solid2/consumer/vite.config.ts) and
 [Vite's nested CommonJS guidance](https://vite.dev/config/dep-optimization-options#optimizedeps-exclude).
 
-Current local source results (Node 24.19.0 / pnpm 8.15.0): build and all three
-typecheck targets pass; 143 Vitest files, 2,414 passed and one existing GraphRenderer
+Historical qualified snapshot `96715b9` (local Node 24.19.0 / pnpm 8.15.0):
+build and all three typecheck targets pass; 143 Vitest files, 2,417 passed and one existing GraphRenderer
 placeholder skip. Lint passes with zero errors and 424 warnings (Spec 1, CLI 2,
 Solid 421), compared with 425 in the unchanged baseline. The Node harness
-suites are separate from those Vitest counts. Hosted CI is a separate gate.
+suites are separate from those Vitest counts. CI run `40036418438`, attempt 1,
+passed for that exact functional snapshot. After any branch update, bind new
+CI and artifacts to the actual new head; this old success is not inherited.
 
 The real-package full and optional-absent profiles pass in dev and optimized
 production, including the generated Node SSR host. The full host records six
@@ -131,9 +143,11 @@ compared. The current validation limit is 100 table rows, so the consumer exerci
 
 ## Deposium Solid 2 integration handoff
 
-The concise [pilot handoff](./SOLID2-PREVIEW-HANDOFF-2026-10-23.md) ships in the
-package too; final Git SHA, archive checksum and matching report paths are
-delivered together in the durable artifact's `source-provenance.json`.
+The canonical [pause/resumption handoff](./SOLID2-PREVIEW-HANDOFF-2026-10-23.md)
+is included in the package's existing documentation list. It identifies the
+preserved CI ZIP and inner tarball, their separate checksums and matching reports.
+The older local Node 24 archive and its `source-provenance.json` are historical,
+not replacements for the later CI snapshot or a future release candidate.
 
 Read-only inventory found 38 static imports across 32 files (22 production files):
 34 root imports, three `/validation`, one `/plugins/katex`, and ten lazy root
@@ -171,7 +185,8 @@ lockfile, never by inserting the Solid 1 renderer into the Solid 2 reactive tree
 
 ## Fresh Solid 1 baseline
 
-Detached source above, Node 24.19.0 / pnpm 8.15.0, frozen lockfile:
+Historical detached source `c107b89c862505ab51253c0a28505c70a6e39886`,
+Node 24.19.0 / pnpm 8.15.0, frozen lockfile:
 
 - Build and typecheck pass; lint has 0 errors and 425 existing warnings.
 - Spec: 166 tests; CLI: 7; Solid: 2,182 plus 1 existing skip.
@@ -202,11 +217,15 @@ unchanged sanitation and wire fixtures; CI running the new checks.
 
 ## Release prohibition
 
-Do not push a preview tag or dispatch the current publication workflow. It
-matches prerelease tags but stages with `--tag latest`; the GitHub release
-workflow also marks releases as stable. A separate reviewed preview-channel
-change and explicit approval of SHA, version, tarball and dist-tag are required
-before any publication. First delivery is a durable local tarball with SHA-256.
+No publication while paused. Do not push a preview tag or use the legacy stable
+publication workflow: it matches prerelease tags but stages with `--tag latest`,
+and the GitHub release workflow also marks releases as stable.
+
+The separate manual preview channel from merged #35 now exists on main; its
+existence is not authorization to dispatch it. After an explicit resumption,
+revalidate the policy and source/CI/artifact binding, then obtain separate
+approval of SHA, version, tarball and dist-tag. The source PR must stay open.
+See the [channel procedure](https://github.com/theseedship/mcp-ui/blob/feat/solid2-preview/.github/SOLID2_PREVIEW_RELEASE.md).
 
 ## Official references
 

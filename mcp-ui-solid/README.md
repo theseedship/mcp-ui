@@ -2,13 +2,19 @@
 
 ## Solid 2 preview (unpublished)
 
+**Paused on 2026-10-24:** retain `feat/solid2-preview` and the open draft PR #34;
+do not start migration, staging or publication until explicitly resumed.
+The [pause/resumption handoff](./docs/SOLID2-PREVIEW-HANDOFF-2026-10-23.md)
+records the preserved source, checksums, known gaps and restart checklist.
+
 This branch prepares `7.0.0-solid2.0` for a **separate Solid 2 host**. The stable
 Solid 1 application must keep `6.25.1` and its own lockfile. This is not a
 dual-runtime package: required peers are exactly `solid-js@2.0.0-rc.18` and
 `@solidjs/web@2.0.0-rc.18` (Node >=22.12.0). DOM types/imports move to
 `@solidjs/web`; core and draft-store APIs come from `solid-js`.
 
-Use an identified local tarball, not an unpinned branch or the stable npm tag.
+After an explicit resumption, use a newly qualified identified tarball, not an
+unpinned branch or the stable npm tag. Preserved archives are historical evidence.
 The [preview guide](./docs/SOLID2-PREVIEW.md) records the compiler/testing pins,
 optional peers, real-package qualification, consumer integration and rollback
 boundaries. Large-table virtualization uses optional
