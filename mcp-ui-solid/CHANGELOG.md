@@ -20,6 +20,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add migration regressions and a clean-tarball Solid 2 consumer harness. This
   preview is a local artefact and review branch, not an npm release.
 
+### Security — preview development tooling
+
+- Carry the compatible tooling fixes from stable PR #38 into this preview:
+  Vitest and `@vitest/ui` 4.1.12, with `@vitest/mocker` 4.1.12 in the lockfile.
+  Retain Vite 8.3.5 and the exact Solid 2 RC.18 runtime/compiler pair; CLI and
+  Spec use Vite 6.4.5. No preview runtime, schema or package version changes.
+- Runtime Zod remains 3.25.76 with its advisory unresolved. Stable audit counts
+  below are not a fresh audit of this preview lockfile.
+
+## [Unreleased] — stable Solid 1 line
+
+### Security — development tooling only
+
+- Pin Vite 6.4.5, Vitest 4.1.12 and `@vitest/ui` 4.1.12; the lockfile also
+  resolves `@vitest/mocker` 4.1.12. Keep Solid 1 and the existing compiler plugin.
+- Runtime Zod remains 3.25.76 and its advisory remains open. No public schema,
+  runtime dependency or package version change is implied by these tooling fixes.
+  See `docs/SECURITY-DEPENDENCIES.md` for current evidence and the migration gate.
+
 ## [6.25.1] - 2026-10-18
 
 ### Security

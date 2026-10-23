@@ -1,4 +1,100 @@
-# Security dependency notes (6.25.1)
+# Security dependency notes
+
+## 2026-10-24 — Solid 2 preview carry-over of stable PR #38
+
+The preview integrates stable main commit
+`725f862ac76170c40ab796a1d4773b0dbb90be27` (#38), keeping its own runtime and
+compiler contract. Vitest, `@vitest/ui` and the resolved `@vitest/mocker` move
+from 4.1.11 to 4.1.12. CLI and Spec use Vite 6.4.5, while this Solid 2 renderer
+retains Vite 8.3.5 and the exact Solid/core/web/compiler RC.18 pins. The Solid 1
+compiler plugin is not reintroduced. Runtime dependencies, public schemas,
+package versions and publishing workflows are unchanged by this integration;
+Zod remains 3.25.76 and is not remediated.
+
+Fresh `pnpm audit --json` against this merged preview lockfile reports one HIGH
+advisory: runtime Zod `GHSA-mrhx-c7xc-m3w5`. The audit exits 1; this is not a
+clean audit. The seven tooling advisories targeted by #38 are absent. This is
+an independent preview audit, not a preview before/after measurement; the
+comparison in the following section belongs to stable PR #38.
+
+Qualification and archive metadata for the old preview head are historical;
+the merged preview requires fresh CI and artifacts. No Git tag, npm
+stage/publication, dist-tag change or application migration is performed by
+this branch synchronization.
+
+## 2026-10-24 — stable Solid 1 tooling fixes, runtime Zod still unresolved
+
+This follow-up updates development tooling on the stable Solid 1 line. It does
+not migrate Zod, change public schemas, dismiss advisories, or publish a package.
+
+| Dependency | Previous lock | Updated lock | Scope |
+| --- | --- | --- | --- |
+| Vite | 6.4.3 | 6.4.5 | CLI, Spec and Solid development/build/test tooling; stays on major 6, compatible with the existing Solid 1 plugin. |
+| Vitest / `@vitest/ui` / `@vitest/mocker` | 4.1.11 | 4.1.12 | Test tooling; UI is declared only by Solid. |
+
+The exact development pins and pnpm 8.15.0 lockfile update target the five Vite
+advisories ([Windows existence check](https://github.com/advisories/GHSA-587h-7wmj-h5pm),
+[argument escaping](https://github.com/advisories/GHSA-698v-4r3x-3vcv),
+[editor flags](https://github.com/advisories/GHSA-r825-w8mm-5pxw),
+[cross-origin middleware](https://github.com/advisories/GHSA-9jrq-w75r-8gcw),
+[filesystem allowlist](https://github.com/advisories/GHSA-rq7h-c2jc-7f22)) and
+two mocker advisories ([manual registration](https://github.com/advisories/GHSA-qxg6-89mg-rqv8),
+[Windows traversal](https://github.com/advisories/GHSA-xp26-3454-mjgp)).
+
+Fresh full-workspace `pnpm audit --json` comparison on this date:
+
+- Baseline lock: 8 distinct advisories (2 high, 5 moderate, 1 low).
+- Updated lock: **1 high**, runtime Zod
+  [`GHSA-mrhx-c7xc-m3w5`](https://github.com/advisories/GHSA-mrhx-c7xc-m3w5).
+- Audit exit status remains nonzero. This is not a clean security audit.
+- At the stable PR #38 review, GitHub listed 11 open Dependabot alerts,
+  including four occurrences of the same Zod advisory across manifests/lockfile.
+  Removing seven tooling advisory entries
+  from this lock does not by itself close GitHub alerts: merge and rescan are
+  separate evidence, and package publication is separate again.
+
+No runtime dependency, `solid-js` peer, Solid/plugin resolution, package version
+or wire schema changes. In particular Zod remains `3.25.76`; no override forces
+an incompatible Zod 4 resolution under the published `^3.22.4` dependency ranges.
+The only related non-tooling lock change is Picomatch deduplication to an already
+present `4.0.7` through the updated Vite peer graph.
+
+### Why this does not silently switch to `zod/v3` in a Zod 4 package
+
+The advisory lists a fix in 4.6.6. The
+[upstream fix](https://github.com/colinhacks/zod/commit/a0ebf970f2d752e5f58527cd2942ff48be4f46bd)
+changes the v4 collection parsers, not v3. The array, set and map parser classes
+in the published `4.6.7/v3` API are identical to the corresponding `3.25.76`
+classes. Using the newer package with the old subpath is not a remediation.
+
+A bounded local probe used 32 elements, never an OOM test. For array `.max(2)`,
+array `.length(2)` and set `.size(2)`, both old root and new `/v3` performed 32
+element callbacks and produced 33 issues for invalid values. The real v4 API
+stopped before element parsing and produced one issue. Synchronous and async
+results agreed. An unbounded array still visits all elements in every version:
+input and collection limits remain necessary even after migrating.
+
+Spec exports its schema objects and inferred types. A real v4 migration must
+qualify those public APIs, records, optional/default output behavior and errors
+against the [migration guide](https://zod.dev/v4/changelog). It is a separate
+versioning decision, not a safe lockfile-only patch. A workspace-only fork or
+patch would not automatically protect consumers either.
+
+The current Solid entry-point size check also continues into schema validation
+after collecting its size error. Changing that path can reduce local exposure,
+but cannot fix exported Zod 3 schemas called directly by consumers; it must not
+be presented as closing the entire advisory. Runtime Zod remediation remains
+an explicit follow-up before claiming the release is security-ready.
+
+### Relation to Dependabot PR #37
+
+That PR's inspected head `27ed1dc168c8efd8acc523fd3fbd1b87c046b558`
+changes only the lockfile, resolving Zod 4.6.7 against `^3.22.4` manifest
+specifiers. Its CI fails building Spec with 20 `z.record` signature errors.
+This compatible tooling follow-up does not adopt that resolution or claim to
+supersede the remaining Zod work. Reassess any later revision of #37 separately.
+
+## Historical record: 6.25.1, verified 2026-10-18
 
 This is the historical Solid 1 remediation record. The separate Solid 2 preview
 uses the RC.18 runtime/web pair and renderer-owned Seroval 1.7.0; the audit counts
@@ -6,6 +102,9 @@ below are not a fresh audit of that preview. See [preview qualification](./SOLID
 
 Verified on 2026-10-18. This is a dependency-remediation record, not a claim
 that every renderer or consuming application has been security-audited.
+The sections below preserve that historical snapshot. Their former single
+`braces` advisory count is not the current audit result above; its absence from
+the current feed is not a claim that this PR patched it.
 
 ## Updates
 

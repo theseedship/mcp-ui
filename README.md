@@ -16,9 +16,16 @@ A collection of TypeScript packages for building generative, streaming user inte
 
 **6.25.1 (`mcp-ui-solid`):** raises the published DOMPurify security floor and
 updates Solid/Seroval and build-tool dependency resolutions. Includes a real
-server-rendering/serialization compatibility smoke test. One unpatched
-development-tooling advisory remains documented in the
-[security dependency notes](./mcp-ui-solid/docs/SECURITY-DEPENDENCIES.md).
+server-rendering/serialization compatibility smoke test. This is the historical
+release record, not a claim that the current dependency audit is clean.
+
+**Security follow-up (unreleased, 2026-10-24):** stable PR #38 updates Vite to
+6.4.5 and Vitest to 4.1.12; its Solid 1 audit removes seven advisory entries.
+This preview carries Vitest 4.1.12 and the CLI/Spec Vite fixes while retaining
+Vite 8.3.5 and the exact Solid 2 RC.18 toolchain. The stable audit counts are not
+a fresh preview audit. Runtime Zod remains affected and needs a separately
+qualified API/version decision before publication. See the
+[current security dependency notes](./mcp-ui-solid/docs/SECURITY-DEPENDENCIES.md).
 
 **6.25.0 (`mcp-ui-solid`):** inherited CSS theme tokens for prompts, resource
 tables, scratchpads, form controls, autocomplete and chart/graph chrome;
