@@ -263,7 +263,7 @@ function ChartRenderer(props: {
   }
 
   // Guard: if data or datasets missing, show error instead of crashing Chart.js
-  if (!params()?.data?.datasets) {
+  if (!untrack(() => params()?.data?.datasets)) {
     return (
       <div class="p-4 bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-800,#1f2937))] rounded-lg border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))]">
         <p class="text-[color:var(--mcp-ui-danger,var(--color-red-500))] dark:text-[color:var(--mcp-ui-danger,var(--color-red-400))] text-sm">{strings.chartInvalidData}</p>
@@ -271,9 +271,29 @@ function ChartRenderer(props: {
     )
   }
 
-  // Check renderer preference and Chart.js availability
-  createEffect(() => ({ pref: rendererPref(), allowExternal: allowQuickchart(), data: params()?.data, options: params()?.options }),
-    ({ pref, allowExternal }) => {
+  type QuickchartSnapshot = { json: string } | { error: unknown }
+
+  // Serialize while tracking so type and nested data/options changes refresh
+  // the external image. Native-only and non-opted-in hosts need no JSON work.
+  createEffect(() => {
+    const pref = rendererPref(), allowExternal = allowQuickchart(), chartParams = params()
+    const data = chartParams?.data, options = chartParams?.options
+    let configSnapshot: QuickchartSnapshot | undefined
+    if (allowExternal && pref !== 'native' && chartParams) {
+      try {
+        configSnapshot = { json: JSON.stringify({
+          type: chartParams.type,
+          data,
+          options: { ...options, responsive: true, maintainAspectRatio: false },
+        }) }
+      } catch (cause) {
+        // Report serialization failures through the existing active apply
+        // generation rather than throwing from the pure compute phase.
+        configSnapshot = { error: cause }
+      }
+    }
+    return { pref, allowExternal, data, options, configSnapshot }
+  }, ({ pref, allowExternal, configSnapshot }) => {
     let active = true
     void (async () => {
     if (pref === 'iframe') {
@@ -281,7 +301,7 @@ function ChartRenderer(props: {
       // opted in (audit P1.7) — otherwise degrade to a local table.
       setUseNative(false)
       if (allowExternal) {
-        buildIframeUrl()
+        buildIframeUrl(configSnapshot)
       } else {
         signalBlockedFallback(
           "renderer: 'iframe' requires the external quickchart.io service; " +
@@ -310,7 +330,7 @@ function ChartRenderer(props: {
         setIsLoading(false)
       } else if (allowExternal) {
         setUseNative(false)
-        buildIframeUrl()
+        buildIframeUrl(configSnapshot)
       } else {
         setUseNative(false)
         signalBlockedFallback('Chart.js peer is not installed.')
@@ -322,23 +342,11 @@ function ChartRenderer(props: {
     return () => { active = false }
   })
 
-  const buildIframeUrl = () => {
-    const chartParams = params()
-    if (!chartParams) return
-
-    // Build Quickchart URL
-    const chartConfig = {
-      type: chartParams.type,
-      data: chartParams.data,
-      options: {
-        ...chartParams.options,
-        responsive: true,
-        maintainAspectRatio: false,
-      },
-    }
-
+  const buildIframeUrl = (snapshot: QuickchartSnapshot | undefined) => {
+    if (!snapshot) return
+    if ('error' in snapshot) throw snapshot.error
     // Encode chart configuration for Quickchart API
-    const configStr = encodeURIComponent(JSON.stringify(chartConfig))
+    const configStr = encodeURIComponent(snapshot.json)
     const url = `https://quickchart.io/chart?c=${configStr}&width=500&height=300&devicePixelRatio=2`
 
     setIframeUrl(url)
