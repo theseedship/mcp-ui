@@ -392,23 +392,25 @@ test('compiled proof rejects forged ten-key exports rather than trusting their c
   await assert.rejects(() => verifyQualification(dir, TARBALL_SHA));
 });
 
-test('preview workflow is manual/main-only and never checks out untrusted source', async () => {
-  const workflow = await readFile(new URL('../../.github/workflows/publish-solid2-preview.yml', import.meta.url), 'utf8');
-  const triggerBlock = workflow.match(/^on:\n([\s\S]*?)^permissions:/m)?.[1];
-  assert.ok(triggerBlock, 'Explicit workflow triggers are required');
-  assert.deepEqual([...triggerBlock.matchAll(/^  ([a-z_]+):/gm)].map((match) => match[1]), ['workflow_dispatch']);
-  assert.match(triggerBlock, /stage:\n[\s\S]*?type: boolean\n\s+default: false/);
-  const checkouts = workflow.split(/(?=^      - )/m).filter((block) => /uses: actions\/checkout@/.test(block));
-  assert.equal(checkouts.length, 2);
-  for (const block of checkouts) {
-    assert.match(block, /ref: \$\{\{ github\.sha \}\}/);
-    assert.match(block, /persist-credentials: false/);
-    assert.doesNotMatch(block, /inputs\.source_sha|SOURCE_SHA/);
-  }
-  assert.equal((workflow.match(/if: .*github\.repository == 'theseedship\/mcp-ui' && github\.ref == 'refs\/heads\/main'/g) || []).length, 2);
-  assert.ok(workflow.indexOf('verify.mjs request') < workflow.indexOf('gh api '), 'Validate inputs before constructing API paths');
-  assert.doesNotMatch(workflow, /\bnpm publish\b|\bnpm dist-tag\b|\bnpm stage approve\b/);
-});
+for (const newline of ['\n', '\r\n']) {
+  test(`preview workflow is manual/main-only and never checks out untrusted source (${newline === '\n' ? 'LF' : 'CRLF'})`, async () => {
+    const workflow = (await readFile(new URL('../../.github/workflows/publish-solid2-preview.yml', import.meta.url), 'utf8')).replace(/\r?\n/g, newline);
+    const triggerBlock = workflow.match(/^on:\r?\n([\s\S]*?)^permissions:/m)?.[1];
+    assert.ok(triggerBlock, 'Explicit workflow triggers are required');
+    assert.deepEqual([...triggerBlock.matchAll(/^  ([a-z_]+):/gm)].map((match) => match[1]), ['workflow_dispatch']);
+    assert.match(triggerBlock, /stage:\r?\n[\s\S]*?type: boolean\r?\n\s+default: false/);
+    const checkouts = workflow.split(/(?=^      - )/m).filter((block) => /uses: actions\/checkout@/.test(block));
+    assert.equal(checkouts.length, 2);
+    for (const block of checkouts) {
+      assert.match(block, /ref: \$\{\{ github\.sha \}\}/);
+      assert.match(block, /persist-credentials: false/);
+      assert.doesNotMatch(block, /inputs\.source_sha|SOURCE_SHA/);
+    }
+    assert.equal((workflow.match(/if: .*github\.repository == 'theseedship\/mcp-ui' && github\.ref == 'refs\/heads\/main'/g) || []).length, 2);
+    assert.ok(workflow.indexOf('verify.mjs request') < workflow.indexOf('gh api '), 'Validate inputs before constructing API paths');
+    assert.doesNotMatch(workflow, /\bnpm publish\b|\bnpm dist-tag\b|\bnpm stage approve\b/);
+  });
+}
 
 test('only the protected stage step receives the npm token, with fixed bytes/tag and script/config guards', async () => {
   const workflow = await readFile(new URL('../../.github/workflows/publish-solid2-preview.yml', import.meta.url), 'utf8');
