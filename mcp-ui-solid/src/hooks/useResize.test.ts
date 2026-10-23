@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { createSignal, createRoot } from 'solid-js'
+import { createSignal, createRoot, flush } from 'solid-js'
 import { useResize } from './useResize'
 import type { GridPosition } from '../types'
 
@@ -19,11 +19,50 @@ const createMockPointerEvent = (
     clientX,
     clientY,
     preventDefault: vi.fn(),
-    stopPropagation: vi.fn()
+    stopPropagation: vi.fn(),
   } as unknown as PointerEvent
 }
 
 describe('useResize', () => {
+  it('reads live enabled, constraints and grid-column getters during pointer events', () => {
+    const container = document.createElement('div')
+    vi.spyOn(container, 'getBoundingClientRect').mockReturnValue({ width: 1200 } as DOMRect)
+    let dispose!: () => void
+    const { resize, setEnabled, setColumns, setMaximum } = createRoot((cleanup) => {
+      dispose = cleanup
+      const [enabled, setEnabled] = createSignal(false)
+      const [columns, setColumns] = createSignal(12)
+      const [maximum, setMaximum] = createSignal(12)
+      const resize = useResize({
+        componentId: 'dynamic', currentPosition: () => ({ colStart: 1, colSpan: 4 }),
+        onResize: vi.fn(), gridContainer: () => container,
+        get enabled() { return enabled() },
+        get constraints() { return { maxColSpan: maximum() } },
+        get gridColumns() { return columns() },
+      })
+      return { resize, setEnabled, setColumns, setMaximum }
+    })
+    resize.handleResizeStart(createMockPointerEvent('pointerdown', 100), 'right')
+    flush()
+    expect(resize.isResizing()).toBe(false)
+    setEnabled(true)
+    flush()
+    resize.handleResizeStart(createMockPointerEvent('pointerdown', 100), 'right')
+    flush()
+    setColumns(6)
+    setMaximum(5)
+    flush()
+    document.dispatchEvent(new MouseEvent('pointermove', { clientX: 500 }))
+    flush()
+    expect(resize.previewPosition()?.colSpan).toBe(5)
+    setMaximum(4)
+    flush()
+    document.dispatchEvent(new MouseEvent('pointermove', { clientX: 500 }))
+    flush()
+    expect(resize.previewPosition()?.colSpan).toBe(4)
+    dispose()
+  })
+
   beforeEach(() => {
     vi.useFakeTimers()
   })
@@ -41,53 +80,59 @@ describe('useResize', () => {
       createRoot((dispose) => {
         const [position] = createSignal<GridPosition>({
           colStart: 1,
-          colSpan: 6
+          colSpan: 6,
         })
 
         const resize = useResize({
           componentId: 'test-comp',
           currentPosition: position,
           onResize: vi.fn(),
-          enabled: true
+          enabled: true,
         })
 
-        expect(resize.isResizing()).toBe(false)
-        expect(resize.resizeEdge()).toBeNull()
-        expect(resize.previewPosition()).toBeNull()
+        // Exercise imperative events outside the pure root-construction scope.
+        return () => {
+          expect(resize.isResizing()).toBe(false)
+          expect(resize.resizeEdge()).toBeNull()
+          expect(resize.previewPosition()).toBeNull()
 
-        dispose()
-      })
+          dispose()
+        }
+      })()
     })
 
     it('provides getResizeHandleProps for edges', () => {
       createRoot((dispose) => {
         const [position] = createSignal<GridPosition>({
           colStart: 1,
-          colSpan: 6
+          colSpan: 6,
         })
 
         const resize = useResize({
           componentId: 'test-comp',
           currentPosition: position,
           onResize: vi.fn(),
-          enabled: true
+          enabled: true,
         })
 
-        const rightProps = resize.getResizeHandleProps('right')
-        const leftProps = resize.getResizeHandleProps('left')
-        const topProps = resize.getResizeHandleProps('top')
-        const bottomProps = resize.getResizeHandleProps('bottom')
+        // Exercise imperative events outside the pure root-construction scope.
+        return () => {
+          const rightProps = resize.getResizeHandleProps('right')
+          const leftProps = resize.getResizeHandleProps('left')
+          const topProps = resize.getResizeHandleProps('top')
+          const bottomProps = resize.getResizeHandleProps('bottom')
 
-        expect(rightProps['data-resize-edge']).toBe('right')
-        expect(leftProps['data-resize-edge']).toBe('left')
-        expect(topProps['data-resize-edge']).toBe('top')
-        expect(bottomProps['data-resize-edge']).toBe('bottom')
+          expect(rightProps['data-resize-edge']).toBe('right')
+          expect(leftProps['data-resize-edge']).toBe('left')
+          expect(topProps['data-resize-edge']).toBe('top')
+          expect(bottomProps['data-resize-edge']).toBe('bottom')
 
-        expect(rightProps.style.cursor).toBe('ew-resize')
-        expect(topProps.style.cursor).toBe('ns-resize')
+          expect(rightProps.style.cursor).toBe('ew-resize')
+          expect(topProps.style.cursor).toBe('ns-resize')
 
-        dispose()
-      })
+          dispose()
+        }
+      })()
     })
   })
 
@@ -96,51 +141,59 @@ describe('useResize', () => {
       createRoot((dispose) => {
         const [position] = createSignal<GridPosition>({
           colStart: 1,
-          colSpan: 6
+          colSpan: 6,
         })
 
         const resize = useResize({
           componentId: 'test-comp',
           currentPosition: position,
           onResize: vi.fn(),
-          enabled: true
+          enabled: true,
         })
 
-        const event = createMockPointerEvent('pointerdown', 100, 50)
-        resize.handleResizeStart(event, 'right')
+        // Exercise imperative events outside the pure root-construction scope.
+        return () => {
+          const event = createMockPointerEvent('pointerdown', 100, 50)
+          resize.handleResizeStart(event, 'right')
+          flush()
 
-        expect(resize.isResizing()).toBe(true)
-        expect(resize.resizeEdge()).toBe('right')
-        expect(resize.previewPosition()).toEqual({ colStart: 1, colSpan: 6 })
-        expect(event.preventDefault).toHaveBeenCalled()
-        expect(event.stopPropagation).toHaveBeenCalled()
+          expect(resize.isResizing()).toBe(true)
+          expect(resize.resizeEdge()).toBe('right')
+          expect(resize.previewPosition()).toEqual({ colStart: 1, colSpan: 6 })
+          expect(event.preventDefault).toHaveBeenCalled()
+          expect(event.stopPropagation).toHaveBeenCalled()
 
-        dispose()
-      })
+          dispose()
+        }
+      })()
     })
 
     it('does not start resize when disabled', () => {
       createRoot((dispose) => {
         const [position] = createSignal<GridPosition>({
           colStart: 1,
-          colSpan: 6
+          colSpan: 6,
         })
 
         const resize = useResize({
           componentId: 'test-comp',
           currentPosition: position,
           onResize: vi.fn(),
-          enabled: false
+          enabled: false,
         })
 
-        const event = createMockPointerEvent('pointerdown', 100, 50)
-        resize.handleResizeStart(event, 'right')
+        // Exercise imperative events outside the pure root-construction scope.
+        return () => {
+          const event = createMockPointerEvent('pointerdown', 100, 50)
+          resize.handleResizeStart(event, 'right')
+          flush()
 
-        expect(resize.isResizing()).toBe(false)
-        expect(resize.resizeEdge()).toBeNull()
+          expect(resize.isResizing()).toBe(false)
+          expect(resize.resizeEdge()).toBeNull()
 
-        dispose()
-      })
+          dispose()
+        }
+      })()
     })
   })
 
@@ -149,7 +202,7 @@ describe('useResize', () => {
       createRoot((dispose) => {
         const [position] = createSignal<GridPosition>({
           colStart: 1,
-          colSpan: 4
+          colSpan: 4,
         })
 
         const onResize = vi.fn()
@@ -159,21 +212,24 @@ describe('useResize', () => {
           currentPosition: position,
           onResize,
           constraints: { minColSpan: 2, maxColSpan: 8 },
-          enabled: true
+          enabled: true,
         })
 
-        // Verify constraints are applied in the hook configuration
-        expect(resize.isResizing()).toBe(false)
+        // Exercise imperative events outside the pure root-construction scope.
+        return () => {
+          // Verify constraints are applied in the hook configuration
+          expect(resize.isResizing()).toBe(false)
 
-        dispose()
-      })
+          dispose()
+        }
+      })()
     })
 
     it('handles lockHorizontal constraint', () => {
       createRoot((dispose) => {
         const [position] = createSignal<GridPosition>({
           colStart: 1,
-          colSpan: 6
+          colSpan: 6,
         })
 
         const resize = useResize({
@@ -181,18 +237,22 @@ describe('useResize', () => {
           currentPosition: position,
           onResize: vi.fn(),
           constraints: { lockHorizontal: true },
-          enabled: true
+          enabled: true,
         })
 
-        // Start horizontal resize
-        const event = createMockPointerEvent('pointerdown', 100, 50)
-        resize.handleResizeStart(event, 'right')
+        // Exercise imperative events outside the pure root-construction scope.
+        return () => {
+          // Start horizontal resize
+          const event = createMockPointerEvent('pointerdown', 100, 50)
+          resize.handleResizeStart(event, 'right')
+          flush()
 
-        // The initial state should be set correctly
-        expect(resize.isResizing()).toBe(true)
+          // The initial state should be set correctly
+          expect(resize.isResizing()).toBe(true)
 
-        dispose()
-      })
+          dispose()
+        }
+      })()
     })
   })
 
@@ -201,42 +261,50 @@ describe('useResize', () => {
       createRoot((dispose) => {
         const [position] = createSignal<GridPosition>({
           colStart: 1,
-          colSpan: 6
+          colSpan: 6,
         })
 
         const resize = useResize({
           componentId: 'test-comp',
           currentPosition: position,
           onResize: vi.fn(),
-          enabled: true
+          enabled: true,
         })
 
-        resize.handleResizeStart(createMockPointerEvent('pointerdown'), 'right')
-        expect(resize.resizeEdge()).toBe('right')
+        // Exercise imperative events outside the pure root-construction scope.
+        return () => {
+          resize.handleResizeStart(createMockPointerEvent('pointerdown'), 'right')
+          flush()
+          expect(resize.resizeEdge()).toBe('right')
 
-        dispose()
-      })
+          dispose()
+        }
+      })()
     })
 
     it('handles left edge resize start', () => {
       createRoot((dispose) => {
         const [position] = createSignal<GridPosition>({
           colStart: 3,
-          colSpan: 6
+          colSpan: 6,
         })
 
         const resize = useResize({
           componentId: 'test-comp',
           currentPosition: position,
           onResize: vi.fn(),
-          enabled: true
+          enabled: true,
         })
 
-        resize.handleResizeStart(createMockPointerEvent('pointerdown'), 'left')
-        expect(resize.resizeEdge()).toBe('left')
+        // Exercise imperative events outside the pure root-construction scope.
+        return () => {
+          resize.handleResizeStart(createMockPointerEvent('pointerdown'), 'left')
+          flush()
+          expect(resize.resizeEdge()).toBe('left')
 
-        dispose()
-      })
+          dispose()
+        }
+      })()
     })
 
     it('handles top edge resize start', () => {
@@ -245,21 +313,25 @@ describe('useResize', () => {
           colStart: 1,
           colSpan: 6,
           rowStart: 2,
-          rowSpan: 2
+          rowSpan: 2,
         })
 
         const resize = useResize({
           componentId: 'test-comp',
           currentPosition: position,
           onResize: vi.fn(),
-          enabled: true
+          enabled: true,
         })
 
-        resize.handleResizeStart(createMockPointerEvent('pointerdown'), 'top')
-        expect(resize.resizeEdge()).toBe('top')
+        // Exercise imperative events outside the pure root-construction scope.
+        return () => {
+          resize.handleResizeStart(createMockPointerEvent('pointerdown'), 'top')
+          flush()
+          expect(resize.resizeEdge()).toBe('top')
 
-        dispose()
-      })
+          dispose()
+        }
+      })()
     })
 
     it('handles bottom edge resize start', () => {
@@ -268,21 +340,25 @@ describe('useResize', () => {
           colStart: 1,
           colSpan: 6,
           rowStart: 1,
-          rowSpan: 2
+          rowSpan: 2,
         })
 
         const resize = useResize({
           componentId: 'test-comp',
           currentPosition: position,
           onResize: vi.fn(),
-          enabled: true
+          enabled: true,
         })
 
-        resize.handleResizeStart(createMockPointerEvent('pointerdown'), 'bottom')
-        expect(resize.resizeEdge()).toBe('bottom')
+        // Exercise imperative events outside the pure root-construction scope.
+        return () => {
+          resize.handleResizeStart(createMockPointerEvent('pointerdown'), 'bottom')
+          flush()
+          expect(resize.resizeEdge()).toBe('bottom')
 
-        dispose()
-      })
+          dispose()
+        }
+      })()
     })
   })
 
@@ -293,21 +369,24 @@ describe('useResize', () => {
       createRoot((dispose) => {
         const [position] = createSignal<GridPosition>({
           colStart: 1,
-          colSpan: 6
+          colSpan: 6,
         })
 
         const resize = useResize({
           componentId: 'test-comp',
           currentPosition: position,
           onResize: vi.fn(),
-          enabled: true
+          enabled: true,
         })
 
-        // Should not throw
-        expect(() => resize.getResizeHandleProps('right')).not.toThrow()
+        // Exercise imperative events outside the pure root-construction scope.
+        return () => {
+          // Should not throw
+          expect(() => resize.getResizeHandleProps('right')).not.toThrow()
 
-        dispose()
-      })
+          dispose()
+        }
+      })()
     })
   })
 })

@@ -9,13 +9,8 @@
  * `MCP-UI-AUDIT-2026-04-26.md` §M.6 for the full specification.
  */
 
-import {
-  createContext,
-  useContext,
-  onCleanup,
-  type Component,
-  type JSX,
-} from 'solid-js'
+import { createContext, useContext, onCleanup, untrack, type Component } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import {
   createTelemetryDispatcher,
   type TelemetryDispatcher,
@@ -38,7 +33,7 @@ export const MCPUITelemetryProvider: Component<MCPUITelemetryProviderProps> = (p
   // `props.options` are captured at that moment — consumers should treat
   // them as effectively immutable for the Provider's lifetime (re-mount the
   // Provider to swap them).
-  const dispatcher = createTelemetryDispatcher(props.sink, props.options)
+  const dispatcher = untrack(() => createTelemetryDispatcher(props.sink, props.options))
 
   // Force-flush on unmount so any buffered events from the last bufferMs
   // window aren't lost (e.g. tab close, route change with cleanup).
@@ -47,9 +42,9 @@ export const MCPUITelemetryProvider: Component<MCPUITelemetryProviderProps> = (p
   })
 
   return (
-    <MCPUITelemetryContext.Provider value={dispatcher}>
+    <MCPUITelemetryContext value={dispatcher}>
       {props.children}
-    </MCPUITelemetryContext.Provider>
+    </MCPUITelemetryContext>
   )
 }
 
@@ -61,7 +56,7 @@ export const MCPUITelemetryProvider: Component<MCPUITelemetryProviderProps> = (p
  * @example
  * ```tsx
  * const telemetry = useTelemetry()
- * onMount(() => {
+ * onSettled(() => {
  *   telemetry?.dispatch({ type: 'component:mounted', id, componentType, ts: Date.now() })
  * })
  * ```

@@ -1,5 +1,9 @@
 # Security dependency notes (6.25.1)
 
+This is the historical Solid 1 remediation record. The separate Solid 2 preview
+uses the RC.18 runtime/web pair and renderer-owned Seroval 1.7.0; the audit counts
+below are not a fresh audit of that preview. See [preview qualification](./SOLID2-PREVIEW.md).
+
 Verified on 2026-10-18. This is a dependency-remediation record, not a claim
 that every renderer or consuming application has been security-audited.
 

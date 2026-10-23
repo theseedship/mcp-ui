@@ -3,9 +3,11 @@
  * Sprint 3: UX Improvements
  */
 
-import { Component, Show, createSignal, createEffect, onCleanup, JSX } from 'solid-js'
-import { Portal } from 'solid-js/web'
+import { Component, Show, createSignal, createEffect } from "solid-js";
+import type { JSX } from "@solidjs/web";
+import { Portal } from "@solidjs/web";
 import { bindPortalTheme } from '../utils/theme'
+import { focusOverlay, lockOverlayScroll } from '../utils/overlay-lifecycle'
 import type { UIComponent, ModalComponentParams } from '../types'
 import { useMCPUIStrings } from '../context/MCPUIStringsContext'
 
@@ -77,19 +79,21 @@ export const ModalRenderer: Component<ModalRendererProps> = (props) => {
   const strings = useMCPUIStrings()
   const [isVisible, setIsVisible] = createSignal(false)
   let themeAnchor: HTMLSpanElement | undefined
+  let dialogRef: HTMLDivElement | undefined
+  bindPortalTheme(() => dialogRef, () => themeAnchor, isVisible)
 
   const params = () => props.params || (props.component?.params as ModalComponentParams) || {}
 
   // Sync with external isOpen prop
-  createEffect(() => {
-    if (props.isOpen !== undefined) {
-      setIsVisible(props.isOpen)
+  createEffect(() => props.isOpen, (open) => {
+    if (open !== undefined) {
+      setIsVisible(open)
     }
   })
 
   // Handle escape key
-  createEffect(() => {
-    if (!isVisible()) return
+  createEffect(isVisible, (visible) => {
+    if (!visible) return
 
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && params()?.closeOnEscape !== false) {
@@ -98,32 +102,18 @@ export const ModalRenderer: Component<ModalRendererProps> = (props) => {
     }
 
     document.addEventListener('keydown', handleEscape)
-    onCleanup(() => document.removeEventListener('keydown', handleEscape))
+    return () => document.removeEventListener('keydown', handleEscape)
   })
 
   // Prevent body scroll when modal is open
-  createEffect(() => {
-    if (isVisible()) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = ''
-    }
-    onCleanup(() => {
-      document.body.style.overflow = ''
-    })
+  createEffect(isVisible, (visible) => {
+    if (!visible || !dialogRef) return
+    return lockOverlayScroll(dialogRef.ownerDocument)
   })
 
   // Focus trap - focus the modal when it opens
-  createEffect(() => {
-    if (isVisible()) {
-      // Small delay to ensure the modal is rendered
-      setTimeout(() => {
-        const modal = document.querySelector('[role="dialog"]')
-        if (modal instanceof HTMLElement) {
-          modal.focus()
-        }
-      }, 10)
-    }
+  createEffect(isVisible, (visible) => {
+    if (visible && dialogRef) return focusOverlay(dialogRef)
   })
 
   const handleClose = () => {
@@ -159,14 +149,16 @@ export const ModalRenderer: Component<ModalRendererProps> = (props) => {
       <Portal>
         {/* Backdrop */}
         <div
-          ref={(element) => bindPortalTheme(element, () => themeAnchor)}
+          ref={(element) => {
+            dialogRef = element
+          }}
           class="mcp-ui-root fixed inset-0 z-50 flex items-center justify-center p-4 bg-[color:var(--mcp-ui-overlay,color-mix(in_oklab,var(--color-black,#000)_50%,transparent))] backdrop-blur-sm"
           style={{ animation: 'modal-fade-in 0.15s ease-out' }}
           onClick={handleBackdropClick}
           role="dialog"
           aria-modal="true"
           aria-labelledby={params()?.title ? 'modal-title' : undefined}
-          tabIndex={-1}
+          tabindex={-1}
         >
           {/* Modal container */}
           <div

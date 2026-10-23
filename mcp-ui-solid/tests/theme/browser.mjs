@@ -15,7 +15,7 @@ if (!externalRoot) throw new Error('Set MCP_THEME_BROWSER_DEPS to a node_modules
 const externalRequire = createRequire(resolve(externalRoot, '../package.json'))
 const load = async path => import(pathToFileURL(path).href)
 const { createServer } = await load(require.resolve('vite'))
-const { default: solid } = await load(require.resolve('vite-plugin-solid'))
+const { default: solid } = await import('@solidjs/vite-plugin')
 const { default: tailwind } = await load(externalRequire.resolve('@tailwindcss/vite'))
 const playwright = await load(externalRequire.resolve('playwright'))
 const { chromium } = playwright.default || playwright
@@ -25,7 +25,7 @@ const server = await createServer({
   plugins: [{name:'theme-fixture-source',enforce:'pre',transform(code,id) {
     if (id === resolve(here,'fixture.css')) return code.replaceAll('SOURCE_ROOT', sourceRoot)
   }}, solid(), ...tailwind()],
-  resolve: {alias: {'theme-source':sourceRoot, 'tailwindcss':tailwindCss,'@seed-ship/mcp-ui-spec':resolve(sourceRoot,'../../mcp-ui-spec/src/index.ts')}, dedupe:['solid-js']},
+  resolve: {conditions:['browser','development'], alias: {'theme-source':sourceRoot, 'tailwindcss':tailwindCss,'@seed-ship/mcp-ui-spec':resolve(sourceRoot,'../../mcp-ui-spec/src/index.ts')}, dedupe:['solid-js','@solidjs/web','@solidjs/signals']},
   server: {host:'127.0.0.1',port:0,hmr:false,watch:{ignored:['**/baseline-6.24.0.json']},fs:{allow:[resolve(packageRoot,'..'),resolve(sourceRoot,'../..'),externalRoot]}},
 })
 const browser = await chromium.launch({headless:true, ...(process.env.MCP_THEME_CHROMIUM ? {executablePath:process.env.MCP_THEME_CHROMIUM}: {})})
@@ -48,6 +48,11 @@ try {
   console.log(`Theme fixture ready: ${url}`)
   const page=await browser.newPage({viewport:{width:1280,height:1000},colorScheme:'light'})
   page.on('pageerror', error => { errors.push(error.message); console.error('Fixture browser error:',error.message) })
+  page.on('console', message => {
+    if (/\[(?:STRICT_READ_UNTRACKED|NO_OWNER_EFFECT|REACTIVE_WRITE_IN_OWNED_SCOPE|HYDRATION[^\]]*)\]/.test(message.text())) {
+      errors.push(message.text())
+    }
+  })
   page.setDefaultTimeout(15000)
   await page.goto(url,{waitUntil:'domcontentloaded'})
   console.log('Theme fixture loaded')

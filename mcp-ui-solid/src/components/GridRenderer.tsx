@@ -145,7 +145,7 @@ export const GridRenderer: Component<GridRendererProps> = (props) => {
       role="group"
       aria-label={gridLabel()}
     >
-      <div ref={responsiveGrid.ref} class="p-4 h-full" style={gridContainerStyle()} data-mcp-ui-grid data-mcp-ui-stacked={responsiveGrid.stacked()}>
+      <div ref={responsiveGrid.ref} class="p-4 h-full" style={gridContainerStyle()} data-mcp-ui-grid data-mcp-ui-stacked={responsiveGrid.stacked() ? 'true' : 'false'}>
         <For each={params().children}>
           {(child) => (
             <div

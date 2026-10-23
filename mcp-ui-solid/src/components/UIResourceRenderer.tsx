@@ -3,13 +3,14 @@
  * Phase 0: Foundation with iframe sandbox and composite grid support
  */
 
-import { Component, createSignal, Show, For, createMemo, createEffect, onMount, onCleanup } from 'solid-js'
-import { isServer } from 'solid-js/web'
+import { Component, createSignal, createUniqueId, merge, Show, Switch, Match, For, createMemo, createEffect, onSettled, onCleanup, untrack } from 'solid-js'
+import { isServer } from "@solidjs/web";
 import { sanitizeHtml, canSanitizeHtml, SANITIZE_PROFILES } from '../utils/sanitize-html'
 import { escapeHtml } from '../utils/escape-html'
 import { safeUrl } from '../utils/safe-url'
 import { SafeHtml } from './SafeHtml'
 import type { UIComponent, UILayout, RendererError, TableVirtualizeOptions } from '../types'
+import type { TableVirtualizerConfig, TableVirtualizerHandle } from '../utils/solid2-virtualizer'
 import { validateComponent, DEFAULT_RESOURCE_LIMITS, getIframeSandbox, isTrustedIframeDomain } from '../services/validation'
 import { GenerativeUIErrorBoundary } from './GenerativeUIErrorBoundary'
 import { markRenderStart, markRenderEnd, PERF_PREFIX } from '../utils/perf'
@@ -78,12 +79,17 @@ import { parseMathMarkdown } from '../utils/math-markdown'
 function CopyButton(props: { getText: () => string; title?: string; position?: 'top-right' | 'bottom-right' }) {
   const strings = useMCPUIStrings()
   const [copied, setCopied] = createSignal(false)
+  let disposed = false
+  let copyTimer: ReturnType<typeof setTimeout> | undefined
+  onCleanup(() => { disposed = true; clearTimeout(copyTimer) })
 
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(props.getText())
+      if (disposed) return
       setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      clearTimeout(copyTimer)
+      copyTimer = setTimeout(() => setCopied(false), 2000)
     } catch (err) {
       console.error('Failed to copy:', err)
     }
@@ -266,14 +272,15 @@ function ChartRenderer(props: {
   }
 
   // Check renderer preference and Chart.js availability
-  createEffect(async () => {
-    const pref = rendererPref()
-
+  createEffect(() => ({ pref: rendererPref(), allowExternal: allowQuickchart(), data: params()?.data, options: params()?.options }),
+    ({ pref, allowExternal }) => {
+    let active = true
+    void (async () => {
     if (pref === 'iframe') {
       // Explicit external render requested. Honor it only when the host has
       // opted in (audit P1.7) — otherwise degrade to a local table.
       setUseNative(false)
-      if (allowQuickchart()) {
+      if (allowExternal) {
         buildIframeUrl()
       } else {
         signalBlockedFallback(
@@ -284,6 +291,7 @@ function ChartRenderer(props: {
     } else if (pref === 'native') {
       // Force native mode - will show error if Chart.js not available
       const available = await isChartJSAvailable()
+      if (!active) return
       if (available) {
         setUseNative(true)
         setIsLoading(false)
@@ -296,10 +304,11 @@ function ChartRenderer(props: {
       // call out to quickchart.io if the host opted in; otherwise degrade to a
       // local data table instead of an implicit external network call (P1.7).
       const available = await isChartJSAvailable()
+      if (!active) return
       if (available) {
         setUseNative(true)
         setIsLoading(false)
-      } else if (allowQuickchart()) {
+      } else if (allowExternal) {
         setUseNative(false)
         buildIframeUrl()
       } else {
@@ -307,6 +316,10 @@ function ChartRenderer(props: {
         signalBlockedFallback('Chart.js peer is not installed.')
       }
     }
+    })().catch((cause) => {
+      if (active) { setError(String(cause)); setIsLoading(false) }
+    })
+    return () => { active = false }
   })
 
   const buildIframeUrl = () => {
@@ -724,7 +737,7 @@ function TableRenderer(props: {
   onError?: (error: RendererError) => void
   toolbarVariant?: 'hover' | 'always-visible'
 }) {
-  const tableParams = props.component.params as any
+  const tableParams = merge(() => props.component.params as any)
   let scrollContainerRef: HTMLDivElement | undefined
   const strings = useMCPUIStrings()
   const mathRenderer = useMCPUIMath()
@@ -733,7 +746,7 @@ function TableRenderer(props: {
   // is present in params, build a CitationCtx once and thread it through
   // every `renderCellValue` call below. Absent → undefined → cells render
   // as before (regression-safe).
-  const citationCtx: CitationCtx | undefined = tableParams.citationMap
+  const citationCtx = createMemo<CitationCtx | undefined>(() => tableParams.citationMap
     ? {
         map: tableParams.citationMap,
         render: tableParams.citationRender,
@@ -745,7 +758,7 @@ function TableRenderer(props: {
           return strings.citationViewSource
         },
       }
-    : undefined
+    : undefined)
 
   // ─── Client-side sorting (v4.0.5) ────────────────────────
   const allRows = () => tableParams.rows || []
@@ -857,11 +870,12 @@ function TableRenderer(props: {
   const hasServerPagination = () => !!tableParams.pagination
   const needsClientPagination = () =>
     !hasServerPagination() && !showAll() && clientPageSize() > 0 && filteredRows().length > clientPageSize()
-  const [requestedClientPage, setClientPage] = createSignal(tableParams.initialPage ?? 0)
+  // Only the initial seed is a snapshot; subsequent page/data reads stay live.
+  const [requestedClientPage, setClientPage] = createSignal(untrack(() => tableParams.initialPage ?? 0))
   const clientTotalPages = () => needsClientPagination() ? Math.ceil(filteredRows().length / clientPageSize()) : 1
   const clientPage = createMemo(() => Math.max(0, Math.min(requestedClientPage(), clientTotalPages() - 1)))
-  createEffect(() => {
-    if (requestedClientPage() !== clientPage()) setClientPage(clientPage())
+  createEffect(() => [requestedClientPage(), clientPage()] as const, ([requested, current]) => {
+    if (requested !== current) setClientPage(current)
   })
   const clientVisibleRows = createMemo(() => {
     if (showAll() || !needsClientPagination()) return filteredRows()
@@ -890,7 +904,8 @@ function TableRenderer(props: {
   }
 
   // ─── Virtualization ──────────────────────────────────────
-  const [virtualizer, setVirtualizer] = createSignal<any>(null)
+  const [virtualizer, setVirtualizer] = createSignal<TableVirtualizerHandle | null>(null)
+  const [virtualVersion, setVirtualVersion] = createSignal(0)
   const [isVirtualizing, setIsVirtualizing] = createSignal(false)
 
   // Disable virtualization when client pagination is active (they conflict)
@@ -914,33 +929,36 @@ function TableRenderer(props: {
     return {}
   })
 
-  // Initialize virtualizer when needed
-  createEffect(async () => {
-    if (isServer || !shouldVirtualize()) {
-      setIsVirtualizing(false)
-      return
-    }
-
-    try {
-      const { createVirtualizer } = await import('@tanstack/solid-virtual')
-      const opts = virtualizeOpts()
-      const rowHeight = opts.rowHeight ?? 48
-      const overscan = opts.overscan ?? 5
-
-      const v = createVirtualizer({
-        get count() { return tableParams.rows?.length ?? 0 },
-        getScrollElement: () => scrollContainerRef ?? null,
-        estimateSize: () => rowHeight,
-        overscan,
-      })
-
-      setVirtualizer(v)
-      setIsVirtualizing(true)
-    } catch (e) {
-      console.warn('Failed to load @tanstack/solid-virtual, falling back to regular table', e)
-      setIsVirtualizing(false)
-    }
+  // Only the engine is loaded asynchronously; reactive ownership is established
+  // here, never inside an async callback from a Solid 1 adapter.
+  let currentVirtualConfig: TableVirtualizerConfig = { count: 0, rowHeight: 48, overscan: 5 }
+  let activeVirtualizer: TableVirtualizerHandle | undefined
+  createEffect(() => ({ count: filteredRows().length,
+    rowHeight: virtualizeOpts().rowHeight ?? 48, overscan: virtualizeOpts().overscan ?? 5 }), (config) => {
+    currentVirtualConfig = config
+    activeVirtualizer?.update(config)
   })
+  createEffect(() => !isServer && shouldVirtualize(), (enabled) => {
+    if (!enabled) { setVirtualizer(null); setIsVirtualizing(false); return }
+    let active = true
+    let handle: TableVirtualizerHandle | undefined
+    void Promise.all([import('../utils/solid2-virtualizer'), import('@tanstack/virtual-core')])
+    .then(([{ createTableVirtualizer }, core]) => {
+      if (!active) return
+      handle = createTableVirtualizer(() => scrollContainerRef ?? null,
+        currentVirtualConfig, () => { if (active) setVirtualVersion(value => value + 1) }, core)
+      activeVirtualizer = handle
+      setVirtualizer(handle)
+      setIsVirtualizing(true)
+    }).catch((cause) => {
+      if (!active) return
+      console.warn('Failed to load @tanstack/virtual-core, falling back to regular table', cause)
+      setIsVirtualizing(false)
+    })
+    return () => { active = false; handle?.dispose(); activeVirtualizer = undefined }
+  })
+  const virtualItems = () => { virtualVersion(); return virtualizer()?.getVirtualItems() ?? [] }
+  const virtualTotalSize = () => { virtualVersion(); return virtualizer()?.getTotalSize() ?? 0 }
 
   // Cell value extraction helper
   const getCellValue = (row: any, key: string): string => {
@@ -997,11 +1015,12 @@ function TableRenderer(props: {
   }
 
   // Export config
-  const exportable = tableParams.exportable
-  const exportFormats = typeof exportable === 'object' && exportable?.formats
-    ? exportable.formats
+  const tableId = `table-${createUniqueId()}`
+  const exportable = () => tableParams.exportable
+  const exportFormats = () => typeof exportable() === 'object' && exportable()?.formats
+    ? exportable().formats
     : ['csv', 'json']
-  const exportFilename = (typeof exportable === 'object' && exportable?.filename) || `table-${Math.random().toString(36).slice(2, 9)}`
+  const exportFilename = () => (typeof exportable() === 'object' && exportable()?.filename) || tableId
 
   // Export dropdown state
   const [showExportMenu, setShowExportMenu] = createSignal(false)
@@ -1015,15 +1034,14 @@ function TableRenderer(props: {
         navigator.clipboard.writeText(getTableText())
         break
       case 'csv':
-        downloadFile(getTableCSV(), `${exportFilename}.csv`, 'text/csv')
+        downloadFile(getTableCSV(), `${exportFilename()}.csv`, 'text/csv')
         break
       case 'json':
-        downloadFile(getTableJSON(), `${exportFilename}.json`, 'application/json')
+        downloadFile(getTableJSON(), `${exportFilename()}.json`, 'application/json')
         break
     }
   }
 
-  const tableId = `table-${Math.random().toString(36).slice(2, 9)}`
 
   // v6.24.0 — whether ANY declared cell of ANY row is missing. Deliberately
   // computed on all rows (not the current page / filter) so the legend does not
@@ -1046,7 +1064,7 @@ function TableRenderer(props: {
                     when={!isMissingCellValue(row[column.key])}
                     fallback={<MissingValueMark />}
                   >
-                    <SafeHtml html={() => highlightQuery(renderCellValue(row[column.key], citationCtx, mathRenderer()), debouncedQuery())} />
+                    <SafeHtml html={() => highlightQuery(renderCellValue(row[column.key], citationCtx(), mathRenderer()), debouncedQuery())} />
                   </Show>
                 </td>
               )}
@@ -1059,27 +1077,19 @@ function TableRenderer(props: {
 
   // Virtualized table body
   const VirtualizedTableBody = () => {
-    const v = virtualizer()
-    if (!v) return null
-
-    const items = v.getVirtualItems()
-    const totalSize = v.getTotalSize()
-    const opts = virtualizeOpts()
-    const rowHeight = opts.rowHeight ?? 48
-
     return (
       <tbody
         class="bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-800,#1f2937))] relative"
-        style={{ height: `${totalSize}px` }}
+        style={{ height: `${virtualTotalSize()}px` }}
       >
-        <For each={items}>
+        <For each={virtualItems()}>
           {(virtualRow: any) => {
-            const row = tableParams.rows[virtualRow.index]
+            const row = () => filteredRows()[virtualRow.index]
             return (
               <tr
                 class={`hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-50,#f9fafb))] dark:hover:bg-[color:var(--mcp-ui-surface-hover,color-mix(in_oklab,var(--color-gray-700,#374151)_50%,transparent))] transition-colors absolute left-0 right-0 ${virtualRow.index % 2 === 0 ? 'bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-800,#1f2937))]' : 'bg-[color:var(--mcp-ui-surface-muted,color-mix(in_oklab,var(--color-gray-50,#f9fafb)_30%,transparent))] dark:bg-[color:var(--mcp-ui-surface,color-mix(in_oklab,var(--color-gray-800,#1f2937)_50%,transparent))]'}`}
                 style={{
-                  height: `${rowHeight}px`,
+                  height: `${virtualRow.size}px`,
                   transform: `translateY(${virtualRow.start}px)`
                 }}
               >
@@ -1087,10 +1097,10 @@ function TableRenderer(props: {
                   {(column: any) => (
                     <td class="px-6 py-4 text-sm text-[color:var(--mcp-ui-fg,var(--color-gray-700,#374151))] dark:text-[color:var(--mcp-ui-fg,var(--color-gray-200,#e5e7eb))] whitespace-normal break-words leading-relaxed first:pl-6 last:pr-6">
                       <Show
-                        when={!isMissingCellValue(row[column.key])}
+                        when={!isMissingCellValue(row()?.[column.key])}
                         fallback={<MissingValueMark />}
                       >
-                        <SafeHtml html={() => highlightQuery(renderCellValue(row[column.key], citationCtx, mathRenderer()), debouncedQuery())} />
+                        <SafeHtml html={() => highlightQuery(renderCellValue(row()?.[column.key], citationCtx(), mathRenderer()), debouncedQuery())} />
                       </Show>
                     </td>
                   )}
@@ -1108,7 +1118,7 @@ function TableRenderer(props: {
       <div class={`relative w-full bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-800,#1f2937))] rounded-lg shadow-[var(--mcp-ui-shadow,var(--shadow-sm))] border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))] overflow-hidden group ${
         isExpanded() ? 'flex-1 min-h-0 flex flex-col' : 'h-full'
       } ${tableParams.className || ''}`}>
-        <Show when={exportable} fallback={<CopyButton getText={getTableCSV} title={strings.tableCopyCsv} position="top-right" />}>
+        <Show when={exportable()} fallback={<CopyButton getText={getTableCSV} title={strings.tableCopyCsv} position="top-right" />}>
           <div class="absolute right-10 top-2 z-10">
             <button
               ref={exportTriggerRef}
@@ -1117,7 +1127,7 @@ function TableRenderer(props: {
               title={strings.tableExport}
               aria-label={strings.tableExport}
               aria-haspopup="menu"
-              aria-expanded={showExportMenu()}
+              aria-expanded={showExportMenu() ? 'true' : 'false'}
             >
               <svg class="w-3 h-3 text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -1129,13 +1139,13 @@ function TableRenderer(props: {
               trigger={exportTriggerRef}
               width={144}
             >
-              <Show when={(exportFormats as string[]).includes('tsv')}>
+              <Show when={(exportFormats() as string[]).includes('tsv')}>
                 <button onClick={() => handleExport('tsv')} class="w-full text-left px-3 py-1.5 hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-100,#f3f4f6))] dark:hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-700,#374151))] text-[color:var(--mcp-ui-fg,var(--color-gray-700,#374151))] dark:text-[color:var(--mcp-ui-fg,var(--color-gray-300,#d1d5db))]">{strings.tableCopyTsv}</button>
               </Show>
-              <Show when={(exportFormats as string[]).includes('csv')}>
+              <Show when={(exportFormats() as string[]).includes('csv')}>
                 <button onClick={() => handleExport('csv')} class="w-full text-left px-3 py-1.5 hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-100,#f3f4f6))] dark:hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-700,#374151))] text-[color:var(--mcp-ui-fg,var(--color-gray-700,#374151))] dark:text-[color:var(--mcp-ui-fg,var(--color-gray-300,#d1d5db))]">{strings.tableDownloadCsv}</button>
               </Show>
-              <Show when={(exportFormats as string[]).includes('json')}>
+              <Show when={(exportFormats() as string[]).includes('json')}>
                 <button onClick={() => handleExport('json')} class="w-full text-left px-3 py-1.5 hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-100,#f3f4f6))] dark:hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-700,#374151))] text-[color:var(--mcp-ui-fg,var(--color-gray-700,#374151))] dark:text-[color:var(--mcp-ui-fg,var(--color-gray-300,#d1d5db))]">{strings.tableDownloadJson}</button>
               </Show>
             </PortalDropdownMenu>
@@ -1224,17 +1234,16 @@ function TableRenderer(props: {
                         scope="col"
                         class="px-6 py-3 text-left text-xs font-semibold text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))] uppercase tracking-wider border-b border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))] first:pl-6 last:pr-6 bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-100,#f3f4f6))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-900,#111827))] cursor-pointer select-none hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-200,#e5e7eb))] dark:hover:bg-[color:var(--mcp-ui-surface-hover,var(--color-gray-800,#1f2937))] transition-colors"
                         style={column.width ? { width: column.width } : {}}
-                        on:click={() => handleSort(column.key)}
+                        onClick={() => handleSort(column.key)}
                         title={formatMCPUIString(strings.sortBy, { column: column.label })}
                       >
                         <span class="inline-flex items-center gap-1">
                           {column.label}
                           <span
-                            class="text-[10px] leading-none"
-                            classList={{
+                            class={['text-[10px] leading-none', {
                               'opacity-30': sortKey() !== column.key,
                               'opacity-100 text-[color:var(--mcp-ui-accent,var(--color-blue-600))] dark:text-[color:var(--mcp-ui-accent,var(--color-blue-400))]': sortKey() === column.key,
-                            }}
+                            }]}
                           >
                             {sortIndicator(column.key)}
                           </span>
@@ -1328,7 +1337,7 @@ function TableRenderer(props: {
  */
 function MetricRenderer(props: { component: UIComponent }) {
   const strings = useMCPUIStrings()
-  const metricParams = props.component.params as any
+  const metricParams = merge(() => props.component.params as any)
 
   // Generate copyable text for metric
   const getMetricText = () => {
@@ -1414,7 +1423,7 @@ function extractImageFromMarkdown(
 function TextRenderer(props: { component: UIComponent }) {
   const strings = useMCPUIStrings()
   const mathRenderer = useMCPUIMath()
-  const textParams = props.component.params as any
+  const textParams = merge(() => props.component.params as any)
 
   // Check if this is an image markdown that should be rendered as image
   // component. Both URLs come from LLM-authored markdown and are bound into
@@ -1516,7 +1525,7 @@ function TextRenderer(props: { component: UIComponent }) {
 function IframeRenderer(props: { component: UIComponent }) {
   const strings = useMCPUIStrings()
   const config = useMCPUIConfig()
-  const params = props.component.params as any
+  const params = merge(() => props.component.params as any)
   // v6.21.0 — the host's custom trusted hosts now reach BOTH the sandbox (they
   // used not to: `getIframeSandbox(params.url)` was called with no options) and
   // the `credentialless` decision.
@@ -1534,12 +1543,8 @@ function IframeRenderer(props: { component: UIComponent }) {
         class="w-full border-0 flex-1"
         style={`height: ${params.height || '400px'}; min-height: 300px;`}
         sandbox={getIframeSandbox(params.url, trustOptions())}
-        // `attr:` is required: `credentialless` is in dom-expressions'
-        // `Properties` set, so a plain `credentialless={…}` compiles to a JS
-        // property assignment and never reaches the DOM as an attribute.
-        // `true | undefined` keeps it a BOOLEAN attribute — bare in SSR
-        // markup, removed (not `="false"`) when it does not apply.
-        attr:credentialless={
+        // Solid 2 owns this standard boolean attribute in the web renderer.
+        credentialless={
           shouldSetCredentialless(params.url, config, {
             // This iframe's sandbox never carries `allow-same-origin` for an
             // untrusted host, so it already runs without cookies.
@@ -1558,7 +1563,7 @@ function IframeRenderer(props: { component: UIComponent }) {
  */
 function ImageRenderer(props: { component: UIComponent }) {
   const strings = useMCPUIStrings()
-  const params = props.component.params as any
+  const params = merge(() => props.component.params as any)
 
   return (
     <figure class={`w-full h-full bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface,var(--color-gray-800,#1f2937))] rounded-lg shadow-[var(--mcp-ui-shadow,var(--shadow-sm))] border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-700,#374151))] overflow-hidden flex flex-col ${params.className || ''}`}>
@@ -1594,7 +1599,7 @@ function ImageRenderer(props: { component: UIComponent }) {
  */
 function LinkRenderer(props: { component: UIComponent }) {
   const strings = useMCPUIStrings()
-  const params = props.component.params as any
+  const params = merge(() => props.component.params as any)
 
   return (
     <a
@@ -1663,7 +1668,7 @@ function ComponentRenderer(props: {
 }) {
   // Performance marks — visible in Chrome DevTools "Performance" panel under
   // user timings. Always-on, SSR-safe (see utils/perf.ts).
-  markRenderStart(props.component.id)
+  untrack(() => markRenderStart(props.component.id))
 
   // Telemetry sink (B.5 — v5.6.0). null when no MCPUITelemetryProvider is
   // mounted above; null-checked at every dispatch site so apps that don't
@@ -1672,7 +1677,7 @@ function ComponentRenderer(props: {
   const strings = useMCPUIStrings()
   const componentConfig = useMCPUIConfig()
 
-  onMount(() => {
+  onSettled(() => {
     markRenderEnd(props.component.id)
     if (telemetry) {
       const ts = Date.now()
@@ -1715,16 +1720,18 @@ function ComponentRenderer(props: {
   // Validate component before rendering. The host's allow-list extension
   // (v6.21.0) has to reach validation too: an unlisted host is replaced by the
   // validation card before any renderer runs.
-  const validation = validateComponent(props.component, {
+  const validation = createMemo(() => validateComponent(props.component, {
     iframePolicy: componentConfig.iframePolicy,
     customIframeDomains: componentConfig.customIframeDomains,
-  })
-  if (!validation.valid) {
-    props.onError?.({
+  }))
+  const validationReport = () => ({ result: validation(), component: props.component, onError: props.onError })
+  const reportValidationFailure = ({ result, component, onError }: ReturnType<typeof validationReport>) => {
+    if (result.valid) return
+    onError?.({
       type: 'validation',
       message: 'Component validation failed',
-      componentId: props.component.id,
-      details: validation.errors,
+      componentId: component.id,
+      details: result.errors,
     })
 
     // Privacy: only counts + first error code, NO error messages or paths
@@ -1732,22 +1739,31 @@ function ComponentRenderer(props: {
     if (telemetry) {
       telemetry.dispatch({
         type: 'validation:failed',
-        id: props.component.id,
-        componentType: props.component.type,
-        errorCount: validation.errors?.length ?? 0,
-        firstErrorCode: validation.errors?.[0]?.code ?? null,
+        id: component.id,
+        componentType: component.type,
+        errorCount: result.errors?.length ?? 0,
+        firstErrorCode: result.errors?.[0]?.code ?? null,
         ts: Date.now(),
       })
     }
+  }
+  // The stable API reports invalid SSR payloads as well. Client callbacks run
+  // after commit so hosts can safely update their own reactive state.
+  if (isServer) untrack(() => reportValidationFailure(validationReport()))
+  // Both graphs must allocate this primitive in the same position, even
+  // though the server intentionally skips its imperative effect phase.
+  createEffect(validationReport, reportValidationFailure)
 
+  const renderValidationFailure = () => {
+    const result = validation()
     const mode: ValidationErrorMode = props.errorMode ?? 'block'
-    const firstError = validation.errors?.[0]?.message || strings.validationUnknownError
+    const firstError = result.errors?.[0]?.message || strings.validationUnknownError
 
     // P1.6 — an UNKNOWN component type must never produce a silent blank,
     // whatever the errorMode. The renderer has no branch for it, so even
     // `silent` would otherwise render nothing. Always surface a visible
     // "Unsupported component type" notice + a render:error telemetry signal.
-    if (validation.errors?.some((e) => e.code === 'UNKNOWN_COMPONENT_TYPE')) {
+    if (result.errors?.some((e) => e.code === 'UNKNOWN_COMPONENT_TYPE')) {
       return <UnsupportedComponentFallback component={props.component} />
     }
 
@@ -1796,6 +1812,7 @@ function ComponentRenderer(props: {
 
   // Render based on component type with enhanced error boundary
   return (
+    <Show when={validation().valid} fallback={renderValidationFailure()}>
     <GenerativeUIErrorBoundary
       componentId={props.component.id}
       componentType={props.component.type}
@@ -1874,6 +1891,7 @@ function ComponentRenderer(props: {
         <UnsupportedComponentFallback component={props.component} />
       </Show>
     </GenerativeUIErrorBoundary>
+    </Show>
   )
 }
 
@@ -1904,7 +1922,7 @@ function UnsupportedComponentFallback(props: { component: UIComponent }) {
  * Refactored in Phase 5.0 to use useAction hook for Context-based execution
  */
 function ActionRenderer(props: { component: UIComponent }) {
-  const params = props.component.params as any
+  const params = merge(() => props.component.params as any)
   const { execute, executeAction, isExecuting } = useAction()
   const telemetry = useTelemetry()
 
@@ -1975,7 +1993,7 @@ function ActionRenderer(props: { component: UIComponent }) {
     <button
       type="button"
       disabled={isDisabled()}
-      aria-busy={isExecuting() && isExecutable()}
+      aria-busy={isExecuting() && isExecutable() ? 'true' : 'false'}
       aria-label={params.ariaLabel || params.label}
       class={`inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[color:var(--mcp-ui-focus,var(--color-blue-500))]
         ${params.variant === 'primary' ? 'bg-[color:var(--mcp-ui-accent,var(--color-blue-600))] text-[color:var(--mcp-ui-accent-fg,var(--color-white,#fff))] hover:bg-[color:var(--mcp-ui-accent-hover,var(--color-blue-700))] shadow-[var(--mcp-ui-shadow,var(--shadow-sm))]' :
@@ -2008,7 +2026,7 @@ function ErrorCardRenderer(props: { error: any }) {
   // The timestamp depends on the viewer's time zone, which the server cannot
   // know. Render it only after mount so SSR and hydration produce the same markup.
   const [mounted, setMounted] = createSignal(false)
-  onMount(() => setMounted(true))
+  onSettled(() => { setMounted(true) })
   const getErrorText = () => {
     return formatMCPUIString(strings.errorCopyText, {
       tool: props.error.tool || strings.errorUnknownTool,
@@ -2117,16 +2135,14 @@ function UIResourceHtmlRenderer(props: { resource: any }) {
  * Main UIResourceRenderer component
  */
 export const UIResourceRenderer: Component<UIResourceRendererProps> = (props) => {
-  // Handle error responses early (Sprint 9b fix)
-  if (isErrorResponse(props.content)) {
-    return <ErrorCardRenderer error={props.content} />
-  }
+  return <Switch>
+    <Match when={isErrorResponse(props.content)}><ErrorCardRenderer error={props.content} /></Match>
+    <Match when={isUIResource(props.content)}><UIResourceHtmlRenderer resource={props.content} /></Match>
+    <Match when={true}><LayoutResourceRenderer {...props} /></Match>
+  </Switch>
+}
 
-  // Handle UIResource (raw HTML) - skip grid validation (Sprint 9c fix)
-  if (isUIResource(props.content)) {
-    return <UIResourceHtmlRenderer resource={props.content} />
-  }
-
+const LayoutResourceRenderer: Component<UIResourceRendererProps> = (props) => {
   const layout = () => {
     // Check if content is a UIComponent (non-composite) vs UILayout (composite)
     if ('type' in props.content && (props.content as any).type !== 'composite') {
@@ -2203,11 +2219,11 @@ export const UIResourceRenderer: Component<UIResourceRendererProps> = (props) =>
   // `isLayoutContent` distinguishes a real composite/layout payload from
   // the synthetic single-component wrapping above. Drives whether the
   // outer wrapper carries `data-mcp-ui-layout-id` or `data-mcp-ui-component-id`.
-  const isLayoutContent =
+  const isLayoutContent = () =>
     !('type' in props.content) || (props.content as { type?: string }).type === 'composite'
   const outerKey = createMemo(() => getUiResourceStableKey(props.content))
 
-  onMount(() => {
+  onSettled(() => {
     const key = outerKey()
     const info = _registerMount(key)
     if (info.count > 1) {
@@ -2232,11 +2248,11 @@ export const UIResourceRenderer: Component<UIResourceRendererProps> = (props) =>
     <RenderProvider renderComponent={renderComponent}>
       <div
         class={`mcp-ui-root [background-color:var(--mcp-ui-bg)] w-full ${props.class || ''}`}
-        {...(isLayoutContent
+        {...(isLayoutContent()
           ? { 'data-mcp-ui-layout-id': outerKey() }
           : { 'data-mcp-ui-component-id': outerKey() })}
       >
-        <div ref={responsiveGrid.ref} class="grid gap-4" style={gridContainerStyle()} data-mcp-ui-grid data-mcp-ui-stacked={responsiveGrid.stacked()}>
+        <div ref={responsiveGrid.ref} class="grid gap-4" style={gridContainerStyle()} data-mcp-ui-grid data-mcp-ui-stacked={responsiveGrid.stacked() ? 'true' : 'false'}>
           <For each={layout().components}>
             {(component) => (
               <div

@@ -10,8 +10,8 @@
  * - User-friendly fallback UI
  */
 
-import { Component, ErrorBoundary, createSignal, Show, onMount } from 'solid-js'
-import { isServer } from 'solid-js/web'
+import { Component, Errored, createSignal, createEffect, Show, onSettled } from 'solid-js'
+import { isServer } from "@solidjs/web";
 import { createLogger } from '../utils/logger'
 import type { RendererError, ComponentType } from '../types'
 import { useTelemetry } from '../context/MCPUITelemetryContext'
@@ -122,7 +122,7 @@ export const GenerativeUIErrorBoundary: Component<GenerativeUIErrorBoundaryProps
   const telemetry = useTelemetry()
 
   // SSR-safe: Initialize performance timing on client only
-  onMount(() => {
+  onSettled(() => {
     if (typeof performance !== 'undefined') {
       setRenderStartTime(performance.now())
     }
@@ -198,24 +198,23 @@ export const GenerativeUIErrorBoundary: Component<GenerativeUIErrorBoundaryProps
   }
 
   return (
-    <ErrorBoundary
-      fallback={(error) => {
-        handleError(error)
+    <Errored
+      fallback={(error, reset) => {
+        createEffect(error, value => handleError(value as Error))
+        const retry = () => { handleRetry(); reset() }
 
-        // Use custom fallback if provided
-        if (props.fallback) {
-          return props.fallback(error, props.allowRetry ? handleRetry : undefined)
-        }
-
-        // Default fallback
         return (
-          <DefaultErrorFallback
-            error={error}
-            componentId={props.componentId}
-            componentType={props.componentType}
-            allowRetry={props.allowRetry}
-            onRetry={handleRetry}
-          />
+          <Show when={props.fallback} fallback={
+            <DefaultErrorFallback
+              error={error() as Error}
+              componentId={props.componentId}
+              componentType={props.componentType}
+              allowRetry={props.allowRetry}
+              onRetry={retry}
+            />
+          }>
+            {fallback => fallback()(error() as Error, props.allowRetry ? retry : undefined)}
+          </Show>
         )
       }}
     >
@@ -224,7 +223,7 @@ export const GenerativeUIErrorBoundary: Component<GenerativeUIErrorBoundaryProps
         void retryKey() // Access signal to track changes
         return <>{props.children}</>
       })()}
-    </ErrorBoundary>
+    </Errored>
   )
 }
 
@@ -239,13 +238,13 @@ export function withPerformanceMonitoring<P extends { componentId: string; compo
     const [renderStart, setRenderStart] = createSignal(0)
 
     // Log render start
-    logger.debug(`Component render start: ${props.componentType}`, {
+    onSettled(() => logger.debug(`Component render start: ${props.componentType}`, {
       componentId: props.componentId,
       timestamp: new Date().toISOString(),
-    })
+    }))
 
     // SSR-safe: Measure on mount completion (client-side only)
-    onMount(() => {
+    onSettled(() => {
       if (typeof performance !== 'undefined') {
         setRenderStart(performance.now())
 
@@ -282,7 +281,7 @@ export function useComponentTelemetry(componentId: string, componentType: string
   const [mountTime, setMountTime] = createSignal(0)
 
   // SSR-safe: Initialize mount time on client only
-  onMount(() => {
+  onSettled(() => {
     if (typeof performance !== 'undefined') {
       setMountTime(performance.now())
     }

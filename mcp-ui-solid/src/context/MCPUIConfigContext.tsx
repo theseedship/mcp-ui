@@ -36,7 +36,8 @@
  * ```
  */
 
-import { createContext, mergeProps, useContext, type JSX } from 'solid-js'
+import { createContext, merge, useContext } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import type { IframePolicy } from '../types'
 
 /**
@@ -64,7 +65,7 @@ import type { IframePolicy } from '../types'
  *
  * - `<MCPUIConfigProvider config={…}>` takes `MCPUIConfigInput` — name that
  *   type for a partial you build, and it merges the rest;
- * - `<MCPUIConfigContext.Provider value={…}>` takes the RESOLVED
+ * - `<MCPUIConfigContext value={…}>` takes the RESOLVED
  *   `MCPUIConfig`, because that context is read as well as written, so a
  *   direct provider hands over `{ ...DEFAULT_MCPUI_CONFIG, ...mine }`;
  * - anything you RECEIVE is `MCPUIConfig`, which is what
@@ -203,7 +204,10 @@ export const MCPUIConfigContext = createContext<MCPUIConfig>(DEFAULT_MCPUI_CONFI
  * outright when no `<MCPUIConfigProvider>` is mounted above.
  */
 export function useMCPUIConfig(): MCPUIConfig {
-  return mergeProps(DEFAULT_MCPUI_CONFIG, useContext(MCPUIConfigContext))
+  const context = useContext(MCPUIConfigContext)
+  return merge(DEFAULT_MCPUI_CONFIG, () => Object.fromEntries(
+    Object.entries(context ?? {}).filter(([, value]) => value !== undefined),
+  ) as Partial<MCPUIConfig>)
 }
 
 export interface MCPUIConfigProviderProps {
@@ -221,11 +225,13 @@ export interface MCPUIConfigProviderProps {
  */
 export function MCPUIConfigProvider(props: MCPUIConfigProviderProps): JSX.Element {
   // The function source keeps replacement `config` objects reactive while
-  // mergeProps fills any omitted key without taking a one-time snapshot.
-  const value = mergeProps(DEFAULT_MCPUI_CONFIG, () => props.config)
+  // Undefined overrides retain the default, while `merge` keeps replacements reactive.
+  const value = merge(DEFAULT_MCPUI_CONFIG, () => Object.fromEntries(
+    Object.entries(props.config ?? {}).filter(([, value]) => value !== undefined),
+  ) as Partial<MCPUIConfig>)
   return (
-    <MCPUIConfigContext.Provider value={value}>
+    <MCPUIConfigContext value={value}>
       {props.children}
-    </MCPUIConfigContext.Provider>
+    </MCPUIConfigContext>
   )
 }

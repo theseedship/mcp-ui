@@ -5,7 +5,7 @@
  * @experimental
  */
 
-import { Component, Show, For, Switch, Match, createSignal, createEffect, onCleanup } from 'solid-js'
+import { Component, Show, For, Switch, Match, createSignal, createEffect, onCleanup, onSettled, untrack, deep } from 'solid-js'
 import type { ScratchpadState, ScratchpadSection, VerifiedTextContent, DataPreviewContent, MapSectionContent, AgentCardContent, SplitStepperContent, AgentHandoffContent, BriefingDiffContent } from '../types/chat-bus'
 import type { FormFieldParams, ChartComponentParams } from '../types'
 import { FormFieldRenderer } from './FormFieldRenderer'
@@ -103,27 +103,27 @@ export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
     complete: [],
     error: ['processing', 'ready', 'waiting_human'],
   }
-  let prevStatus = props.state.status
+  let prevStatus = untrack(() => props.state.status)
 
   // Etape 1: create log
-  console.info(
+  onSettled(() => console.info(
     `%c[MCP-UI] Scratchpad created%c id=${props.state.id} sections=${props.state.sections?.length || 0} status=${props.state.status}${props.pinned ? ' pinned=true' : ''}`,
     'color: #10b981; font-weight: bold', 'color: inherit'
-  )
+  ))
 
   // Etape 3: status transitions + Etape 4: auto-close info
-  createEffect(() => {
-    const newStatus = props.state.status
+  createEffect(() => ({ status: props.state.status, id: props.state.id, delay: props.autoCloseDelay }),
+    ({ status: newStatus, id, delay }) => {
     if (newStatus !== prevStatus) {
-      console.info(`%c[MCP-UI] Scratchpad status%c ${props.state.id}: ${prevStatus} → ${newStatus}`, 'color: #3b82f6; font-weight: bold', 'color: inherit')
+      console.info(`%c[MCP-UI] Scratchpad status%c ${id}: ${prevStatus} → ${newStatus}`, 'color: #3b82f6; font-weight: bold', 'color: inherit')
       if (!VALID_TRANSITIONS[prevStatus]?.includes(newStatus)) {
-        console.warn(`[MCP-UI] Scratchpad ${props.state.id}: unusual transition ${prevStatus} → ${newStatus}. Expected: ${VALID_TRANSITIONS[prevStatus]?.join(', ') || 'none (terminal)'}`)
+        console.warn(`[MCP-UI] Scratchpad ${id}: unusual transition ${prevStatus} → ${newStatus}. Expected: ${VALID_TRANSITIONS[prevStatus]?.join(', ') || 'none (terminal)'}`)
       }
       prevStatus = newStatus
     }
     // Etape 4
-    if (props.autoCloseDelay && newStatus !== 'complete') {
-      console.info(`[MCP-UI] Scratchpad ${props.state.id}: autoCloseDelay=${props.autoCloseDelay}ms but status='${newStatus}' — auto-close will NOT trigger.`)
+    if (delay && newStatus !== 'complete') {
+      console.info(`[MCP-UI] Scratchpad ${id}: autoCloseDelay=${delay}ms but status='${newStatus}' — auto-close will NOT trigger.`)
     }
   })
 
@@ -147,41 +147,44 @@ export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
   }
 
   // Debug: log state changes
-  createEffect(() => {
-    debugLog('state', { status: props.state.status, sections: props.state.sections?.length, filters: Object.keys(props.state.filters || {}), turn: props.state.turn })
-  })
+  createEffect(() => ({ status: props.state.status, sections: props.state.sections?.length,
+    filters: Object.keys(props.state.filters || {}), turn: props.state.turn }),
+    state => debugLog('state', state))
 
   // Auto-close on complete (unless pinned)
-  createEffect(() => {
-    if (props.state.status === 'complete' && props.autoCloseDelay && !props.pinned) {
-      const timer = setTimeout(() => props.onClose?.(), props.autoCloseDelay)
-      onCleanup(() => clearTimeout(timer))
-    }
+  createEffect(() => ({ status: props.state.status, delay: props.autoCloseDelay,
+    pinned: props.pinned, close: props.onClose, loading: loadingAction() }),
+    ({ status, delay, pinned, close, loading }) => {
     // Clear loading action when server responds
-    if (props.state.status !== 'processing' && loadingAction()) {
+    if (status !== 'processing' && loading) {
       setLoadingAction(null)
+    }
+    if (status === 'complete' && delay && !pinned) {
+      const timer = setTimeout(() => close?.(), delay)
+      return () => clearTimeout(timer)
     }
   })
 
   // Preview auto-refresh when filters change
-  createEffect(() => {
-    const endpoint = props.state.previewEndpoint
+  createEffect(() => ({ endpoint: props.state.previewEndpoint, filters: deep(props.state.filters ?? {}),
+    method: props.state.previewMethod, headers: deep(props.state.previewHeaders ?? {}), debounce: props.state.previewDebounce }),
+    ({ endpoint, filters, method, headers, debounce }) => {
     if (!endpoint) return
-    const filters = props.state.filters
     if (!filters || Object.keys(filters).length === 0) return
 
     if (previewTimer) clearTimeout(previewTimer)
     previewTimer = setTimeout(async () => {
       try {
         const res = await fetch(endpoint, {
-          method: props.state.previewMethod || 'POST',
-          headers: { 'Content-Type': 'application/json', ...props.state.previewHeaders },
+          method: method || 'POST',
+          headers: { 'Content-Type': 'application/json', ...headers },
           credentials: 'include',
           body: JSON.stringify({ filters }),
         })
         if (res.ok) setLocalPreview(await res.json())
       } catch { /* ignore */ }
-    }, props.state.previewDebounce || 500)
+    }, debounce || 500)
+    return () => { if (previewTimer) clearTimeout(previewTimer) }
   })
 
   onCleanup(() => { if (previewTimer) clearTimeout(previewTimer) })
@@ -577,11 +580,10 @@ const EmbeddedFormSection: Component<{
     return initial
   }
 
-  const [formData, setFormData] = createSignal<Record<string, any>>(buildInitial())
+  const [formData, setFormData] = createSignal<Record<string, any>>(untrack(buildInitial))
 
   // Re-init when content changes (streaming updates)
-  createEffect(() => {
-    const fields = config().fields
+  createEffect(() => deep(config().fields), fields => {
     if (fields.length > 0) {
       setFormData((prev) => {
         const next = { ...prev }
@@ -608,10 +610,10 @@ const EmbeddedFormSection: Component<{
 
   onCleanup(() => cancelCountdown())
 
-  createEffect(() => {
-    const delay = config().autoSubmitDelay
-    if (!delay || userInteracted()) return
-    const allRequiredPrefilled = config().fields
+  createEffect(() => ({ delay: config().autoSubmitDelay, interacted: userInteracted(),
+    fields: deep(config().fields), sectionId: props.sectionId }), ({ delay, interacted, fields, sectionId }) => {
+    if (!delay || interacted) return
+    const allRequiredPrefilled = fields
       .filter((f: any) => f.required)
       .every((f: any) => f.prefill != null)
     if (!allRequiredPrefilled) return
@@ -622,12 +624,13 @@ const EmbeddedFormSection: Component<{
       remaining--
       if (remaining <= 0) {
         cancelCountdown()
-        const form = document.querySelector(`#scratchpad-form-${props.sectionId}`) as HTMLFormElement | null
+        const form = document.querySelector(`#scratchpad-form-${sectionId}`) as HTMLFormElement | null
         if (form) form.requestSubmit()
       } else {
         setCountdown(remaining)
       }
     }, 1000)
+    return () => { if (countdownTimer) clearInterval(countdownTimer); countdownTimer = null }
   })
 
   const updateField = (name: string, value: any) => {
@@ -636,9 +639,8 @@ const EmbeddedFormSection: Component<{
   }
 
   // depends_on reactive (#9)
-  createEffect(() => {
-    const data = formData()
-    for (const field of config().fields) {
+  createEffect(() => ({ data: formData(), fields: deep(config().fields) }), ({ data, fields }) => {
+    for (const field of fields) {
       const dep = field.depends_on || field.dependsOn
       if (!dep) continue
       const parentValue = data[dep.field]
@@ -988,7 +990,7 @@ const ActionSection: Component<{
       </Show>
       <Show when={data().validation && data().validation.confidence != null}>
         <div class="mb-2 flex items-center gap-2 text-xs">
-          <span classList={{
+          <span class={{
             'text-[color:var(--mcp-ui-success,var(--color-green-600))] dark:text-[color:var(--mcp-ui-success,var(--color-green-400))]': data().validation.confidence >= 0.8,
             'text-[color:var(--mcp-ui-warning,var(--color-amber-600))] dark:text-[color:var(--mcp-ui-warning,var(--color-amber-400))]': data().validation.confidence >= 0.5 && data().validation.confidence < 0.8,
             'text-[color:var(--mcp-ui-danger,var(--color-red-600))] dark:text-[color:var(--mcp-ui-danger,var(--color-red-400))]': data().validation.confidence < 0.5,
@@ -1011,7 +1013,7 @@ const ActionSection: Component<{
       <div class="flex flex-wrap gap-2">
         <For each={data().actions as Array<{ label: string; value?: string; action?: string; variant?: string; icon?: string }>}>
           {(item) => (
-            <button type="button" on:click={() => props.onAction?.(item.value || item.action || item.label, item)}
+            <button type="button" onClick={() => props.onAction?.(item.value || item.action || item.label, item)}
               class={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
                 item.variant === 'primary' ? 'bg-[color:var(--mcp-ui-accent,var(--color-blue-600))] text-[color:var(--mcp-ui-accent-fg,var(--color-white,#fff))] hover:bg-[color:var(--mcp-ui-accent-hover,var(--color-blue-700))]'
                 : item.variant === 'danger' ? 'bg-[color:var(--mcp-ui-danger,var(--color-red-600))] text-[color:var(--mcp-ui-accent-fg,var(--color-white,#fff))] hover:bg-[color:var(--mcp-ui-danger-hover,var(--color-red-700))]'
@@ -1131,7 +1133,7 @@ const FeedbackSection: Component<{
       {/* Already submitted — show micro-badge */}
       <Show when={submitted()}>
         <div class="flex items-center gap-2 text-xs text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]">
-          <span classList={{
+          <span class={{
             'text-[color:var(--mcp-ui-success,var(--color-green-600))]': submitted() === 'approve',
             'text-[color:var(--mcp-ui-danger,var(--color-red-600))]': submitted() === 'reject',
             'text-[color:var(--mcp-ui-accent,var(--color-blue-600))]': submitted() !== 'approve' && submitted() !== 'reject',
@@ -1149,7 +1151,7 @@ const FeedbackSection: Component<{
         <div class="flex flex-wrap gap-2">
           <For each={data().options}>
             {(option) => (
-              <button type="button" on:click={() => handleOption(option)}
+              <button type="button" onClick={() => handleOption(option)}
                 class={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex items-center gap-1 ${
                   option.variant === 'primary' ? 'bg-[color:var(--mcp-ui-accent,var(--color-blue-600))] text-[color:var(--mcp-ui-accent-fg,var(--color-white,#fff))] hover:bg-[color:var(--mcp-ui-accent-hover,var(--color-blue-700))]'
                   : option.variant === 'danger' ? 'bg-[color:var(--mcp-ui-danger,var(--color-red-600))] text-[color:var(--mcp-ui-accent-fg,var(--color-white,#fff))] hover:bg-[color:var(--mcp-ui-danger-hover,var(--color-red-700))]'
@@ -1166,7 +1168,7 @@ const FeedbackSection: Component<{
             <input type="text" value={comment()} onInput={(e) => setComment(e.currentTarget.value)}
               placeholder={data().placeholder} autofocus={showComment()}
               class="flex-1 px-3 py-2 text-sm border border-[color:var(--mcp-ui-border,var(--color-gray-200,#e5e7eb))] dark:border-[color:var(--mcp-ui-border,var(--color-gray-600,#4b5563))] rounded-lg bg-[color:var(--mcp-ui-surface,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-700,#374151))] text-[color:var(--mcp-ui-fg,var(--color-gray-900,#111827))] dark:text-[color:var(--mcp-ui-fg,var(--color-white,#fff))] focus:border-[color:var(--mcp-ui-focus,var(--color-blue-400))] outline-none" />
-            <button type="button" on:click={() => { setSubmitted('comment'); setSubmittedLabel(''); props.onAction?.('feedback', { option: 'comment', comment: comment(), agentId: data().agentId, stepId: data().stepId }) }}
+            <button type="button" onClick={() => { setSubmitted('comment'); setSubmittedLabel(''); props.onAction?.('feedback', { option: 'comment', comment: comment(), agentId: data().agentId, stepId: data().stepId }) }}
               class="px-3 py-2 text-sm bg-[color:var(--mcp-ui-accent,var(--color-blue-600))] text-[color:var(--mcp-ui-accent-fg,var(--color-white,#fff))] rounded-lg hover:bg-[color:var(--mcp-ui-accent-hover,var(--color-blue-700))]">{strings.scratchpadSend}</button>
           </div>
         </Show>

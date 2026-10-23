@@ -1,3 +1,4 @@
+import { flush } from 'solid-js'
 /**
  * Runtime pseudo-localization — the DOM-level counterpart of the AST guard.
  *
@@ -13,7 +14,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, waitFor } from '@solidjs/testing-library'
-import type { JSX } from 'solid-js'
+import type { JSX } from "@solidjs/web";
 import { DEFAULT_MCPUI_STRINGS, MCPUIStringsProvider, type MCPUIStrings } from './MCPUIStringsContext'
 import { UIResourceRenderer } from '../components/UIResourceRenderer'
 import { DataPreviewSection } from '../components/DataPreviewSection'
@@ -246,16 +247,16 @@ describe('pseudo-locale — UIResourceRenderer', () => {
     expectNoLeaks()
 
     const search = container.querySelector('input[type="text"]') as HTMLInputElement
-    fireEvent.input(search, { target: { value: '数据1' } })
+    flush(() => fireEvent.input(search, { target: { value: '数据1' } }))
     await waitFor(() => expect(container.querySelector('[aria-label^="⟦tableClearSearch"]')).not.toBeNull())
     await waitFor(() => expect(container.textContent).toContain('⟦tableSearchResultsMany'))
     expectNoLeaks()
 
-    fireEvent.click(container.querySelector('button[aria-haspopup="menu"]') as HTMLElement)
+    flush(() => fireEvent.click(container.querySelector('button[aria-haspopup="menu"]') as HTMLElement))
     await waitFor(() => expect(document.body.textContent).toContain('⟦tableDownloadJson'))
     expectNoLeaks()
 
-    fireEvent.click(container.querySelector('[data-mcp-ui-action="expand"]') as HTMLElement)
+    flush(() => fireEvent.click(container.querySelector('[data-mcp-ui-action="expand"]') as HTMLElement))
     await waitFor(() => expect(document.querySelector('[data-mcp-ui-portal="dialog"]')).not.toBeNull())
     expectNoLeaks()
   })
@@ -342,7 +343,7 @@ describe('pseudo-locale — UIResourceRenderer', () => {
     expectNoLeaks()
 
     // Validation errors.
-    fireEvent.submit(container.querySelector('form') as HTMLFormElement)
+    flush(() => fireEvent.submit(container.querySelector('form') as HTMLFormElement))
     await waitFor(() => expect(container.textContent).toContain('⟦fieldRequired'))
     expectNoLeaks()
 
@@ -358,7 +359,7 @@ describe('pseudo-locale — UIResourceRenderer', () => {
     expectNoLeaks()
 
     // Lightbox (portal).
-    fireEvent.click(container.querySelector('button[aria-label^="⟦galleryViewImage"]') as HTMLElement)
+    flush(() => fireEvent.click(container.querySelector('button[aria-label^="⟦galleryViewImage"]') as HTMLElement))
     await waitFor(() => expect(document.querySelector('[role="dialog"]')).not.toBeNull())
     expectNoLeaks()
   })
@@ -394,7 +395,7 @@ describe('pseudo-locale — UIResourceRenderer', () => {
       (b.textContent ?? '').includes('⟦chartDataView')
     )
     expect(dataButton).toBeDefined()
-    fireEvent.click(dataButton as HTMLElement)
+    flush(() => fireEvent.click(dataButton as HTMLElement))
     await waitFor(() => expect(container.querySelector('table')).not.toBeNull())
     expectNoLeaks()
   })
@@ -409,7 +410,7 @@ describe('pseudo-locale — UIResourceRenderer', () => {
 
     const copy = container.querySelector('button[title^="⟦copyErrorDetails"]') as HTMLElement
     expect(copy).not.toBeNull()
-    fireEvent.click(copy)
+    flush(() => fireEvent.click(copy))
     await waitFor(() => expect(clipboard.writeText).toHaveBeenCalled())
     const text = clipboard.writeText.mock.calls[0][0]
     expect(text).toBe('⟦errorCopyText 工具 错误⟧')
@@ -419,7 +420,7 @@ describe('pseudo-locale — UIResourceRenderer', () => {
     cleanup()
     clipboard.writeText.mockClear()
     const bare = withPseudo(() => <UIResourceRenderer content={{ error: true } as never} />)
-    fireEvent.click(bare.container.querySelector('button[title^="⟦copyErrorDetails"]') as HTMLElement)
+    flush(() => fireEvent.click(bare.container.querySelector('button[title^="⟦copyErrorDetails"]') as HTMLElement))
     await waitFor(() => expect(clipboard.writeText).toHaveBeenCalled())
     expect(stripMarkers(clipboard.writeText.mock.calls[0][0])).not.toMatch(/[A-Za-z]{2}/)
   })
@@ -443,7 +444,7 @@ describe('pseudo-locale — DataPreviewSection', () => {
         }}
       />
     ))
-    fireEvent.click(container.querySelector('th') as HTMLElement)
+    flush(() => fireEvent.click(container.querySelector('th') as HTMLElement))
     expectNoLeaks({
       CSV: 'P4 — file-format acronym on the export button (its title is localized).',
       JSON: 'P4 — file-format acronym on the export button (its title is localized).',
@@ -517,9 +518,9 @@ describe('pseudo-locale — ScratchpadPanel', () => {
 
     // Error details, then a feedback answer.
     const details = Array.from(container.querySelectorAll('button')).find((b) => (b.textContent ?? '').includes('⟦scratchpadDetails'))
-    fireEvent.click(details as HTMLElement)
+    flush(() => fireEvent.click(details as HTMLElement))
     const yes = Array.from(container.querySelectorAll('button')).find((b) => (b.textContent ?? '').includes('⟦yes'))
-    fireEvent.click(yes as HTMLElement)
+    flush(() => fireEvent.click(yes as HTMLElement))
     await waitFor(() => expect(Array.from(container.querySelectorAll('button')).some((b) => (b.textContent ?? '').includes('⟦yes'))).toBe(false))
     expectNoLeaks({ ms: 'P4 — unit symbol of step durations / latency.' })
   })
@@ -582,9 +583,9 @@ describe('pseudo-locale — FormRenderer', () => {
     const { container } = withPseudo(() => <FormRenderer component={form(1)} />)
     expect(container.textContent).toContain('⟦formPrefilledOne')
     expect(container.textContent).toContain('⟦fieldSelectedCount 2⟧')
-    fireEvent.input(container.querySelector('input[name="b"]') as HTMLInputElement, { target: { value: '一' } })
-    fireEvent.input(container.querySelector('input[name="d"]') as HTMLInputElement, { target: { value: '1' } })
-    fireEvent.submit(container.querySelector('form') as HTMLFormElement)
+    flush(() => fireEvent.input(container.querySelector('input[name="b"]') as HTMLInputElement, { target: { value: '一' } }))
+    flush(() => fireEvent.input(container.querySelector('input[name="d"]') as HTMLInputElement, { target: { value: '1' } }))
+    flush(() => fireEvent.submit(container.querySelector('form') as HTMLFormElement))
     await waitFor(() => expect(container.textContent).toContain('⟦fieldMinLength'))
     expectNoLeaks()
   })
@@ -699,7 +700,7 @@ describe('pseudo-locale — standalone components', () => {
       return button as HTMLElement
     })
     expectNoLeaks()
-    fireEvent.click(trigger)
+    flush(() => fireEvent.click(trigger))
     await waitFor(() => expect(document.body.textContent).toContain('⟦graphDownloadJson'))
     expectNoLeaks()
   })
@@ -716,7 +717,7 @@ describe('pseudo-locale — standalone components', () => {
   it('FeedbackInline before and after a rating', async () => {
     const { container } = withPseudo(() => <FeedbackInline onSubmit={() => {}} />)
     expectNoLeaks()
-    fireEvent.click(container.querySelector('button') as HTMLElement)
+    flush(() => fireEvent.click(container.querySelector('button') as HTMLElement))
     await waitFor(() => expect(container.textContent).toContain('⟦feedback'))
     expectNoLeaks()
   })

@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [7.0.0-solid2.0] - Unreleased preview
+
+- Port runtime, DOM renderer, JSX compiler and testing to the exact Solid 2
+  RC.18 toolchain; leave the stable Solid 1 line and MCP schemas unchanged.
+- Adapt compute/apply effects, ownership, cleanup, context fallbacks, draft
+  stores and imperative store/controller observation boundaries.
+- Replace the Solid 1 virtualizer adapter with a lazy optional TanStack core
+  bridge, qualified against the real core including disposal and two instances.
+- Keep browser engines lazy and guard late imports after unmount; cancel fetch
+  readers and reconnect timers on streaming stop/disposal.
+- Preserve portal DOM identity and local live themes, use hydration-stable table
+  ids, and revalidate changed component payloads in a tracked computation.
+- Add migration regressions and a clean-tarball Solid 2 consumer harness. This
+  preview is a local artefact and review branch, not an npm release.
+
 ## [6.25.1] - 2026-10-18
 
 ### Security

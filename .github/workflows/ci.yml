@@ -55,8 +55,11 @@ jobs:
       - name: Type check
         run: pnpm typecheck
 
+      - name: Test clean-consumer harness safeguards
+        run: node --test mcp-ui-solid/tests/solid2/harness.node-test.mjs mcp-ui-solid/tests/solid2/dist-browser.node-test.mjs mcp-ui-solid/tests/solid2/optional-loader.node-test.mjs
+
       - name: Test
-        run: pnpm test
+        run: pnpm -r exec vitest run --maxWorkers=4
 
       # Browser tooling is isolated from the published package and its lockfile.
       - name: Install theme regression tooling
@@ -69,3 +72,59 @@ jobs:
         env:
           MCP_THEME_BROWSER_DEPS: ${{ runner.temp }}/mcp-ui-theme-tools/node_modules
         run: node mcp-ui-solid/tests/theme/browser.mjs --host
+
+      - name: Create local-only preview package
+        working-directory: mcp-ui-solid
+        run: |
+          mkdir -p "$RUNNER_TEMP/mcpui-solid2-artifacts"
+          pnpm pack --pack-destination "$RUNNER_TEMP/mcpui-solid2-artifacts"
+
+      - name: Create unchanged Spec fixture package
+        working-directory: mcp-ui-spec
+        run: pnpm pack --pack-destination "$RUNNER_TEMP/mcpui-solid2-artifacts"
+
+      - name: Qualify real tarballs with and without optional engines
+        env:
+          MCP_THEME_BROWSER_DEPS: ${{ runner.temp }}/mcp-ui-theme-tools/node_modules
+        run: |
+          for profile in full optional-absent; do
+            consumer="$RUNNER_TEMP/mcpui-solid2-$profile"
+            node mcp-ui-solid/tests/solid2/run.mjs prepare \
+              --tarball "$RUNNER_TEMP/mcpui-solid2-artifacts/seed-ship-mcp-ui-solid-7.0.0-solid2.0.tgz" \
+              --spec-tarball "$RUNNER_TEMP/mcpui-solid2-artifacts/seed-ship-mcp-ui-spec-5.7.0.tgz" \
+              --consumer "$consumer" --profile "$profile"
+            pnpm --dir "$consumer" install --ignore-scripts
+            node mcp-ui-solid/tests/solid2/run.mjs probe --consumer "$consumer"
+            node mcp-ui-solid/tests/solid2/run.mjs run --consumer "$consumer" --mode both
+          done
+          node mcp-ui-solid/tests/solid2/dist-browser.mjs --consumer "$RUNNER_TEMP/mcpui-solid2-full"
+
+      - name: Retain local-package qualification evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: solid2-preview-qualification
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/mcpui-solid2-artifacts/*.tgz
+            ${{ runner.temp }}/mcpui-solid2-*/qualification-input.json
+            ${{ runner.temp }}/mcpui-solid2-*/import-probe-result.json
+            ${{ runner.temp }}/mcpui-solid2-*/pnpm-lock.yaml
+            ${{ runner.temp }}/mcpui-solid2-*/qualification-results/
+            ${{ runner.temp }}/mcpui-solid2-*/dist-client-probe/
+
+  solid1-baseline:
+    # Independent runtime and lockfile: never install Solid 2 over the baseline.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: c107b89c862505ab51253c0a28505c70a6e39886
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm typecheck
+      - run: pnpm -r exec vitest run --maxWorkers=4

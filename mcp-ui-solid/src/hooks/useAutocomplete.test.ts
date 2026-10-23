@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { createSignal, createRoot } from 'solid-js'
+import { createSignal, createRoot, flush } from 'solid-js'
 import { useAutocomplete } from './useAutocomplete'
 // Note: Full integration tests require AutocompleteProvider
 // These tests focus on the hook's internal logic
@@ -26,20 +26,23 @@ describe('useAutocomplete', () => {
 
         const autocomplete = useAutocomplete({
           inputValue,
-          enabled: true
+          enabled: true,
         })
 
-        expect(autocomplete.completion()).toBeNull()
-        expect(autocomplete.ghostText()).toBe('')
-        expect(autocomplete.options()).toEqual([])
-        expect(autocomplete.selectedIndex()).toBe(-1)
-        expect(autocomplete.isLoading()).toBe(false)
-        expect(autocomplete.error()).toBeNull()
-        expect(autocomplete.isOpen()).toBe(false)
-        expect(autocomplete.resultType()).toBeNull()
+        // Exercise imperative events outside the pure root-construction scope.
+        return () => {
+          expect(autocomplete.completion()).toBeNull()
+          expect(autocomplete.ghostText()).toBe('')
+          expect(autocomplete.options()).toEqual([])
+          expect(autocomplete.selectedIndex()).toBe(-1)
+          expect(autocomplete.isLoading()).toBe(false)
+          expect(autocomplete.error()).toBeNull()
+          expect(autocomplete.isOpen()).toBe(false)
+          expect(autocomplete.resultType()).toBeNull()
 
-        dispose()
-      })
+          dispose()
+        }
+      })()
     })
 
     it('does not fetch when disabled', () => {
@@ -48,17 +51,22 @@ describe('useAutocomplete', () => {
 
         const autocomplete = useAutocomplete({
           inputValue,
-          enabled: false
+          enabled: false,
         })
 
-        setInputValue('test')
-        vi.advanceTimersByTime(200)
+        // Exercise imperative events outside the pure root-construction scope.
+        return () => {
+          setInputValue('test')
+          flush()
+          vi.advanceTimersByTime(200)
+          flush()
 
-        expect(autocomplete.isLoading()).toBe(false)
-        expect(autocomplete.isOpen()).toBe(false)
+          expect(autocomplete.isLoading()).toBe(false)
+          expect(autocomplete.isOpen()).toBe(false)
 
-        dispose()
-      })
+          dispose()
+        }
+      })()
     })
   })
 
@@ -71,15 +79,18 @@ describe('useAutocomplete', () => {
         const autocomplete = useAutocomplete({
           inputValue,
           enabled: true,
-          onInputChange
+          onInputChange,
         })
 
-        // Manually set completion for testing
-        // In real usage, this would come from the context
-        expect(autocomplete.ghostText()).toBe('')
+        // Exercise imperative events outside the pure root-construction scope.
+        return () => {
+          // Manually set completion for testing
+          // In real usage, this would come from the context
+          expect(autocomplete.ghostText()).toBe('')
 
-        dispose()
-      })
+          dispose()
+        }
+      })()
     })
   })
 
@@ -90,14 +101,17 @@ describe('useAutocomplete', () => {
 
         const autocomplete = useAutocomplete({
           inputValue,
-          enabled: true
+          enabled: true,
         })
 
-        // Initially no selection
-        expect(autocomplete.selectedIndex()).toBe(-1)
+        // Exercise imperative events outside the pure root-construction scope.
+        return () => {
+          // Initially no selection
+          expect(autocomplete.selectedIndex()).toBe(-1)
 
-        dispose()
-      })
+          dispose()
+        }
+      })()
     })
 
     it('navigates options with prevOption', () => {
@@ -106,14 +120,17 @@ describe('useAutocomplete', () => {
 
         const autocomplete = useAutocomplete({
           inputValue,
-          enabled: true
+          enabled: true,
         })
 
-        // Initially no selection
-        expect(autocomplete.selectedIndex()).toBe(-1)
+        // Exercise imperative events outside the pure root-construction scope.
+        return () => {
+          // Initially no selection
+          expect(autocomplete.selectedIndex()).toBe(-1)
 
-        dispose()
-      })
+          dispose()
+        }
+      })()
     })
   })
 
@@ -126,20 +143,23 @@ describe('useAutocomplete', () => {
         const autocomplete = useAutocomplete({
           inputValue,
           enabled: true,
-          onInputChange
+          onInputChange,
         })
 
-        const event = {
-          key: 'Tab',
-          preventDefault: vi.fn()
-        } as unknown as KeyboardEvent
+        // Exercise imperative events outside the pure root-construction scope.
+        return () => {
+          const event = {
+            key: 'Tab',
+            preventDefault: vi.fn(),
+          } as unknown as KeyboardEvent
 
-        // Should return false when not open
-        const handled = autocomplete.handleKeyDown(event)
-        expect(handled).toBe(false)
+          // Should return false when not open
+          const handled = autocomplete.handleKeyDown(event)
+          expect(handled).toBe(false)
 
-        dispose()
-      })
+          dispose()
+        }
+      })()
     })
 
     it('handles Escape key to dismiss', () => {
@@ -148,20 +168,23 @@ describe('useAutocomplete', () => {
 
         const autocomplete = useAutocomplete({
           inputValue,
-          enabled: true
+          enabled: true,
         })
 
-        const event = {
-          key: 'Escape',
-          preventDefault: vi.fn()
-        } as unknown as KeyboardEvent
+        // Exercise imperative events outside the pure root-construction scope.
+        return () => {
+          const event = {
+            key: 'Escape',
+            preventDefault: vi.fn(),
+          } as unknown as KeyboardEvent
 
-        // Should return false when not open
-        const handled = autocomplete.handleKeyDown(event)
-        expect(handled).toBe(false)
+          // Should return false when not open
+          const handled = autocomplete.handleKeyDown(event)
+          expect(handled).toBe(false)
 
-        dispose()
-      })
+          dispose()
+        }
+      })()
     })
 
     it('handles ArrowDown for dropdown navigation', () => {
@@ -170,20 +193,23 @@ describe('useAutocomplete', () => {
 
         const autocomplete = useAutocomplete({
           inputValue,
-          enabled: true
+          enabled: true,
         })
 
-        const event = {
-          key: 'ArrowDown',
-          preventDefault: vi.fn()
-        } as unknown as KeyboardEvent
+        // Exercise imperative events outside the pure root-construction scope.
+        return () => {
+          const event = {
+            key: 'ArrowDown',
+            preventDefault: vi.fn(),
+          } as unknown as KeyboardEvent
 
-        // Should return false when not open
-        const handled = autocomplete.handleKeyDown(event)
-        expect(handled).toBe(false)
+          // Should return false when not open
+          const handled = autocomplete.handleKeyDown(event)
+          expect(handled).toBe(false)
 
-        dispose()
-      })
+          dispose()
+        }
+      })()
     })
 
     it('handles ArrowUp for dropdown navigation', () => {
@@ -192,20 +218,23 @@ describe('useAutocomplete', () => {
 
         const autocomplete = useAutocomplete({
           inputValue,
-          enabled: true
+          enabled: true,
         })
 
-        const event = {
-          key: 'ArrowUp',
-          preventDefault: vi.fn()
-        } as unknown as KeyboardEvent
+        // Exercise imperative events outside the pure root-construction scope.
+        return () => {
+          const event = {
+            key: 'ArrowUp',
+            preventDefault: vi.fn(),
+          } as unknown as KeyboardEvent
 
-        // Should return false when not open
-        const handled = autocomplete.handleKeyDown(event)
-        expect(handled).toBe(false)
+          // Should return false when not open
+          const handled = autocomplete.handleKeyDown(event)
+          expect(handled).toBe(false)
 
-        dispose()
-      })
+          dispose()
+        }
+      })()
     })
   })
 
@@ -216,19 +245,23 @@ describe('useAutocomplete', () => {
 
         const autocomplete = useAutocomplete({
           inputValue,
-          enabled: true
+          enabled: true,
         })
 
-        autocomplete.dismiss()
+        // Exercise imperative events outside the pure root-construction scope.
+        return () => {
+          autocomplete.dismiss()
+          flush()
 
-        expect(autocomplete.completion()).toBeNull()
-        expect(autocomplete.options()).toEqual([])
-        expect(autocomplete.selectedIndex()).toBe(-1)
-        expect(autocomplete.isOpen()).toBe(false)
-        expect(autocomplete.error()).toBeNull()
+          expect(autocomplete.completion()).toBeNull()
+          expect(autocomplete.options()).toEqual([])
+          expect(autocomplete.selectedIndex()).toBe(-1)
+          expect(autocomplete.isOpen()).toBe(false)
+          expect(autocomplete.error()).toBeNull()
 
-        dispose()
-      })
+          dispose()
+        }
+      })()
     })
   })
 
@@ -240,18 +273,23 @@ describe('useAutocomplete', () => {
         const autocomplete = useAutocomplete({
           inputValue,
           enabled: true,
-          minChars: 3
+          minChars: 3,
         })
 
-        // Should not trigger with only 1 char
-        setInputValue('ab')
-        vi.advanceTimersByTime(200)
+        // Exercise imperative events outside the pure root-construction scope.
+        return () => {
+          // Should not trigger with only 1 char
+          setInputValue('ab')
+          flush()
+          vi.advanceTimersByTime(200)
+          flush()
 
-        expect(autocomplete.isLoading()).toBe(false)
-        expect(autocomplete.isOpen()).toBe(false)
+          expect(autocomplete.isLoading()).toBe(false)
+          expect(autocomplete.isOpen()).toBe(false)
 
-        dispose()
-      })
+          dispose()
+        }
+      })()
     })
   })
 
@@ -263,28 +301,38 @@ describe('useAutocomplete', () => {
         const autocomplete = useAutocomplete({
           inputValue,
           enabled: true,
-          debounceMs: 300
+          debounceMs: 300,
         })
 
-        // Rapid changes should be debounced
-        setInputValue('a')
-        vi.advanceTimersByTime(100)
-        setInputValue('ab')
-        vi.advanceTimersByTime(100)
-        setInputValue('abc')
-        vi.advanceTimersByTime(100)
+        // Exercise imperative events outside the pure root-construction scope.
+        return () => {
+          // Rapid changes should be debounced
+          setInputValue('a')
+          flush()
+          vi.advanceTimersByTime(100)
+          flush()
+          setInputValue('ab')
+          flush()
+          vi.advanceTimersByTime(100)
+          flush()
+          setInputValue('abc')
+          flush()
+          vi.advanceTimersByTime(100)
+          flush()
 
-        // Not enough time has passed
-        expect(autocomplete.isLoading()).toBe(false)
+          // Not enough time has passed
+          expect(autocomplete.isLoading()).toBe(false)
 
-        // After full debounce time
-        vi.advanceTimersByTime(300)
+          // After full debounce time
+          vi.advanceTimersByTime(300)
+          flush()
 
-        // Would be loading if context was available
-        expect(autocomplete.isOpen()).toBe(false) // No context
+          // Would be loading if context was available
+          expect(autocomplete.isOpen()).toBe(false) // No context
 
-        dispose()
-      })
+          dispose()
+        }
+      })()
     })
   })
 
@@ -297,15 +345,19 @@ describe('useAutocomplete', () => {
         const autocomplete = useAutocomplete({
           inputValue,
           enabled: true,
-          onInputChange
+          onInputChange,
         })
 
-        autocomplete.selectOption({ value: 'selected', label: 'Selected Option' })
+        // Exercise imperative events outside the pure root-construction scope.
+        return () => {
+          autocomplete.selectOption({ value: 'selected', label: 'Selected Option' })
+          flush()
 
-        expect(onInputChange).toHaveBeenCalledWith('selected')
+          expect(onInputChange).toHaveBeenCalledWith('selected')
 
-        dispose()
-      })
+          dispose()
+        }
+      })()
     })
   })
 
@@ -318,17 +370,21 @@ describe('useAutocomplete', () => {
         const autocomplete = useAutocomplete({
           inputValue,
           enabled: true,
-          onInputChange
+          onInputChange,
         })
 
-        // Without actual completion, this should not call onChange
-        autocomplete.acceptCompletion()
+        // Exercise imperative events outside the pure root-construction scope.
+        return () => {
+          // Without actual completion, this should not call onChange
+          autocomplete.acceptCompletion()
+          flush()
 
-        // Since completion is null, onInputChange should not be called
-        expect(onInputChange).not.toHaveBeenCalled()
+          // Since completion is null, onInputChange should not be called
+          expect(onInputChange).not.toHaveBeenCalled()
 
-        dispose()
-      })
+          dispose()
+        }
+      })()
     })
   })
 })

@@ -5,7 +5,8 @@
  * Sprint Autocomplete Feature
  */
 
-import { Component, For, Show, createMemo, JSX } from 'solid-js'
+import { Component, For, Show, createMemo } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import type { AutocompleteOption } from '../types'
 import { useMCPUIStrings } from '../context/MCPUIStringsContext'
 
@@ -236,8 +237,8 @@ export const AutocompleteDropdown: Component<AutocompleteDropdownProps> = (props
                 return (
                   <li
                     role="option"
-                    aria-selected={isSelected()}
-                    aria-disabled={isDisabled()}
+                    aria-selected={isSelected() ? 'true' : 'false'}
+                    aria-disabled={isDisabled() === undefined ? undefined : isDisabled() ? 'true' : 'false'}
                     class={`mcp-autocomplete-option ${isSelected() ? 'mcp-autocomplete-option-selected' : ''} ${isDisabled() ? 'mcp-autocomplete-option-disabled' : ''}`}
                     style={{
                       padding: '8px 16px',

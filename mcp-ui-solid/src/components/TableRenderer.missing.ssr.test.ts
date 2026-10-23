@@ -10,25 +10,17 @@
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createServer, type ViteDevServer } from 'vite'
-import solidPlugin from 'vite-plugin-solid'
+import solidPlugin from "@solidjs/vite-plugin";
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
-import { createRequire } from 'node:module'
 
 type Entry = typeof import('../../test-support/ssr/table-entry')
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
-// Pin Solid to its SERVER builds: the plugin's dev conditions would otherwise
-// resolve `solid-js` to dev.js next to web/dist/server.js (two runtimes).
-const solidDir = dirname(createRequire(import.meta.url).resolve('solid-js/package.json'))
-const solidServer = [
-  { find: /^solid-js$/, replacement: resolve(solidDir, 'dist/server.js') },
-  { find: /^solid-js\/web$/, replacement: resolve(solidDir, 'web/dist/server.js') },
-  { find: /^solid-js\/store$/, replacement: resolve(solidDir, 'store/dist/server.js') },
-]
 
 let server: ViteDevServer
 let render: Entry['renderTableToString']
+let renderValidation: Entry['renderValidationToString']
 
 beforeAll(async () => {
   server = await createServer({
@@ -38,11 +30,15 @@ beforeAll(async () => {
     appType: 'custom',
     server: { middlewareMode: true, hmr: false, watch: null },
     optimizeDeps: { noDiscovery: true, include: [] },
-    resolve: { alias: solidServer },
+    ssr: {
+      noExternal: ['solid-js', '@solidjs/web', '@solidjs/signals'],
+      resolve: { conditions: ['node', 'development'] },
+    },
     plugins: [solidPlugin({ ssr: true })],
   })
   const mod = (await server.ssrLoadModule('/test-support/ssr/table-entry.tsx')) as Entry
   render = mod.renderTableToString
+  renderValidation = mod.renderValidationToString
 }, 60_000)
 
 afterAll(async () => {
@@ -57,6 +53,30 @@ const table = (rows: Array<Record<string, unknown>>) => ({
 })
 
 describe('TableRenderer missing cells — SSR', () => {
+  it('blocks a known malicious iframe and reports validation synchronously even in silent mode', () => {
+    for (const mode of ['block', 'silent'] as const) {
+      const result = renderValidation({ id: 'ssr-invalid-frame', type: 'iframe', params: {
+        url: 'javascript:alert(1)', title: 'Unsafe frame',
+      }, position: { colStart: 1, colSpan: 12 } }, mode)
+      expect(result.errors).toHaveLength(1)
+      expect(result.errors[0]).toMatchObject({ type: 'validation', componentId: 'ssr-invalid-frame' })
+      expect(result.html).not.toMatch(/<iframe\b/i)
+      expect(result.html).not.toMatch(/(?:src|href)="javascript:/i)
+      if (mode === 'block') expect(result.html).toContain('Validation Error')
+      else expect(result.html).not.toContain('Validation Error')
+    }
+  })
+
+  it('keeps unknown components visible under silent mode and reports their validation failure', () => {
+    const result = renderValidation({ id: 'ssr-unknown', type: 'invented-component', params: {},
+      position: { colStart: 1, colSpan: 12 } }, 'silent')
+    expect(result.errors).toHaveLength(1)
+    expect(result.errors[0]).toMatchObject({ type: 'validation', componentId: 'ssr-unknown' })
+    expect(result.html).toContain('invented-component')
+    expect(result.html).toContain('Unsupported component type')
+    expect(result.html).not.toMatch(/<iframe\b|<script\b/i)
+  })
+
   it('renders the marker, the hidden wording and the legend for a null cell', () => {
     const html = render(table([{ name: 'Alpha', qty: null }, { name: 'Beta', qty: 3 }]))
     expect(html).toContain('data-mcp-missing-value')

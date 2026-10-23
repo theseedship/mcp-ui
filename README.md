@@ -1,5 +1,10 @@
 # MCP UI Components
 
+> This branch is the isolated **Solid 2 preview**, `7.0.0-solid2.0`, not a
+> published release. Production Solid 1 stays on `6.25.1`. Do not install this
+> branch into a Solid 1 application or trigger the stable publishing workflows.
+> See [the preview qualification and integration guide](./mcp-ui-solid/docs/SOLID2-PREVIEW.md).
+
 > **UI component library for Model Context Protocol (MCP) servers**
 
 A collection of TypeScript packages for building generative, streaming user interfaces powered by MCP servers and LLMs.
