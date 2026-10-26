@@ -20,10 +20,12 @@ updates Solid/Seroval and build-tool dependency resolutions. Includes a real
 server-rendering/serialization compatibility smoke test. This is the historical
 release record, not a claim that the current dependency audit is clean.
 
-**Security follow-up (unreleased, 2026-10-24):** compatible Vite 6.4.5 and
-Vitest 4.1.12 tooling updates remove seven advisory entries from the workspace
-audit. Runtime Zod remains affected and needs a separately qualified API/version
-decision before publication. See the
+**Security follow-up (unreleased, 2026-10-26):** after the stable-line Zod 4
+migration, `fast-uri` 3.1.9 removes the four remaining workspace audit entries.
+The CLI declares its own corrected dependency and supplies it to both Ajv
+validators; monorepo overrides alone do not protect published consumers.
+Full and production workspace audits report zero advisories on this date,
+not a security guarantee for every host application. See the
 [current security dependency notes](./mcp-ui-solid/docs/SECURITY-DEPENDENCIES.md).
 
 **6.25.0 (`mcp-ui-solid`):** inherited CSS theme tokens for prompts, resource

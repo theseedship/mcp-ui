@@ -22,6 +22,7 @@ export default defineConfig({
         'commander',
         'ajv',
         'ajv-formats',
+        'fast-uri',
         'chalk',
         'ora',
         'json-schema-to-typescript',

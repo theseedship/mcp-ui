@@ -5,6 +5,12 @@
 > declarations. The public file/options command API is unchanged. Spec's Zod
 > validation and the subsequent Ajv/JSON Schema path are separate checks.
 
+The prepared patch also declares `fast-uri: ^3.1.9` and explicitly uses that
+resolver in both Ajv validators (`validate` and `test-examples`). A workspace
+override would not carry over into a published consumer. An application can
+still retain older copies under other dependencies: update and audit its own
+lockfile separately. See the [security notes](../mcp-ui-solid/docs/SECURITY-DEPENDENCIES.md).
+
 CLI tools for validating and managing MCP UI component registries. Part of the MCP UI ecosystem.
 
 [![npm version](https://img.shields.io/npm/v/@seed-ship/mcp-ui-cli.svg)](https://www.npmjs.com/package/@seed-ship/mcp-ui-cli)
