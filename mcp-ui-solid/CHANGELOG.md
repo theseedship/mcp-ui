@@ -5,7 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [7.0.0] - Unreleased
+
+### Breaking — Zod types, not the Solid engine
+
+- Use Zod 4.6.6 and Spec ^6.0.0 while retaining Solid 1 and the existing renderer,
+  peer range, engine loading, sanitizer and MCP wire contracts. Adapt connector
+  records and preserve application validation codes/paths; native Zod messages
+  can change. The paused Solid 2 preview is not resumed.
+- Qualify emitted ESM/CJS declarations with a real packed-consumer TypeScript
+  gate and retain the existing resource-size behavior explicitly as a limitation.
+- See `docs/ZOD4-STABLE-MIGRATION-2026-10-26.md` for compatibility and release gates.
+
+## Historical tooling follow-up before Zod 4
 
 ### Security — development tooling only
 

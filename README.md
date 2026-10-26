@@ -1,5 +1,11 @@
 # MCP UI Components
 
+> Stable-line Zod 4 preparation: Spec `6.0.0`, MCPUI Solid `7.0.0` and CLI
+> `5.0.2`. **MCPUI Solid 7 still uses Solid 1**, with the unchanged `^1.9.0`
+> peer range. These candidates are not published by this change. The unrelated
+> Solid 2 preview PR #34 remains paused. See the
+> [migration and qualification record](./mcp-ui-solid/docs/ZOD4-STABLE-MIGRATION-2026-10-26.md).
+
 > **UI component library for Model Context Protocol (MCP) servers**
 
 A collection of TypeScript packages for building generative, streaming user interfaces powered by MCP servers and LLMs.

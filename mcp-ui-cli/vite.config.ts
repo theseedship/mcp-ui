@@ -12,13 +12,16 @@ export default defineConfig({
       formats: ['es', 'cjs'],
     },
     rollupOptions: {
+      output: { interop: 'auto' },
       external: [
         'fs',
         'path',
         'url',
         'process',
+        'module',
         'commander',
         'ajv',
+        'ajv-formats',
         'chalk',
         'ora',
         'json-schema-to-typescript',

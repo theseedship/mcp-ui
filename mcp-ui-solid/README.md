@@ -1,5 +1,19 @@
 # @seed-ship/mcp-ui-solid
 
+## Prepared v7.0.0 — Zod 4, still Solid 1
+
+This stable-line candidate uses Zod `4.6.6` and requires Spec `^6.0.0`.
+The Solid peer remains `^1.9.0`; no Solid 2 renderer or visual redesign is
+included. This conservative major marks the Spec 6 dependency/public-type
+compatibility boundary, not a new Solid engine or a direct Solid-local Zod
+schema-class export. JSON acceptance, absent optional fields and application
+validation codes/paths are preserved; native Zod error messages can change.
+
+This is not the paused `7.0.0-solid2.0` experiment. Do not consume its branch or
+old archives for this release. See the [migration record](./docs/ZOD4-STABLE-MIGRATION-2026-10-26.md)
+for SemVer, exact gates, resource-limit caveats and the separate publication
+approval. A PR or staged upload is not a public npm release.
+
 SolidJS components + chat toolkit for MCP-generated UI. Part of the [MCP UI ecosystem](https://github.com/theseedship/mcp-ui).
 
 [![npm version](https://img.shields.io/npm/v/@seed-ship/mcp-ui-solid.svg)](https://www.npmjs.com/package/@seed-ship/mcp-ui-solid)
