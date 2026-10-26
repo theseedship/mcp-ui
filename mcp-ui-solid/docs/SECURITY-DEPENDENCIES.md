@@ -1,5 +1,42 @@
 # Security dependency notes
 
+## 2026-10-26 — stable fast-uri follow-up after PR #40
+
+The workspace override floor moves from `^3.1.6` to `^3.1.9`; the pnpm 8.15.0
+lockfile resolves **3.1.9**, without a major-4 upgrade or unrelated updates.
+The upstream [3.1.9 release](https://github.com/fastify/fast-uri/releases/tag/v3.1.9)
+fixes these four advisory entries:
+
+- Moderate: [percent-decoded scheme spoofing](https://github.com/advisories/GHSA-w74x-v6f9-j3xg)
+  and [authority host confusion](https://github.com/advisories/GHSA-wjr9-j795-jxcr).
+- Low: [relative-reference path equivalence](https://github.com/advisories/GHSA-xhq7-xmqj-769h)
+  and [suffix-reference scheme injection](https://github.com/advisories/GHSA-333x-w4r6-6crp).
+
+The CLI publishes a direct `fast-uri: ^3.1.9` dependency and injects its default
+import into **both** Ajv instances with the documented
+[`uriResolver` option](https://ajv.js.org/options.html#uriresolver).
+Ajv 8.18.0 itself requests `^3.0.1`: a workspace override or a direct dependency
+without explicit injection cannot guarantee which copy Ajv uses in a consumer.
+Vite leaves the dependency external in ESM and CJS, as it does for Ajv.
+
+This protects the CLI's schema-ID and `$ref` resolution, not every URI policy
+in a host. `validate` compiles the fixed Spec JSON Schema; `test-examples`
+compiles registry-supplied component schemas. Format checks are a separate Ajv
+formats path. The suffix advisory requires a non-default option not used by
+these commands; this is not a claim that all four exploits were CLI-reachable.
+
+Fresh full and production workspace `pnpm audit --json` runs move from four
+entries (two moderate, two low) to **zero**, both exiting 0 after the update.
+GitHub alerts require a separate merge/rescan; none is dismissed or suppressed.
+An independent packed-consumer gate intentionally retains `fast-uri` 3.1.8
+under Ajv and checks that both public CLI module formats use the direct 3.1.9
+resolver instead. That control consumer is deliberately not audit-clean;
+applications must update and audit their own complete dependency trees.
+
+No renderer, Solid peer, Zod schema, package version or release workflow changes.
+The prepared Spec 6.0.0 / Solid 7.0.0 (Solid 1) / CLI 5.0.2 versions are retained.
+This PR neither stages nor publishes them and does not resume Solid 2 PR #34.
+
 ## 2026-10-26 — prepared stable-line Zod 4 migration
 
 Spec 6.0.0, MCPUI Solid 7.0.0 (still Solid 1) and CLI 5.0.2 prepare real Zod

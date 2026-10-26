@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [5.0.2] - Unreleased
 
+### Security
+
+- Declare `fast-uri: ^3.1.9` directly and supply it as `uriResolver` to both
+  Ajv validators, including the published ESM and CJS entrypoints. This fixes
+  the active resolver independently of Ajv's older transitive dependency floor.
+  The workspace override and lockfile also move to 3.1.9; consumers must still
+  audit any separate older copies in their application.
+
 ### Fixed
 
 - Align internal Zod to 4.6.6 and Spec to ^6.0.0 without changing the public

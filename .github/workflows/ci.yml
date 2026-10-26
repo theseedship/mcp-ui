@@ -110,6 +110,17 @@ jobs:
               --report "$RUNNER_TEMP/mcpui-zod4-$profile-report.json"
           done
 
+      - name: Check CLI resolver with an intentionally old Ajv nested dependency
+        shell: bash
+        run: |
+          set -euo pipefail
+          spec_version=$(node -p "require('./mcp-ui-spec/package.json').version")
+          cli_version=$(node -p "require('./mcp-ui-cli/package.json').version")
+          node scripts/fast-uri-security/verify.mjs \
+            --spec "$RUNNER_TEMP/mcpui-zod4-artifacts/seed-ship-mcp-ui-spec-$spec_version.tgz" \
+            --cli "$RUNNER_TEMP/mcpui-zod4-artifacts/seed-ship-mcp-ui-cli-$cli_version.tgz" \
+            --report "$RUNNER_TEMP/mcpui-fast-uri-report.json"
+
       - name: Retain stable tarball qualification evidence
         if: always()
         uses: actions/upload-artifact@v7
@@ -119,3 +130,4 @@ jobs:
           path: |
             ${{ runner.temp }}/mcpui-zod4-artifacts/*.tgz
             ${{ runner.temp }}/mcpui-zod4-*-report*
+            ${{ runner.temp }}/mcpui-fast-uri-report*

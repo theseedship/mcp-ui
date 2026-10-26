@@ -7,6 +7,7 @@ import { resolve } from 'path'
 import { createRequire } from 'module'
 import Ajv from 'ajv'
 import addFormats from 'ajv-formats'
+import uriResolver from 'fast-uri'
 import chalk from 'chalk'
 import ora from 'ora'
 import { ComponentRegistrySchema, type ComponentRegistry } from '@seed-ship/mcp-ui-spec'
@@ -53,6 +54,8 @@ export async function validateCommand(file: string, options: ValidateOptions) {
 
     // Validate with JSON Schema using Ajv
     const ajv = new Ajv({
+      // Use our published security floor, not Ajv's looser transitive range.
+      uriResolver,
       allErrors: options.strict,
       verbose: options.verbose,
       strict: options.strict,
