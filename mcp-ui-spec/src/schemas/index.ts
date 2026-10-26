@@ -9,7 +9,7 @@ export const GridPositionSchema = z.object({
   colStart: z.number().int().min(1).max(12),
   colSpan: z.number().int().min(1).max(12),
   rowStart: z.number().int().min(1).optional(),
-  rowSpan: z.number().int().min(1).default(1).optional(),
+  rowSpan: z.number().int().min(1).optional(),
 });
 
 // Component types (synced with mcp-ui-solid v1.2.6)
@@ -134,7 +134,7 @@ export const FormFieldSchema = z.object({
   searchParam: z.string().optional(),
   labelField: z.string().optional(),
   valueField: z.string().optional(),
-  extraParams: z.record(z.string()).optional(),
+  extraParams: z.record(z.string(), z.string()).optional(),
   minChars: z.number().int().min(0).optional(),
   debounceMs: z.number().int().min(0).optional(),
   // Dependent field (v2.7.0)
@@ -144,7 +144,7 @@ export const FormFieldSchema = z.object({
       apiUrl: z.string(),
       labelField: z.string(),
       valueField: z.string(),
-      extraParams: z.record(z.string()).optional(),
+      extraParams: z.record(z.string(), z.string()).optional(),
     })
     .optional(),
   // Field status — API capability indicator (v2.11.0)
@@ -161,7 +161,7 @@ export const FormFieldSchema = z.object({
 // Form submit action schema
 export const FormSubmitActionSchema = z.object({
   toolName: z.string().min(1),
-  params: z.record(z.unknown()).optional(),
+  params: z.record(z.string(), z.unknown()).optional(),
 });
 
 // Form component params schema
@@ -212,7 +212,7 @@ export const ActionParamsSchema = z.object({
   type: z.enum(['button', 'link']).optional(),
   action: z.enum(['tool-call', 'link', 'submit']).optional(),
   toolName: z.string().optional(),
-  params: z.record(z.unknown()).optional(),
+  params: z.record(z.string(), z.unknown()).optional(),
   url: z.string().optional(),
   variant: z.enum(['primary', 'secondary', 'outline', 'ghost', 'danger']).optional(),
   size: z.enum(['sm', 'md', 'lg']).optional(),
@@ -240,9 +240,10 @@ export const GalleryImageSchema = z.object({
 });
 
 // Image gallery columns schema (Sprint 5)
+const imageGalleryColumnValues = { '2': 2, '3': 3, '4': 4, '5': 5 } as const;
 export const ImageGalleryColumnsSchema = z
   .enum(['2', '3', '4', '5'])
-  .transform(Number) as unknown as z.ZodType<2 | 3 | 4 | 5>;
+  .transform((value) => imageGalleryColumnValues[value]);
 
 // Image gallery gap schema (Sprint 5)
 export const ImageGalleryGapSchema = z.enum(['none', 'sm', 'md', 'lg']);
@@ -375,7 +376,7 @@ export const GeoJSONGeometrySchema = z.object({
 export const GeoJSONFeatureSchema = z.object({
   type: z.literal('Feature'),
   geometry: GeoJSONGeometrySchema.nullable(),
-  properties: z.record(z.unknown()).nullable().optional(),
+  properties: z.record(z.string(), z.unknown()).nullable().optional(),
   id: z.union([z.string(), z.number()]).optional(),
   bbox: z.array(z.number()).optional(),
 });
@@ -511,8 +512,8 @@ export const GraphNodeSchema = z.object({
    * layout (highest weight at center). Domain semantics opaque to the lib.
    */
   weight: z.number().optional(),
-  style: z.record(z.unknown()).optional(), // passthrough G6 NodeStyle
-  data: z.record(z.unknown()).optional(), // arbitrary metadata for tooltips / click handlers
+  style: z.record(z.string(), z.unknown()).optional(), // passthrough G6 NodeStyle
+  data: z.record(z.string(), z.unknown()).optional(), // arbitrary metadata for tooltips / click handlers
 });
 
 export const GraphEdgeSchema = z.object({
@@ -525,8 +526,8 @@ export const GraphEdgeSchema = z.object({
    * as attractive force in `force` layouts. Domain semantics opaque.
    */
   weight: z.number().optional(),
-  style: z.record(z.unknown()).optional(),
-  data: z.record(z.unknown()).optional(),
+  style: z.record(z.string(), z.unknown()).optional(),
+  data: z.record(z.string(), z.unknown()).optional(),
 });
 
 /**
@@ -551,7 +552,7 @@ export const GraphLayoutSchema = z.union([
   GraphLayoutNameSchema,
   z.object({
     type: GraphLayoutNameSchema,
-    options: z.record(z.unknown()).optional(),
+    options: z.record(z.string(), z.unknown()).optional(),
   }),
 ]);
 
@@ -710,7 +711,7 @@ export const CitationEntrySchema = z.object({
 export const TableComponentParamsSchema = z.object({
   title: z.string().optional(),
   columns: z.array(TableColumnSchema).min(1),
-  rows: z.array(z.record(z.unknown())),
+  rows: z.array(z.record(z.string(), z.unknown())),
   pagination: TablePaginationSchema.optional(),
   /** Show the client-side, accent-insensitive search field (default: true). */
   searchable: z.boolean().optional(),
@@ -812,23 +813,23 @@ export const SandboxFlagSchema = z.enum([
 
 // Security constraints
 export const SecurityConstraintsSchema = z.object({
-  requiresAuth: z.boolean().default(false).optional(),
+  requiresAuth: z.boolean().optional(),
   allowedDomains: z.array(z.string()).optional(),
-  maxIframeDepth: z.number().int().min(0).max(3).default(1).optional(),
+  maxIframeDepth: z.number().int().min(0).max(3).optional(),
   sandboxFlags: z.array(SandboxFlagSchema).optional(),
 });
 
 // Performance constraints
 export const PerformanceConstraintsSchema = z.object({
-  maxRenderTime: z.number().int().min(100).default(5000).optional(),
-  maxDataSize: z.number().int().min(1024).default(102400).optional(),
+  maxRenderTime: z.number().int().min(100).optional(),
+  maxDataSize: z.number().int().min(1024).optional(),
 });
 
 // Component schema (JSON Schema definition)
 export const ComponentSchemaSchema = z.object({
   type: z.literal('object'),
   required: z.array(z.string()).optional(),
-  properties: z.record(z.unknown()),
+  properties: z.record(z.string(), z.unknown()),
   additionalProperties: z.boolean().optional(),
 });
 
@@ -836,7 +837,7 @@ export const ComponentSchemaSchema = z.object({
 export const ComponentExampleSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
-  params: z.record(z.unknown()),
+  params: z.record(z.string(), z.unknown()),
   position: GridPositionSchema.optional(),
 });
 
@@ -855,7 +856,7 @@ export const ComponentSchema = z.object({
     .string()
     .regex(/^\d+\.\d+\.\d+$/)
     .optional(),
-  deprecated: z.boolean().default(false).optional(),
+  deprecated: z.boolean().optional(),
   deprecationMessage: z.string().optional(),
 });
 
@@ -1070,9 +1071,9 @@ export const ConnectorDynamicResultV1Schema = z.object({
   /** Normalized user intent (e.g. `real_estate_city`, `dpe_city`). */
   intent: z.string().optional(),
   /** Primary result — a `UIComponent` or `UILayout` (passthrough, see header). */
-  primary: z.record(z.unknown()),
+  primary: z.record(z.string(), z.unknown()),
   /** Supplemental components — related datasets, source cards, etc. */
-  supplemental: z.array(z.record(z.unknown())).optional(),
+  supplemental: z.array(z.record(z.string(), z.unknown())).optional(),
   /** Follow-up actions (tool calls / links) the user can trigger. */
   actions: z.array(ConnectorActionSchema).optional(),
   /** Suggested follow-up queries. */
@@ -1229,7 +1230,7 @@ export interface MacroStepV1 {
 }
 
 /** Recursive — `parallel` nests `MacroStepV1`. */
-export const MacroStepV1Schema: z.ZodType<MacroStepV1> = z.lazy(() =>
+export const MacroStepV1Schema: z.ZodType<MacroStepV1, MacroStepV1> = z.lazy(() =>
   z.object({
     id: z.string().min(1),
     label: z.string(),
@@ -1249,7 +1250,7 @@ export const MacroInterrogationOptionSchema = z.object({
   label: z.string(),
   icon: z.string().optional(),
   description: z.string().optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 /** The four interrogation kinds an adapter can map to a `ChatPromptConfig`. */
@@ -1301,7 +1302,7 @@ export const MacroInterrogationV1Schema = z.object({
       mode: z.enum(['agent_resume', 'legacy_chat_prompt', 'macro_resume']),
     })
     .optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 /** Presentation agent attached to a run (optional — macro-tools have none). */
@@ -1325,7 +1326,7 @@ export const MacroRunErrorSchema = z.object({
 /** Optional terminal outcome. No single shape exists — kept opaque. */
 export const MacroRunOutcomeSchema = z.object({
   kind: z.enum(['verified_text', 'briefing_diff', 'agent_result', 'raw']),
-  content: z.unknown(),
+  content: z.unknown().optional(),
 });
 
 /**
@@ -1358,12 +1359,12 @@ export const MacroRunV1Schema = z.object({
   // Execution
   steps: z.array(MacroStepV1Schema),
   /** `UIComponent`-shaped results (passthrough). Optional — see header. */
-  results: z.array(z.record(z.unknown())).optional(),
+  results: z.array(z.record(z.string(), z.unknown())).optional(),
   pendingInterrogation: MacroInterrogationV1Schema.optional(),
   error: MacroRunErrorSchema.optional(),
   outcome: MacroRunOutcomeSchema.optional(),
-  variables: z.record(z.unknown()).optional(),
-  metadata: z.record(z.unknown()).optional(),
+  variables: z.record(z.string(), z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type MacroRunStatus = z.infer<typeof MacroRunStatusSchema>;

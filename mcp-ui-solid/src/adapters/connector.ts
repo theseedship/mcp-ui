@@ -141,9 +141,9 @@ const LenientResultSchema = z.object({
   query: z.string(),
   queryHash: z.string().optional(),
   intent: z.string().optional(),
-  primary: z.record(z.unknown()),
-  supplemental: z.array(z.record(z.unknown())).optional(),
-  actions: z.array(z.record(z.unknown())).optional(),
+  primary: z.record(z.string(), z.unknown()),
+  supplemental: z.array(z.record(z.string(), z.unknown())).optional(),
+  actions: z.array(z.record(z.string(), z.unknown())).optional(),
 })
 
 const DEFAULT_GRID = { columns: 12, gap: '1rem' } as const

@@ -1,5 +1,10 @@
 # @seed-ship/mcp-ui-cli
 
+> Prepared patch `5.0.2`: internal Zod `4.6.6` and Spec `^6.0.0`, portable
+> packed JSON Schema resolution, Ajv format validation and emitted ESM/CJS
+> declarations. The public file/options command API is unchanged. Spec's Zod
+> validation and the subsequent Ajv/JSON Schema path are separate checks.
+
 CLI tools for validating and managing MCP UI component registries. Part of the MCP UI ecosystem.
 
 [![npm version](https://img.shields.io/npm/v/@seed-ship/mcp-ui-cli.svg)](https://www.npmjs.com/package/@seed-ship/mcp-ui-cli)

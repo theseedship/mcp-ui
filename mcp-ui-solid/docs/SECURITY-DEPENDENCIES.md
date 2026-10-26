@@ -1,5 +1,20 @@
 # Security dependency notes
 
+## 2026-10-26 — prepared stable-line Zod 4 migration
+
+Spec 6.0.0, MCPUI Solid 7.0.0 (still Solid 1) and CLI 5.0.2 prepare real Zod
+4.6.6 with preserved JSON omission/error-code contracts and qualified emitted
+package declarations. This is not a Solid 2 migration or publication approval.
+See the [decision and qualification record](./ZOD4-STABLE-MIGRATION-2026-10-26.md).
+
+Fresh baseline full audit: one HIGH Zod plus four fast-uri entries. After the
+upgrade, Zod is absent but the two moderate/two low fast-uri advisories remain
+in full and production audits. Both still exit nonzero. Reconcile GitHub alerts
+after a merge/rescan separately; no advisory is dismissed by this change.
+
+The records below describe their dated pre-migration state; they do not override
+the newer evidence or establish a current clean security audit.
+
 ## 2026-10-24 — compatible tooling fixes, runtime Zod still unresolved
 
 This follow-up updates development tooling on the stable Solid 1 line. It does

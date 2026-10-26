@@ -4,17 +4,16 @@
 
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
+import { createRequire } from 'module'
 import Ajv from 'ajv'
+import addFormats from 'ajv-formats'
 import chalk from 'chalk'
 import ora from 'ora'
 import { ComponentRegistrySchema, type ComponentRegistry } from '@seed-ship/mcp-ui-spec'
 
-// Load JSON Schema from @seed-ship/mcp-ui-spec package
-import { fileURLToPath } from 'url'
-import { dirname, join } from 'path'
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
+// Resolve the public Spec subpath from this package, including when Vite
+// emits the CommonJS entrypoint (`import.meta.url` is ESM-only).
+const requireFromHere = createRequire(typeof __filename === 'string' ? __filename : import.meta.url)
 
 interface ValidateOptions {
   strict?: boolean
@@ -38,7 +37,7 @@ export async function validateCommand(file: string, options: ValidateOptions) {
     if (!zodResult.success) {
       spinner.fail('Zod validation failed')
       console.error(chalk.red('\nValidation Errors:'))
-      zodResult.error.errors.forEach((err) => {
+      zodResult.error.issues.forEach((err) => {
         console.error(chalk.red(`  • ${err.path.join('.')}: ${err.message}`))
       })
       process.exit(1)
@@ -47,24 +46,10 @@ export async function validateCommand(file: string, options: ValidateOptions) {
     spinner.text = 'Validating with JSON Schema...'
 
     // Load JSON Schema for secondary validation
-    const schemaPath = join(
-      __dirname,
-      '../../node_modules/@seed-ship/mcp-ui-spec/schemas/component-registry-v1.json'
+    const schemaPath = requireFromHere.resolve(
+      '@seed-ship/mcp-ui-spec/schemas/component-registry-v1.json'
     )
-    let jsonSchemaContent: string
-
-    try {
-      jsonSchemaContent = readFileSync(schemaPath, 'utf-8')
-    } catch {
-      // Fallback to local schema if node_modules path fails
-      const localSchemaPath = join(
-        __dirname,
-        '../../../mcp-ui-spec/schemas/component-registry-v1.json'
-      )
-      jsonSchemaContent = readFileSync(localSchemaPath, 'utf-8')
-    }
-
-    const jsonSchema = JSON.parse(jsonSchemaContent)
+    const jsonSchema = JSON.parse(readFileSync(schemaPath, 'utf-8'))
 
     // Validate with JSON Schema using Ajv
     const ajv = new Ajv({
@@ -72,6 +57,7 @@ export async function validateCommand(file: string, options: ValidateOptions) {
       verbose: options.verbose,
       strict: options.strict,
     })
+    addFormats(ajv)
 
     const validate = ajv.compile(jsonSchema)
     const jsonValid = validate(registry)

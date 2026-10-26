@@ -1,5 +1,11 @@
 # @seed-ship/mcp-ui-spec
 
+> Prepared major `6.0.0`: exported schemas now use real Zod `4.6.6`, not its
+> legacy `/v3` implementation. Existing JSON contracts retain optional-field
+> omission and raw macro outcomes without `content`. Public Zod objects/types
+> are a major API change; use the aligned MCPUI Solid `7.0.0` (still Solid 1).
+> See the [migration record](https://github.com/theseedship/mcp-ui/blob/fix/zod4-stable-security/mcp-ui-solid/docs/ZOD4-STABLE-MIGRATION-2026-10-26.md).
+
 Component registry specification and validation schemas for MCP UI. Part of the MCP UI ecosystem.
 
 [![npm version](https://img.shields.io/npm/v/@seed-ship/mcp-ui-spec.svg)](https://www.npmjs.com/package/@seed-ship/mcp-ui-spec)
