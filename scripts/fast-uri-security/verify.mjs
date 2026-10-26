@@ -156,6 +156,7 @@ try {
     dependencies: { [names.spec]: `file:${archives.spec}`, [names.cli]: `file:${archives.cli}`,
       'fast-uri': '3.1.9' },
     pnpm: { overrides: { [names.spec]: `file:${archives.spec}`, ajv: '8.18.0',
+      [`${names.cli}>fast-uri`]: '3.1.9',
       'ajv@8.18.0>fast-uri': '3.1.8' } } }
   await writeFile(join(consumer, 'package.json'), JSON.stringify(manifest, null, 2) + '\n')
   report.toolchain.node = run('node', ['--version'])
