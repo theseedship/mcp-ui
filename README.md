@@ -1,9 +1,10 @@
 # MCP UI Components
 
-> Stable-line Zod 4 preparation: Spec `6.0.0`, MCPUI Solid `7.0.0` and CLI
+> Stable-line workspace: Spec `6.0.0`, MCPUI Solid `7.0.0` and CLI
 > `5.0.2`. **MCPUI Solid 7 still uses Solid 1**, with the unchanged `^1.9.0`
-> peer range. These candidates are not published by this change. The unrelated
-> Solid 2 preview PR #34 remains paused. See the
+> peer range. MCPUI **7.x stays on Solid 1** (`latest`); the separate **8.x
+> preview targets Solid 2** (`solid2`, opt-in). This infrastructure change does
+> not publish either line. See the
 > [migration and qualification record](./mcp-ui-solid/docs/ZOD4-STABLE-MIGRATION-2026-10-26.md).
 
 > **UI component library for Model Context Protocol (MCP) servers**
@@ -123,8 +124,9 @@ native chart/data switching, and chart/table/graph catalogue parity.
 See the [integration handoff](./mcp-ui-solid/docs/briefs/VISUALIZATION-FOUNDATION-2026-09-14.md).
 This work does not add automatic MCP selection or shared host filters.
 
-**Current line — `mcp-ui-solid` 6.25.1** (post-`5.0.0`, audit-driven visual-renderer
-& streaming hardening; `mcp-ui-spec` 5.7.0). Highlights from 6.18.0 — see
+**Stable workspace — `mcp-ui-solid` 7.0.0 / `mcp-ui-spec` 6.0.0**, still on
+Solid 1, with Zod 4 validation. Earlier visual-renderer and streaming highlights
+from 6.18.0 onward — see
 [`mcp-ui-solid/CHANGELOG.md`](./mcp-ui-solid/CHANGELOG.md) for the full list
 including 6.19.0:
 
@@ -177,19 +179,26 @@ does not make them public. Approve them in npmjs.com **Staged Packages** with
 2FA, Spec before Solid. See [npm release instructions](./.github/NPM_SETUP.md)
 for token setup, tags, and recovery of an interrupted release.
 
-**Solid 2 preview:** the stable package remains on Solid 1. A separate, manual
-[preview channel](./.github/SOLID2_PREVIEW_RELEASE.md) reviews the exact qualified
-`7.0.0-solid2.0` artifact before any upload, targets only `solid2`, and preserves
-`latest`. Merging its infrastructure does not publish or deploy the preview.
-Install it only in an isolated Solid 2 pilot, never over the existing Solid 1 app.
+| MCPUI Solid line | Host framework | npm channel | Release path |
+| --- | --- | --- | --- |
+| `7.x` (including future `7.1.x`) | Solid 1 | `latest` | Reviewed bump + stable Git tag, then npm staging and human 2FA approval |
+| `8.0.0-solid2.N` (first candidate: `8.0.0-solid2.0`) | Solid 2 | `solid2`, explicit opt-in | Manual review of the exact CI artifact; upload requires separate approval |
+
+**Solid 2 preview:** a separate, manual
+[preview channel](./.github/SOLID2_PREVIEW_RELEASE.md) checks the qualified RC.19
+artifact before any upload and preserves `latest`. No preview is published by
+merging this infrastructure. The source stays on PR #34, not stable main.
+There is no need to publish 8 while the host migration is unfinished. Install a
+future approved preview only in an isolated Solid 2 pilot. A future stable
+`8.0.0` / `latest` switch requires another reviewed release-policy change.
 
 This monorepo contains three packages published under `@seed-ship/`:
 
-| Package | Version | Description |
+| Package | Stable workspace version | Description |
 |---------|---------|-------------|
-| [`@seed-ship/mcp-ui-solid`](./mcp-ui-solid) | 6.25.1 | SolidJS components for rendering MCP-generated UI |
-| [`@seed-ship/mcp-ui-spec`](./mcp-ui-spec) | 5.7.0 | JSON schemas and Zod validators |
-| [`@seed-ship/mcp-ui-cli`](./mcp-ui-cli) | 5.0.1 | CLI for validation and type generation |
+| [`@seed-ship/mcp-ui-solid`](./mcp-ui-solid) | 7.0.0 | Solid 1 components for rendering MCP-generated UI |
+| [`@seed-ship/mcp-ui-spec`](./mcp-ui-spec) | 6.0.0 | JSON schemas and Zod validators |
+| [`@seed-ship/mcp-ui-cli`](./mcp-ui-cli) | 5.0.2 | CLI for validation and type generation |
 
 ### @seed-ship/mcp-ui-solid
 
