@@ -96,7 +96,7 @@ async function verifyConsumer(consumer) {
   const packageRoot = await realpath(resolve(consumer, 'node_modules/@seed-ship/mcp-ui-solid'))
   assert(packageRoot.startsWith((await realpath(consumer)) + sep), 'Package realpath escapes the isolated consumer')
   const installed = JSON.parse(await readFile(resolve(packageRoot, 'package.json'), 'utf8'))
-  assert.equal(installed.version, '7.0.0-solid2.0', 'Review harness pins for another preview version')
+  assert.equal(installed.version, '8.0.0-solid2.0', 'Review harness pins for another preview version')
   const req = createRequire(resolve(consumer, 'package.json')), actualPins = {}
   for (const [name, expected] of Object.entries(pins)) {
     let entry

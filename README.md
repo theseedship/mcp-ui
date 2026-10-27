@@ -5,10 +5,11 @@
 > dispatch, npm publication or Deposium change is authorized. See the
 > [current Deposium handoff](./mcp-ui-solid/docs/SOLID2-DEPOSIUM-HANDOFF-2026-10-27.md).
 
-> This branch is the isolated **Solid 2 preview**, `7.0.0-solid2.0`, not a
-> published release. Stable `7.0.0` remains Solid 1. The historical preview
-> number is retained for qualification only, not a new npm candidate. Do not install this
-> branch into a Solid 1 application or trigger the stable publishing workflows.
+> This branch prepares the isolated **Solid 2 preview**, `8.0.0-solid2.0`,
+> not a published release. Stable **7.x remains Solid 1** (`latest`), including
+> future `7.1.x` releases; **8.x targets Solid 2** (`solid2`, opt-in).
+> The old 7.x preview archive cannot qualify the new 8.x package. Do not install
+> this branch into a Solid 1 application or trigger stable publishing workflows.
 > See [the preview qualification and integration guide](./mcp-ui-solid/docs/SOLID2-PREVIEW.md).
 
 > **UI component library for Model Context Protocol (MCP) servers**

@@ -103,7 +103,7 @@ jobs:
           for profile in full optional-absent; do
             consumer="$RUNNER_TEMP/mcpui-solid2-$profile"
             node mcp-ui-solid/tests/solid2/run.mjs prepare \
-              --tarball "$RUNNER_TEMP/mcpui-solid2-artifacts/seed-ship-mcp-ui-solid-7.0.0-solid2.0.tgz" \
+              --tarball "$RUNNER_TEMP/mcpui-solid2-artifacts/seed-ship-mcp-ui-solid-8.0.0-solid2.0.tgz" \
               --spec-tarball "$RUNNER_TEMP/mcpui-solid2-artifacts/seed-ship-mcp-ui-spec-6.0.0.tgz" \
               --consumer "$consumer" --profile "$profile"
             pnpm --dir "$consumer" install --ignore-scripts

@@ -123,17 +123,32 @@ prouve ni le vrai chat Deposium, ni ses services, auth, SQL/RLS ou Workers/WASM.
    cartes/graphes, thèmes et SSR/hydratation sur le lockfile de l'application.
    Ce n'est pas remplacé par la qualification synthétique de la bibliothèque.
 
-## Version et publication : volontairement non préparées pour un upload
+## Version et promotion : candidate 8.x, aucun upload autorisé
 
-Stable MCP UI `7.0.0` est publié avec Solid 1. La preview conserve pour cette
-qualification le numéro historique `7.0.0-solid2.0`, inférieur au stable : il ne
-faut pas l'annoncer comme une nouvelle release ou un chemin d'update npm.
-Avant une future publication, choisir une nouvelle identité SemVer adaptée
-au changement de runtime (par exemple une preview de major 8, à faire approuver),
-puis revoir la politique, ses fixtures Spec 6 et ses tests de promotion.
+La politique de versions est maintenant explicite : la ligne stable `7.x`, y
+compris les futures `7.1.x`, reste Solid 1 et conserve le canal npm `latest`.
+La ligne `8.x` porte le runtime Solid 2 et reste opt-in sur le tag npm `solid2`.
+Le manifeste source préparé annonce `8.0.0-solid2.0`; cette chaîne de version
+ne prouve ni la qualification ni l'autorisation de publier. Il faut qualifier
+le HEAD exact et son archive; l'ancienne archive 7.x ne peut pas qualifier 8.x.
+La migration du host Deposium continue; l'installation attend l'accord de son
+équipe applicative.
 
-Le workflow de preview actuellement sur main est figé sur l'ancienne identité,
-RC.18 et le fixture Spec 5.7.0 : **ne pas le dispatcher pour ce delta**. Il n'est pas
-modifié dans cette préparation. Aucun upload n'est autorisé par l'existence
-du canal. Ne jamais utiliser le workflow stable, un tag `v…` ni `latest` pour
-la preview Solid 2. La branche main et son package Solid 1 restent distincts.
+Le tuple antérieur `7.0.0-solid2.0` et son archive/checksum sont des preuves
+historiques pour l'ancien source/CI seulement. Ils ne doivent jamais être
+présentés comme qualification du nouveau `8.0.0-solid2.0`. Il faut une nouvelle
+CI réussie sur le HEAD exact, puis qualifier son archive exacte. Les résultats
+et checksums de l'ancien tuple restent distincts de cette preuve.
+
+Le workflow de preview actuellement sur main reste figé sur l'ancienne identité,
+RC.18 et le fixture Spec 5.7.0 : **ne pas le dispatcher pour ce delta**. Une PR
+d'infrastructure distincte, basée sur stable main, doit d'abord être examinée
+et fusionnée avec la politique RC.19 / Spec 6 / CLI 5.0.2 et le validateur
+correspondant avant tout usage du nouveau workflow. Cette fusion d'infrastructure
+ne fusionne pas le runtime PR #34 et n'autorise aucun dispatch ni upload.
+
+Aucun dispatch, tag, merge de #34, staging, publication npm ou installation dans
+l'application n'est autorisé dans cette tranche. Plus tard, review-only et
+staging demanderont leurs validations et approbations séparées; une publication
+éventuelle resterait une approbation npm manuelle. Ne jamais utiliser le workflow
+stable, un tag `v…` ni `latest` pour la preview Solid 2.

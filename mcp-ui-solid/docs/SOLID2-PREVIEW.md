@@ -1,19 +1,40 @@
 # Solid 2 preview qualification
 
-> Source preparation explicitly resumed on 2026-10-27, for RC.19, stable
-> security carry-over and fresh package qualification only. The dated pause
-> and results below are historical. See the
+> Source preparation explicitly resumed on 2026-10-27 for the `8.0.0-solid2.0`
+> candidate: RC.19, stable security carry-over and fresh package qualification
+> only. The pause and qualification results below describe the earlier
+> `7.0.0-solid2.0` candidate (including historical RC.18 / RC.19 records).
+> See the
 > [current Deposium handoff](./SOLID2-DEPOSIUM-HANDOFF-2026-10-27.md).
-> No release operation or application change is authorized by this resumption.
+> A version string alone does not qualify a release: bind proof to the exact
+> new source HEAD and archive. No release operation or application change is
+> authorized by this resumption.
 
-Historical status: **paused by the maintainer on 2026-10-24**, with no target resumption
-date. Work is preserved on `feat/solid2-preview` and open draft PR #34, not on
-the Solid 1 production line. The matrix below records historical qualification,
+## Current source candidate and release boundary
+
+The candidate manifest is now `8.0.0-solid2.0`, targeting the exact RC.19
+runtime/toolchain and the stable Spec 6 / CLI 5.0.2 line. Stable `7.x`, including
+future `7.1.x`, remains Solid 1 on npm `latest`; Solid 2 is the opt-in `8.x` line
+on `solid2`. Qualification must bind to this exact source HEAD and its archive;
+the historical `7.0.0-solid2.0` SHA, archive and checksum do not qualify it.
+
+Before any use of a preview promotion workflow, the separate RC.19 / Spec 6 /
+CLI 5.0.2 infrastructure PR must be reviewed and merged into stable main. This
+does not merge runtime PR #34. Dispatch, upload, tag, runtime merge and app
+installation remain unauthorized. The Deposium host migration is in progress;
+installation requires the application team's approval.
+
+## Historical source, workbench and qualification (through 2026-10-24)
+
+At the 2026-10-24 checkpoint, preparation was paused with no resumption date.
+That pause is historical; source is now being prepared on `feat/solid2-preview`
+and open draft PR #34. The matrix below records only the earlier qualification,
 not permission to migrate, merge, release, tag, stage npm or deploy.
 
-Start with the canonical [pause and resumption handoff](./SOLID2-PREVIEW-HANDOFF-2026-10-23.md).
-It supersedes any earlier next-step language in this workbench. Do not resume
-automatically, keep the branch, and rerun the stated gates after a new human go.
+The [pause and resumption handoff](./SOLID2-PREVIEW-HANDOFF-2026-10-23.md)
+preserves the earlier checkpoint and restart evidence. Its pause instruction
+has been superseded by the explicit 2026-10-27 source-preparation resumption;
+its archived qualifications remain historical.
 
 ## Source and packaging decision
 
@@ -21,16 +42,17 @@ automatically, keep the branch, and rerun the stated gates after a new human go.
 - Last integrated stable main: `725f862ac76170c40ab796a1d4773b0dbb90be27`
   (#38). Last qualified functional preview: `96715b9746b259d26219b24a503e92a7106275a4`.
   Later pause-documentation commits are not the source of that CI archive.
-- Stable npm `latest` verified on 2026-10-23: `6.25.1`.
-- Isolated branch: `feat/solid2-preview`; proposed local version
-  `7.0.0-solid2.0`. Same package name, separate artifact/channel only.
+- Stable npm `latest` verified on 2026-10-23: `6.25.1` (historical snapshot).
+- Isolated branch: `feat/solid2-preview`; the earlier local candidate was
+  `7.0.0-solid2.0`. This is not the current package or promotion identity.
 - Stable source and lockfile stay in an independent detached checkout.
 - Public source condition `solid` does not select a runtime version: only
   install this preview into an independently pinned Solid 2 target.
-- Wire schemas, payloads, trust policy, callbacks and citation metadata remain
-  in scope for parity; Spec and CLI do not need version changes.
+- Wire schemas, payloads, trust policy, callbacks and citation metadata remained
+  in scope for parity. That earlier plan did not change Spec/CLI; the current
+  candidate now uses Spec 6 and CLI 5.0.2 and requires fresh qualification.
 
-## Exact workbench
+## Historical exact workbench: RC.18
 
 | Package | Pin |
 | --- | --- |
@@ -77,9 +99,10 @@ metadata warning; no runtime alias or old serializer override hides it.
   types-only, adapters, adapters/presentation, plugins/duckdb and plugins/katex.
   The KaTeX entry is explicitly opt-in and requires its peer. Other engines stay
   lazy; no optional engine or monorepo dependency graph is bundled into the package.
-- No Spec or CLI source/schema/version change is needed. Wire shapes, citations,
-  callbacks and sanitization profiles stay unchanged. Server validation callbacks
-  remain synchronous; client notifications run after commit.
+- For this historical candidate, no Spec or CLI source/schema/version change was
+  planned. The current candidate carries Spec 6 / CLI 5.0.2 while preserving the
+  wire shapes, citations, callbacks and sanitization profiles. Server validation
+  callbacks remain synchronous; client notifications run after commit.
 
 ## Reproduction and clean-package gates
 
@@ -221,17 +244,22 @@ large virtualized tables; optional engines/math; portal/citation identity;
 streaming cancellation/remount/listener counts; two-instance isolation;
 unchanged sanitation and wire fixtures; CI running the new checks.
 
-## Release prohibition
+## Release and application boundary
 
-No publication while paused. Do not push a preview tag or use the legacy stable
-publication workflow: it matches prerelease tags but stages with `--tag latest`,
-and the GitHub release workflow also marks releases as stable.
+This resumption authorizes source preparation and qualification only. Do not
+dispatch, upload, tag, merge runtime PR #34, or install into the Deposium host.
+Do not use the legacy stable publication workflow: it matches prerelease tags
+but stages with `--tag latest`, and the GitHub release workflow marks releases
+as stable.
 
-The separate manual preview channel from merged #35 now exists on main; its
-existence is not authorization to dispatch it. After an explicit resumption,
-revalidate the policy and source/CI/artifact binding, then obtain separate
-approval of SHA, version, tarball and dist-tag. The source PR must stay open.
-See the [channel procedure](https://github.com/theseedship/mcp-ui/blob/feat/solid2-preview/.github/SOLID2_PREVIEW_RELEASE.md).
+The manual preview channel already on main is pinned to the earlier version,
+RC.18 and Spec 5.7.0; do not dispatch it for this candidate. A separate
+RC.19 / Spec 6 / CLI 5.0.2 infrastructure PR must first be reviewed and merged
+to stable main before any future use of its policy. That merge does not merge
+the runtime PR. Later review-only and staging operations still require their
+own exact source/CI/artifact binding and explicit approvals; the source PR must
+remain open. The current [channel procedure](../../.github/SOLID2_PREVIEW_RELEASE.md)
+is the historical 7.x/RC.18 policy, not instructions to use for 8.x.
 
 ## Official references
 

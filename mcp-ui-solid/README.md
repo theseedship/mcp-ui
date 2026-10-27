@@ -9,16 +9,19 @@ See the [current Deposium handoff](./docs/SOLID2-DEPOSIUM-HANDOFF-2026-10-27.md)
 The [pause/resumption handoff](./docs/SOLID2-PREVIEW-HANDOFF-2026-10-23.md)
 records the preserved source, checksums, known gaps and restart checklist.
 
-This branch prepares `7.0.0-solid2.0` for a **separate Solid 2 host**. The stable
-Solid 1 application uses stable `7.0.0` and its own lockfile. The historical
-preview version is a source-qualification identity, not an approved npm candidate.
-Zod is now 4.6.6 and Spec ^6.0.0. This is not a
+This branch prepares `8.0.0-solid2.0` as an **opt-in preview for a separate
+Solid 2 host**. The stable `7.x` line, including future `7.1.x` releases, remains
+Solid 1 on npm `latest`; Solid 2 belongs to `8.x` and the separate `solid2` tag.
+The `8.0.0-solid2.0` source version alone proves neither qualification nor
+release approval: bind later proof to the exact source HEAD and archive. Zod is
+4.6.6 and Spec is 6.x. This is not a
 dual-runtime package: required peers are exactly `solid-js@2.0.0-rc.19` and
 `@solidjs/web@2.0.0-rc.19` (Node >=22.12.0). DOM types/imports move to
 `@solidjs/web`; core and draft-store APIs come from `solid-js`.
 
-After an explicit resumption, use a newly qualified identified tarball, not an
-unpinned branch or the stable npm tag. Preserved archives are historical evidence.
+For any later host qualification, use an identified archive qualified from the
+exact source HEAD, not an unpinned branch or the stable npm tag. Preserved
+archives are historical evidence.
 The [preview guide](./docs/SOLID2-PREVIEW.md) records the compiler/testing pins,
 optional peers, real-package qualification, consumer integration and rollback
 boundaries. Large-table virtualization uses optional
@@ -29,9 +32,9 @@ tokens are retained. Imperative store/controller methods commit before returning
 ordinary reactive writes follow Solid 2 staged scheduling. Do not widen the
 stable peer range, alias runtimes or mix Solid 1 and Solid 2 in a reactive tree.
 
-No npm staging/publication, release tag, workflow dispatch or deployment is
-authorized by this preview. The historical stable changelog and examples below
-do not override these preview-specific requirements.
+No npm staging/publication, release tag, workflow dispatch, runtime-PR merge or
+application installation is authorized by this preview. The historical stable
+changelog and examples below do not override these preview-specific requirements.
 
 SolidJS components + chat toolkit for MCP-generated UI. Part of the [MCP UI ecosystem](https://github.com/theseedship/mcp-ui).
 
