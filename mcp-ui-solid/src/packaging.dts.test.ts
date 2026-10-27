@@ -45,7 +45,10 @@ describe('declaration packaging', () => {
     expect(existsSync(barrel), `missing flattened barrel ${barrel}`).toBe(true)
 
     const source = readFileSync(barrel, 'utf8')
-    expect(source).toContain(`export * from './${dir}/index'`)
+    expect(source).toContain(`export * from "./${dir}/index.js"`)
+    const commonjs = readFileSync(resolve(dist, `${dir}.d.cts`), 'utf8')
+    expect(commonjs).toContain(`export * from "./${dir}/index.cjs"`)
+    expect(existsSync(resolve(dist, dir, 'index.d.cts'))).toBe(true)
   })
 
   it('re-exports the components default through the flattened barrel', () => {
@@ -53,7 +56,9 @@ describe('declaration packaging', () => {
     // src/components/index.ts has `export { UIResourceRenderer as default }`.
     // `export *` does NOT carry a default, so it needs its own line.
     const source = readFileSync(resolve(dist, 'components.d.ts'), 'utf8')
-    expect(source).toContain(`export { default } from './components/index'`)
+    expect(source).toContain('export { default } from "./components/index.js"')
+    const commonjs = readFileSync(resolve(dist, 'components.d.cts'), 'utf8')
+    expect(commonjs).toContain('export { default } from "./components/index.cjs"')
   })
 
   it('ships the declaration entry points every export condition points at', () => {

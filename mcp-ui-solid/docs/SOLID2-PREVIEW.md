@@ -1,6 +1,12 @@
 # Solid 2 preview qualification
 
-Status: **paused by the maintainer on 2026-10-24**, with no target resumption
+> Source preparation explicitly resumed on 2026-10-27, for RC.19, stable
+> security carry-over and fresh package qualification only. The dated pause
+> and results below are historical. See the
+> [current Deposium handoff](./SOLID2-DEPOSIUM-HANDOFF-2026-10-27.md).
+> No release operation or application change is authorized by this resumption.
+
+Historical status: **paused by the maintainer on 2026-10-24**, with no target resumption
 date. Work is preserved on `feat/solid2-preview` and open draft PR #34, not on
 the Solid 1 production line. The matrix below records historical qualification,
 not permission to migrate, merge, release, tag, stage npm or deploy.

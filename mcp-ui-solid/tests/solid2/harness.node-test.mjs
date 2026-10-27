@@ -7,6 +7,7 @@ test('full host pins runtime/compiler and explicit optional engines without work
   const manifest = manifestFor('/durable/solid.tgz', '/durable/spec.tgz')
   assert.equal(manifest.dependencies['@seed-ship/mcp-ui-solid'], 'file:/durable/solid.tgz')
   assert.equal(manifest.dependencies['@seed-ship/mcp-ui-spec'], 'file:/durable/spec.tgz')
+  assert.equal(manifest.pnpm.overrides['@seed-ship/mcp-ui-spec'], 'file:/durable/spec.tgz')
   for (const [key, value] of Object.entries(pins)) assert.equal({ ...manifest.dependencies, ...manifest.devDependencies }[key], value)
   for (const [key, value] of Object.entries(enginePins)) assert.equal(manifest.dependencies[key], value)
   assert(!JSON.stringify(manifest).includes('workspace:'))
@@ -14,7 +15,7 @@ test('full host pins runtime/compiler and explicit optional engines without work
 test('optional-absent host declares no optional engines and fixes Spec version', () => {
   const manifest = manifestFor('/durable/solid.tgz', undefined, 'optional-absent')
   for (const key of Object.keys(enginePins)) assert.equal(manifest.dependencies[key], undefined)
-  assert.equal(manifest.dependencies['@seed-ship/mcp-ui-spec'], '5.7.0')
+  assert.equal(manifest.dependencies['@seed-ship/mcp-ui-spec'], '6.0.0')
 })
 test('rejects unsafe/ambiguous inputs before creating a consumer', () => {
   assert.throws(() => manifestFor('relative.tgz'))
@@ -25,7 +26,8 @@ test('rejects unsafe/ambiguous inputs before creating a consumer', () => {
 test('server gate rejects ownership and both hydration namespace failure diagnostics', () => {
   for (const text of ['[NO_OWNER_EFFECT] scope missing', 'Hydration key miss for "42"',
     'Hydration completed with 29 unclaimed server-rendered nodes', '[STRICT_READ_UNTRACKED]',
-    '[REACTIVE_WRITE_IN_OWNED_SCOPE]', '[SSR_UNSAFE_WRITE]']) assert(hasMigrationDiagnostic(text), text)
+    '[REACTIVE_WRITE_IN_OWNED_SCOPE]', '[EFFECT_RELAY_TEAR]',
+    '[EFFECT_WRITES_OWN_SOURCE]', '[SSR_UNSAFE_WRITE]']) assert(hasMigrationDiagnostic(text), text)
   assert(!hasMigrationDiagnostic('SSR ready; HTTP 200'))
 })
 test('only the exact intentional SSE scope/message is classified as expected', () => {

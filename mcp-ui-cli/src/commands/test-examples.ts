@@ -5,6 +5,7 @@
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
 import Ajv from 'ajv'
+import uriResolver from 'fast-uri'
 import chalk from 'chalk'
 import ora from 'ora'
 import type { ComponentRegistry } from '@seed-ship/mcp-ui-spec'
@@ -51,7 +52,8 @@ export async function testExamplesCommand(file: string, options: TestExamplesOpt
       spinner.text = `Testing examples for ${component.id}...`
 
       // Create Ajv validator for this component's schema
-      const ajv = new Ajv({ allErrors: true, verbose: options.verbose })
+      // Use our published security floor, not Ajv's looser transitive range.
+      const ajv = new Ajv({ uriResolver, allErrors: true, verbose: options.verbose })
       const validate = ajv.compile(component.schema as any)
 
       // Test each example

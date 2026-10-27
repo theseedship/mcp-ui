@@ -1,10 +1,15 @@
 # Solid 2 MCPUI — mise en pause et procédure de reprise
 
+> **2026-10-27 : reprise explicite de la préparation du code et des tests.**
+> La décision historique ci-dessous ne bloque plus ce périmètre. Pas de merge,
+> dispatch, publication ni modification de Deposium autorisés. Lire d'abord le
+> [handoff courant RC.16/RC.18](./SOLID2-DEPOSIUM-HANDOFF-2026-10-27.md).
+
 Document commencé le 2026-10-23, décision de pause du mainteneur le 2026-10-24
 (Europe/Paris). Cette page est la référence de reprise ; les anciens guides
 d'installation ci-dessous sont conditionnels, pas une consigne de continuer.
 
-## Décision et conservation
+## Décision historique de pause et conservation — 2026-10-24
 
 - Migration Solid 2 suspendue, sans date de reprise : le chantier côté Deposium
   doit d'abord être suffisamment avancé. Aucun travail de migration automatique.

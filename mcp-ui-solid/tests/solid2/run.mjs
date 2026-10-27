@@ -12,7 +12,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import { qualifyBrowser } from './browser.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url)), sourceRoot = resolve(here, '../../..')
-export const hasMigrationDiagnostic = text => /\[(?:STRICT_READ_UNTRACKED|REACTIVE_WRITE_IN_OWNED_SCOPE|PRIMITIVE_IN_[A-Z_]+|MISSING_EFFECT_FN|NO_OWNER_[A-Z_]+|SSR_[A-Z_]+)\]|hydration (?:key miss|completed[^\n]*unclaimed|mismatch|error)/i.test(text)
+export const hasMigrationDiagnostic = text => /\[(?:STRICT_READ_UNTRACKED|REACTIVE_WRITE_IN_OWNED_SCOPE|EFFECT_RELAY_TEAR|EFFECT_WRITES_OWN_SOURCE|PRIMITIVE_IN_[A-Z_]+|MISSING_EFFECT_FN|NO_OWNER_[A-Z_]+|SSR_[A-Z_]+)\]|hydration (?:key miss|completed[^\n]*unclaimed|mismatch|error)/i.test(text)
 export const hasBareZoomImport = text => /\bimport\s*\(\s*(?:\/\*[\s\S]*?\*\/\s*)?(['"`])chartjs-plugin-zoom\1\s*\)/.test(text)
 
 async function auditClientZoomGraph(root) {
@@ -31,8 +31,8 @@ async function auditClientZoomGraph(root) {
   return { javascript, bareImports }
 }
 export const pins = Object.freeze({
-  'solid-js': '2.0.0-rc.18', '@solidjs/web': '2.0.0-rc.18', '@solidjs/signals': '2.0.0-rc.18',
-  '@solidjs/compiler': '2.0.0-rc.18', '@solidjs/babel-plugin': '2.0.0-rc.18',
+  'solid-js': '2.0.0-rc.19', '@solidjs/web': '2.0.0-rc.19', '@solidjs/signals': '2.0.0-rc.19',
+  '@solidjs/compiler': '2.0.0-rc.19', '@solidjs/babel-plugin': '2.0.0-rc.19',
   '@solidjs/vite-plugin': '3.0.0-next.51', '@babel/core': '7.29.6', '@types/node': '22.19.11', vite: '8.3.5', typescript: '5.9.3',
   '@tailwindcss/vite': '4.3.3', tailwindcss: '4.3.3',
 })
@@ -47,11 +47,14 @@ export function manifestFor(tarball, specTarball, profile = 'full') {
   return { name: 'mcp-ui-solid2-tarball-consumer', version: '0.0.0', private: true, type: 'module',
     packageManager: 'pnpm@8.15.0', scripts: { dev: 'vite', build: 'vite build', serve: 'node dist/server/node.js', typecheck: 'tsc --noEmit' },
     dependencies: { '@seed-ship/mcp-ui-solid': `file:${tarball}`,
-      '@seed-ship/mcp-ui-spec': specTarball ? `file:${specTarball}` : '5.7.0',
+      '@seed-ship/mcp-ui-spec': specTarball ? `file:${specTarball}` : '6.0.0',
       'solid-js': pins['solid-js'], '@solidjs/web': pins['@solidjs/web'], ...(profile === 'full' ? enginePins : {}) },
     devDependencies: Object.fromEntries(Object.entries(pins).filter(([key]) => !['solid-js', '@solidjs/web'].includes(key))),
     // Pin the Solid 2 compiler/runtime family, never alias a Solid 1 package.
-    pnpm: { overrides: Object.fromEntries(Object.entries(pins).filter(([key]) => key.startsWith('@solidjs/') || key === 'solid-js')) },
+    pnpm: { overrides: {
+      ...Object.fromEntries(Object.entries(pins).filter(([key]) => key.startsWith('@solidjs/') || key === 'solid-js')),
+      ...(specTarball ? { '@seed-ship/mcp-ui-spec': `file:${specTarball}` } : {}),
+    } },
   }
 }
 export function validateDestination(path) {

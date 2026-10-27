@@ -5,7 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [5.0.2] - Unreleased
+
+### Security
+
+- Declare `fast-uri: ^3.1.9` directly and supply it as `uriResolver` to both
+  Ajv validators, including the published ESM and CJS entrypoints. This fixes
+  the active resolver independently of Ajv's older transitive dependency floor.
+  The workspace override and lockfile also move to 3.1.9; consumers must still
+  audit any separate older copies in their application.
+
+### Fixed
+
+- Align internal Zod to 4.6.6 and Spec to ^6.0.0 without changing the public
+  command API. Read `ZodError.issues` rather than its removed `errors` alias.
+- Resolve the packaged JSON Schema through its public Spec export, register
+  Ajv formats instead of silently ignoring them, and qualify both validation paths.
+- Emit the previously missing declarations and repair ESM/CJS external-default
+  interop for the existing dependencies. These are pre-existing packaging fixes.
+
+## Historical tooling follow-up before Zod 4
 
 ### Security — development tooling only
 

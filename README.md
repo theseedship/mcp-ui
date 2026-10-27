@@ -1,12 +1,13 @@
 # MCP UI Components
 
-> **Solid 2 work paused — 2026-10-24.** The work is preserved on
-> `feat/solid2-preview`; PR #34 stays open as a draft. No migration, merge,
-> preview staging/publication or deployment is scheduled. Resume only after a
-> new maintainer decision using the [pause and resumption handoff](./mcp-ui-solid/docs/SOLID2-PREVIEW-HANDOFF-2026-10-23.md).
+> **Solid 2 source preparation resumed — 2026-10-27.** Target RC.19 and carry
+> the stable Zod 4 / fast-uri fixes; PR #34 stays draft. No merge, release
+> dispatch, npm publication or Deposium change is authorized. See the
+> [current Deposium handoff](./mcp-ui-solid/docs/SOLID2-DEPOSIUM-HANDOFF-2026-10-27.md).
 
 > This branch is the isolated **Solid 2 preview**, `7.0.0-solid2.0`, not a
-> published release. Production Solid 1 stays on `6.25.1`. Do not install this
+> published release. Stable `7.0.0` remains Solid 1. The historical preview
+> number is retained for qualification only, not a new npm candidate. Do not install this
 > branch into a Solid 1 application or trigger the stable publishing workflows.
 > See [the preview qualification and integration guide](./mcp-ui-solid/docs/SOLID2-PREVIEW.md).
 
@@ -26,10 +27,10 @@ release record, not a claim that the current dependency audit is clean.
 
 **Security follow-up (unreleased, 2026-10-24):** stable PR #38 updates Vite to
 6.4.5 and Vitest to 4.1.12; its Solid 1 audit removes seven advisory entries.
-This preview carries Vitest 4.1.12 and the CLI/Spec Vite fixes while retaining
-Vite 8.3.5 and the exact Solid 2 RC.18 toolchain. The stable audit counts are not
-a fresh preview audit. Runtime Zod remains affected and needs a separately
-qualified API/version decision before publication. See the
+That historical preview carried Vitest 4.1.12 and the CLI/Spec Vite fixes,
+with Vite 8.3.5 and Solid 2 RC.18. Its runtime Zod advisory and audit counts
+describe the old #38 snapshot, not the resumed source or a current clean audit.
+The resumed source now carries Zod 4.6.6 and fast-uri 3.1.9. See the
 [current security dependency notes](./mcp-ui-solid/docs/SECURITY-DEPENDENCIES.md).
 
 **6.25.0 (`mcp-ui-solid`):** inherited CSS theme tokens for prompts, resource

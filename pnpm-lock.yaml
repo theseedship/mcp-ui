@@ -10,7 +10,7 @@ overrides:
   brace-expansion: ^5.0.12
   minimatch: '>=10.2.1'
   postcss: ^8.5.23
-  fast-uri: ^3.1.6
+  fast-uri: ^3.1.9
   js-yaml: ^4.3.2
   source-map-js: ^1.2.2
   '@babel/core': ^7.29.6
@@ -37,17 +37,23 @@ importers:
   mcp-ui-cli:
     dependencies:
       '@seed-ship/mcp-ui-spec':
-        specifier: workspace:^5.6.0
+        specifier: workspace:^6.0.0
         version: link:../mcp-ui-spec
       ajv:
         specifier: ^8.18.0
         version: 8.18.0
+      ajv-formats:
+        specifier: 3.0.1
+        version: 3.0.1(ajv@8.18.0)
       chalk:
         specifier: ^5.3.0
         version: 5.6.2
       commander:
         specifier: ^11.1.0
         version: 11.1.0
+      fast-uri:
+        specifier: ^3.1.9
+        version: 3.1.9
       json-schema-to-typescript:
         specifier: ^15.0.4
         version: 15.0.4
@@ -55,8 +61,8 @@ importers:
         specifier: ^7.0.1
         version: 7.0.1
       zod:
-        specifier: ^3.22.4
-        version: 3.25.76
+        specifier: 4.6.6
+        version: 4.6.6
     devDependencies:
       '@types/node':
         specifier: ^22.0.0
@@ -89,7 +95,7 @@ importers:
         specifier: ^1.28.0
         version: 1.32.0
       '@seed-ship/mcp-ui-spec':
-        specifier: workspace:^5.7.0
+        specifier: workspace:^6.0.0
         version: link:../mcp-ui-spec
       '@types/dompurify':
         specifier: ^3.0.5
@@ -113,8 +119,8 @@ importers:
         specifier: ^4.0.0
         version: 4.1.1
       zod:
-        specifier: ^3.22.4
-        version: 3.25.76
+        specifier: 4.6.6
+        version: 4.6.6
     devDependencies:
       '@size-limit/esbuild':
         specifier: ^12.0.0
@@ -126,23 +132,23 @@ importers:
         specifier: ^12.0.0
         version: 12.0.0(size-limit@12.0.0)
       '@solidjs/babel-plugin':
-        specifier: 2.0.0-rc.18
-        version: 2.0.0-rc.18(@babel/core@7.29.7)
+        specifier: 2.0.0-rc.19
+        version: 2.0.0-rc.19(@babel/core@7.29.7)
       '@solidjs/compiler':
-        specifier: 2.0.0-rc.18
-        version: 2.0.0-rc.18
+        specifier: 2.0.0-rc.19
+        version: 2.0.0-rc.19
       '@solidjs/signals':
-        specifier: 2.0.0-rc.18
-        version: 2.0.0-rc.18
+        specifier: 2.0.0-rc.19
+        version: 2.0.0-rc.19
       '@solidjs/testing-library':
         specifier: 1.0.0-rc.2
-        version: 1.0.0-rc.2(@solidjs/web@2.0.0-rc.18)(solid-js@2.0.0-rc.18)
+        version: 1.0.0-rc.2(@solidjs/web@2.0.0-rc.19)(solid-js@2.0.0-rc.19)
       '@solidjs/vite-plugin':
         specifier: 3.0.0-next.51
-        version: 3.0.0-next.51(@solidjs/web@2.0.0-rc.18)(solid-js@2.0.0-rc.18)(vite@8.3.5)
+        version: 3.0.0-next.51(@solidjs/web@2.0.0-rc.19)(solid-js@2.0.0-rc.19)(vite@8.3.5)
       '@solidjs/web':
-        specifier: 2.0.0-rc.18
-        version: 2.0.0-rc.18(solid-js@2.0.0-rc.18)
+        specifier: 2.0.0-rc.19
+        version: 2.0.0-rc.19(solid-js@2.0.0-rc.19)
       '@tanstack/virtual-core':
         specifier: 3.13.18
         version: 3.13.18
@@ -183,8 +189,8 @@ importers:
         specifier: ^12.0.0
         version: 12.0.0
       solid-js:
-        specifier: 2.0.0-rc.18
-        version: 2.0.0-rc.18
+        specifier: 2.0.0-rc.19
+        version: 2.0.0-rc.19
       typescript:
         specifier: ^5.3.3
         version: 5.9.3
@@ -198,8 +204,8 @@ importers:
   mcp-ui-spec:
     dependencies:
       zod:
-        specifier: ^3.22.4
-        version: 3.25.76
+        specifier: 4.6.6
+        version: 4.6.6
     devDependencies:
       '@types/node':
         specifier: ^22.0.0
@@ -1721,8 +1727,8 @@ packages:
       size-limit: 12.0.0
     dev: true
 
-  /@solidjs/babel-plugin@2.0.0-rc.18(@babel/core@7.29.7):
-    resolution: {integrity: sha512-jgwUfRB9jZrIaFxjgzbr6Di7H+jSVEk7j+ZtYHLWSTuF1UnRct6wrfrGQOU9B9WQZa8fR0KWNkdLlb6zfqfeZw==}
+  /@solidjs/babel-plugin@2.0.0-rc.19(@babel/core@7.29.7):
+    resolution: {integrity: sha512-DZTDg989Znh553C/emDjAJXNEe73G+8jYbLyq9kZSB5HV3bTb9yq2PY/qwfM+NiJIA8qRCVMkrW+XsAE+yO6kQ==}
     peerDependencies:
       '@babel/core': ^7.29.6
       '@tsrx/core': 0.1.63
@@ -1738,40 +1744,40 @@ packages:
       parse5: 7.3.0
     dev: true
 
-  /@solidjs/compiler-darwin-arm64@2.0.0-rc.18:
-    resolution: {integrity: sha512-QXbaI9bCW4WGd3s5ZJIzI8quMTaMaWryoq/u9PD42apGCX1Md3B/foFU7UiW7jq51YHaRWCkf1iQkd8Ee5GI7w==}
+  /@solidjs/compiler-darwin-arm64@2.0.0-rc.19:
+    resolution: {integrity: sha512-4IM2eXXVffIVGo6ps1dnv3iyR+EBZHP/85FfmyEeOr3LkaAr1uTHr1gtQwdz/Ru670TRzUPNiWDGb7hJWHFEBw==}
     cpu: [arm64]
     os: [darwin]
     requiresBuild: true
     dev: true
     optional: true
 
-  /@solidjs/compiler-darwin-x64@2.0.0-rc.18:
-    resolution: {integrity: sha512-Y6x899jJWsnTwoQqqpWyjMp+/Dz35fPXUHQKrcQesbUajXWsljPY+dT6XLDMpEILrMSxyyBPQ9lmRTRE7nJLGQ==}
+  /@solidjs/compiler-darwin-x64@2.0.0-rc.19:
+    resolution: {integrity: sha512-YXMya46yTZqgeprZurE7kdbjcm0ky6OyVBWB276SRiWXlp275mnO8rpeT32uyQP8f8qlisjroyVNmPTmLGpEmg==}
     cpu: [x64]
     os: [darwin]
     requiresBuild: true
     dev: true
     optional: true
 
-  /@solidjs/compiler-linux-arm64-gnu@2.0.0-rc.18:
-    resolution: {integrity: sha512-bs7rXGsC+1rVk5WadxOyaxdux8Mx2vjEUdX8UnhTQc37uCHBCI5mLuYICoFX9qXdINZK9H8VrkgT2WJxVN6ypQ==}
+  /@solidjs/compiler-linux-arm64-gnu@2.0.0-rc.19:
+    resolution: {integrity: sha512-aXZ8SEsUJGLji3ilC9m9wpgDTbXxdbngDwQnRdhhdPUaER6nz5YfLd7zzkZpYHNVq+/TcUP7IY3TV3Iq4sfnZw==}
     cpu: [arm64]
     os: [linux]
     requiresBuild: true
     dev: true
     optional: true
 
-  /@solidjs/compiler-linux-x64-gnu@2.0.0-rc.18:
-    resolution: {integrity: sha512-91+hS2M3HJdZQ/b44XJnFhpSjO9JdmAefwIQPz+iBvbkafNW6yvVjkiCd+BKZ106tJ1HtHnbj2OSQwH7+cxhyw==}
+  /@solidjs/compiler-linux-x64-gnu@2.0.0-rc.19:
+    resolution: {integrity: sha512-U6muc1Qz4PCckrquesnhc0/O2+zypV8F+ad0jkYXM+gwdoDFnzFLk1xevJI8uTPOSt4Qdn3LGldBViG9MFoZeQ==}
     cpu: [x64]
     os: [linux]
     requiresBuild: true
     dev: true
     optional: true
 
-  /@solidjs/compiler-wasm32-wasi@2.0.0-rc.18:
-    resolution: {integrity: sha512-5JuKtcdNjVUBgkz2lyTuVen4K7/3ASwaJg6vp7zbnsM2ZapcQXzlIhP3zee8FBBhGgvdgbf18L+u2B3H6T88DQ==}
+  /@solidjs/compiler-wasm32-wasi@2.0.0-rc.19:
+    resolution: {integrity: sha512-Y7BM58QTk0aAz5OxrVzTaMvCvw74KEvLWUJXSMJz6txfedpIFzmaATnmVE9Pkyodv801Z3Gnp1fadVNudcA6tw==}
     engines: {node: '>=14.0.0'}
     requiresBuild: true
     dependencies:
@@ -1781,43 +1787,43 @@ packages:
     dev: true
     optional: true
 
-  /@solidjs/compiler-win32-x64-msvc@2.0.0-rc.18:
-    resolution: {integrity: sha512-DOfsflkkvZ4XRzcgKPTpthdtDB4syTr+8ci6ZZkcfexi2TaxiWROIP7heMFlBBYrSYINW8ct6eOjgkFUom4kqQ==}
+  /@solidjs/compiler-win32-x64-msvc@2.0.0-rc.19:
+    resolution: {integrity: sha512-UBjA+xCXCWgH/6gHdlzViKk21XaPAPJZIsnHav5BcpHdyRl2K6kAIzAoPm2IZGH7ZK73TxSxCifMaRWY6Yt3ag==}
     cpu: [x64]
     os: [win32]
     requiresBuild: true
     dev: true
     optional: true
 
-  /@solidjs/compiler@2.0.0-rc.18:
-    resolution: {integrity: sha512-I9wQy6RQeOeDvbxDxco+hlDIK5UBxnVNdBEc2LnaC+bkSZwQX7S5ebAohPGhxfsEChLD++u9A8NBkFd9vSVM7A==}
+  /@solidjs/compiler@2.0.0-rc.19:
+    resolution: {integrity: sha512-1ySojyE1/RXePyoWqm4nXxYWSdrJ4SoxAY8VF2Ac787zGkrme1PKq5fyE1tq/dJxdAAw6Tc2jgAJn0hyq3h9DA==}
     optionalDependencies:
-      '@solidjs/compiler-darwin-arm64': 2.0.0-rc.18
-      '@solidjs/compiler-darwin-x64': 2.0.0-rc.18
-      '@solidjs/compiler-linux-arm64-gnu': 2.0.0-rc.18
-      '@solidjs/compiler-linux-x64-gnu': 2.0.0-rc.18
-      '@solidjs/compiler-wasm32-wasi': 2.0.0-rc.18
-      '@solidjs/compiler-win32-x64-msvc': 2.0.0-rc.18
+      '@solidjs/compiler-darwin-arm64': 2.0.0-rc.19
+      '@solidjs/compiler-darwin-x64': 2.0.0-rc.19
+      '@solidjs/compiler-linux-arm64-gnu': 2.0.0-rc.19
+      '@solidjs/compiler-linux-x64-gnu': 2.0.0-rc.19
+      '@solidjs/compiler-wasm32-wasi': 2.0.0-rc.19
+      '@solidjs/compiler-win32-x64-msvc': 2.0.0-rc.19
     dev: true
 
-  /@solidjs/signals@2.0.0-rc.18:
-    resolution: {integrity: sha512-pzYahnM93EpDN4xZF1EefdjPE6Buuu/90/kiaLOjUFhPd3H0W6J9R8lIF+kkD1Z78LW1OTHciRY5MCqpYj5iSQ==}
+  /@solidjs/signals@2.0.0-rc.19:
+    resolution: {integrity: sha512-Epg4lyelYZnwG152q1U7lXAXp/2/jaQdaRbzh60rcOelSwmCMf/WN6FQuUEUwbn1p/QNyoJzdGSKPajkVe3zOg==}
     engines: {node: '>=22.12.0'}
     dev: true
 
-  /@solidjs/testing-library@1.0.0-rc.2(@solidjs/web@2.0.0-rc.18)(solid-js@2.0.0-rc.18):
+  /@solidjs/testing-library@1.0.0-rc.2(@solidjs/web@2.0.0-rc.19)(solid-js@2.0.0-rc.19):
     resolution: {integrity: sha512-QZqIVoyDAqaGgSsWQ3gnYGaG1peFkNF0/n5uM+393g5plZlcvgxmUgdjsQtwrRLVZCrh0K1lp7YHxsAlN5XPkA==}
     engines: {node: '>= 14'}
     peerDependencies:
       '@solidjs/web': '>=2.0.0-0'
       solid-js: '>=2.0.0-0'
     dependencies:
-      '@solidjs/web': 2.0.0-rc.18(solid-js@2.0.0-rc.18)
+      '@solidjs/web': 2.0.0-rc.19(solid-js@2.0.0-rc.19)
       '@testing-library/dom': 10.4.2
-      solid-js: 2.0.0-rc.18
+      solid-js: 2.0.0-rc.19
     dev: true
 
-  /@solidjs/vite-plugin@3.0.0-next.51(@solidjs/web@2.0.0-rc.18)(solid-js@2.0.0-rc.18)(vite@8.3.5):
+  /@solidjs/vite-plugin@3.0.0-next.51(@solidjs/web@2.0.0-rc.19)(solid-js@2.0.0-rc.19)(vite@8.3.5):
     resolution: {integrity: sha512-ffpFNYX1z3mGjr95nM3hwo0R3P489FjVnYP5YCOorw+N8grCo+Ay1hGx68H00n5OAC7uGd/7B4GsU1HnA/VU0A==}
     engines: {node: '>=22.12.0'}
     peerDependencies:
@@ -1834,12 +1840,12 @@ packages:
     dependencies:
       '@ampproject/remapping': 2.3.0
       '@babel/core': 7.29.7
-      '@solidjs/babel-plugin': 2.0.0-rc.18(@babel/core@7.29.7)
-      '@solidjs/compiler': 2.0.0-rc.18
-      '@solidjs/web': 2.0.0-rc.18(solid-js@2.0.0-rc.18)
+      '@solidjs/babel-plugin': 2.0.0-rc.19(@babel/core@7.29.7)
+      '@solidjs/compiler': 2.0.0-rc.19
+      '@solidjs/web': 2.0.0-rc.19(solid-js@2.0.0-rc.19)
       '@types/babel__core': 7.20.5
       merge-anything: 5.1.7
-      solid-js: 2.0.0-rc.18
+      solid-js: 2.0.0-rc.19
       vite: 8.3.5(@types/node@22.19.11)
       vitefu: 1.1.1(vite@8.3.5)
     transitivePeerDependencies:
@@ -1847,15 +1853,15 @@ packages:
       - supports-color
     dev: true
 
-  /@solidjs/web@2.0.0-rc.18(solid-js@2.0.0-rc.18):
-    resolution: {integrity: sha512-qtxuskii4N/gMipmg94yfPSJ0djwVWF+Elrdhtdb/8ZThvPc6RI/edY6guEMwdx7OADa1f9cQ0MwQe7kDW+Vwg==}
+  /@solidjs/web@2.0.0-rc.19(solid-js@2.0.0-rc.19):
+    resolution: {integrity: sha512-FTHxQ8aE+vSHWc1exWw2Y+Brb727I4hCiWi+Y0DURbaqCou8xjCTzn8uiPi7mwC1tqpKSWfkn1Iq1ya/Bl9vYQ==}
     engines: {node: '>=22.12.0'}
     peerDependencies:
-      solid-js: ^2.0.0-rc.18
+      solid-js: ^2.0.0-rc.19
     dependencies:
       seroval: 1.7.0
       seroval-plugins: 1.7.0(seroval@1.7.0)
-      solid-js: 2.0.0-rc.18
+      solid-js: 2.0.0-rc.19
     dev: true
 
   /@standard-schema/spec@1.1.0:
@@ -2474,6 +2480,17 @@ packages:
     engines: {node: '>= 14'}
     dev: true
 
+  /ajv-formats@3.0.1(ajv@8.18.0):
+    resolution: {integrity: sha512-8iUql50EUR+uUcdRQ3HDqa6EVyo3docL8g5WJ3FNcWmu62IbkGUue/pEyLBW8VGKKucTPgqeks4fIU1DA4yowQ==}
+    peerDependencies:
+      ajv: ^8.0.0
+    peerDependenciesMeta:
+      ajv:
+        optional: true
+    dependencies:
+      ajv: 8.18.0
+    dev: false
+
   /ajv@6.14.0:
     resolution: {integrity: sha512-IWrosm/yrn43eiKqkfkHis7QioDleaXQHdDVPKg0FSwwd/DuvyX79TZnFOnYpB7dcsFAMmtFztZuXPDvSePkFw==}
     dependencies:
@@ -2487,7 +2504,7 @@ packages:
     resolution: {integrity: sha512-PlXPeEWMXMZ7sPYOHqmDyCJzcfNrUr3fGNKtezX14ykXOEIvyK81d+qydx89KY5O71FKMPaQ2vBfBFI5NHR63A==}
     dependencies:
       fast-deep-equal: 3.1.3
-      fast-uri: 3.1.8
+      fast-uri: 3.1.9
       json-schema-traverse: 1.0.0
       require-from-string: 2.0.2
     dev: false
@@ -3309,8 +3326,8 @@ packages:
     resolution: {integrity: sha512-DCXu6Ifhqcks7TZKY3Hxp3y6qphY5SJZmrWMDrKcERSOXWQdMhU9Ig/PYrzyw/ul9jOIyh0N4M0tbC5hodg8dw==}
     dev: true
 
-  /fast-uri@3.1.8:
-    resolution: {integrity: sha512-GZMtZUTNRpOVIECoXwLNZS5xUGE+mVNbTB8h/7Rwh2TFWcBQiPzTgyZi05BF9UMZKkLJv8XBRJTlU7zg8+ZfMg==}
+  /fast-uri@3.1.9:
+    resolution: {integrity: sha512-hS/0Wt3Ya043oKXs0sIxrMpKQITXhMLIrVAKKXi4gozGC9v7YRWVnXIZzjNPTO02M9BdxLCWqK1yRXgNziVyJQ==}
     dev: false
 
   /fastq@1.19.1:
@@ -4513,11 +4530,11 @@ packages:
     engines: {node: '>=8'}
     dev: true
 
-  /solid-js@2.0.0-rc.18:
-    resolution: {integrity: sha512-g4KjUQUjfqvqHYnBddN5nVAF7DFcDjtuH+NeDu/26vx6SlSDiqBJS8jsNag6VpdKAnfK8oLfphogEhXtM4UOyw==}
+  /solid-js@2.0.0-rc.19:
+    resolution: {integrity: sha512-tlA+rZT1n3XkuxW0sMIoRf/QpOa0H9N9ZDrZLQFueUkZp+hElG+EXWBojBYYi4lVBKV8l03RTNgv+lfVCYkp9w==}
     engines: {node: '>=22.12.0'}
     dependencies:
-      '@solidjs/signals': 2.0.0-rc.18
+      '@solidjs/signals': 2.0.0-rc.19
       csstype: 3.2.1
       seroval: 1.7.0
       seroval-plugins: 1.7.0(seroval@1.7.0)
@@ -5158,6 +5175,6 @@ packages:
     engines: {node: '>=10'}
     dev: true
 
-  /zod@3.25.76:
-    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
+  /zod@4.6.6:
+    resolution: {integrity: sha512-4UmzQUF5fxvfcYHlbjBmejU+w+hbDnWFx4aS8kBx7nPBHcO2SqPbpAG8snbdg+Xse4pRefR98hgjFgIMCI/UhA==}
     dev: false

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [7.0.0-solid2.0] - Unreleased preview
 
+### 2026-10-27 — source preparation resumed, not a release
+
+- Integrate stable #40/#41: Spec 6, real Zod 4.6.6, explicit patched CLI
+  fast-uri 3.1.9 and complete declaration graphs. Keep the Solid 2 SSR/runtime.
+- Qualify the new exact RC.19 cohort (including compiler/signals/web) and reject native effect-relay/own-source
+  diagnostics. Qualify against Spec 6 tarballs rather than the old Spec 5 fixture.
+- Keep the historical preview version for source qualification only; a future
+  publication version and policy need separate review. Stable 7 remains Solid 1.
+
 - Port runtime, DOM renderer, JSX compiler and testing to the exact Solid 2
   RC.18 toolchain; leave the stable Solid 1 line and MCP schemas unchanged.
 - Adapt compute/apply effects, ownership, cleanup, context fallbacks, draft

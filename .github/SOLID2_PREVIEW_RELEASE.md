@@ -1,5 +1,11 @@
 # Solid 2 preview: review first, npm staging only after approval
 
+> 2026-10-27: source/test preparation is resumed, not release operations. This
+> workflow/policy remains unchanged and must not be dispatched for the new
+> source without separate review of version, Spec fixture and artifact bindings.
+> Stable npm 7.0.0 remains Solid 1; the historical preview version is not a
+> newly approved candidate. See the [current handoff](../mcp-ui-solid/docs/SOLID2-DEPOSIUM-HANDOFF-2026-10-27.md).
+
 > **Paused by the maintainer — 2026-10-24.** Keep `feat/solid2-preview` and
 > PR #34 open as a draft. No review-only dispatch, staging, publication,
 > migration or deployment is scheduled or authorized during this pause.

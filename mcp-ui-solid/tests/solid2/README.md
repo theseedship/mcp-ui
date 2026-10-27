@@ -36,12 +36,12 @@ Run after the library has been built and the maintainer supplies its tarball:
 ```sh
 node mcp-ui-solid/tests/solid2/run.mjs prepare \
   --tarball /absolute/artifacts/seed-ship-mcp-ui-solid-7.0.0-solid2.0.tgz \
-  --spec-tarball /absolute/artifacts/seed-ship-mcp-ui-spec-5.7.0.tgz \
+  --spec-tarball /absolute/artifacts/seed-ship-mcp-ui-spec-6.0.0.tgz \
   --consumer /home/nico/worktrees/mcp-ui-solid2-consumer-full \
   --profile full
 ```
 
-`--spec-tarball` is optional: omitting it pins public Spec `5.7.0`, not a workspace
+`--spec-tarball` is optional: omitting it pins public Spec `6.0.0`, not a workspace
 dependency. The source tarball is hashed during preparation and rechecked before
 every probe/run. An existing nonempty consumer is never overwritten. To repeat a
 qualification, reuse the installed consumer with `run` or choose a new directory.
@@ -56,7 +56,7 @@ pnpm install --ignore-scripts
 The generated `.npmrc` disables automatic peer installation. Full profile lists
 every browser engine explicitly at the exact locally inspected versions, including
 KaTeX `0.18.4` and TanStack virtual-core `3.13.18`. It pins Solid/web/signals/compiler/
-  Babel `2.0.0-rc.18`, scoped Vite plugin `3.0.0-next.51`, Vite `8.3.5`, explicit
+  Babel `2.0.0-rc.19`, scoped Vite plugin `3.0.0-next.51`, Vite `8.3.5`, explicit
   Babel core `7.29.6`, and Node types `22.19.11`.
 The runner rejects package realpaths outside its own consumer. pnpm's internal
 consumer-local symlinks are normal; linking to the MCPUI source checkout is not.

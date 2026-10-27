@@ -15,6 +15,8 @@
     "docs/SECURITY-DEPENDENCIES.md",
     "docs/SOLID2-PREVIEW.md",
     "docs/SOLID2-PREVIEW-HANDOFF-2026-10-23.md",
+    "docs/SOLID2-DEPOSIUM-HANDOFF-2026-10-27.md",
+    "docs/ZOD4-STABLE-MIGRATION-2026-10-26.md",
     "LICENSE"
   ],
   "sideEffects": [
@@ -209,7 +211,7 @@
   },
   "scripts": {
     "build": "vite build && vite build --mode server && pnpm build:types",
-    "build:types": "tsc --declaration --emitDeclarationOnly --outDir dist --composite false && pnpm build:types:copy && cp dist/plugins/katex.d.ts dist/plugins/katex.d.cts",
+    "build:types": "tsc --declaration --emitDeclarationOnly --outDir dist --composite false && pnpm build:types:copy && cp dist/plugins/katex.d.ts dist/plugins/katex.d.cts && node ../scripts/finalize-declarations.mjs dist",
     "build:types:copy": "printf \"export * from './components/index';\\nexport { default } from './components/index';\\n\" > dist/components.d.ts && printf \"export * from './hooks/index';\\n\" > dist/hooks.d.ts && printf \"export * from './types/index';\\n\" > dist/types.d.ts && printf \"export * from './adapters/index';\\n\" > dist/adapters.d.ts && pnpm build:types:cts",
     "build:types:cts": "cp dist/index.d.ts dist/index.d.cts && cp dist/components.d.ts dist/components.d.cts 2>/dev/null || true && cp dist/hooks.d.ts dist/hooks.d.cts 2>/dev/null || true && cp dist/types.d.ts dist/types.d.cts 2>/dev/null || true && cp dist/validation.d.ts dist/validation.d.cts 2>/dev/null || true && cp dist/types-export.d.ts dist/types-export.d.cts 2>/dev/null || true && cp dist/adapters.d.ts dist/adapters.d.cts 2>/dev/null || true && cp dist/adapters/presentation.d.ts dist/adapters/presentation.d.cts 2>/dev/null || true && cp dist/plugins/duckdb.d.ts dist/plugins/duckdb.d.cts 2>/dev/null || true",
     "dev": "vite build --watch",
@@ -246,7 +248,7 @@
     "@antv/g6": "^5.0.0",
     "@duckdb/duckdb-wasm": "^1.28.0",
     "@tanstack/virtual-core": "3.13.18",
-    "@solidjs/web": "2.0.0-rc.18",
+    "@solidjs/web": "2.0.0-rc.19",
     "chart.js": "^4.0.0",
     "chartjs-plugin-zoom": "^2.0.0",
     "highlight.js": "^11.9.0",
@@ -254,7 +256,7 @@
     "leaflet": "^1.9.4",
     "leaflet.markercluster": "^1.5.0",
     "protomaps-leaflet": "^4.0.0",
-    "solid-js": "2.0.0-rc.18"
+    "solid-js": "2.0.0-rc.19"
   },
   "peerDependenciesMeta": {
     "@antv/g6": {
@@ -289,21 +291,21 @@
     }
   },
   "dependencies": {
-    "@seed-ship/mcp-ui-spec": "workspace:^5.7.0",
+    "@seed-ship/mcp-ui-spec": "workspace:^6.0.0",
     "@types/dompurify": "^3.0.5",
     "dompurify": "^3.4.17",
     "marked": "^16.3.0",
-    "zod": "^3.22.4"
+    "zod": "4.6.6"
   },
   "devDependencies": {
     "@size-limit/esbuild": "^12.0.0",
     "@size-limit/esbuild-why": "^12.0.0",
     "@size-limit/preset-small-lib": "^12.0.0",
     "@solidjs/testing-library": "1.0.0-rc.2",
-    "@solidjs/web": "2.0.0-rc.18",
-    "@solidjs/signals": "2.0.0-rc.18",
-    "@solidjs/compiler": "2.0.0-rc.18",
-    "@solidjs/babel-plugin": "2.0.0-rc.18",
+    "@solidjs/web": "2.0.0-rc.19",
+    "@solidjs/signals": "2.0.0-rc.19",
+    "@solidjs/compiler": "2.0.0-rc.19",
+    "@solidjs/babel-plugin": "2.0.0-rc.19",
     "@solidjs/vite-plugin": "3.0.0-next.51",
     "@tanstack/virtual-core": "3.13.18",
     "@types/leaflet": "^1.9.8",
@@ -318,7 +320,7 @@
     "katex": "0.18.4",
     "leaflet.markercluster": "^1.5.3",
     "size-limit": "^12.0.0",
-    "solid-js": "2.0.0-rc.18",
+    "solid-js": "2.0.0-rc.19",
     "typescript": "^5.3.3",
     "vite": "8.3.5",
     "vitest": "4.1.12"

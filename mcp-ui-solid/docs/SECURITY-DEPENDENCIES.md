@@ -1,5 +1,15 @@
 # Security dependency notes
 
+## 2026-10-27 — resumed Solid 2 source preparation
+
+Stable main #40/#41 is integrated: Spec 6, Zod 4.6.6, root fast-uri floor
+^3.1.9 and the CLI's directly injected corrected resolver. Runtime/compiler
+move together to RC.19, without a Solid 1 virtualizer or forced serializer override.
+The records below describe earlier states; their advisory counts do not apply
+to this new source. Fresh preview audits/CI are reported in the
+[current handoff](./SOLID2-DEPOSIUM-HANDOFF-2026-10-27.md).
+No release dispatch, npm staging/publication or application change is included.
+
 > Solid 2 work is paused by the maintainer as of 2026-10-24. The observations
 > below are dated evidence, not a claim of a current clean audit or release
 > approval. The [pause/resumption handoff](./SOLID2-PREVIEW-HANDOFF-2026-10-23.md)

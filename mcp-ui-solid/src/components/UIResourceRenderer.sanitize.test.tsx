@@ -236,8 +236,23 @@ describe('TextRenderer — non-markdown path', () => {
   })
 
   it('tolerates missing content', () => {
-    const { container } = render(() => <UIResourceRenderer content={textComponent({})} />)
-    expect(container.innerHTML).not.toContain('undefined')
+    const errors: unknown[] = []
+    const { container } = render(() => (
+      <UIResourceRenderer content={textComponent({})} onError={(error) => errors.push(error)} />
+    ))
+    // Both Zod versions reject this payload before TextRenderer. Zod 4's
+    // diagnostic legitimately includes "received undefined"; it must remain
+    // a validation notice, not an accidentally rendered raw text value.
+    expect(container.textContent).toContain('Validation Error')
+    expect(container.querySelectorAll('p')).toHaveLength(2)
+    expect(container.querySelector('p:last-child')?.textContent).toMatch(/(?:Required|expected string)/)
+    expect(container.querySelector('p:last-child')?.textContent).not.toBe('undefined')
+    expect(errors).toEqual([
+      expect.objectContaining({
+        type: 'validation',
+        details: [expect.objectContaining({ code: 'INVALID_TEXT', path: 'params.content' })],
+      }),
+    ])
   })
 })
 
