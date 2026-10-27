@@ -1,7 +1,7 @@
 # MCP UI Components
 
 > **Solid 2 source preparation resumed — 2026-10-27.** Target RC.19 and carry
-> the stable Zod 4 / fast-uri fixes; PR #34 stays draft. No merge, release
+> the stable Zod 4 / fast-uri fixes; PR #34 is for review only. No merge, release
 > dispatch, npm publication or Deposium change is authorized. See the
 > [current Deposium handoff](./mcp-ui-solid/docs/SOLID2-DEPOSIUM-HANDOFF-2026-10-27.md).
 

@@ -8,8 +8,9 @@ et à ce handoff : pas de modification de Deposium, de main, de merge de #34,
 de dispatch, de tag, de staging/publication npm ni de déploiement.
 
 Source : `feat/solid2-preview`, [PR #34](https://github.com/theseedship/mcp-ui/pull/34),
-toujours en brouillon. Main stable intégré :
-`dad219a3e637c78f833fcc1d00e16f8c8beec1c0` (#40 Zod 4 et #41 fast-uri).
+réservée à la relecture, sans autorisation de fusion. Main stable intégré :
+`54c49dca5a049eeddb70aae7e9df1055ec3d50e3` (#40 Zod 4, #41 fast-uri et
+#42 séparation des canaux 7.x / 8.x, y compris le garde des overrides racine).
 Le vieux tuple source/CI/archive `96715b9` reste historique, pas une preuve
 de qualification de ce nouveau delta. Consulter les checks du **HEAD exact**
 de #34, puis les rapports contenus dans son nouvel artefact CI.
@@ -94,7 +95,8 @@ La qualification navigateur/tarballs du **nouveau HEAD** reste celle de sa CI,
   `EFFECT_RELAY_TEAR` non rejeté. `EFFECT_WRITES_OWN_SOURCE` est aussi rejeté.
 - La CI reconstruit les packages et teste les profils **full/optional-absent**
   avec SSR/hydratation dev/production, navigateur compilé et moteurs réels.
-  La baseline Solid 1 est isolée sur `dad219a`, avec son propre lockfile.
+  L'ancienne baseline Solid 1 était isolée sur `dad219a`. La CI synchronisée
+  après #42 épingle désormais `54c49dc`, toujours avec son propre lockfile.
 - Le CLI empaqueté garde sa preuve ESM/CJS : résolveur direct corrigé même si
   une ancienne copie est délibérément conservée sous Ajv dans le contrôle.
 - Les anciens comptes de tests/audit ne sont pas transposables au nouveau HEAD.
@@ -141,12 +143,12 @@ présentés comme qualification du nouveau `8.0.0-solid2.0`. Il faut une nouvell
 CI réussie sur le HEAD exact, puis qualifier son archive exacte. Les résultats
 et checksums de l'ancien tuple restent distincts de cette preuve.
 
-La mise à jour du workflow est portée par la [PR d'infrastructure #42](https://github.com/theseedship/mcp-ui/pull/42),
-basée sur stable main. Elle remplace l'ancienne politique RC.18 / Spec 5 / preview
-7.x : **ne pas dispatcher cette ancienne politique pour le nouveau delta**.
-La politique RC.19 / Spec 6 / CLI 5.0.2 et son validateur doivent d'abord être
-examinés et fusionnés sur main avant tout usage du workflow 8.x. Cette fusion d'infrastructure
-ne fusionne pas le runtime PR #34 et n'autorise aucun dispatch ni upload.
+La [PR d'infrastructure #42](https://github.com/theseedship/mcp-ui/pull/42) est
+fusionnée sur main à `54c49dc`. Elle remplace l'ancienne politique RC.18 / Spec 5 /
+preview 7.x par le validateur RC.19 / Spec 6 / CLI 5.0.2 pour la preview 8.x.
+Sa synchronisation dans #34 conserve les régressions du garde des overrides.
+Cette fusion d'infrastructure ne fusionne pas le runtime PR #34 et n'autorise
+aucun dispatch ni upload. Le passage de #34 en relecture ne publie rien non plus.
 
 Aucun dispatch, tag, merge de #34, staging, publication npm ou installation dans
 l'application n'est autorisé dans cette tranche. Plus tard, review-only et

@@ -143,7 +143,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: dad219a3e637c78f833fcc1d00e16f8c8beec1c0
+          ref: 54c49dca5a049eeddb70aae7e9df1055ec3d50e3
       - uses: pnpm/action-setup@v5
       - uses: actions/setup-node@v5
         with:

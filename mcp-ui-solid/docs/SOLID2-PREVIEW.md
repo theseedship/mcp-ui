@@ -18,9 +18,10 @@ future `7.1.x`, remains Solid 1 on npm `latest`; Solid 2 is the opt-in `8.x` lin
 on `solid2`. Qualification must bind to this exact source HEAD and its archive;
 the historical `7.0.0-solid2.0` SHA, archive and checksum do not qualify it.
 
-Before any use of a preview promotion workflow, the separate RC.19 / Spec 6 /
-CLI 5.0.2 infrastructure PR must be reviewed and merged into stable main. This
-does not merge runtime PR #34. Dispatch, upload, tag, runtime merge and app
+The separate RC.19 / Spec 6 / CLI 5.0.2 infrastructure PR #42 is merged into
+stable main at `54c49dca5a049eeddb70aae7e9df1055ec3d50e3`, and is synchronized
+into this branch. PR #34 is review-only; it is not merged by that operation.
+Dispatch, upload, tag, runtime merge and app
 installation remain unauthorized. The Deposium host migration is in progress;
 installation requires the application team's approval.
 
@@ -28,7 +29,7 @@ installation requires the application team's approval.
 
 At the 2026-10-24 checkpoint, preparation was paused with no resumption date.
 That pause is historical; source is now being prepared on `feat/solid2-preview`
-and open draft PR #34. The matrix below records only the earlier qualification,
+and open review-only PR #34. The matrix below records only the earlier qualification,
 not permission to migrate, merge, release, tag, stage npm or deploy.
 
 The [pause and resumption handoff](./SOLID2-PREVIEW-HANDOFF-2026-10-23.md)
@@ -252,14 +253,14 @@ Do not use the legacy stable publication workflow: it matches prerelease tags
 but stages with `--tag latest`, and the GitHub release workflow marks releases
 as stable.
 
-The manual preview channel already on main is pinned to the earlier version,
-RC.18 and Spec 5.7.0; do not dispatch it for this candidate. A separate
-RC.19 / Spec 6 / CLI 5.0.2 infrastructure PR must first be reviewed and merged
-to stable main before any future use of its policy. That merge does not merge
-the runtime PR. Later review-only and staging operations still require their
-own exact source/CI/artifact binding and explicit approvals; the source PR must
-remain open. The current [channel procedure](../../.github/SOLID2_PREVIEW_RELEASE.md)
-is the historical 7.x/RC.18 policy, not instructions to use for 8.x.
+The manual preview channel on main now uses the RC.19 / Spec 6 / CLI 5.0.2
+policy for `8.0.0-solid2.0`, after infrastructure PR #42. That merge does not
+merge the runtime PR. Later review-only and staging operations still require
+their own exact source/CI/artifact binding and explicit approvals; the source
+PR must remain open. Follow the current
+[channel procedure](../../.github/SOLID2_PREVIEW_RELEASE.md), not historical
+7.x / RC.18 commands or archived checksums. No workflow dispatch is authorized
+by synchronization or by marking this source PR ready for review.
 
 ## Official references
 

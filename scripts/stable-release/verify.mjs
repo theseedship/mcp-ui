@@ -57,6 +57,26 @@ function assertNoSolid2Dependencies(manifest) {
   }
 }
 
+function assertNoSolidOverrides(workspace) {
+  if (workspace.pnpm === undefined) return
+  assert(workspace.pnpm && typeof workspace.pnpm === 'object' && !Array.isArray(workspace.pnpm),
+    'Root pnpm configuration must be an object')
+  const overrides = workspace.pnpm.overrides
+  if (overrides === undefined) return
+  assert(overrides && typeof overrides === 'object' && !Array.isArray(overrides),
+    'Root pnpm overrides must be an object')
+  for (const [selector, replacement] of Object.entries(overrides)) {
+    assert.equal(typeof replacement, 'string', `Root override must be a string: ${selector}`)
+    for (const part of selector.split('>')) {
+      const name = /^(@[^/\s>]+\/[^@\s>]+|[^@\s>]+)(?:@.*)?$/.exec(part.trim())?.[1]
+      assert(name !== 'solid-js' && !solid2PackageName(name),
+        `Solid runtime/toolchain override is forbidden: ${selector}`)
+    }
+  }
+  // The dependency scanner also catches npm:solid-js@2 and npm:@solidjs/web aliases under unrelated keys.
+  assertNoSolid2Dependencies({ dependencies: overrides })
+}
+
 function assertSolidOnePeer(manifest) {
   const peer = manifest.peerDependencies?.['solid-js']
   assert.equal(typeof peer, 'string', 'Solid producer must declare solid-js as a peer dependency')
@@ -66,12 +86,17 @@ function assertSolidOnePeer(manifest) {
 }
 
 /** Validate the three package manifests without requiring them to share release numbers. */
-export function validateStableRelease({ solid, spec, cli }) {
+export function validateStableRelease({ solid, spec, cli, workspace }) {
   assertStableVersion(solid, SOLID_PACKAGE, 'Solid', STABLE_MAJOR)
   assertSolidOnePeer(solid)
   assertNoSolid2Dependencies(solid)
   assertStableVersion(spec, SPEC_PACKAGE, 'Spec')
   assertStableVersion(cli, CLI_PACKAGE, 'CLI')
+  if (workspace !== undefined) {
+    assert(workspace && typeof workspace === 'object' && !Array.isArray(workspace), 'Root workspace manifest must be an object')
+    assertNoSolid2Dependencies(workspace)
+    assertNoSolidOverrides(workspace)
+  }
   return { solid: solid.version, spec: spec.version, cli: cli.version }
 }
 
@@ -97,12 +122,13 @@ async function readManifest(file) {
 
 export async function verifyWorkspace(root) {
   const base = resolve(root)
-  const [solid, spec, cli] = await Promise.all([
+  const [solid, spec, cli, workspace] = await Promise.all([
     readManifest(resolve(base, 'mcp-ui-solid/package.json')),
     readManifest(resolve(base, 'mcp-ui-spec/package.json')),
     readManifest(resolve(base, 'mcp-ui-cli/package.json')),
+    readManifest(resolve(base, 'package.json')),
   ])
-  return validateStableRelease({ solid, spec, cli })
+  return validateStableRelease({ solid, spec, cli, workspace })
 }
 
 async function main(args) {

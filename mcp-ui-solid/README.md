@@ -3,7 +3,7 @@
 ## Solid 2 preview (unpublished)
 
 **Source preparation resumed on 2026-10-27:** RC.19, stable security carry-over
-and fresh qualification only. Retain the open draft PR #34; no release dispatch,
+and fresh qualification only. Keep PR #34 separate and review-only; no release dispatch,
 staging, publication, merge or application installation is authorized.
 See the [current Deposium handoff](./docs/SOLID2-DEPOSIUM-HANDOFF-2026-10-27.md).
 The [pause/resumption handoff](./docs/SOLID2-PREVIEW-HANDOFF-2026-10-23.md)
