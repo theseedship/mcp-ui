@@ -17,7 +17,7 @@ de #34, puis les rapports contenus dans son nouvel artefact CI.
 ## Cible actualisée : RC.19
 
 **Cible de préparation demandée : RC.19.** Les cinq packages ont été publiés
-ensemble le 2026-10-27. Le pilote Deposium consulté est encore RC.18 : il doit
+ensemble le 2026-10-27. Le pilote Deposium consulté lors du relevé était RC.18 : il doit
 passer la cohorte entière à RC.19 avant de consommer ce nouveau renderer.
 Un downgrade RC.16 ne constitue pas un correctif établi du Combobox.
 Pas de mélange de cohortes ni d'alias Solid 1 → 2.
@@ -77,7 +77,8 @@ Spec 6 empaqueté, y compris pour les dépendances transitives du renderer.
 
 ## Qualification : lire les niveaux de preuve séparément
 
-Validation locale RC.19 : installation frozen pnpm 8.15.0, **69 garde-fous Node**,
+Validation locale historique RC.19 avant le bump 8.x (source `15427cb`) :
+installation frozen pnpm 8.15.0, **69 garde-fous Node**,
 build browser/server/déclarations, trois typechecks, **2 447 tests Vitest réussis
 et un skip préexistant**, lint sans erreur (424 avertissements existants).
 Les audits complets et production du 2026-10-27 sortent 0, aucune advisory
@@ -140,11 +141,11 @@ présentés comme qualification du nouveau `8.0.0-solid2.0`. Il faut une nouvell
 CI réussie sur le HEAD exact, puis qualifier son archive exacte. Les résultats
 et checksums de l'ancien tuple restent distincts de cette preuve.
 
-Le workflow de preview actuellement sur main reste figé sur l'ancienne identité,
-RC.18 et le fixture Spec 5.7.0 : **ne pas le dispatcher pour ce delta**. Une PR
-d'infrastructure distincte, basée sur stable main, doit d'abord être examinée
-et fusionnée avec la politique RC.19 / Spec 6 / CLI 5.0.2 et le validateur
-correspondant avant tout usage du nouveau workflow. Cette fusion d'infrastructure
+La mise à jour du workflow est portée par la [PR d'infrastructure #42](https://github.com/theseedship/mcp-ui/pull/42),
+basée sur stable main. Elle remplace l'ancienne politique RC.18 / Spec 5 / preview
+7.x : **ne pas dispatcher cette ancienne politique pour le nouveau delta**.
+La politique RC.19 / Spec 6 / CLI 5.0.2 et son validateur doivent d'abord être
+examinés et fusionnés sur main avant tout usage du workflow 8.x. Cette fusion d'infrastructure
 ne fusionne pas le runtime PR #34 et n'autorise aucun dispatch ni upload.
 
 Aucun dispatch, tag, merge de #34, staging, publication npm ou installation dans

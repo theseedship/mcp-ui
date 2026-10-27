@@ -22,7 +22,7 @@ jobs:
           node-version: '22.23.3'
           package-manager-cache: false
       - name: Test preview release guards without credentials or network
-        run: node --test scripts/solid2-preview/verify.test.mjs mcp-ui-solid/tests/solid2/cohort.node-test.mjs
+        run: node --test scripts/solid2-preview/verify.test.mjs scripts/stable-release/verify.test.mjs mcp-ui-solid/tests/solid2/cohort.node-test.mjs
 
   test:
     runs-on: ubuntu-latest
@@ -68,8 +68,8 @@ jobs:
       - name: Type check
         run: pnpm typecheck
 
-      - name: Test clean-consumer harness safeguards
-        run: node --test scripts/finalize-declarations.test.mjs mcp-ui-solid/tests/solid2/cohort.node-test.mjs mcp-ui-solid/tests/solid2/harness.node-test.mjs mcp-ui-solid/tests/solid2/dist-browser.node-test.mjs mcp-ui-solid/tests/solid2/optional-loader.node-test.mjs
+      - name: Test clean-consumer harness and release safeguards
+        run: node --test scripts/finalize-declarations.test.mjs scripts/solid2-preview/verify.test.mjs scripts/stable-release/verify.test.mjs mcp-ui-solid/tests/solid2/cohort.node-test.mjs mcp-ui-solid/tests/solid2/harness.node-test.mjs mcp-ui-solid/tests/solid2/dist-browser.node-test.mjs mcp-ui-solid/tests/solid2/optional-loader.node-test.mjs
 
       - name: Test
         run: pnpm -r exec vitest run --maxWorkers=4

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import test from 'node:test';
@@ -19,7 +19,13 @@ const SOURCE_SHA = '271e92434696f14ba0fdaaa3e91b242819820a16';
 const TARBALL_SHA = 'a'.repeat(64);
 const OTHER_SHA = 'b'.repeat(64);
 const PACKAGE = '@seed-ship/mcp-ui-solid';
-const VERSION = '7.0.0-solid2.0';
+const VERSION = '8.0.0-solid2.0';
+const SPEC_SHA = 'c'.repeat(64);
+const RUNTIME_PINS = {
+  'solid-js': '2.0.0-rc.19', '@solidjs/web': '2.0.0-rc.19', '@solidjs/signals': '2.0.0-rc.19',
+  '@solidjs/compiler': '2.0.0-rc.19', '@solidjs/babel-plugin': '2.0.0-rc.19',
+  '@solidjs/vite-plugin': '3.0.0-next.51',
+};
 const PUBLIC_ENTRIES = {
   '.': 'index', './components': 'components', './hooks': 'hooks', './types': 'types',
   './validation': 'validation', './types-only': 'types-export', './adapters': 'adapters',
@@ -86,8 +92,8 @@ function manifest(overrides = {}) {
     module: './dist/index.js',
     types: './dist/index.d.ts',
     exports: { '.': { solid: './src/index.ts', import: './dist/index.js', require: './dist/index.cjs' } },
-    peerDependencies: { 'solid-js': '2.0.0-rc.18', '@solidjs/web': '2.0.0-rc.18' },
-    dependencies: { '@seed-ship/mcp-ui-spec': '^5.7.0' },
+    peerDependencies: { 'solid-js': RUNTIME_PINS['solid-js'], '@solidjs/web': RUNTIME_PINS['@solidjs/web'] },
+    dependencies: { '@seed-ship/mcp-ui-spec': '^6.0.0' },
     ...overrides,
   };
 }
@@ -152,7 +158,9 @@ function report(profile) {
   return {
     status: 'passed',
     version: VERSION,
-    input: { profile, tarball: { sha256: TARBALL_SHA } },
+    input: { profile, tarball: { sha256: TARBALL_SHA },
+      spec: { path: '/fixture/seed-ship-mcp-ui-spec-6.0.0.tgz', sha256: SPEC_SHA }, pins: { ...RUNTIME_PINS } },
+    actualPins: { ...RUNTIME_PINS },
     modes: { dev: mode(profile), production: mode(profile) },
   };
 }
@@ -205,6 +213,31 @@ async function qualification(t, change = () => {}) {
     await json(join(dir, 'mcpui-solid2-full', 'dist-client-probe', 'fixture', 'report.json'), evidence.compiled);
   }
   return dir;
+}
+
+async function promotionArtifact(t, { includeSpec = true, specVersion = '6.0.0', reportSpecSha,
+  includeCli = true, cliVersion = '5.0.2', cliFastUri = '^3.1.9', includeReport = true,
+  reportCliSha, extraArchive = false } = {}) {
+  const solid = await archive(t);
+  const spec = await archive(t, { packageJson: { name: '@seed-ship/mcp-ui-spec', version: specVersion } });
+  const cli = await archive(t, { packageJson: { name: '@seed-ship/mcp-ui-cli', version: cliVersion,
+    dependencies: { '@seed-ship/mcp-ui-spec': '^6.0.0', 'fast-uri': cliFastUri } } });
+  const dir = await qualification(t, (evidence) => {
+    for (const profile of ['full', 'absent']) {
+      evidence[profile].input.tarball.sha256 = solid.sha;
+      evidence[profile].input.spec.sha256 = reportSpecSha ?? spec.sha;
+    }
+    evidence.compiled.tarball.sha256 = solid.sha;
+  });
+  await writeFile(join(dir, `seed-ship-mcp-ui-solid-${VERSION}.tgz`), await readFile(solid.file));
+  if (includeSpec) await writeFile(join(dir, 'seed-ship-mcp-ui-spec-6.0.0.tgz'), await readFile(spec.file));
+  if (includeCli) await writeFile(join(dir, 'seed-ship-mcp-ui-cli-5.0.2.tgz'), await readFile(cli.file));
+  if (extraArchive) await writeFile(join(dir, 'unreviewed-cli-5.0.2.tgz'), await readFile(cli.file));
+  if (includeReport) await json(join(dir, 'mcpui-fast-uri-report.json'), { status: 'passed', failures: [], archives: {
+    spec: { sha256: spec.sha, name: '@seed-ship/mcp-ui-spec', version: '6.0.0' },
+    cli: { sha256: reportCliSha ?? cli.sha, name: '@seed-ship/mcp-ui-cli', version: '5.0.2' },
+  } });
+  return { dir, solidSha: solid.sha };
 }
 
 test('policy fixes one package, prerelease, source PR and non-latest channel', () => {
@@ -340,8 +373,12 @@ test('archive rejects both symbolic and hard links with correct digests', async 
 for (const [name, packageJson] of [
   ['wrong package', manifest({ name: '@seed-ship/mcp-ui-spec' })],
   ['stable or different version', manifest({ version: '6.25.1' })],
-  ['Solid1 peer', manifest({ peerDependencies: { 'solid-js': '^1.9.0', '@solidjs/web': '2.0.0-rc.18' } })],
-  ['workspace runtime dependency', manifest({ dependencies: { '@seed-ship/mcp-ui-spec': 'workspace:^5.7.0' } })],
+  ['old Solid2 preview version', manifest({ version: '7.0.0-solid2.0' })],
+  ['Solid1 peer', manifest({ peerDependencies: { 'solid-js': '^1.9.0', '@solidjs/web': RUNTIME_PINS['@solidjs/web'] } })],
+  ['RC18 peer', manifest({ peerDependencies: { 'solid-js': '2.0.0-rc.18', '@solidjs/web': '2.0.0-rc.18' } })],
+  ['mixed RC18 and RC19 peers', manifest({ peerDependencies: { 'solid-js': '2.0.0-rc.18', '@solidjs/web': RUNTIME_PINS['@solidjs/web'] } })],
+  ['old Spec floor', manifest({ dependencies: { '@seed-ship/mcp-ui-spec': '^5.7.0' } })],
+  ['workspace runtime dependency', manifest({ dependencies: { '@seed-ship/mcp-ui-spec': 'workspace:^6.0.0' } })],
   ['publishConfig latest override', manifest({ publishConfig: { tag: 'latest' } })],
   ['foreign registry override', manifest({ publishConfig: { registry: 'https://registry.attacker.invalid' } })],
 ]) {
@@ -352,13 +389,52 @@ for (const [name, packageJson] of [
 }
 
 test('requires successful source and compiled-browser qualification of the same archive', async (t) => {
-  await verifyQualification(await qualification(t), TARBALL_SHA);
+  await verifyQualification(await qualification(t), TARBALL_SHA, SPEC_SHA);
 });
+
+for (const [name, options, passes] of [
+  ['matching RC19, Spec 6 and CLI 5.0.2 fixtures', {}, true],
+  ['missing Spec 6 fixture', { includeSpec: false }, false],
+  ['Spec fixture with old manifest', { specVersion: '5.7.0' }, false],
+  ['Spec fixture hash forged in profile evidence', { reportSpecSha: OTHER_SHA }, false],
+  ['missing CLI fixture', { includeCli: false }, false],
+  ['CLI fixture with wrong version', { cliVersion: '5.0.1' }, false],
+  ['CLI fixture with wrong fast-uri floor', { cliFastUri: '^3.1.8' }, false],
+  ['CLI fixture with forged report hash', { reportCliSha: OTHER_SHA }, false],
+  ['missing packed CLI security report', { includeReport: false }, false],
+  ['unexpected extra archive', { extraArchive: true }, false],
+]) {
+  test(`archive ${passes ? 'accepts' : 'rejects'} ${name} without executing package code`, async (t) => {
+    const { dir, solidSha } = await promotionArtifact(t, options);
+    const output = join(await temp(t), 'delivery');
+    const result = spawnSync(process.execPath, [new URL('./verify.mjs', import.meta.url).pathname, 'archive', dir, output], {
+      env: { ...process.env, SOURCE_SHA, CI_RUN_ID: '123456', ARTIFACT_ID: '654321', TARBALL_SHA256: solidSha,
+        GITHUB_REPOSITORY: 'theseedship/mcp-ui', GITHUB_REF: 'refs/heads/main', GITHUB_EVENT_NAME: 'workflow_dispatch', STAGE: 'false' },
+      encoding: 'utf8', timeout: 5000,
+    });
+    assert.equal(result.error, undefined);
+    assert.equal(result.status === 0, passes, result.stderr);
+    if (passes) {
+      const delivery = JSON.parse(await readFile(join(output, 'delivery.json'), 'utf8'));
+      assert.equal(delivery.version, VERSION);
+      assert.equal(delivery.sha256, solidSha);
+      assert.deepEqual((await readdir(output)).sort(), ['delivery.json', `seed-ship-mcp-ui-solid-${VERSION}.tgz`].sort());
+    }
+  });
+}
 
 for (const [name, mutate] of [
   ['missing optional-absent profile', (e) => { delete e.absent; }],
   ['failed production source mode', (e) => { e.full.modes.production.status = 'failed'; }],
   ['source report bound to different archive', (e) => { e.absent.input.tarball.sha256 = OTHER_SHA; }],
+  ['prepared RC18 runtime', (e) => { e.full.input.pins['solid-js'] = '2.0.0-rc.18'; }],
+  ['installed mixed RC18 cohort', (e) => { e.full.actualPins['@solidjs/compiler'] = '2.0.0-rc.18'; }],
+  ['wrong installed plugin', (e) => { e.absent.actualPins['@solidjs/vite-plugin'] = '3.0.0-next.50'; }],
+  ['missing installed cohort proof', (e) => { delete e.full.actualPins; }],
+  ['wrong Spec fixture hash', (e) => { e.full.input.spec.sha256 = OTHER_SHA; }],
+  ['missing Spec fixture', (e) => { delete e.absent.input.spec; }],
+  ['wrong Spec fixture path', (e) => { e.absent.input.spec.path = '/fixture/seed-ship-mcp-ui-spec-5.7.0.tgz'; }],
+  ['missing prepared cohort pin', (e) => { delete e.absent.input.pins['@solidjs/babel-plugin']; }],
   ['missing real engine qualification', (e) => { delete e.full.modes.dev.engines; }],
   ['missing compiled-browser report', (e) => { delete e.compiled; }],
   ['compiled-browser diagnostic', (e) => { e.compiled.modes.production.diagnostics = ['STRICT_READ_UNTRACKED']; }],
@@ -366,21 +442,21 @@ for (const [name, mutate] of [
 ]) {
   test(`qualification rejects ${name}`, async (t) => {
     const dir = await qualification(t, mutate);
-    await assert.rejects(() => verifyQualification(dir, TARBALL_SHA));
+    await assert.rejects(() => verifyQualification(dir, TARBALL_SHA, SPEC_SHA));
   });
 }
 
 test('qualification does not follow evidence symlinks outside its directory', async (t) => {
   const dir = await qualification(t);
   await symlink('/etc/passwd', join(dir, 'escaped-report.json'));
-  await assert.rejects(() => verifyQualification(dir, TARBALL_SHA));
+  await assert.rejects(() => verifyQualification(dir, TARBALL_SHA, SPEC_SHA));
 });
 
 for (const missing of ['qualification-input.json', 'import-probe-result.json', 'pnpm-lock.yaml']) {
   test(`qualification rejects a missing ${missing} even with passed browser reports`, async (t) => {
     const dir = await qualification(t);
     await rm(join(dir, 'mcpui-solid2-full', missing));
-    await assert.rejects(() => verifyQualification(dir, TARBALL_SHA));
+    await assert.rejects(() => verifyQualification(dir, TARBALL_SHA, SPEC_SHA));
   });
 }
 
@@ -389,7 +465,7 @@ test('compiled proof rejects forged ten-key exports rather than trusting their c
     delete e.compiled.publicDefaults['./types-only'];
     e.compiled.publicDefaults['./forged-entry'] = './dist/types-export.js';
   });
-  await assert.rejects(() => verifyQualification(dir, TARBALL_SHA));
+  await assert.rejects(() => verifyQualification(dir, TARBALL_SHA, SPEC_SHA));
 });
 
 for (const newline of ['\n', '\r\n']) {
@@ -425,7 +501,7 @@ test('only the protected stage step receives the npm token, with fixed bytes/tag
   assert.match(stage, /working-directory: \$\{\{ runner\.temp \}\}\/solid2-stage-empty/);
   assert.match(stage, /NPM_CONFIG_IGNORE_SCRIPTS: 'true'/);
   assert.match(stage, /NPM_CONFIG_GLOBALCONFIG: \/dev\/null/);
-  assert.match(stage, /npm stage publish "\$RUNNER_TEMP\/solid2-reviewed\/seed-ship-mcp-ui-solid-7\.0\.0-solid2\.0\.tgz" --access public --tag solid2 --ignore-scripts --registry=https:\/\/registry\.npmjs\.org --json/);
+  assert.match(stage, /npm stage publish "\$RUNNER_TEMP\/solid2-reviewed\/seed-ship-mcp-ui-solid-8\.0\.0-solid2\.0\.tgz" --access public --tag solid2 --ignore-scripts --registry=https:\/\/registry\.npmjs\.org --json/);
   assert.doesNotMatch(stage, /--tag\s+["']?\$|\bnpm (?:install|ci|run|exec)\b|\bpnpm\b/);
   const latestGuard = blocks.find((block) => block.includes('Verify latest even when the staging command failed'));
   assert.ok(latestGuard);
