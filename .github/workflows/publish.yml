@@ -56,6 +56,9 @@ jobs:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org'
 
+      - name: Refuse prereleases and Solid 2 on the stable channel
+        run: node scripts/stable-release/verify.mjs
+
       - name: Get pnpm store directory
         id: pnpm-cache
         shell: bash
@@ -91,6 +94,7 @@ jobs:
         # Successful staging is NOT a public release: approval requires 2FA.
         run: |
           set -euo pipefail
+          node scripts/stable-release/verify.mjs
           echo '## npm staging (manual approval required)' >> "$GITHUB_STEP_SUMMARY"
           echo 'Approve packages in npmjs.com → Staged Packages, Spec before Solid. Uploads are not public until approved.' >> "$GITHUB_STEP_SUMMARY"
           for dir in mcp-ui-spec mcp-ui-solid mcp-ui-cli; do

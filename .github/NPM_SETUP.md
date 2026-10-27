@@ -6,8 +6,29 @@ maintainer must approve each uploaded package on npmjs.com with 2FA.
 
 This page describes the **stable** channel. For Solid 2 use the separate
 [preview review/staging procedure](./SOLID2_PREVIEW_RELEASE.md). Do not push a
-`v7.0.0-solid2.0` tag or dispatch this stable workflow on the preview source:
+`v8.0.0-solid2.0` tag or dispatch this stable workflow on the preview source:
 its `latest` tag and three-package loop are not suitable for a prerelease.
+
+## Two independent framework lines
+
+- MCPUI Solid **7.x = Solid 1**, on `latest`. Future `7.0.x` and `7.1.x`
+  releases use the normal stable procedure below. A version bump/merge alone
+  does not trigger this workflow: push the reviewed stable Git tag as well.
+- MCPUI Solid **8.x = Solid 2**. The first source candidate is
+  `8.0.0-solid2.0`, followed by `8.0.0-solid2.N` candidates after separate
+  policy review. Only the manual preview workflow may stage one, with the
+  fixed `solid2` dist-tag. Do not publish anything until the pilot is ready.
+- Spec `6.0.0` and CLI `5.0.2` have independent version numbers: a renderer
+  preview does not require rebumping or restaging them.
+
+The stable npm and GitHub-release workflows check the actual workspace before
+installation: only a canonical stable Solid 7 version with a Solid 1 peer and
+no Solid 2 runtime/toolchain is accepted. They refuse preview/8.x workspaces;
+the normal `7.1.x` path stays available. Moving a stable `8.0.0` onto `latest`
+later needs a separately reviewed policy change, not an accidental preview tag.
+Tag-triggered releases also require a canonical stable tag matching one of the
+three workspace versions (Solid, Spec or CLI), so independent package releases
+remain possible. Manual stable dispatches are restricted to main.
 
 ## Setup
 
@@ -43,6 +64,9 @@ CLI approval is also possible with an interactive npm login:
 See the [official staged publishing guide](https://docs.npmjs.com/staged-publishing/).
 
 ## Recovering the 6.18.0 release
+
+Historical recovery record only; do not rerun this old release on today's
+main. Follow the current-version procedure above.
 
 The existing `v6.18.0` tag points to the old direct-publish workflow. After
 merging this CI fix, **manually run `publish.yml` on `main`**, with

@@ -10,7 +10,7 @@ import { gunzipSync } from 'node:zlib'
 
 export const POLICY = Object.freeze({
   repository: 'theseedship/mcp-ui', sourceBranch: 'feat/solid2-preview', sourcePr: 34,
-  packageName: '@seed-ship/mcp-ui-solid', version: '7.0.0-solid2.0', tag: 'solid2',
+  packageName: '@seed-ship/mcp-ui-solid', version: '8.0.0-solid2.0', tag: 'solid2',
   artifactName: 'solid2-preview-qualification', workflowPath: '.github/workflows/ci.yml',
 })
 const sha = value => typeof value === 'string' && /^[a-f0-9]{40}$/.test(value)
@@ -18,7 +18,13 @@ const digest = value => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value
 const id = value => typeof value === 'string' && /^[1-9][0-9]*$/.test(value) && Number.isSafeInteger(Number(value))
 const exactId = (actual, expected) => Number.isSafeInteger(actual) && String(actual) === expected
 const solidFilename = `seed-ship-mcp-ui-solid-${POLICY.version}.tgz`
-const specFilename = 'seed-ship-mcp-ui-spec-5.7.0.tgz'
+const specFilename = 'seed-ship-mcp-ui-spec-6.0.0.tgz'
+const cliFilename = 'seed-ship-mcp-ui-cli-5.0.2.tgz'
+const runtimePins = Object.freeze({
+  'solid-js': '2.0.0-rc.19', '@solidjs/web': '2.0.0-rc.19', '@solidjs/signals': '2.0.0-rc.19',
+  '@solidjs/compiler': '2.0.0-rc.19', '@solidjs/babel-plugin': '2.0.0-rc.19',
+  '@solidjs/vite-plugin': '3.0.0-next.51',
+})
 const publicEntries = { '.': 'index', './components': 'components', './hooks': 'hooks', './types': 'types',
   './validation': 'validation', './types-only': 'types-export', './adapters': 'adapters',
   './adapters/presentation': 'adapters/presentation', './plugins/duckdb': 'plugins/duckdb', './plugins/katex': 'plugins/katex' }
@@ -125,9 +131,10 @@ function validateManifest(manifest, files) {
   assert.equal(manifest.name, POLICY.packageName, 'Tarball package name mismatch')
   assert.equal(manifest.version, POLICY.version, 'Tarball version mismatch')
   for (const peer of ['solid-js', '@solidjs/web']) {
-    assert.equal(manifest.peerDependencies?.[peer], '2.0.0-rc.18', `Unexpected ${peer} peer`)
+    assert.equal(manifest.peerDependencies?.[peer], runtimePins[peer], `Unexpected ${peer} peer`)
     assert.notEqual(manifest.peerDependenciesMeta?.[peer]?.optional, true, 'Solid runtime cannot be optional')
   }
+  assert.equal(manifest.dependencies?.['@seed-ship/mcp-ui-spec'], '^6.0.0', 'Unexpected Spec dependency floor')
   for (const group of ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies']) {
     for (const value of Object.values(manifest[group] || {})) {
       assert(typeof value === 'string' && !/[:\\/\n\r]/.test(value), 'Dependency protocols and workspace references are forbidden')
@@ -159,6 +166,30 @@ export async function verifyTarball(file, expectedSha256) {
   return { name: manifest.name, version: manifest.version, sha256, path: await realpath(file) }
 }
 
+async function verifySpecFixture(file) {
+  const stat = await lstat(file)
+  assert(stat.isFile() && !stat.isSymbolicLink() && stat.size <= 64 * 1024 * 1024, 'Spec fixture must be a bounded regular file')
+  const bytes = await readFile(file), files = tarFiles(bytes)
+  assert(files.has('package/package.json'), 'Spec fixture manifest is missing')
+  const manifest = JSON.parse(files.get('package/package.json').toString('utf8'))
+  assert.equal(manifest.name, '@seed-ship/mcp-ui-spec', 'Spec fixture name mismatch')
+  assert.equal(manifest.version, '6.0.0', 'Spec fixture version mismatch')
+  return createHash('sha256').update(bytes).digest('hex')
+}
+
+async function verifyCliFixture(file) {
+  const stat = await lstat(file)
+  assert(stat.isFile() && !stat.isSymbolicLink() && stat.size <= 64 * 1024 * 1024, 'CLI fixture must be a bounded regular file')
+  const bytes = await readFile(file), files = tarFiles(bytes)
+  assert(files.has('package/package.json'), 'CLI fixture manifest is missing')
+  const manifest = JSON.parse(files.get('package/package.json').toString('utf8'))
+  assert.equal(manifest.name, '@seed-ship/mcp-ui-cli', 'CLI fixture name mismatch')
+  assert.equal(manifest.version, '5.0.2', 'CLI fixture version mismatch')
+  assert.equal(manifest.dependencies?.['@seed-ship/mcp-ui-spec'], '^6.0.0', 'CLI fixture Spec dependency mismatch')
+  assert.equal(manifest.dependencies?.['fast-uri'], '^3.1.9', 'CLI fixture fast-uri dependency mismatch')
+  return createHash('sha256').update(bytes).digest('hex')
+}
+
 async function walk(directory) {
   const stat = await lstat(directory)
   assert(stat.isDirectory() && !stat.isSymbolicLink(), 'Evidence root must be a real directory')
@@ -174,8 +205,9 @@ async function walk(directory) {
 const json = async file => JSON.parse(await readFile(file, 'utf8'))
 const empty = (value, message) => assert(Array.isArray(value) && value.length === 0, message)
 
-export async function verifyQualification(directory, sha256) {
+export async function verifyQualification(directory, sha256, specSha256) {
   assert(digest(sha256), 'Invalid qualification SHA-256')
+  assert(digest(specSha256), 'Invalid Spec fixture SHA-256')
   directory = resolve(directory)
   const reports = (await walk(resolve(directory))).filter(file => basename(file) === 'report.json')
   const core = new Map(), compiled = []
@@ -191,6 +223,13 @@ export async function verifyQualification(directory, sha256) {
       assert(file.startsWith(join(consumer, 'qualification-results') + sep), 'Profile evidence is outside its fixed consumer root')
       const input = await json(join(consumer, 'qualification-input.json')), probe = await json(join(consumer, 'import-probe-result.json'))
       assert.deepEqual(report.input, input, 'Profile report does not match preparation input')
+      assert.equal(input.spec?.sha256, specSha256, 'Profile qualified another Spec fixture')
+      assert(typeof input.spec.path === 'string' && isAbsolute(input.spec.path) && basename(input.spec.path) === specFilename,
+        'Profile Spec fixture path mismatch')
+      for (const [name, version] of Object.entries(runtimePins)) {
+        assert.equal(input.pins?.[name], version, `Unexpected prepared ${name} pin`)
+        assert.equal(report.actualPins?.[name], version, `Unexpected installed ${name} pin`)
+      }
       assert((await readFile(join(consumer, 'pnpm-lock.yaml'), 'utf8')).trim().length > 0, 'Consumer lockfile is missing or empty')
       assert.equal(probe.profile, profile, 'Import probe profile mismatch')
       assert.equal(probe.version, POLICY.version, 'Import probe version mismatch')
@@ -275,11 +314,26 @@ async function main([command, first, second, ...extra]) {
     const parent = await realpath(dirname(output))
     assert.equal(parent, dirname(output), 'Output parent cannot resolve through symlinks')
     const files = await walk(source), archives = files.filter(file => file.endsWith('.tgz'))
-    assert(archives.every(file => [solidFilename, specFilename].includes(basename(file))), 'Unexpected archive in CI artifact')
+    assert(archives.every(file => [solidFilename, specFilename, cliFilename].includes(basename(file))), 'Unexpected archive in CI artifact')
     const solid = archives.filter(file => basename(file) === solidFilename)
-    assert(solid.length === 1 && archives.filter(file => basename(file) === specFilename).length <= 1, 'Expected one Solid tarball and at most one Spec fixture')
+    const spec = archives.filter(file => basename(file) === specFilename)
+    const cli = archives.filter(file => basename(file) === cliFilename)
+    assert(solid.length === 1 && spec.length === 1 && cli.length === 1, 'Expected one Solid tarball and one each Spec/CLI fixture')
     const verified = await verifyTarball(solid[0], request.tarballSha256)
-    const qualification = await verifyQualification(source, verified.sha256)
+    const specSha256 = await verifySpecFixture(spec[0])
+    const cliSha256 = await verifyCliFixture(cli[0])
+    const reportFile = join(source, 'mcpui-fast-uri-report.json')
+    assert(files.includes(reportFile), 'Packed CLI security report is missing')
+    const cliReport = await json(reportFile)
+    assert.equal(cliReport.status, 'passed', 'Packed CLI security report did not pass')
+    empty(cliReport.failures, 'Packed CLI security report recorded failures')
+    assert.equal(cliReport.archives?.spec?.sha256, specSha256, 'Packed CLI report qualified another Spec fixture')
+    assert.equal(cliReport.archives?.cli?.sha256, cliSha256, 'Packed CLI report qualified another CLI fixture')
+    assert.equal(cliReport.archives.spec.name, '@seed-ship/mcp-ui-spec', 'Packed CLI report Spec name mismatch')
+    assert.equal(cliReport.archives.spec.version, '6.0.0', 'Packed CLI report Spec version mismatch')
+    assert.equal(cliReport.archives.cli.name, '@seed-ship/mcp-ui-cli', 'Packed CLI report CLI name mismatch')
+    assert.equal(cliReport.archives.cli.version, '5.0.2', 'Packed CLI report CLI version mismatch')
+    const qualification = await verifyQualification(source, verified.sha256, specSha256)
     await mkdir(output) // No recursive creation and no reuse of an existing delivery directory.
     await copyFile(verified.path, join(output, solidFilename), constants.COPYFILE_EXCL)
     const delivery = { ...request, ...verified, path: join(output, solidFilename), qualification }

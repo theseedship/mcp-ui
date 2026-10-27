@@ -108,7 +108,7 @@ jobs:
           {
             echo '## Solid 2 preview review — not a public release'
             echo "Source: $SOURCE_SHA; CI: $CI_RUN_ID; artifact: $ARTIFACT_ID."
-            echo "Package: @seed-ship/mcp-ui-solid@7.0.0-solid2.0; tag: solid2; SHA-256: $TARBALL_SHA256."
+            echo "Package: @seed-ship/mcp-ui-solid@8.0.0-solid2.0; tag: solid2; SHA-256: $TARBALL_SHA256."
             echo 'Stable latest before this operation:'
             jq -r .latest "$RUNNER_TEMP/solid2-verified/latest-before.json"
             echo 'Exact sentence required for a separately approved staging dispatch:'
@@ -165,11 +165,11 @@ jobs:
       - name: Recheck the exact bytes and public-version state without npm credentials
         run: |
           set -euo pipefail
-          node scripts/solid2-preview/verify.mjs tarball "$RUNNER_TEMP/solid2-reviewed/seed-ship-mcp-ui-solid-7.0.0-solid2.0.tgz"
+          node scripts/solid2-preview/verify.mjs tarball "$RUNNER_TEMP/solid2-reviewed/seed-ship-mcp-ui-solid-8.0.0-solid2.0.tgz"
           npm view @seed-ship/mcp-ui-solid dist-tags --json --registry=https://registry.npmjs.org > "$RUNNER_TEMP/solid2-stage-before.json"
           node scripts/solid2-preview/verify.mjs latest "$RUNNER_TEMP/solid2-reviewed/latest-before.json" "$RUNNER_TEMP/solid2-stage-before.json"
           npm view @seed-ship/mcp-ui-solid versions --json --registry=https://registry.npmjs.org > "$RUNNER_TEMP/solid2-public-versions.json"
-          jq -e 'type == "array" and index("7.0.0-solid2.0") == null' "$RUNNER_TEMP/solid2-public-versions.json"
+          jq -e 'type == "array" and index("8.0.0-solid2.0") == null' "$RUNNER_TEMP/solid2-public-versions.json"
           mkdir "$RUNNER_TEMP/solid2-stage-empty"
       - name: Stage only Solid with the fixed non-stable tag
         id: npm_stage
@@ -183,7 +183,7 @@ jobs:
         run: |
           set -euo pipefail
           test -n "${NODE_AUTH_TOKEN:-}"
-          npm stage publish "$RUNNER_TEMP/solid2-reviewed/seed-ship-mcp-ui-solid-7.0.0-solid2.0.tgz" --access public --tag solid2 --ignore-scripts --registry=https://registry.npmjs.org --json | tee "$RUNNER_TEMP/solid2-stage-result.json"
+          npm stage publish "$RUNNER_TEMP/solid2-reviewed/seed-ship-mcp-ui-solid-8.0.0-solid2.0.tgz" --access public --tag solid2 --ignore-scripts --registry=https://registry.npmjs.org --json | tee "$RUNNER_TEMP/solid2-stage-result.json"
       - name: Verify latest even when the staging command failed
         if: always() && steps.npm_stage.outcome != 'skipped'
         run: |
@@ -205,6 +205,6 @@ jobs:
           {
             echo '## npm staging is not public publication'
             echo 'Inspect the stage ID in solid2-stage-result and npmjs.com → Staged Packages.'
-            echo 'Approve only the reviewed @seed-ship/mcp-ui-solid@7.0.0-solid2.0 upload with tag solid2, using npm 2FA.'
+            echo 'Approve only the reviewed @seed-ship/mcp-ui-solid@8.0.0-solid2.0 upload with tag solid2, using npm 2FA.'
             echo 'After approval verify the public version, solid2 tag and unchanged latest. No application deployment was performed.'
           } >> "$GITHUB_STEP_SUMMARY"

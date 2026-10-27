@@ -26,6 +26,9 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Refuse prereleases and Solid 2 in stable GitHub releases
+        run: node scripts/stable-release/verify.mjs
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
