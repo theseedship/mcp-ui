@@ -5,19 +5,54 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [7.0.0] - Unreleased
+## [8.0.0-solid2.0] - Unreleased Solid 2 preview candidate
 
-### Breaking — Zod types, not the Solid engine
+### 2026-10-27 — source preparation, not a qualification or release
 
-- Use Zod 4.6.6 and Spec ^6.0.0 while retaining Solid 1 and the existing renderer,
-  peer range, engine loading, sanitizer and MCP wire contracts. Adapt connector
-  records and preserve application validation codes/paths; native Zod messages
-  can change. The paused Solid 2 preview is not resumed.
-- Qualify emitted ESM/CJS declarations with a real packed-consumer TypeScript
-  gate and retain the existing resource-size behavior explicitly as a limitation.
-- See `docs/ZOD4-STABLE-MIGRATION-2026-10-26.md` for compatibility and release gates.
+- Candidate source identity is `8.0.0-solid2.0`, on the Solid 2 line. Stable
+  `7.x` (including future `7.1.x`) remains Solid 1 and npm `latest`; Solid 2 is
+  opt-in on the separate `solid2` tag, only after a separately reviewed gate.
+- Carry stable #40/#41: Spec 6, Zod 4.6.6, patched CLI `fast-uri` 3.1.9 and
+  complete declaration graphs. Keep the Solid 2 SSR/runtime.
+- Target the exact RC.19 cohort (including compiler/signals/web), reject native
+  effect-relay/own-source diagnostics, and qualify against Spec 6 tarballs.
+- The source version alone is not CI qualification or release proof. Qualify
+  the exact source HEAD and archive; never reuse the historical
+  `7.0.0-solid2.0` qualification archive or checksum as proof for 8.0.0.
+- The RC.19 / Spec 6 / CLI 5.0.2 promotion policy must first be reviewed and
+  merged as an infrastructure-only PR to stable main. That does not authorize
+  dispatch, staging, publication, runtime-PR merge, or application installation.
 
-## Historical tooling follow-up before Zod 4
+## [7.0.0-solid2.0] - Historical, unpublished Solid 2 qualification identity
+
+This section records historical RC.18 and RC.19 preview-source work under the
+earlier identity only.
+Its version, source, CI reports, tarball and checksums are historical evidence;
+none qualifies the current `8.0.0-solid2.0` candidate.
+
+- Port runtime, DOM renderer, JSX compiler and testing to the exact Solid 2
+  RC.18 toolchain; leave the stable Solid 1 line and MCP schemas unchanged.
+- Adapt compute/apply effects, ownership, cleanup, context fallbacks, draft
+  stores and imperative store/controller observation boundaries.
+- Replace the Solid 1 virtualizer adapter with a lazy optional TanStack core
+  bridge, qualified against the real core including disposal and two instances.
+- Keep browser engines lazy and guard late imports after unmount; cancel fetch
+  readers and reconnect timers on streaming stop/disposal.
+- Preserve portal DOM identity and local live themes, use hydration-stable table
+  ids, and revalidate changed component payloads in a tracked computation.
+- Add migration regressions and a clean-tarball Solid 2 consumer harness. This
+  preview is a local artefact and review branch, not an npm release.
+
+### Security — historical preview development tooling
+
+- Carry the compatible tooling fixes from stable PR #38 into this preview:
+  Vitest and `@vitest/ui` 4.1.12, with `@vitest/mocker` 4.1.12 in the lockfile.
+  Retain Vite 8.3.5 and the exact Solid 2 RC.18 runtime/compiler pair; CLI and
+  Spec use Vite 6.4.5. No preview runtime, schema or package version changes.
+- Runtime Zod remains 3.25.76 with its advisory unresolved. Stable audit counts
+  below are not a fresh audit of this preview lockfile.
+
+## [Unreleased] — stable Solid 1 / 7.x line
 
 ### Security — development tooling only
 

@@ -1,6 +1,6 @@
 {
   "name": "@seed-ship/mcp-ui-solid",
-  "version": "7.0.0",
+  "version": "8.0.0-solid2.0",
   "description": "SolidJS components for rendering MCP-generated UI resources",
   "type": "module",
   "files": [
@@ -13,6 +13,9 @@
     "CHANGELOG.md",
     "docs/THEMING.md",
     "docs/SECURITY-DEPENDENCIES.md",
+    "docs/SOLID2-PREVIEW.md",
+    "docs/SOLID2-PREVIEW-HANDOFF-2026-10-23.md",
+    "docs/SOLID2-DEPOSIUM-HANDOFF-2026-10-27.md",
     "docs/ZOD4-STABLE-MIGRATION-2026-10-26.md",
     "LICENSE"
   ],
@@ -58,10 +61,14 @@
       "solid": "./src/index.ts",
       "import": {
         "types": "./dist/index.d.ts",
+        "node": "./dist/server/index.js",
+        "worker": "./dist/server/index.js",
         "default": "./dist/index.js"
       },
       "require": {
         "types": "./dist/index.d.cts",
+        "node": "./dist/server/index.cjs",
+        "worker": "./dist/server/index.cjs",
         "default": "./dist/index.cjs"
       }
     },
@@ -69,10 +76,14 @@
       "solid": "./src/components/index.ts",
       "import": {
         "types": "./dist/components.d.ts",
+        "node": "./dist/server/components.js",
+        "worker": "./dist/server/components.js",
         "default": "./dist/components.js"
       },
       "require": {
         "types": "./dist/components.d.cts",
+        "node": "./dist/server/components.cjs",
+        "worker": "./dist/server/components.cjs",
         "default": "./dist/components.cjs"
       }
     },
@@ -80,10 +91,14 @@
       "solid": "./src/hooks/index.ts",
       "import": {
         "types": "./dist/hooks.d.ts",
+        "node": "./dist/server/hooks.js",
+        "worker": "./dist/server/hooks.js",
         "default": "./dist/hooks.js"
       },
       "require": {
         "types": "./dist/hooks.d.cts",
+        "node": "./dist/server/hooks.cjs",
+        "worker": "./dist/server/hooks.cjs",
         "default": "./dist/hooks.cjs"
       }
     },
@@ -91,10 +106,14 @@
       "solid": "./src/types/index.ts",
       "import": {
         "types": "./dist/types.d.ts",
+        "node": "./dist/server/types.js",
+        "worker": "./dist/server/types.js",
         "default": "./dist/types.js"
       },
       "require": {
         "types": "./dist/types.d.cts",
+        "node": "./dist/server/types.cjs",
+        "worker": "./dist/server/types.cjs",
         "default": "./dist/types.cjs"
       }
     },
@@ -102,10 +121,14 @@
       "solid": "./src/validation.ts",
       "import": {
         "types": "./dist/validation.d.ts",
+        "node": "./dist/server/validation.js",
+        "worker": "./dist/server/validation.js",
         "default": "./dist/validation.js"
       },
       "require": {
         "types": "./dist/validation.d.cts",
+        "node": "./dist/server/validation.cjs",
+        "worker": "./dist/server/validation.cjs",
         "default": "./dist/validation.cjs"
       }
     },
@@ -113,10 +136,14 @@
       "solid": "./src/types-export.ts",
       "import": {
         "types": "./dist/types-export.d.ts",
+        "node": "./dist/server/types-export.js",
+        "worker": "./dist/server/types-export.js",
         "default": "./dist/types-export.js"
       },
       "require": {
         "types": "./dist/types-export.d.cts",
+        "node": "./dist/server/types-export.cjs",
+        "worker": "./dist/server/types-export.cjs",
         "default": "./dist/types-export.cjs"
       }
     },
@@ -124,10 +151,14 @@
       "solid": "./src/adapters/index.ts",
       "import": {
         "types": "./dist/adapters.d.ts",
+        "node": "./dist/server/adapters.js",
+        "worker": "./dist/server/adapters.js",
         "default": "./dist/adapters.js"
       },
       "require": {
         "types": "./dist/adapters.d.cts",
+        "node": "./dist/server/adapters.cjs",
+        "worker": "./dist/server/adapters.cjs",
         "default": "./dist/adapters.cjs"
       }
     },
@@ -135,10 +166,14 @@
       "solid": "./src/adapters/presentation.ts",
       "import": {
         "types": "./dist/adapters/presentation.d.ts",
+        "node": "./dist/server/adapters/presentation.js",
+        "worker": "./dist/server/adapters/presentation.js",
         "default": "./dist/adapters/presentation.js"
       },
       "require": {
         "types": "./dist/adapters/presentation.d.cts",
+        "node": "./dist/server/adapters/presentation.cjs",
+        "worker": "./dist/server/adapters/presentation.cjs",
         "default": "./dist/adapters/presentation.cjs"
       }
     },
@@ -146,10 +181,14 @@
       "solid": "./src/plugins/duckdb.ts",
       "import": {
         "types": "./dist/plugins/duckdb.d.ts",
+        "node": "./dist/server/plugins/duckdb.js",
+        "worker": "./dist/server/plugins/duckdb.js",
         "default": "./dist/plugins/duckdb.js"
       },
       "require": {
         "types": "./dist/plugins/duckdb.d.cts",
+        "node": "./dist/server/plugins/duckdb.cjs",
+        "worker": "./dist/server/plugins/duckdb.cjs",
         "default": "./dist/plugins/duckdb.cjs"
       }
     },
@@ -157,17 +196,21 @@
       "solid": "./src/plugins/katex.ts",
       "import": {
         "types": "./dist/plugins/katex.d.ts",
+        "node": "./dist/server/plugins/katex.js",
+        "worker": "./dist/server/plugins/katex.js",
         "default": "./dist/plugins/katex.js"
       },
       "require": {
         "types": "./dist/plugins/katex.d.cts",
+        "node": "./dist/server/plugins/katex.cjs",
+        "worker": "./dist/server/plugins/katex.cjs",
         "default": "./dist/plugins/katex.cjs"
       }
     },
     "./src/*": "./src/*"
   },
   "scripts": {
-    "build": "vite build && pnpm build:types",
+    "build": "vite build && vite build --mode server && pnpm build:types",
     "build:types": "tsc --declaration --emitDeclarationOnly --outDir dist --composite false && pnpm build:types:copy && cp dist/plugins/katex.d.ts dist/plugins/katex.d.cts && node ../scripts/finalize-declarations.mjs dist",
     "build:types:copy": "printf \"export * from './components/index';\\nexport { default } from './components/index';\\n\" > dist/components.d.ts && printf \"export * from './hooks/index';\\n\" > dist/hooks.d.ts && printf \"export * from './types/index';\\n\" > dist/types.d.ts && printf \"export * from './adapters/index';\\n\" > dist/adapters.d.ts && pnpm build:types:cts",
     "build:types:cts": "cp dist/index.d.ts dist/index.d.cts && cp dist/components.d.ts dist/components.d.cts 2>/dev/null || true && cp dist/hooks.d.ts dist/hooks.d.cts 2>/dev/null || true && cp dist/types.d.ts dist/types.d.cts 2>/dev/null || true && cp dist/validation.d.ts dist/validation.d.cts 2>/dev/null || true && cp dist/types-export.d.ts dist/types-export.d.cts 2>/dev/null || true && cp dist/adapters.d.ts dist/adapters.d.cts 2>/dev/null || true && cp dist/adapters/presentation.d.ts dist/adapters/presentation.d.cts 2>/dev/null || true && cp dist/plugins/duckdb.d.ts dist/plugins/duckdb.d.cts 2>/dev/null || true",
@@ -204,7 +247,8 @@
   "peerDependencies": {
     "@antv/g6": "^5.0.0",
     "@duckdb/duckdb-wasm": "^1.28.0",
-    "@tanstack/solid-virtual": "^3.0.0",
+    "@tanstack/virtual-core": "3.13.18",
+    "@solidjs/web": "2.0.0-rc.19",
     "chart.js": "^4.0.0",
     "chartjs-plugin-zoom": "^2.0.0",
     "highlight.js": "^11.9.0",
@@ -212,7 +256,7 @@
     "leaflet": "^1.9.4",
     "leaflet.markercluster": "^1.5.0",
     "protomaps-leaflet": "^4.0.0",
-    "solid-js": "^1.9.0"
+    "solid-js": "2.0.0-rc.19"
   },
   "peerDependenciesMeta": {
     "@antv/g6": {
@@ -239,7 +283,7 @@
     "leaflet.markercluster": {
       "optional": true
     },
-    "@tanstack/solid-virtual": {
+    "@tanstack/virtual-core": {
       "optional": true
     },
     "protomaps-leaflet": {
@@ -257,8 +301,13 @@
     "@size-limit/esbuild": "^12.0.0",
     "@size-limit/esbuild-why": "^12.0.0",
     "@size-limit/preset-small-lib": "^12.0.0",
-    "@solidjs/testing-library": "^0.8.5",
-    "@tanstack/solid-virtual": "^3.13.18",
+    "@solidjs/testing-library": "1.0.0-rc.2",
+    "@solidjs/web": "2.0.0-rc.19",
+    "@solidjs/signals": "2.0.0-rc.19",
+    "@solidjs/compiler": "2.0.0-rc.19",
+    "@solidjs/babel-plugin": "2.0.0-rc.19",
+    "@solidjs/vite-plugin": "3.0.0-next.51",
+    "@tanstack/virtual-core": "3.13.18",
     "@types/leaflet": "^1.9.8",
     "@types/leaflet.markercluster": "^1.5.6",
     "@types/node": "^22.0.0",
@@ -267,14 +316,13 @@
     "@vitest/ui": "4.1.12",
     "chart.js": "^4.5.1",
     "eslint": "^8.56.0",
-    "jsdom": "^27.2.0",
+    "jsdom": "27.2.0",
     "katex": "0.18.4",
     "leaflet.markercluster": "^1.5.3",
     "size-limit": "^12.0.0",
-    "solid-js": "^1.9.17",
+    "solid-js": "2.0.0-rc.19",
     "typescript": "^5.3.3",
-    "vite": "6.4.5",
-    "vite-plugin-solid": "^2.11.8",
+    "vite": "8.3.5",
     "vitest": "4.1.12"
   },
   "keywords": [

@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "target": "ES2022", "module": "ESNext", "moduleResolution": "Bundler",
+    "jsx": "preserve", "jsxImportSource": "@solidjs/web", "strict": true,
+    "noEmit": true, "skipLibCheck": false, "allowImportingTsExtensions": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"], "types": ["vite/client"]
+  },
+  "include": ["src"]
+}

@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { createSignal, createRoot } from 'solid-js'
+import { createSignal, createRoot, flush } from 'solid-js'
 import { useFormPersistence } from './useFormPersistence'
 
 // Mock localStorage
@@ -41,6 +41,46 @@ describe('useFormPersistence', () => {
     vi.clearAllMocks()
   })
 
+  it('restores a reactive key over committed defaults and cancels pending writes on disposal', () => {
+    mockStorage.setItem(
+      'mcp-ui-form:first',
+      JSON.stringify({ data: { name: 'saved first' }, timestamp: Date.now(), version: 1 })
+    )
+    mockStorage.setItem(
+      'mcp-ui-form:second',
+      JSON.stringify({ data: { name: 'saved second' }, timestamp: Date.now(), version: 1 })
+    )
+    let dispose!: () => void
+    const { formData, setFormData, setKey } = createRoot((cleanup) => {
+      dispose = cleanup
+      const [key, setKey] = createSignal('first')
+      const [formData, setFormData] = createSignal<Record<string, unknown>>({
+        name: 'default',
+        retained: true,
+      })
+      useFormPersistence({
+        get persistKey() {
+          return key()
+        },
+        formData,
+        setFormData,
+        storage: mockStorage,
+        debounce: 10,
+      })
+      return { formData, setFormData, setKey }
+    })
+    flush()
+    expect(formData()).toEqual({ name: 'saved first', retained: true })
+    setKey('second')
+    flush()
+    expect(formData()).toEqual({ name: 'saved second', retained: true })
+    setFormData({ name: 'not persisted after disposal' })
+    flush()
+    dispose()
+    vi.advanceTimersByTime(20)
+    expect(JSON.parse(mockStorage.getItem('mcp-ui-form:second')!).data.name).toBe('saved second')
+  })
+
   it('does not save before initialization', () => {
     createRoot((dispose) => {
       const [formData, setFormData] = createSignal<Record<string, unknown>>({ name: 'test' })
@@ -52,12 +92,16 @@ describe('useFormPersistence', () => {
         storage: mockStorage,
       })
 
-      // Should not save immediately (before onMount)
-      vi.advanceTimersByTime(600)
-      expect(mockStorage.setItem).not.toHaveBeenCalled()
+      // Exercise imperative events outside the pure root-construction scope.
+      return () => {
+        // Should not save immediately (before onMount)
+        vi.advanceTimersByTime(600)
+        flush()
+        expect(mockStorage.setItem).not.toHaveBeenCalled()
 
-      dispose()
-    })
+        dispose()
+      }
+    })()
   })
 
   it('clears persisted data with clearPersisted', () => {
@@ -79,11 +123,15 @@ describe('useFormPersistence', () => {
         storage: mockStorage,
       })
 
-      clearPersisted()
-      expect(mockStorage.removeItem).toHaveBeenCalledWith('mcp-ui-form:test-form')
+      // Exercise imperative events outside the pure root-construction scope.
+      return () => {
+        clearPersisted()
+        flush()
+        expect(mockStorage.removeItem).toHaveBeenCalledWith('mcp-ui-form:test-form')
 
-      dispose()
-    })
+        dispose()
+      }
+    })()
   })
 
   it('returns false for hasPersisted when no data exists', () => {
@@ -97,10 +145,13 @@ describe('useFormPersistence', () => {
         storage: mockStorage,
       })
 
-      expect(hasPersisted()).toBe(false)
+      // Exercise imperative events outside the pure root-construction scope.
+      return () => {
+        expect(hasPersisted()).toBe(false)
 
-      dispose()
-    })
+        dispose()
+      }
+    })()
   })
 
   it('returns true for hasPersisted when valid data exists', () => {
@@ -122,10 +173,13 @@ describe('useFormPersistence', () => {
         storage: mockStorage,
       })
 
-      expect(hasPersisted()).toBe(true)
+      // Exercise imperative events outside the pure root-construction scope.
+      return () => {
+        expect(hasPersisted()).toBe(true)
 
-      dispose()
-    })
+        dispose()
+      }
+    })()
   })
 
   it('returns false for hasPersisted when data is expired', () => {
@@ -148,10 +202,13 @@ describe('useFormPersistence', () => {
         expiresIn: 5000, // 5 seconds
       })
 
-      expect(hasPersisted()).toBe(false)
+      // Exercise imperative events outside the pure root-construction scope.
+      return () => {
+        expect(hasPersisted()).toBe(false)
 
-      dispose()
-    })
+        dispose()
+      }
+    })()
   })
 
   it('returns null for getPersistedTimestamp when no data exists', () => {
@@ -165,10 +222,13 @@ describe('useFormPersistence', () => {
         storage: mockStorage,
       })
 
-      expect(getPersistedTimestamp()).toBeNull()
+      // Exercise imperative events outside the pure root-construction scope.
+      return () => {
+        expect(getPersistedTimestamp()).toBeNull()
 
-      dispose()
-    })
+        dispose()
+      }
+    })()
   })
 
   it('returns timestamp for getPersistedTimestamp when data exists', () => {
@@ -190,10 +250,13 @@ describe('useFormPersistence', () => {
         storage: mockStorage,
       })
 
-      expect(getPersistedTimestamp()).toBe(timestamp)
+      // Exercise imperative events outside the pure root-construction scope.
+      return () => {
+        expect(getPersistedTimestamp()).toBe(timestamp)
 
-      dispose()
-    })
+        dispose()
+      }
+    })()
   })
 
   it('handles null storage gracefully (SSR)', () => {
@@ -207,13 +270,17 @@ describe('useFormPersistence', () => {
         storage: null,
       })
 
-      // Should not throw errors
-      expect(hasPersisted()).toBe(false)
-      expect(getPersistedTimestamp()).toBeNull()
-      clearPersisted() // Should not throw
+      // Exercise imperative events outside the pure root-construction scope.
+      return () => {
+        // Should not throw errors
+        expect(hasPersisted()).toBe(false)
+        expect(getPersistedTimestamp()).toBeNull()
+        clearPersisted()
+        flush() // Should not throw
 
-      dispose()
-    })
+        dispose()
+      }
+    })()
   })
 
   it('ignores data with wrong version', () => {
@@ -235,10 +302,13 @@ describe('useFormPersistence', () => {
         storage: mockStorage,
       })
 
-      expect(hasPersisted()).toBe(false)
+      // Exercise imperative events outside the pure root-construction scope.
+      return () => {
+        expect(hasPersisted()).toBe(false)
 
-      dispose()
-    })
+        dispose()
+      }
+    })()
   })
 
   it('handles JSON parse errors gracefully', () => {
@@ -255,11 +325,14 @@ describe('useFormPersistence', () => {
         storage: mockStorage,
       })
 
-      // Should handle gracefully
-      expect(hasPersisted()).toBe(false)
-      expect(getPersistedTimestamp()).toBeNull()
+      // Exercise imperative events outside the pure root-construction scope.
+      return () => {
+        // Should handle gracefully
+        expect(hasPersisted()).toBe(false)
+        expect(getPersistedTimestamp()).toBeNull()
 
-      dispose()
-    })
+        dispose()
+      }
+    })()
   })
 })

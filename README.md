@@ -1,11 +1,16 @@
 # MCP UI Components
 
-> Stable-line workspace: Spec `6.0.0`, MCPUI Solid `7.0.0` and CLI
-> `5.0.2`. **MCPUI Solid 7 still uses Solid 1**, with the unchanged `^1.9.0`
-> peer range. MCPUI **7.x stays on Solid 1** (`latest`); the separate **8.x
-> preview targets Solid 2** (`solid2`, opt-in). This infrastructure change does
-> not publish either line. See the
-> [migration and qualification record](./mcp-ui-solid/docs/ZOD4-STABLE-MIGRATION-2026-10-26.md).
+> **Solid 2 source preparation resumed — 2026-10-27.** Target RC.19 and carry
+> the stable Zod 4 / fast-uri fixes; PR #34 is for review only. No merge, release
+> dispatch, npm publication or Deposium change is authorized. See the
+> [current Deposium handoff](./mcp-ui-solid/docs/SOLID2-DEPOSIUM-HANDOFF-2026-10-27.md).
+
+> This branch prepares the isolated **Solid 2 preview**, `8.0.0-solid2.0`,
+> not a published release. Stable **7.x remains Solid 1** (`latest`), including
+> future `7.1.x` releases; **8.x targets Solid 2** (`solid2`, opt-in).
+> The old 7.x preview archive cannot qualify the new 8.x package. Do not install
+> this branch into a Solid 1 application or trigger stable publishing workflows.
+> See [the preview qualification and integration guide](./mcp-ui-solid/docs/SOLID2-PREVIEW.md).
 
 > **UI component library for Model Context Protocol (MCP) servers**
 
@@ -21,12 +26,12 @@ updates Solid/Seroval and build-tool dependency resolutions. Includes a real
 server-rendering/serialization compatibility smoke test. This is the historical
 release record, not a claim that the current dependency audit is clean.
 
-**Security follow-up (unreleased, 2026-10-26):** after the stable-line Zod 4
-migration, `fast-uri` 3.1.9 removes the four remaining workspace audit entries.
-The CLI declares its own corrected dependency and supplies it to both Ajv
-validators; monorepo overrides alone do not protect published consumers.
-Full and production workspace audits report zero advisories on this date,
-not a security guarantee for every host application. See the
+**Security follow-up (unreleased, 2026-10-24):** stable PR #38 updates Vite to
+6.4.5 and Vitest to 4.1.12; its Solid 1 audit removes seven advisory entries.
+That historical preview carried Vitest 4.1.12 and the CLI/Spec Vite fixes,
+with Vite 8.3.5 and Solid 2 RC.18. Its runtime Zod advisory and audit counts
+describe the old #38 snapshot, not the resumed source or a current clean audit.
+The resumed source now carries Zod 4.6.6 and fast-uri 3.1.9. See the
 [current security dependency notes](./mcp-ui-solid/docs/SECURITY-DEPENDENCIES.md).
 
 **6.25.0 (`mcp-ui-solid`):** inherited CSS theme tokens for prompts, resource

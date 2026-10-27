@@ -5,16 +5,8 @@
  * Sprint Drag-Drop Feature
  */
 
-import {
-  Component,
-  For,
-  Show,
-  createSignal,
-  createMemo,
-  createEffect,
-  on,
-  JSX
-} from 'solid-js'
+import { Component, For, Show, createSignal, createMemo, createEffect, untrack } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import type {
   UIComponent,
   UILayout,
@@ -104,15 +96,17 @@ const GridOverlay: Component<{ columns: number; visible: boolean }> = (props) =>
  */
 export const EditableUIResourceRenderer: Component<EditableUIResourceRendererProps> = (props) => {
   // Internal state for components (allows editing)
-  const [components, setComponents] = createSignal<UIComponent[]>(props.layout.components)
+  const [components, setComponents] = createSignal<UIComponent[]>(untrack(() => props.layout.components))
   const [activeResizeId, setActiveResizeId] = createSignal<string | null>(null)
   const [previewPositions, setPreviewPositions] = createSignal<Map<string, GridPosition>>(new Map())
-  const [gridContainerRef, setGridContainerRef] = createSignal<HTMLElement | null>(null)
+  // DOM measurement target, read imperatively by pointer handlers; it does not
+  // drive rendering and must not write reactive state from a ref callback.
+  let gridContainerRef: HTMLElement | null = null
 
   // Sync with external layout changes
-  createEffect(on(() => props.layout.components, (newComponents) => {
+  createEffect(() => props.layout.components, (newComponents) => {
     setComponents(newComponents)
-  }))
+  })
 
   // Drag-drop configuration
   const dragDropConfig = createMemo(() => ({
@@ -171,7 +165,7 @@ export const EditableUIResourceRenderer: Component<EditableUIResourceRendererPro
   const dragDrop = useDragDrop({
     components,
     onReorder: handleReorder,
-    enabled: dragDropConfig().enabled && dragDropConfig().reorder
+    get enabled() { return dragDropConfig().enabled && dragDropConfig().reorder }
   })
 
   // Grid container style
@@ -193,25 +187,23 @@ export const EditableUIResourceRenderer: Component<EditableUIResourceRendererPro
     return preview || component.position
   }
 
-  // If drag-drop is not enabled, just render the standard UIResourceRenderer
-  if (!props.dragDrop?.enabled) {
-    return (
+  return (
+    <Show when={dragDropConfig().enabled} fallback={
       <UIResourceRenderer
         content={props.layout}
         onError={props.onError}
         class={props.class}
       />
-    )
-  }
-
-  return (
+    }>
     <EditableLayoutProvider>
       <div class={`w-full editable-ui-renderer ${props.class || ''}`}>
         <div
-          ref={setGridContainerRef}
+          ref={(element) => { gridContainerRef = element }}
           class="grid relative"
           style={gridContainerStyle()}
           data-grid-container
+          data-mcp-ui-grid="true"
+          data-mcp-ui-stacked="false"
         >
         {/* Grid overlay */}
         <GridOverlay
@@ -228,10 +220,10 @@ export const EditableUIResourceRenderer: Component<EditableUIResourceRendererPro
               currentPosition: () => component.position,
               onResize: (pos) => handleResize(component.id, pos),
               onResizePreview: (pos) => handleResizePreview(component.id, pos),
-              constraints: dragDropConfig().constraints,
-              gridContainer: gridContainerRef,
-              gridColumns: props.layout.grid.columns,
-              enabled: dragDropConfig().enabled && dragDropConfig().resize
+              get constraints() { return dragDropConfig().constraints },
+              gridContainer: () => gridContainerRef,
+              get gridColumns() { return props.layout.grid.columns },
+              get enabled() { return dragDropConfig().enabled && dragDropConfig().resize }
             })
 
             const effectivePosition = () => getEffectivePosition(component)
@@ -265,6 +257,7 @@ export const EditableUIResourceRenderer: Component<EditableUIResourceRendererPro
         </div>
       </div>
     </EditableLayoutProvider>
+    </Show>
   )
 }
 

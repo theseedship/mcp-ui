@@ -124,24 +124,26 @@ export interface UseConfirmModalReturn {
  */
 export function useConfirmModal(): UseConfirmModalReturn {
   const [isOpen, setIsOpen] = createSignal(false)
-  const [resolveRef, setResolveRef] = createSignal<((value: boolean) => void) | null>(null)
+  // Promise bookkeeping is imperative, not UI state: resolving in the same
+  // turn as confirm() must not depend on the staged signal commit.
+  let resolveRef: ((value: boolean) => void) | null = null
 
   const confirm = (): Promise<boolean> => {
     return new Promise((resolve) => {
-      setResolveRef(() => resolve)
+      resolveRef = resolve
       setIsOpen(true)
     })
   }
 
   const handleConfirm = () => {
-    resolveRef()?.(true)
-    setResolveRef(null)
+    resolveRef?.(true)
+    resolveRef = null
     setIsOpen(false)
   }
 
   const handleCancel = () => {
-    resolveRef()?.(false)
-    setResolveRef(null)
+    resolveRef?.(false)
+    resolveRef = null
     setIsOpen(false)
   }
 

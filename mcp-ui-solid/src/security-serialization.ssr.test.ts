@@ -6,7 +6,7 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createServer, type ViteDevServer } from 'vite'
-import solidPlugin from 'vite-plugin-solid'
+import solidPlugin from "@solidjs/vite-plugin";
 import { createRequire } from 'node:module'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -15,10 +15,9 @@ import type { SerializationPayload } from '../test-support/ssr/security-serializ
 type Entry = typeof import('../test-support/ssr/security-serialization-entry')
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const solidPackage = createRequire(import.meta.url).resolve('solid-js/package.json')
-const solidDir = dirname(solidPackage)
-// Exercise the Seroval actually owned by Solid, without adding a direct dep.
-const seroval = createRequire(solidPackage)('seroval') as {
+// In Solid 2 the web renderer owns the hydration serializer, not the core.
+const webEntry = createRequire(import.meta.url).resolve('@solidjs/web')
+const seroval = createRequire(webEntry)('seroval') as {
   toJSONAsync(value: unknown): Promise<unknown>
   fromJSON<T>(value: unknown): T
 }
@@ -41,12 +40,9 @@ beforeAll(async () => {
     appType: 'custom',
     server: { middlewareMode: true, hmr: false, watch: null },
     optimizeDeps: { noDiscovery: true, include: [] },
-    resolve: {
-      alias: [
-        { find: /^solid-js$/, replacement: resolve(solidDir, 'dist/server.js') },
-        { find: /^solid-js\/web$/, replacement: resolve(solidDir, 'web/dist/server.js') },
-        { find: /^solid-js\/store$/, replacement: resolve(solidDir, 'store/dist/server.js') },
-      ],
+    ssr: {
+      noExternal: ['solid-js', '@solidjs/web', '@solidjs/signals'],
+      resolve: { conditions: ['node', 'development'] },
     },
     plugins: [solidPlugin({ ssr: true })],
   })

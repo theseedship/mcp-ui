@@ -187,8 +187,8 @@ export const VideoRenderer: Component<VideoRendererProps> = (props) => {
             allowfullscreen
             // v6.21.0 — youtube-nocookie / player.vimeo are not trusted hosts,
             // so under COEP `credentialless` is what lets them load at all.
-            // `attr:` + `true | undefined` — see the note in `IframeRenderer`.
-            attr:credentialless={
+            // Solid 2 uses standard attributes; false means absence.
+            credentialless={
               // No sandbox here: a YouTube/Vimeo embed keeps its provider
               // cookies, so `'auto'` leaves it alone and a COEP host opts in
               // with `iframeCredentialless: 'always'`.

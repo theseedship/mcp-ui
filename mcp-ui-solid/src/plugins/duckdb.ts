@@ -53,16 +53,25 @@ async function loadDuckDB(): Promise<{ db: DuckDBInstance; conn: DuckDBConnectio
 
   duckdbPromise = (async () => {
     try {
-      // Dynamic import to avoid bundling if not used
-      // The import is wrapped to handle missing module gracefully
+      // Keep this literal namespace import visible to the consumer bundler;
+      // vite-ignore leaves an unresolvable bare import in production browsers.
+      // Missing optional-peer stubs are rejected before bundle/worker setup.
       let duckdb: DuckDBModule
       try {
-        duckdb = await import(/* @vite-ignore */ '@duckdb/duckdb-wasm')
+        const module = await import('@duckdb/duckdb-wasm')
+        duckdb = (module as { default?: DuckDBModule }).default ?? module
       } catch (importError) {
         throw new Error(
           '[DuckDB Plugin] @duckdb/duckdb-wasm is not installed. ' +
           'Install it with: npm install @duckdb/duckdb-wasm'
         )
+      }
+
+      if (typeof duckdb?.getJsDelivrBundles !== 'function' ||
+          typeof duckdb?.selectBundle !== 'function' ||
+          typeof duckdb?.AsyncDuckDB !== 'function' ||
+          typeof duckdb?.ConsoleLogger !== 'function') {
+        throw new Error('[DuckDB Plugin] The optional DuckDB peer does not expose its browser API.')
       }
 
       // Get WASM bundles

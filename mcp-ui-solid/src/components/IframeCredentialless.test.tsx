@@ -14,7 +14,7 @@
 
 import { describe, it, expect, afterEach } from 'vitest'
 import { render, cleanup } from '@solidjs/testing-library'
-import type { JSX } from 'solid-js'
+import type { JSX } from "@solidjs/web";
 import { UIResourceRenderer } from './UIResourceRenderer'
 import { VideoRenderer } from './VideoRenderer'
 import { IframeFallbackLink } from './IframeFallbackLink'

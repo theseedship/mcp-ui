@@ -4,7 +4,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest'
 import { render, cleanup } from '@solidjs/testing-library'
-import { createEffect, createRoot } from 'solid-js'
+import { createEffect, createRoot, flush, untrack } from 'solid-js'
 import {
   createServerCapabilitiesStore,
   setServerCapabilities,
@@ -69,6 +69,18 @@ describe('createServerCapabilitiesStore — v5.3.0', () => {
     expect(store.hasCapability('tools')).toBe(false)
   })
 
+  it('keeps host extension payloads and synchronously replaces capabilities snapshots', () => {
+    const store = createServerCapabilitiesStore()
+    const extended = { ...sampleInfo, extensions: { connectors_available: ['geoai'] } }
+    store.set(extended)
+    expect((store.info() as typeof extended).extensions.connectors_available).toEqual(['geoai'])
+    store.set({ ...sampleInfo, capabilities: { completions: {} } })
+    expect(store.hasCapability('completions')).toBe(true)
+    expect(store.hasCapability('tools')).toBe(false)
+    store.set(null)
+    expect(store.info()).toBeNull()
+  })
+
   it('hasCapability returns true for present keys, false for absent', () => {
     const store = createServerCapabilitiesStore()
     store.set(sampleInfo)
@@ -109,7 +121,7 @@ describe('setServerCapabilities + useServerCapabilities (singleton path)', () =>
     const captures: Array<string | undefined> = []
     const Probe = () => {
       const { serverInfo } = useServerCapabilities()
-      captures.push(serverInfo()?.name)
+      captures.push(untrack(() => serverInfo()?.name))
       return null
     }
     render(() => <Probe />)
@@ -138,11 +150,13 @@ describe('ServerCapabilitiesProvider scoping', () => {
     let outside: string | undefined
 
     const Inside = () => {
-      inside = useServerCapabilities().serverInfo()?.name
+      const store = useServerCapabilities()
+      inside = untrack(() => store.serverInfo()?.name)
       return null
     }
     const Outside = () => {
-      outside = useServerCapabilities().serverInfo()?.name
+      const store = useServerCapabilities()
+      outside = untrack(() => store.serverInfo()?.name)
       return null
     }
 
@@ -184,12 +198,13 @@ describe('ServerCapabilitiesProvider scoping', () => {
     let dispose: (() => void) | undefined
     createRoot((d) => {
       dispose = d
-      createEffect(() => {
-        captures.push(store.serverInfo()?.name ?? null)
+      createEffect(() => store.serverInfo()?.name ?? null, (name) => {
+        captures.push(name)
       })
     })
 
-    // Initial effect run
+    // Initial effect effects are committed after pure root construction.
+    flush()
     expect(captures).toEqual([null])
 
     store.set(sampleInfo)
@@ -202,5 +217,7 @@ describe('ServerCapabilitiesProvider scoping', () => {
     expect(captures).toEqual([null, 'deposium-mcp', 'renamed', null])
 
     dispose?.()
+    store.set(sampleInfo)
+    expect(captures).toEqual([null, 'deposium-mcp', 'renamed', null])
   })
 })

@@ -22,7 +22,7 @@ jobs:
           node-version: '22.23.3'
           package-manager-cache: false
       - name: Test preview release guards without credentials or network
-        run: node --test scripts/solid2-preview/verify.test.mjs scripts/stable-release/verify.test.mjs
+        run: node --test scripts/solid2-preview/verify.test.mjs scripts/stable-release/verify.test.mjs mcp-ui-solid/tests/solid2/cohort.node-test.mjs
 
   test:
     runs-on: ubuntu-latest
@@ -68,11 +68,11 @@ jobs:
       - name: Type check
         run: pnpm typecheck
 
-      - name: Test declaration graph and release safeguards
-        run: node --test scripts/finalize-declarations.test.mjs scripts/solid2-preview/verify.test.mjs scripts/stable-release/verify.test.mjs
+      - name: Test clean-consumer harness and release safeguards
+        run: node --test scripts/finalize-declarations.test.mjs scripts/solid2-preview/verify.test.mjs scripts/stable-release/verify.test.mjs mcp-ui-solid/tests/solid2/cohort.node-test.mjs mcp-ui-solid/tests/solid2/harness.node-test.mjs mcp-ui-solid/tests/solid2/dist-browser.node-test.mjs mcp-ui-solid/tests/solid2/optional-loader.node-test.mjs
 
       - name: Test
-        run: pnpm test
+        run: pnpm -r exec vitest run --maxWorkers=4
 
       # Browser tooling is isolated from the published package and its lockfile.
       - name: Install theme regression tooling
@@ -86,48 +86,69 @@ jobs:
           MCP_THEME_BROWSER_DEPS: ${{ runner.temp }}/mcp-ui-theme-tools/node_modules
         run: node mcp-ui-solid/tests/theme/browser.mjs --host
 
-      - name: Qualify real stable tarballs under Solid 1
+      - name: Create local-only preview package
+        working-directory: mcp-ui-solid
+        run: |
+          mkdir -p "$RUNNER_TEMP/mcpui-solid2-artifacts"
+          pnpm pack --pack-destination "$RUNNER_TEMP/mcpui-solid2-artifacts"
+
+      - name: Create patched Spec fixture package
+        working-directory: mcp-ui-spec
+        run: pnpm pack --pack-destination "$RUNNER_TEMP/mcpui-solid2-artifacts"
+
+      - name: Qualify real tarballs with and without optional engines
         env:
           MCP_THEME_BROWSER_DEPS: ${{ runner.temp }}/mcp-ui-theme-tools/node_modules
-        shell: bash
         run: |
-          set -euo pipefail
-          artifact_dir="$RUNNER_TEMP/mcpui-zod4-artifacts"
-          mkdir -p "$artifact_dir"
-          for package in mcp-ui-spec mcp-ui-solid mcp-ui-cli; do
-            pnpm --dir "$package" pack --pack-destination "$artifact_dir"
-          done
-          spec_version=$(node -p "require('./mcp-ui-spec/package.json').version")
-          solid_version=$(node -p "require('./mcp-ui-solid/package.json').version")
-          cli_version=$(node -p "require('./mcp-ui-cli/package.json').version")
           for profile in full optional-absent; do
-            node scripts/zod4-stable/verify.mjs \
-              --spec "$artifact_dir/seed-ship-mcp-ui-spec-$spec_version.tgz" \
-              --solid "$artifact_dir/seed-ship-mcp-ui-solid-$solid_version.tgz" \
-              --cli "$artifact_dir/seed-ship-mcp-ui-cli-$cli_version.tgz" \
-              --expect-spec "$spec_version" --expect-solid "$solid_version" --expect-cli "$cli_version" \
-              --profile "$profile" --browser-deps "$MCP_THEME_BROWSER_DEPS" \
-              --report "$RUNNER_TEMP/mcpui-zod4-$profile-report.json"
+            consumer="$RUNNER_TEMP/mcpui-solid2-$profile"
+            node mcp-ui-solid/tests/solid2/run.mjs prepare \
+              --tarball "$RUNNER_TEMP/mcpui-solid2-artifacts/seed-ship-mcp-ui-solid-8.0.0-solid2.0.tgz" \
+              --spec-tarball "$RUNNER_TEMP/mcpui-solid2-artifacts/seed-ship-mcp-ui-spec-6.0.0.tgz" \
+              --consumer "$consumer" --profile "$profile"
+            pnpm --dir "$consumer" install --ignore-scripts
+            node mcp-ui-solid/tests/solid2/run.mjs probe --consumer "$consumer"
+            node mcp-ui-solid/tests/solid2/run.mjs run --consumer "$consumer" --mode both
           done
+          node mcp-ui-solid/tests/solid2/dist-browser.mjs --consumer "$RUNNER_TEMP/mcpui-solid2-full"
 
-      - name: Check CLI resolver with an intentionally old Ajv nested dependency
+      - name: Qualify packed CLI resolver
         shell: bash
         run: |
           set -euo pipefail
-          spec_version=$(node -p "require('./mcp-ui-spec/package.json').version")
-          cli_version=$(node -p "require('./mcp-ui-cli/package.json').version")
+          pnpm --dir mcp-ui-cli pack --pack-destination "$RUNNER_TEMP/mcpui-solid2-artifacts"
           node scripts/fast-uri-security/verify.mjs \
-            --spec "$RUNNER_TEMP/mcpui-zod4-artifacts/seed-ship-mcp-ui-spec-$spec_version.tgz" \
-            --cli "$RUNNER_TEMP/mcpui-zod4-artifacts/seed-ship-mcp-ui-cli-$cli_version.tgz" \
+            --spec "$RUNNER_TEMP/mcpui-solid2-artifacts/seed-ship-mcp-ui-spec-6.0.0.tgz" \
+            --cli "$RUNNER_TEMP/mcpui-solid2-artifacts/seed-ship-mcp-ui-cli-5.0.2.tgz" \
             --report "$RUNNER_TEMP/mcpui-fast-uri-report.json"
 
-      - name: Retain stable tarball qualification evidence
+      - name: Retain local-package qualification evidence
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: zod4-stable-qualification
+          name: solid2-preview-qualification
           if-no-files-found: warn
           path: |
-            ${{ runner.temp }}/mcpui-zod4-artifacts/*.tgz
-            ${{ runner.temp }}/mcpui-zod4-*-report*
+            ${{ runner.temp }}/mcpui-solid2-artifacts/*.tgz
+            ${{ runner.temp }}/mcpui-solid2-*/qualification-input.json
+            ${{ runner.temp }}/mcpui-solid2-*/import-probe-result.json
+            ${{ runner.temp }}/mcpui-solid2-*/pnpm-lock.yaml
+            ${{ runner.temp }}/mcpui-solid2-*/qualification-results/
+            ${{ runner.temp }}/mcpui-solid2-*/dist-client-probe/
             ${{ runner.temp }}/mcpui-fast-uri-report*
+
+  solid1-baseline:
+    # Independent runtime and lockfile: never install Solid 2 over the baseline.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: 54c49dca5a049eeddb70aae7e9df1055ec3d50e3
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm typecheck
+      - run: pnpm -r exec vitest run --maxWorkers=4

@@ -6,9 +6,11 @@
  * imperative components like ChartJS that bind instances to DOM nodes.
  */
 
-import { Component, Show, createSignal, createEffect, onCleanup, JSX, createContext, useContext, Accessor } from 'solid-js'
-import { Portal } from 'solid-js/web'
+import { Component, Show, createSignal, createEffect, onCleanup, createContext, useContext, Accessor } from "solid-js";
+import type { JSX } from "@solidjs/web";
+import { Portal } from "@solidjs/web";
 import { bindPortalTheme } from '../utils/theme'
+import { focusOverlay, lockOverlayScroll } from '../utils/overlay-lifecycle'
 import { useMCPUIStrings } from '../context/MCPUIStringsContext'
 
 /** Context for child components to know if they're in expanded/fullscreen view */
@@ -64,20 +66,28 @@ export const ExpandableWrapper: Component<ExpandableWrapperProps> = (props) => {
   let contentRef: HTMLDivElement | undefined
   let inlineSlotRef: HTMLDivElement | undefined
   let modalSlotRef: HTMLDivElement | undefined
+  let expandButtonRef: HTMLButtonElement | undefined
+  bindPortalTheme(() => dialogRef, () => inlineSlotRef, isExpanded)
+  let disposed = false
+  let copyTimer: ReturnType<typeof setTimeout> | undefined
+  onCleanup(() => {
+    disposed = true
+    clearTimeout(copyTimer)
+  })
 
   const handleOpen = () => setIsExpanded(true)
   const handleClose = () => setIsExpanded(false)
 
   // Report the state to the owner (see `onExpandedChange` docs).
-  createEffect(() => {
-    props.onExpandedChange?.(isExpanded())
+  createEffect(() => ({ expanded: isExpanded(), notify: props.onExpandedChange }), ({ expanded, notify }) => {
+    notify?.(expanded)
   })
 
   // Reparent content DOM between inline and modal slots
-  createEffect(() => {
+  createEffect(isExpanded, (expanded) => {
     if (!contentRef) return
 
-    if (isExpanded()) {
+    if (expanded) {
       // Move content into modal
       modalSlotRef?.appendChild(contentRef)
     } else {
@@ -87,8 +97,8 @@ export const ExpandableWrapper: Component<ExpandableWrapperProps> = (props) => {
   })
 
   // Keyboard: Escape to close
-  createEffect(() => {
-    if (!isExpanded()) return
+  createEffect(isExpanded, (expanded) => {
+    if (!expanded) return
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -98,19 +108,18 @@ export const ExpandableWrapper: Component<ExpandableWrapperProps> = (props) => {
     }
 
     document.addEventListener('keydown', onKeyDown)
-    onCleanup(() => document.removeEventListener('keydown', onKeyDown))
+    return () => document.removeEventListener('keydown', onKeyDown)
   })
 
   // Prevent body scroll when expanded
-  createEffect(() => {
-    if (isExpanded()) {
-      const prev = document.body.style.overflow
-      document.body.style.overflow = 'hidden'
-      // Focus the dialog
-      setTimeout(() => dialogRef?.focus(), 10)
-      onCleanup(() => {
-        document.body.style.overflow = prev
-      })
+  createEffect(isExpanded, (expanded) => {
+    if (expanded && dialogRef) {
+      const releaseScroll = lockOverlayScroll(dialogRef.ownerDocument)
+      const restoreFocus = focusOverlay(dialogRef, expandButtonRef)
+      return () => {
+        restoreFocus()
+        releaseScroll()
+      }
     }
   })
 
@@ -147,8 +156,10 @@ export const ExpandableWrapper: Component<ExpandableWrapperProps> = (props) => {
     if (!props.copyData) return
     try {
       await navigator.clipboard.writeText(props.copyData)
+      if (disposed) return
       setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      clearTimeout(copyTimer)
+      copyTimer = setTimeout(() => setCopied(false), 2000)
     } catch (err) {
       console.error('Failed to copy:', err)
     }
@@ -159,14 +170,15 @@ export const ExpandableWrapper: Component<ExpandableWrapperProps> = (props) => {
       {/* Inline slot — content lives here when not expanded */}
       <div ref={inlineSlotRef}>
         <div ref={contentRef}>
-          <ExpandedContext.Provider value={isExpanded}>
+          <ExpandedContext value={isExpanded}>
             {props.children}
-          </ExpandedContext.Provider>
+          </ExpandedContext>
         </div>
       </div>
 
       {/* Expand button — visibility per `toolbarVariant` (default 'hover') */}
       <button
+        ref={(element) => { expandButtonRef = element }}
         type="button"
         onClick={handleOpen}
         class={`absolute top-2 right-2 z-10 ${
@@ -195,10 +207,9 @@ export const ExpandableWrapper: Component<ExpandableWrapperProps> = (props) => {
             data-mcp-ui-portal="dialog"
             aria-modal="true"
             aria-label={props.title || strings.expandedView}
-            tabIndex={-1}
+            tabindex={-1}
             ref={(element) => {
               dialogRef = element
-              bindPortalTheme(element, () => inlineSlotRef)
             }}
           >
             {/* Modal panel */}

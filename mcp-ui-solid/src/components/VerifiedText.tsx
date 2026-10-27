@@ -168,12 +168,11 @@ export function VerifiedText(props: VerifiedTextProps) {
         <div class="mt-2 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
           <div class="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
             <div
-              class="h-full rounded-full transition-all"
-              classList={{
+              class={["h-full rounded-full transition-all", {
                 'bg-green-500': props.validation.confidence >= 0.8,
                 'bg-amber-500': props.validation.confidence >= 0.5 && props.validation.confidence < 0.8,
                 'bg-red-500': props.validation.confidence < 0.5,
-              }}
+              }]}
               style={{ width: `${Math.round(props.validation.confidence * 100)}%` }}
             />
           </div>

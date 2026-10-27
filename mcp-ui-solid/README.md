@@ -1,18 +1,40 @@
 # @seed-ship/mcp-ui-solid
 
-## Prepared v7.0.0 — Zod 4, still Solid 1
+## Solid 2 preview (unpublished)
 
-This stable-line candidate uses Zod `4.6.6` and requires Spec `^6.0.0`.
-The Solid peer remains `^1.9.0`; no Solid 2 renderer or visual redesign is
-included. This conservative major marks the Spec 6 dependency/public-type
-compatibility boundary, not a new Solid engine or a direct Solid-local Zod
-schema-class export. JSON acceptance, absent optional fields and application
-validation codes/paths are preserved; native Zod error messages can change.
+**Source preparation resumed on 2026-10-27:** RC.19, stable security carry-over
+and fresh qualification only. Keep PR #34 separate and review-only; no release dispatch,
+staging, publication, merge or application installation is authorized.
+See the [current Deposium handoff](./docs/SOLID2-DEPOSIUM-HANDOFF-2026-10-27.md).
+The [pause/resumption handoff](./docs/SOLID2-PREVIEW-HANDOFF-2026-10-23.md)
+records the preserved source, checksums, known gaps and restart checklist.
 
-This is not the paused `7.0.0-solid2.0` experiment. Do not consume its branch or
-old archives for this release. See the [migration record](./docs/ZOD4-STABLE-MIGRATION-2026-10-26.md)
-for SemVer, exact gates, resource-limit caveats and the separate publication
-approval. A PR or staged upload is not a public npm release.
+This branch prepares `8.0.0-solid2.0` as an **opt-in preview for a separate
+Solid 2 host**. The stable `7.x` line, including future `7.1.x` releases, remains
+Solid 1 on npm `latest`; Solid 2 belongs to `8.x` and the separate `solid2` tag.
+The `8.0.0-solid2.0` source version alone proves neither qualification nor
+release approval: bind later proof to the exact source HEAD and archive. Zod is
+4.6.6 and Spec is 6.x. This is not a
+dual-runtime package: required peers are exactly `solid-js@2.0.0-rc.19` and
+`@solidjs/web@2.0.0-rc.19` (Node >=22.12.0). DOM types/imports move to
+`@solidjs/web`; core and draft-store APIs come from `solid-js`.
+
+For any later host qualification, use an identified archive qualified from the
+exact source HEAD, not an unpinned branch or the stable npm tag. Preserved
+archives are historical evidence.
+The [preview guide](./docs/SOLID2-PREVIEW.md) records the compiler/testing pins,
+optional peers, real-package qualification, consumer integration and rollback
+boundaries. Large-table virtualization uses optional
+`@tanstack/virtual-core@3.13.18`; the Solid 1 adapter is not compatible.
+
+Public component names, MCP wire payloads, HTML trust policy, callbacks and CSS
+tokens are retained. Imperative store/controller methods commit before returning;
+ordinary reactive writes follow Solid 2 staged scheduling. Do not widen the
+stable peer range, alias runtimes or mix Solid 1 and Solid 2 in a reactive tree.
+
+No npm staging/publication, release tag, workflow dispatch, runtime-PR merge or
+application installation is authorized by this preview. The historical stable
+changelog and examples below do not override these preview-specific requirements.
 
 SolidJS components + chat toolkit for MCP-generated UI. Part of the [MCP UI ecosystem](https://github.com/theseedship/mcp-ui).
 
@@ -256,7 +278,7 @@ text and every concrete occurrence.
   cannot run) the sink emits `escapeHtml()`'d text — for `text` components
   specifically, the **escaped markdown source**, not escaped `marked`
   output — so block structure (tables, lists, headings) is not present on
-  first paint; `<SafeHtml>`'s `onMount` upgrades it to sanitized rich HTML on
+  first paint; `<SafeHtml>`'s `onSettled` upgrades it to sanitized rich HTML on
   the client, and the region reflows at that point. See **SSR Compatibility**
   below for the full contract. The `code` component's own `<code innerHTML>`
   sink is a separate, documented exception: it binds highlight.js output or
@@ -1352,9 +1374,9 @@ to load or throws.
   region **reflows once the client hydrates**.
 - **Client:** the real DOMPurify runs with a profile scoped to the call site
   (`prose` for text content, `cellLink` / `cellMarkdown` / `cellHtml` for
-  table cells, `resource` for `ui://` content). `<SafeHtml>`'s `onMount`
+  table cells, `resource` for `ui://` content). `<SafeHtml>`'s `onSettled`
   then re-applies the sanitized rich HTML if the hydrated DOM still shows
-  the server's escaped text — this is what covers `solid-js/web`'s
+  the server's escaped text — this is what covers `@solidjs/web`'s
   `setProperty(node, 'innerHTML', v)` early-return during hydration, so a
   hydrated page doesn't stay stuck showing escaped text.
 
