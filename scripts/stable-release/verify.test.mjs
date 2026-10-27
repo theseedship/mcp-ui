@@ -15,6 +15,11 @@ const cli = version => manifest('@seed-ship/mcp-ui-cli', version)
 const release = (overrides = {}) => ({
   solid: solid(), spec: spec('6.0.0'), cli: cli('5.0.2'), ...overrides,
 })
+const ROOT_WORKSPACE = { name: '@mcp-ui/root', devDependencies: { typescript: '^5.3.3' }, pnpm: { overrides: {
+  lodash: '>=4.17.23', '@isaacs/brace-expansion': '>=5.0.1', 'brace-expansion': '^5.0.12',
+  minimatch: '>=10.2.1', postcss: '^8.5.23', 'fast-uri': '^3.1.9', 'js-yaml': '^4.3.2',
+  seroval: '~1.6.8', 'source-map-js': '^1.2.2', '@babel/core': '^7.29.6', ws: '^8.21.0', fflate: '^0.8.3',
+} } }
 
 test('accepts stable Solid 7 releases with independent stable Spec and CLI versions', () => {
   for (const version of ['7.0.0', '7.1.0', '7.1.1']) {
@@ -68,6 +73,42 @@ test('rejects the real @solidjs/web package, direct or aliased, in every depende
   }
 })
 
+test('accepts current unrelated root override floors with a stable Solid 7 workspace', () => {
+  assert.deepEqual(validateStableRelease(release({ workspace: ROOT_WORKSPACE })),
+    { solid: '7.0.0', spec: '6.0.0', cli: '5.0.2' })
+})
+
+test('rejects root overrides targeting Solid, including versioned and parent selectors or aliases', () => {
+  for (const [selector, replacement] of [
+    ['solid-js', '2.0.0-rc.19'],
+    ['solid-js@^1.9.0', '1.9.17'],
+    ['some-package>solid-js', '2.0.0-rc.19'],
+    ['solid-js>seroval', '~1.6.8'],
+    ['@solidjs/web', '2.0.0-rc.19'],
+    ['@solidjs/signals@2.0.0-rc.19', '2.0.0-rc.19'],
+    ['@solidjs/compiler', '2.0.0-rc.19'],
+    ['@solidjs/babel-plugin', '2.0.0-rc.19'],
+    ['@solidjs/vite-plugin', '3.0.0-next.51'],
+    ['unrelated-runtime', 'npm:solid-js@2.0.0-rc.19'],
+    ['unrelated-web', 'npm:@solidjs/web@2.0.0-rc.19'],
+  ]) {
+    const workspace = { ...ROOT_WORKSPACE, pnpm: { overrides: { ...ROOT_WORKSPACE.pnpm.overrides, [selector]: replacement } } }
+    assert.throws(() => validateStableRelease(release({ workspace })),
+      /Solid (?:2 runtime\/toolchain package|runtime\/toolchain override) is forbidden/, selector)
+  }
+})
+
+test('rejects Solid 2 direct dependencies at the workspace root', () => {
+  for (const [section, entry] of [
+    ['dependencies', { 'solid-js': '2.0.0-rc.19' }],
+    ['devDependencies', { 'solid-js': '2.0.0-rc.19' }],
+    ['devDependencies', { '@solidjs/web': '2.0.0-rc.19' }],
+  ]) {
+    const workspace = { ...ROOT_WORKSPACE, [section]: entry }
+    assert.throws(() => validateStableRelease(release({ workspace })), /Solid 2 runtime\/toolchain package/)
+  }
+})
+
 test('tag pushes may release independently versioned Solid, Spec or CLI; manual dispatch stays on main', () => {
   const versions = validateStableRelease(release())
   for (const version of ['7.0.0', '6.0.0', '5.0.2']) {
@@ -102,6 +143,7 @@ test('hosted CLI enforces release context while ordinary local invocation remain
     await mkdir(join(root, directory))
     await writeFile(join(root, directory, 'package.json'), JSON.stringify(value))
   }
+  await writeFile(join(root, 'package.json'), JSON.stringify(ROOT_WORKSPACE))
   const run = overrides => spawnSync(process.execPath, [new URL('./verify.mjs', import.meta.url).pathname, root], {
     env: { ...process.env, GITHUB_ACTIONS: 'true', GITHUB_EVENT_NAME: 'push', GITHUB_REF: 'refs/tags/v7.0.0', ...overrides },
     encoding: 'utf8', timeout: 5000,
@@ -115,6 +157,9 @@ test('hosted CLI enforces release context while ordinary local invocation remain
     { GITHUB_EVENT_NAME: 'workflow_dispatch', GITHUB_REF: 'refs/heads/feat/solid2-preview' },
   ]) assert.notEqual(run(overrides).status, 0)
   assert.equal(run({ GITHUB_ACTIONS: 'false', GITHUB_EVENT_NAME: 'push', GITHUB_REF: 'refs/tags/v8.0.0-solid2.0' }).status, 0)
+  const unsafeRoot = { ...ROOT_WORKSPACE, pnpm: { overrides: { ...ROOT_WORKSPACE.pnpm.overrides, 'solid-js': '2.0.0-rc.19' } } }
+  await writeFile(join(root, 'package.json'), JSON.stringify(unsafeRoot))
+  assert.notEqual(run({}).status, 0, 'Hosted CLI must reject a root override before installation')
 })
 
 test('stable publish and release workflows run the guard before their first install', async () => {
