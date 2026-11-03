@@ -16,7 +16,8 @@
  * Both are SSR-safe: no browser API, and the same markup on server and client.
  */
 
-import type { Component, JSX } from 'solid-js'
+import type { Component } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import { formatMCPUIString, useMCPUIStrings } from '../context/MCPUIStringsContext'
 import { MISSING_VALUE_MARKER } from '../utils/missing-value'
 

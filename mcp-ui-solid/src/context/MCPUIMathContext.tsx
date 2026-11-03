@@ -1,4 +1,5 @@
-import { createContext, useContext, type Accessor, type JSX } from 'solid-js'
+import { createContext, useContext, type Accessor } from "solid-js";
+import type { JSX } from "@solidjs/web";
 
 export interface MathRenderOptions {
   displayMode: boolean
@@ -17,9 +18,9 @@ export interface MCPUIMathProviderProps {
 
 export function MCPUIMathProvider(props: MCPUIMathProviderProps): JSX.Element {
   return (
-    <MCPUIMathContext.Provider value={() => props.renderMath ?? undefined}>
+    <MCPUIMathContext value={() => props.renderMath ?? undefined}>
       {props.children}
-    </MCPUIMathContext.Provider>
+    </MCPUIMathContext>
   )
 }
 

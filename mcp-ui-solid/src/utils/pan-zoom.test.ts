@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest'
-import { createEffect, createRoot, createSignal, type Setter } from 'solid-js'
+import { createEffect, createRoot, createSignal, flush, type Setter } from 'solid-js'
 import {
   clampScale,
   contentPointAt,
@@ -80,13 +80,15 @@ const pointer = (init: {
     preventDefault: vi.fn(),
   }) as unknown as PointerEvent
 
-/** Runs `body` inside a root and disposes it, mirroring a component lifetime. */
-const withRoot = <T,>(body: (dispose: () => void) => T): T =>
-  createRoot((dispose) => {
-    const result = body(dispose)
+/** Construct primitives in a pure root, then exercise imperative events outside it. */
+const withRoot = <T>(setup: (dispose: () => void) => () => T): T => {
+  const { run, dispose } = createRoot((dispose) => ({ run: setup(dispose), dispose }))
+  try {
+    return run()
+  } finally {
     dispose()
-    return result
-  })
+  }
+}
 
 // ─── Pure maths ─────────────────────────────────────────────────────────
 
@@ -168,24 +170,30 @@ describe('createPanZoom — initial state', () => {
   it('starts at min scale, no offset, not zoomed', () => {
     withRoot(() => {
       const panZoom = createPanZoom()
-      expect(panZoom.scale()).toBe(1)
-      expect(panZoom.offset()).toEqual({ x: 0, y: 0 })
-      expect(panZoom.state()).toEqual({ scale: 1, x: 0, y: 0 })
-      expect(panZoom.isZoomed()).toBe(false)
-      expect(panZoom.isPanning()).toBe(false)
-      expect(panZoom.wasDragged()).toBe(false)
-      expect(panZoom.percent()).toBe(100)
-      expect(panZoom.min).toBe(1)
-      expect(panZoom.max).toBe(8)
-      expect(panZoom.transform()).toBe('translate(0px, 0px) scale(1)')
-      expect(panZoom.cursor()).toBe('auto')
+      return () => {
+        expect(panZoom.scale()).toBe(1)
+        expect(panZoom.offset()).toEqual({ x: 0, y: 0 })
+        expect(panZoom.state()).toEqual({ scale: 1, x: 0, y: 0 })
+        expect(panZoom.isZoomed()).toBe(false)
+        expect(panZoom.isPanning()).toBe(false)
+        expect(panZoom.wasDragged()).toBe(false)
+        expect(panZoom.percent()).toBe(100)
+        expect(panZoom.min).toBe(1)
+        expect(panZoom.max).toBe(8)
+        expect(panZoom.transform()).toBe('translate(0px, 0px) scale(1)')
+        expect(panZoom.cursor()).toBe('auto')
+      }
     })
   })
 
   it('honours custom bounds and never lets max fall under min', () => {
     withRoot(() => {
-      expect(createPanZoom({ min: 0.5, max: 3 }).min).toBe(0.5)
-      expect(createPanZoom({ min: 2, max: 1 }).max).toBe(2)
+      const first = createPanZoom({ min: 0.5, max: 3 })
+      const second = createPanZoom({ min: 2, max: 1 })
+      return () => {
+        expect(first.min).toBe(0.5)
+        expect(second.max).toBe(2)
+      }
     })
   })
 })
@@ -194,79 +202,111 @@ describe('createPanZoom — zoomBy / zoomTo / reset', () => {
   it('multiplies the scale and clamps at both ends', () => {
     withRoot(() => {
       const panZoom = createPanZoom()
-      panZoom.zoomBy(2)
-      expect(panZoom.scale()).toBe(2)
-      expect(panZoom.percent()).toBe(200)
-      expect(panZoom.isZoomed()).toBe(true)
-      panZoom.zoomBy(100)
-      expect(panZoom.scale()).toBe(8)
-      panZoom.zoomBy(0.001)
-      expect(panZoom.scale()).toBe(1)
+      return () => {
+        panZoom.zoomBy(2)
+        flush()
+        expect(panZoom.scale()).toBe(2)
+        expect(panZoom.percent()).toBe(200)
+        expect(panZoom.isZoomed()).toBe(true)
+        panZoom.zoomBy(100)
+        flush()
+        expect(panZoom.scale()).toBe(8)
+        panZoom.zoomBy(0.001)
+        flush()
+        expect(panZoom.scale()).toBe(1)
+      }
     })
   })
 
   it('ignores a factor that is not a positive number', () => {
     withRoot(() => {
       const panZoom = createPanZoom()
-      panZoom.zoomBy(0)
-      panZoom.zoomBy(-2)
-      panZoom.zoomBy(Number.NaN)
-      expect(panZoom.scale()).toBe(1)
+      return () => {
+        panZoom.zoomBy(0)
+        flush()
+        panZoom.zoomBy(-2)
+        flush()
+        panZoom.zoomBy(Number.NaN)
+        flush()
+        expect(panZoom.scale()).toBe(1)
+      }
     })
   })
 
   it('zooms about the content origin when no element can be measured', () => {
     withRoot(() => {
       const panZoom = createPanZoom()
-      panZoom.zoomBy(4)
-      expect(panZoom.state()).toEqual({ scale: 4, x: 0, y: 0 })
+      return () => {
+        panZoom.zoomBy(4)
+        flush()
+        expect(panZoom.state()).toEqual({ scale: 4, x: 0, y: 0 })
+      }
     })
   })
 
   it('zooms about the element centre from a toolbar button', () => {
     withRoot(() => {
       let state: PanZoomState = { scale: 1, x: 0, y: 0 }
-      const element = transformedElement({ x: 100, y: 50 }, { width: 400, height: 300 }, () => state)
+      const element = transformedElement(
+        { x: 100, y: 50 },
+        { width: 400, height: 300 },
+        () => state
+      )
       const panZoom = createPanZoom({ target: () => element })
-      state = panZoom.state()
-      // The centre of the element's own box before the zoom…
-      const centre = viewportPointOf(state, { x: 200, y: 150 })
-      panZoom.zoomBy(2)
-      // …is still where it was.
-      const after = viewportPointOf(panZoom.state(), { x: 200, y: 150 })
-      expect(after.x).toBeCloseTo(centre.x, 9)
-      expect(after.y).toBeCloseTo(centre.y, 9)
+      return () => {
+        state = panZoom.state()
+        // The centre of the element's own box before the zoom…
+        const centre = viewportPointOf(state, { x: 200, y: 150 })
+        panZoom.zoomBy(2)
+        flush()
+        // …is still where it was.
+        const after = viewportPointOf(panZoom.state(), { x: 200, y: 150 })
+        expect(after.x).toBeCloseTo(centre.x, 9)
+        expect(after.y).toBeCloseTo(centre.y, 9)
+      }
     })
   })
 
   it('snaps the offset back to zero when the scale returns to min', () => {
     withRoot(() => {
       const panZoom = createPanZoom()
-      panZoom.zoomTo(4, { x: 500, y: 300 })
-      expect(panZoom.offset()).not.toEqual({ x: 0, y: 0 })
-      panZoom.zoomTo(0.25, { x: 500, y: 300 })
-      expect(panZoom.state()).toEqual({ scale: 1, x: 0, y: 0 })
-      expect(panZoom.isZoomed()).toBe(false)
+      return () => {
+        panZoom.zoomTo(4, { x: 500, y: 300 })
+        flush()
+        expect(panZoom.offset()).not.toEqual({ x: 0, y: 0 })
+        panZoom.zoomTo(0.25, { x: 500, y: 300 })
+        flush()
+        expect(panZoom.state()).toEqual({ scale: 1, x: 0, y: 0 })
+        expect(panZoom.isZoomed()).toBe(false)
+      }
     })
   })
 
   it('reset() returns to min scale and zero offset', () => {
     withRoot(() => {
       const panZoom = createPanZoom()
-      panZoom.zoomTo(5, { x: 120, y: 90 })
-      panZoom.reset()
-      expect(panZoom.state()).toEqual({ scale: 1, x: 0, y: 0 })
-      expect(panZoom.transform()).toBe('translate(0px, 0px) scale(1)')
+      return () => {
+        panZoom.zoomTo(5, { x: 120, y: 90 })
+        flush()
+        panZoom.reset()
+        flush()
+        expect(panZoom.state()).toEqual({ scale: 1, x: 0, y: 0 })
+        expect(panZoom.transform()).toBe('translate(0px, 0px) scale(1)')
+      }
     })
   })
 
   it('does nothing when the target scale is the current one', () => {
     withRoot(() => {
       const panZoom = createPanZoom()
-      panZoom.zoomTo(8, { x: 10, y: 10 })
-      const settled = panZoom.state()
-      panZoom.zoomTo(12, { x: 999, y: 999 })
-      expect(panZoom.state()).toEqual(settled)
+      return () => {
+        panZoom.zoomTo(8, { x: 10, y: 10 })
+        flush()
+        const settled = panZoom.state()
+        panZoom.zoomTo(12, { x: 999, y: 999 })
+        flush()
+        expect(panZoom.state()).toEqual(settled)
+      }
     })
   })
 })
@@ -277,26 +317,35 @@ describe('createPanZoom — wheel zoom', () => {
   it('zooms in on a negative delta, out on a positive one, and takes the event', () => {
     withRoot(() => {
       const panZoom = createPanZoom()
-      const zoomIn = wheel({ deltaY: -100 })
-      panZoom.onWheel(zoomIn.event)
-      expect(zoomIn.preventDefault).toHaveBeenCalled()
-      expect(panZoom.scale()).toBeGreaterThan(1)
+      return () => {
+        const zoomIn = wheel({ deltaY: -100 })
+        panZoom.onWheel(zoomIn.event)
+        flush()
+        expect(zoomIn.preventDefault).toHaveBeenCalled()
+        expect(panZoom.scale()).toBeGreaterThan(1)
 
-      const zoomed = panZoom.scale()
-      const zoomOut = wheel({ deltaY: 50 })
-      panZoom.onWheel(zoomOut.event)
-      expect(panZoom.scale()).toBeLessThan(zoomed)
+        const zoomed = panZoom.scale()
+        const zoomOut = wheel({ deltaY: 50 })
+        panZoom.onWheel(zoomOut.event)
+        flush()
+        expect(panZoom.scale()).toBeLessThan(zoomed)
+      }
     })
   })
 
   it('is symmetric — a notch back undoes a notch forward', () => {
     withRoot(() => {
       const panZoom = createPanZoom()
-      panZoom.onWheel(wheel({ deltaY: -100 }).event)
-      panZoom.onWheel(wheel({ deltaY: -100 }).event)
-      const twoNotches = panZoom.scale()
-      panZoom.onWheel(wheel({ deltaY: 100 }).event)
-      expect(panZoom.scale()).toBeCloseTo(twoNotches / Math.exp(100 * 0.0015), 9)
+      return () => {
+        panZoom.onWheel(wheel({ deltaY: -100 }).event)
+        flush()
+        panZoom.onWheel(wheel({ deltaY: -100 }).event)
+        flush()
+        const twoNotches = panZoom.scale()
+        panZoom.onWheel(wheel({ deltaY: 100 }).event)
+        flush()
+        expect(panZoom.scale()).toBeCloseTo(twoNotches / Math.exp(100 * 0.0015), 9)
+      }
     })
   })
 
@@ -304,8 +353,11 @@ describe('createPanZoom — wheel zoom', () => {
     const scaleAfter = (deltaMode: number) =>
       withRoot(() => {
         const panZoom = createPanZoom()
-        panZoom.onWheel(wheel({ deltaY: -1, deltaMode }).event)
-        return panZoom.scale()
+        return () => {
+          panZoom.onWheel(wheel({ deltaY: -1, deltaMode }).event)
+          flush()
+          return panZoom.scale()
+        }
       })
     expect(scaleAfter(0)).toBeLessThan(scaleAfter(1))
     expect(scaleAfter(1)).toBeLessThan(scaleAfter(2))
@@ -314,18 +366,24 @@ describe('createPanZoom — wheel zoom', () => {
   it('ignores a zero delta', () => {
     withRoot(() => {
       const panZoom = createPanZoom()
-      panZoom.onWheel(wheel({ deltaY: 0 }).event)
-      expect(panZoom.scale()).toBe(1)
+      return () => {
+        panZoom.onWheel(wheel({ deltaY: 0 }).event)
+        flush()
+        expect(panZoom.scale()).toBe(1)
+      }
     })
   })
 
   it('does not zoom when min and max are the same', () => {
     withRoot(() => {
       const panZoom = createPanZoom({ min: 1, max: 1 })
-      const event = wheel({ deltaY: -400 })
-      panZoom.onWheel(event.event)
-      expect(panZoom.scale()).toBe(1)
-      expect(event.preventDefault).not.toHaveBeenCalled()
+      return () => {
+        const event = wheel({ deltaY: -400 })
+        panZoom.onWheel(event.event)
+        flush()
+        expect(panZoom.scale()).toBe(1)
+        expect(event.preventDefault).not.toHaveBeenCalled()
+      }
     })
   })
 
@@ -335,39 +393,47 @@ describe('createPanZoom — wheel zoom', () => {
       let state: PanZoomState = { scale: 1, x: 0, y: 0 }
       const element = transformedElement(origin, { width: 400, height: 300 }, () => state)
       const panZoom = createPanZoom({ target: () => element })
-      state = panZoom.state()
-
-      // The cursor sits still, 220px right and 130px down from the element's
-      // untransformed top-left corner — a viewport point, by definition.
-      const cursor = { clientX: origin.x + 220, clientY: origin.y + 130 }
-      const anchor = { x: 220, y: 130 }
-      const pixel = contentPointAt(panZoom.state(), anchor)
-
-      for (const deltaY of [-100, -100, -240, 100, -60, 100, 100]) {
-        panZoom.onWheel(wheel({ deltaY, ...cursor }).event)
+      return () => {
         state = panZoom.state()
-        if (!panZoom.isZoomed()) continue // the snap back to min is not an anchored zoom
-        const shown = viewportPointOf(state, pixel)
-        expect(shown.x).toBeCloseTo(anchor.x, 6)
-        expect(shown.y).toBeCloseTo(anchor.y, 6)
+
+        // The cursor sits still, 220px right and 130px down from the element's
+        // untransformed top-left corner — a viewport point, by definition.
+        const cursor = { clientX: origin.x + 220, clientY: origin.y + 130 }
+        const anchor = { x: 220, y: 130 }
+        const pixel = contentPointAt(panZoom.state(), anchor)
+
+        for (const deltaY of [-100, -100, -240, 100, -60, 100, 100]) {
+          panZoom.onWheel(wheel({ deltaY, ...cursor }).event)
+          flush()
+          state = panZoom.state()
+          if (!panZoom.isZoomed()) continue // the snap back to min is not an anchored zoom
+          const shown = viewportPointOf(state, pixel)
+          expect(shown.x).toBeCloseTo(anchor.x, 6)
+          expect(shown.y).toBeCloseTo(anchor.y, 6)
+        }
+        expect(panZoom.isZoomed()).toBe(true)
       }
-      expect(panZoom.isZoomed()).toBe(true)
     })
   })
 
-  it('anchors on the handler\'s own element when no target is given', () => {
+  it("anchors on the handler's own element when no target is given", () => {
     withRoot(() => {
       let state: PanZoomState = { scale: 1, x: 0, y: 0 }
       const element = transformedElement({ x: 0, y: 0 }, { width: 200, height: 200 }, () => state)
       const panZoom = createPanZoom()
-      const event = wheel({ deltaY: -100, clientX: 200, clientY: 0 })
-      ;(event.event as unknown as { currentTarget: unknown }).currentTarget = element
-      panZoom.onWheel(event.event)
-      state = panZoom.state()
-      // Zooming in around the right edge pushes the content left.
-      expect(state.scale).toBeGreaterThan(1)
-      expect(state.x).toBeLessThan(0)
-      expect(viewportPointOf(state, contentPointAt({ scale: 1, x: 0, y: 0 }, { x: 200, y: 0 })).x).toBeCloseTo(200, 6)
+      return () => {
+        const event = wheel({ deltaY: -100, clientX: 200, clientY: 0 })
+        ;(event.event as unknown as { currentTarget: unknown }).currentTarget = element
+        panZoom.onWheel(event.event)
+        flush()
+        state = panZoom.state()
+        // Zooming in around the right edge pushes the content left.
+        expect(state.scale).toBeGreaterThan(1)
+        expect(state.x).toBeLessThan(0)
+        expect(
+          viewportPointOf(state, contentPointAt({ scale: 1, x: 0, y: 0 }, { x: 200, y: 0 })).x
+        ).toBeCloseTo(200, 6)
+      }
     })
   })
 })
@@ -382,19 +448,26 @@ const drag = (
   currentTarget?: unknown
 ) => {
   panZoom.onPointerDown(pointer({ clientX: from.x, clientY: from.y, currentTarget }))
+  flush()
   panZoom.onPointerMove(pointer({ clientX: to.x, clientY: to.y, currentTarget }))
+  flush()
   panZoom.onPointerUp(pointer({ clientX: to.x, clientY: to.y, currentTarget }))
+  flush()
 }
 
 describe('createPanZoom — drag pan', () => {
   it('does not pan while the surface is at min scale', () => {
     withRoot(() => {
       const panZoom = createPanZoom()
-      panZoom.onPointerDown(pointer({ clientX: 0, clientY: 0 }))
-      expect(panZoom.isPanning()).toBe(false)
-      panZoom.onPointerMove(pointer({ clientX: 200, clientY: 200 }))
-      expect(panZoom.offset()).toEqual({ x: 0, y: 0 })
-      expect(panZoom.cursor()).toBe('auto')
+      return () => {
+        panZoom.onPointerDown(pointer({ clientX: 0, clientY: 0 }))
+        flush()
+        expect(panZoom.isPanning()).toBe(false)
+        panZoom.onPointerMove(pointer({ clientX: 200, clientY: 200 }))
+        flush()
+        expect(panZoom.offset()).toEqual({ x: 0, y: 0 })
+        expect(panZoom.cursor()).toBe('auto')
+      }
     })
   })
 
@@ -403,9 +476,11 @@ describe('createPanZoom — drag pan', () => {
       // The lightbox backdrop closes on click; a drag that merely ended there
       // must not, whether or not the image happened to be zoomed.
       const panZoom = createPanZoom()
-      drag(panZoom, { x: 0, y: 0 }, { x: 200, y: 200 })
-      expect(panZoom.wasDragged()).toBe(true)
-      expect(panZoom.offset()).toEqual({ x: 0, y: 0 })
+      return () => {
+        drag(panZoom, { x: 0, y: 0 }, { x: 200, y: 200 })
+        expect(panZoom.wasDragged()).toBe(true)
+        expect(panZoom.offset()).toEqual({ x: 0, y: 0 })
+      }
     })
   })
 
@@ -413,93 +488,132 @@ describe('createPanZoom — drag pan', () => {
     withRoot(() => {
       const element = { setPointerCapture: vi.fn() }
       const panZoom = createPanZoom()
-      const event = pointer({ clientX: 0, clientY: 0, currentTarget: element })
-      panZoom.onPointerDown(event)
-      expect(element.setPointerCapture).not.toHaveBeenCalled()
-      expect(event.preventDefault).not.toHaveBeenCalled()
+      return () => {
+        const event = pointer({ clientX: 0, clientY: 0, currentTarget: element })
+        panZoom.onPointerDown(event)
+        flush()
+        expect(element.setPointerCapture).not.toHaveBeenCalled()
+        expect(event.preventDefault).not.toHaveBeenCalled()
+      }
     })
   })
 
   it('adds the pointer travel to the offset once zoomed', () => {
     withRoot(() => {
       const panZoom = createPanZoom()
-      panZoom.zoomBy(3)
-      const before = panZoom.offset()
-      panZoom.onPointerDown(pointer({ clientX: 100, clientY: 100 }))
-      expect(panZoom.isPanning()).toBe(true)
-      expect(panZoom.cursor()).toBe('grabbing')
-      panZoom.onPointerMove(pointer({ clientX: 140, clientY: 70 }))
-      expect(panZoom.offset()).toEqual({ x: before.x + 40, y: before.y - 30 })
-      panZoom.onPointerUp(pointer({ clientX: 140, clientY: 70 }))
-      expect(panZoom.isPanning()).toBe(false)
-      expect(panZoom.cursor()).toBe('grab')
+      return () => {
+        panZoom.zoomBy(3)
+        flush()
+        const before = panZoom.offset()
+        panZoom.onPointerDown(pointer({ clientX: 100, clientY: 100 }))
+        flush()
+        expect(panZoom.isPanning()).toBe(true)
+        expect(panZoom.cursor()).toBe('grabbing')
+        panZoom.onPointerMove(pointer({ clientX: 140, clientY: 70 }))
+        flush()
+        expect(panZoom.offset()).toEqual({ x: before.x + 40, y: before.y - 30 })
+        panZoom.onPointerUp(pointer({ clientX: 140, clientY: 70 }))
+        flush()
+        expect(panZoom.isPanning()).toBe(false)
+        expect(panZoom.cursor()).toBe('grab')
+      }
     })
   })
 
   it('does not accumulate across moves — the offset is always start + travel', () => {
     withRoot(() => {
       const panZoom = createPanZoom()
-      panZoom.zoomBy(2)
-      panZoom.onPointerDown(pointer({ clientX: 0, clientY: 0 }))
-      panZoom.onPointerMove(pointer({ clientX: 10, clientY: 10 }))
-      panZoom.onPointerMove(pointer({ clientX: 30, clientY: 5 }))
-      expect(panZoom.offset()).toEqual({ x: 30, y: 5 })
+      return () => {
+        panZoom.zoomBy(2)
+        flush()
+        panZoom.onPointerDown(pointer({ clientX: 0, clientY: 0 }))
+        flush()
+        panZoom.onPointerMove(pointer({ clientX: 10, clientY: 10 }))
+        flush()
+        panZoom.onPointerMove(pointer({ clientX: 30, clientY: 5 }))
+        flush()
+        expect(panZoom.offset()).toEqual({ x: 30, y: 5 })
+      }
     })
   })
 
   it('ignores a second pointer mid-gesture', () => {
     withRoot(() => {
       const panZoom = createPanZoom()
-      panZoom.zoomBy(2)
-      panZoom.onPointerDown(pointer({ clientX: 0, clientY: 0, pointerId: 1 }))
-      panZoom.onPointerMove(pointer({ clientX: 500, clientY: 500, pointerId: 2 }))
-      expect(panZoom.offset()).toEqual({ x: 0, y: 0 })
-      panZoom.onPointerUp(pointer({ clientX: 0, clientY: 0, pointerId: 2 }))
-      expect(panZoom.isPanning()).toBe(true)
+      return () => {
+        panZoom.zoomBy(2)
+        flush()
+        panZoom.onPointerDown(pointer({ clientX: 0, clientY: 0, pointerId: 1 }))
+        flush()
+        panZoom.onPointerMove(pointer({ clientX: 500, clientY: 500, pointerId: 2 }))
+        flush()
+        expect(panZoom.offset()).toEqual({ x: 0, y: 0 })
+        panZoom.onPointerUp(pointer({ clientX: 0, clientY: 0, pointerId: 2 }))
+        flush()
+        expect(panZoom.isPanning()).toBe(true)
+      }
     })
   })
 
   it('flags a real drag and keeps the flag until the next pointerdown', () => {
     withRoot(() => {
       const panZoom = createPanZoom()
-      panZoom.zoomBy(2)
-      drag(panZoom, { x: 0, y: 0 }, { x: 80, y: 0 })
-      // The click that follows the drag must be ignorable by the backdrop.
-      expect(panZoom.wasDragged()).toBe(true)
-      panZoom.onPointerDown(pointer({ clientX: 0, clientY: 0 }))
-      expect(panZoom.wasDragged()).toBe(false)
+      return () => {
+        panZoom.zoomBy(2)
+        flush()
+        drag(panZoom, { x: 0, y: 0 }, { x: 80, y: 0 })
+        // The click that follows the drag must be ignorable by the backdrop.
+        expect(panZoom.wasDragged()).toBe(true)
+        panZoom.onPointerDown(pointer({ clientX: 0, clientY: 0 }))
+        flush()
+        expect(panZoom.wasDragged()).toBe(false)
+      }
     })
   })
 
   it('does not flag a click that only jitters', () => {
     withRoot(() => {
       const panZoom = createPanZoom()
-      panZoom.zoomBy(2)
-      drag(panZoom, { x: 0, y: 0 }, { x: 1, y: 1 })
-      expect(panZoom.wasDragged()).toBe(false)
+      return () => {
+        panZoom.zoomBy(2)
+        flush()
+        drag(panZoom, { x: 0, y: 0 }, { x: 1, y: 1 })
+        expect(panZoom.wasDragged()).toBe(false)
+      }
     })
   })
 
   it('clears the flag on a pointerdown that cannot pan', () => {
     withRoot(() => {
       const panZoom = createPanZoom()
-      panZoom.zoomBy(2)
-      drag(panZoom, { x: 0, y: 0 }, { x: 80, y: 0 })
-      panZoom.reset()
-      panZoom.onPointerDown(pointer({ clientX: 0, clientY: 0 }))
-      expect(panZoom.wasDragged()).toBe(false)
+      return () => {
+        panZoom.zoomBy(2)
+        flush()
+        drag(panZoom, { x: 0, y: 0 }, { x: 80, y: 0 })
+        panZoom.reset()
+        flush()
+        panZoom.onPointerDown(pointer({ clientX: 0, clientY: 0 }))
+        flush()
+        expect(panZoom.wasDragged()).toBe(false)
+      }
     })
   })
 
   it('ends the gesture on pointercancel', () => {
     withRoot(() => {
       const panZoom = createPanZoom()
-      panZoom.zoomBy(2)
-      panZoom.onPointerDown(pointer({ clientX: 0, clientY: 0 }))
-      panZoom.onPointerCancel(pointer({ clientX: 0, clientY: 0 }))
-      expect(panZoom.isPanning()).toBe(false)
-      panZoom.onPointerMove(pointer({ clientX: 300, clientY: 0 }))
-      expect(panZoom.offset()).toEqual({ x: 0, y: 0 })
+      return () => {
+        panZoom.zoomBy(2)
+        flush()
+        panZoom.onPointerDown(pointer({ clientX: 0, clientY: 0 }))
+        flush()
+        panZoom.onPointerCancel(pointer({ clientX: 0, clientY: 0 }))
+        flush()
+        expect(panZoom.isPanning()).toBe(false)
+        panZoom.onPointerMove(pointer({ clientX: 300, clientY: 0 }))
+        flush()
+        expect(panZoom.offset()).toEqual({ x: 0, y: 0 })
+      }
     })
   })
 })
@@ -519,11 +633,14 @@ describe('createPanZoom — pointer capture', () => {
     withRoot(() => {
       const { element, captured } = captureStub()
       const panZoom = createPanZoom()
-      panZoom.zoomBy(2)
-      drag(panZoom, { x: 0, y: 0 }, { x: 40, y: 0 }, element)
-      expect(element.setPointerCapture).toHaveBeenCalledWith(1)
-      expect(element.releasePointerCapture).toHaveBeenCalledWith(1)
-      expect(captured.size).toBe(0)
+      return () => {
+        panZoom.zoomBy(2)
+        flush()
+        drag(panZoom, { x: 0, y: 0 }, { x: 40, y: 0 }, element)
+        expect(element.setPointerCapture).toHaveBeenCalledWith(1)
+        expect(element.releasePointerCapture).toHaveBeenCalledWith(1)
+        expect(captured.size).toBe(0)
+      }
     })
   })
 
@@ -531,11 +648,15 @@ describe('createPanZoom — pointer capture', () => {
     const { element, captured } = captureStub()
     createRoot((dispose) => {
       const panZoom = createPanZoom()
-      panZoom.zoomBy(2)
-      panZoom.onPointerDown(pointer({ clientX: 0, clientY: 0, currentTarget: element }))
-      expect(captured.has(1)).toBe(true)
-      dispose()
-    })
+      return () => {
+        panZoom.zoomBy(2)
+        flush()
+        panZoom.onPointerDown(pointer({ clientX: 0, clientY: 0, currentTarget: element }))
+        flush()
+        expect(captured.has(1)).toBe(true)
+        dispose()
+      }
+    })()
     expect(captured.size).toBe(0)
   })
 
@@ -547,9 +668,12 @@ describe('createPanZoom — pointer capture', () => {
         },
       }
       const panZoom = createPanZoom()
-      panZoom.zoomBy(2)
-      drag(panZoom, { x: 0, y: 0 }, { x: 25, y: 15 }, element)
-      expect(panZoom.offset()).toEqual({ x: 25, y: 15 })
+      return () => {
+        panZoom.zoomBy(2)
+        flush()
+        drag(panZoom, { x: 0, y: 0 }, { x: 25, y: 15 }, element)
+        expect(panZoom.offset()).toEqual({ x: 25, y: 15 })
+      }
     })
   })
 })
@@ -560,20 +684,26 @@ describe('createPanZoom — styles', () => {
   it('pins the transform-origin the maths depends on', () => {
     withRoot(() => {
       const panZoom = createPanZoom()
-      expect(panZoom.contentStyle()['transform-origin']).toBe('0 0')
-      expect(panZoom.contentStyle()['will-change']).toBe('auto')
-      panZoom.zoomBy(2)
-      expect(panZoom.contentStyle().transform).toBe('translate(0px, 0px) scale(2)')
-      expect(panZoom.contentStyle()['will-change']).toBe('transform')
+      return () => {
+        expect(panZoom.contentStyle()['transform-origin']).toBe('0 0')
+        expect(panZoom.contentStyle()['will-change']).toBe('auto')
+        panZoom.zoomBy(2)
+        flush()
+        expect(panZoom.contentStyle().transform).toBe('translate(0px, 0px) scale(2)')
+        expect(panZoom.contentStyle()['will-change']).toBe('transform')
+      }
     })
   })
 
   it('offers the surface a grab cursor and no native touch gestures', () => {
     withRoot(() => {
       const panZoom = createPanZoom()
-      expect(panZoom.surfaceStyle()).toEqual({ cursor: 'auto', 'touch-action': 'none' })
-      panZoom.zoomBy(2)
-      expect(panZoom.surfaceStyle().cursor).toBe('grab')
+      return () => {
+        expect(panZoom.surfaceStyle()).toEqual({ cursor: 'auto', 'touch-action': 'none' })
+        panZoom.zoomBy(2)
+        flush()
+        expect(panZoom.surfaceStyle().cursor).toBe('grab')
+      }
     })
   })
 })
@@ -584,11 +714,18 @@ describe('createPanZoom — reactivity', () => {
     let panZoom!: PanZoomController
     const dispose = createRoot((d) => {
       panZoom = createPanZoom()
-      createEffect(() => seen.push(panZoom.scale()))
+      createEffect(
+        () => panZoom.scale(),
+        (value) => {
+          seen.push(value)
+        }
+      )
       return d
     })
+    flush()
     expect(seen).toEqual([1])
     panZoom.zoomBy(2)
+    flush()
     expect(seen).toEqual([1, 2])
     dispose()
   })
@@ -604,20 +741,22 @@ describe('createPanZoom — reactivity', () => {
       const [image, setImageIndex] = createSignal(0)
       setImage = setImageIndex
       panZoom = createPanZoom()
-      createEffect(() => {
-        image()
+      createEffect(image, () => {
         runs++
         panZoom.zoomTo(2)
       })
       return d
     })
 
+    flush()
     expect(runs).toBe(1)
     panZoom.zoomBy(1.5)
+    flush()
     expect(runs).toBe(1)
     expect(panZoom.scale()).toBe(3)
 
     setImage(1)
+    flush()
     expect(runs).toBe(2)
     expect(panZoom.scale()).toBe(2)
     dispose()
@@ -630,8 +769,11 @@ describe('createPanZoom — telling a tap from a drag', () => {
   /** Press, wobble by `(dx, dy)`, release: a tap that did not quite hold still. */
   const wobble = (panZoom: PanZoomController, dx: number, dy: number, pointerType: string) => {
     panZoom.onPointerDown(pointer({ clientX: 200, clientY: 200, pointerType }))
+    flush()
     panZoom.onPointerMove(pointer({ clientX: 200 + dx, clientY: 200 + dy, pointerType }))
+    flush()
     panZoom.onPointerUp(pointer({ clientX: 200 + dx, clientY: 200 + dy, pointerType }))
+    flush()
   }
 
   it('lets a finger roll as far as the platform lets it before calling it a drag', () => {
@@ -641,24 +783,30 @@ describe('createPanZoom — telling a tap from a drag', () => {
       // `click`. On the mouse's budget this tap would be charged as a drag and
       // the lightbox backdrop would refuse to close on it.
       const panZoom = createPanZoom()
-      wobble(panZoom, 4, 4, 'touch')
-      expect(panZoom.wasDragged()).toBe(false)
+      return () => {
+        wobble(panZoom, 4, 4, 'touch')
+        expect(panZoom.wasDragged()).toBe(false)
+      }
     })
   })
 
   it('still calls a real finger drag a drag', () => {
     withRoot(() => {
       const panZoom = createPanZoom()
-      wobble(panZoom, 12, 0, 'touch')
-      expect(panZoom.wasDragged()).toBe(true)
+      return () => {
+        wobble(panZoom, 12, 0, 'touch')
+        expect(panZoom.wasDragged()).toBe(true)
+      }
     })
   })
 
   it('holds a mouse to its own, much tighter budget', () => {
     withRoot(() => {
       const panZoom = createPanZoom()
-      wobble(panZoom, 4, 4, 'mouse')
-      expect(panZoom.wasDragged()).toBe(true)
+      return () => {
+        wobble(panZoom, 4, 4, 'mouse')
+        expect(panZoom.wasDragged()).toBe(true)
+      }
     })
   })
 
@@ -667,8 +815,10 @@ describe('createPanZoom — telling a tap from a drag', () => {
       // 2px on each axis is 2.83px of travel, inside the 3px budget; summing
       // the axes scores it 4 and turns a diagonal jitter into a drag.
       const panZoom = createPanZoom()
-      wobble(panZoom, 2, 2, 'mouse')
-      expect(panZoom.wasDragged()).toBe(false)
+      return () => {
+        wobble(panZoom, 2, 2, 'mouse')
+        expect(panZoom.wasDragged()).toBe(false)
+      }
     })
   })
 })
@@ -692,17 +842,22 @@ describe('createPanZoom — a surface that goes away mid-gesture', () => {
     withRoot(() => {
       const element = surfaceStub()
       const panZoom = createPanZoom()
-      panZoom.zoomBy(2)
-      panZoom.onPointerDown(pointer({ clientX: 100, clientY: 100, currentTarget: element }))
-      expect(panZoom.isPanning()).toBe(true)
+      return () => {
+        panZoom.zoomBy(2)
+        flush()
+        panZoom.onPointerDown(pointer({ clientX: 100, clientY: 100, currentTarget: element }))
+        flush()
+        expect(panZoom.isPanning()).toBe(true)
 
-      panZoom.cancelGesture()
+        panZoom.cancelGesture()
+        flush()
 
-      expect(panZoom.isPanning()).toBe(false)
-      expect(panZoom.cursor()).toBe('grab')
-      expect(element.captured.size).toBe(0)
-      // The zoom belongs to the user, not to the gesture that was cancelled.
-      expect(panZoom.scale()).toBe(2)
+        expect(panZoom.isPanning()).toBe(false)
+        expect(panZoom.cursor()).toBe('grab')
+        expect(element.captured.size).toBe(0)
+        // The zoom belongs to the user, not to the gesture that was cancelled.
+        expect(panZoom.scale()).toBe(2)
+      }
     })
   })
 
@@ -710,21 +865,28 @@ describe('createPanZoom — a surface that goes away mid-gesture', () => {
     withRoot(() => {
       const element = surfaceStub()
       const panZoom = createPanZoom()
-      panZoom.zoomBy(2)
-      panZoom.onPointerDown(pointer({ clientX: 100, clientY: 100, currentTarget: element }))
-      panZoom.cancelGesture()
+      return () => {
+        panZoom.zoomBy(2)
+        flush()
+        panZoom.onPointerDown(pointer({ clientX: 100, clientY: 100, currentTarget: element }))
+        flush()
+        panZoom.cancelGesture()
+        flush()
 
-      // A contact left behind would make this single press look like a SECOND
-      // finger and start a pinch against a phantom first one.
-      panZoom.onPointerDown(
-        pointer({ clientX: 300, clientY: 300, pointerId: 2, currentTarget: element })
-      )
-      panZoom.onPointerMove(
-        pointer({ clientX: 340, clientY: 300, pointerId: 2, currentTarget: element })
-      )
+        // A contact left behind would make this single press look like a SECOND
+        // finger and start a pinch against a phantom first one.
+        panZoom.onPointerDown(
+          pointer({ clientX: 300, clientY: 300, pointerId: 2, currentTarget: element })
+        )
+        flush()
+        panZoom.onPointerMove(
+          pointer({ clientX: 340, clientY: 300, pointerId: 2, currentTarget: element })
+        )
+        flush()
 
-      expect(panZoom.scale()).toBe(2)
-      expect(panZoom.offset()).toEqual({ x: 40, y: 0 })
+        expect(panZoom.scale()).toBe(2)
+        expect(panZoom.offset()).toEqual({ x: 40, y: 0 })
+      }
     })
   })
 
@@ -732,32 +894,44 @@ describe('createPanZoom — a surface that goes away mid-gesture', () => {
     withRoot(() => {
       const element = surfaceStub()
       const panZoom = createPanZoom()
-      panZoom.zoomBy(2)
-      panZoom.onPointerDown(pointer({ clientX: 100, clientY: 100, currentTarget: element }))
+      return () => {
+        panZoom.zoomBy(2)
+        flush()
+        panZoom.onPointerDown(pointer({ clientX: 100, clientY: 100, currentTarget: element }))
+        flush()
 
-      // The `<Show>` around the surface disposed: the real `pointerup` is
-      // delivered to whatever is underneath and never reaches these handlers.
-      element.isConnected = false
-      panZoom.onPointerMove(pointer({ clientX: 400, clientY: 400, currentTarget: element }))
+        // The `<Show>` around the surface disposed: the real `pointerup` is
+        // delivered to whatever is underneath and never reaches these handlers.
+        element.isConnected = false
+        panZoom.onPointerMove(pointer({ clientX: 400, clientY: 400, currentTarget: element }))
+        flush()
 
-      expect(panZoom.isPanning()).toBe(false)
-      expect(panZoom.offset()).toEqual({ x: 0, y: 0 })
+        expect(panZoom.isPanning()).toBe(false)
+        expect(panZoom.offset()).toEqual({ x: 0, y: 0 })
+      }
     })
   })
 
   it('stops panning when the zoom is reset out from under the gesture', () => {
     withRoot(() => {
       const panZoom = createPanZoom()
-      panZoom.zoomBy(2)
-      panZoom.onPointerDown(pointer({ clientX: 100, clientY: 100 }))
-      panZoom.onPointerMove(pointer({ clientX: 140, clientY: 100 }))
-      expect(panZoom.offset()).toEqual({ x: 40, y: 0 })
+      return () => {
+        panZoom.zoomBy(2)
+        flush()
+        panZoom.onPointerDown(pointer({ clientX: 100, clientY: 100 }))
+        flush()
+        panZoom.onPointerMove(pointer({ clientX: 140, clientY: 100 }))
+        flush()
+        expect(panZoom.offset()).toEqual({ x: 40, y: 0 })
 
-      // The `0` key, or the reset button, while the button is still down.
-      panZoom.reset()
-      panZoom.onPointerMove(pointer({ clientX: 300, clientY: 100 }))
+        // The `0` key, or the reset button, while the button is still down.
+        panZoom.reset()
+        flush()
+        panZoom.onPointerMove(pointer({ clientX: 300, clientY: 100 }))
+        flush()
 
-      expect(panZoom.offset()).toEqual({ x: 0, y: 0 })
+        expect(panZoom.offset()).toEqual({ x: 0, y: 0 })
+      }
     })
   })
 })
@@ -788,102 +962,130 @@ describe('createPanZoom — pinch', () => {
   /** Two fingers 100px apart, straddling x = 150. */
   const twoDown = (panZoom: PanZoomController) => {
     panZoom.onPointerDown(finger(1, 100))
+    flush()
     panZoom.onPointerDown(finger(2, 200))
+    flush()
   }
 
   it('zooms from the fitted size — the gesture `touch-action: none` takes from the browser', () => {
     withRoot(() => {
       const panZoom = pinchable()
-      twoDown(panZoom)
-      // 100px apart → 200px apart: twice the scale. Note nothing zoomed first;
-      // a pinch is how a touch user gets INTO the zoom at all, which is why
-      // it cannot be gated on `isZoomed()` the way the one-finger drag is.
-      panZoom.onPointerMove(finger(2, 300))
+      return () => {
+        twoDown(panZoom)
+        // 100px apart → 200px apart: twice the scale. Note nothing zoomed first;
+        // a pinch is how a touch user gets INTO the zoom at all, which is why
+        // it cannot be gated on `isZoomed()` the way the one-finger drag is.
+        panZoom.onPointerMove(finger(2, 300))
+        flush()
 
-      expect(panZoom.scale()).toBeCloseTo(2, 10)
+        expect(panZoom.scale()).toBeCloseTo(2, 10)
+      }
     })
   })
 
   it('keeps the pixel under the fingers under the fingers', () => {
     withRoot(() => {
       const panZoom = pinchable()
-      twoDown(panZoom)
-      const content = contentPointAt({ scale: 1, x: 0, y: 0 }, { x: 150, y: 100 })
+      return () => {
+        twoDown(panZoom)
+        const content = contentPointAt({ scale: 1, x: 0, y: 0 }, { x: 150, y: 100 })
 
-      // Spread AND slide: the midpoint moves from 150 to 200.
-      panZoom.onPointerMove(finger(2, 300))
+        // Spread AND slide: the midpoint moves from 150 to 200.
+        panZoom.onPointerMove(finger(2, 300))
+        flush()
 
-      const after = viewportPointOf(panZoom.state(), content)
-      expect(after.x).toBeCloseTo(200, 6)
-      expect(after.y).toBeCloseTo(100, 6)
+        const after = viewportPointOf(panZoom.state(), content)
+        expect(after.x).toBeCloseTo(200, 6)
+        expect(after.y).toBeCloseTo(100, 6)
+      }
     })
   })
 
   it('snaps back to the fitted frame when the fingers come together again', () => {
     withRoot(() => {
       const panZoom = pinchable()
-      twoDown(panZoom)
-      panZoom.onPointerMove(finger(2, 300))
-      panZoom.onPointerMove(finger(2, 200))
+      return () => {
+        twoDown(panZoom)
+        panZoom.onPointerMove(finger(2, 300))
+        flush()
+        panZoom.onPointerMove(finger(2, 200))
+        flush()
 
-      // Recomputed from the start of the pinch every move, so going out and
-      // back lands exactly where it began rather than drifting.
-      expect(panZoom.scale()).toBe(1)
-      expect(panZoom.offset()).toEqual({ x: 0, y: 0 })
+        // Recomputed from the start of the pinch every move, so going out and
+        // back lands exactly where it began rather than drifting.
+        expect(panZoom.scale()).toBe(1)
+        expect(panZoom.offset()).toEqual({ x: 0, y: 0 })
+      }
     })
   })
 
   it('is never the click that closes a backdrop', () => {
     withRoot(() => {
       const panZoom = pinchable()
-      twoDown(panZoom)
+      return () => {
+        twoDown(panZoom)
 
-      expect(panZoom.wasDragged()).toBe(true)
+        expect(panZoom.wasDragged()).toBe(true)
+      }
     })
   })
 
   it('hands the surviving finger back to the drag when the other lifts', () => {
     withRoot(() => {
       const panZoom = pinchable()
-      twoDown(panZoom)
-      panZoom.onPointerMove(finger(2, 300))
-      const zoomed = panZoom.offset()
+      return () => {
+        twoDown(panZoom)
+        panZoom.onPointerMove(finger(2, 300))
+        flush()
+        const zoomed = panZoom.offset()
 
-      panZoom.onPointerUp(finger(1, 100))
-      expect(panZoom.isPanning()).toBe(true)
+        panZoom.onPointerUp(finger(1, 100))
+        flush()
+        expect(panZoom.isPanning()).toBe(true)
 
-      // …and it pans from where it IS, not from where it went down, so the
-      // image does not jump under a finger that never left the glass.
-      panZoom.onPointerMove(finger(2, 350))
-      expect(panZoom.offset()).toEqual({ x: zoomed.x + 50, y: zoomed.y })
+        // …and it pans from where it IS, not from where it went down, so the
+        // image does not jump under a finger that never left the glass.
+        panZoom.onPointerMove(finger(2, 350))
+        flush()
+        expect(panZoom.offset()).toEqual({ x: zoomed.x + 50, y: zoomed.y })
 
-      panZoom.onPointerUp(finger(2, 350))
-      expect(panZoom.isPanning()).toBe(false)
+        panZoom.onPointerUp(finger(2, 350))
+        flush()
+        expect(panZoom.isPanning()).toBe(false)
+      }
     })
   })
 
   it('stops rather than pinch on an arbitrary pair when a third finger lands', () => {
     withRoot(() => {
       const panZoom = pinchable()
-      twoDown(panZoom)
-      panZoom.onPointerMove(finger(2, 300))
-      const frozen = panZoom.state()
+      return () => {
+        twoDown(panZoom)
+        panZoom.onPointerMove(finger(2, 300))
+        flush()
+        const frozen = panZoom.state()
 
-      panZoom.onPointerDown(finger(3, 500))
-      panZoom.onPointerMove(finger(3, 600))
+        panZoom.onPointerDown(finger(3, 500))
+        flush()
+        panZoom.onPointerMove(finger(3, 600))
+        flush()
 
-      expect(panZoom.isPanning()).toBe(false)
-      expect(panZoom.state()).toEqual(frozen)
+        expect(panZoom.isPanning()).toBe(false)
+        expect(panZoom.state()).toEqual(frozen)
+      }
     })
   })
 
   it('clamps at the configured maximum', () => {
     withRoot(() => {
       const panZoom = pinchable()
-      twoDown(panZoom)
-      panZoom.onPointerMove(finger(2, 5000))
+      return () => {
+        twoDown(panZoom)
+        panZoom.onPointerMove(finger(2, 5000))
+        flush()
 
-      expect(panZoom.scale()).toBe(8)
+        expect(panZoom.scale()).toBe(8)
+      }
     })
   })
 })

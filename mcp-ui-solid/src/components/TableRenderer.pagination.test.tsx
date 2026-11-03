@@ -1,3 +1,4 @@
+import { flush } from 'solid-js';
 import { afterEach, describe, expect, it } from 'vitest'
 import { cleanup, fireEvent, render } from '@solidjs/testing-library'
 import { createSignal } from 'solid-js'
@@ -33,10 +34,10 @@ describe('table page bounds', () => {
     expect(container.querySelector('.custom-table')).not.toBeNull()
     expect(container.querySelector('tbody')?.textContent).toContain('row-29')
     expect(getByText('3 / 3')).toBeTruthy()
-    setCount(15)
+    flush(() => setCount(15))
     expect(container.querySelector('tbody')?.textContent).toContain('row-14')
     expect(getByText('2 / 2')).toBeTruthy()
-    fireEvent.click(getByText('◀'))
+    flush(() => fireEvent.click(getByText('◀')))
     expect(getByText('1 / 2')).toBeTruthy()
     expect(container.querySelector('tbody')?.textContent).toContain('row-0')
   })
@@ -103,9 +104,9 @@ describe('table pagination accessibility', () => {
       <UIResourceRenderer content={pagedTableComponent(30)} />
     ))
     expect(getByText('1 / 3')).toBeTruthy()
-    fireEvent.click(container.querySelector('button[data-mcp-ui-action="page-next"]')!)
+    flush(() => fireEvent.click(container.querySelector('button[data-mcp-ui-action="page-next"]')!))
     expect(getByText('2 / 3')).toBeTruthy()
-    fireEvent.click(container.querySelector('button[data-mcp-ui-action="page-prev"]')!)
+    flush(() => fireEvent.click(container.querySelector('button[data-mcp-ui-action="page-prev"]')!))
     expect(getByText('1 / 3')).toBeTruthy()
   })
 
@@ -125,7 +126,7 @@ describe('TableRenderer fullscreen page size (v6.19.0 — self-wrapped expanded 
   it('exposes the page-size select once the table is expanded', () => {
     const { container } = render(() => <UIResourceRenderer content={pagedTableComponent(30)} />)
     expect(document.querySelector('select[data-mcp-ui-action="page-size"]')).toBeNull()
-    fireEvent.click(container.querySelector('button[data-mcp-ui-action="expand"]')!)
+    flush(() => fireEvent.click(container.querySelector('button[data-mcp-ui-action="expand"]')!))
     const select = document.querySelector('select[data-mcp-ui-action="page-size"]')
     expect(select).not.toBeNull()
     expect(select!.getAttribute('aria-label')).toBe('Rows per page')

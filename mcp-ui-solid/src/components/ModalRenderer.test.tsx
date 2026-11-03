@@ -1,3 +1,4 @@
+import { flush } from 'solid-js';
 /**
  * ModalRenderer Tests
  * Sprint 3: UX Improvements
@@ -93,7 +94,7 @@ describe('ModalRenderer', () => {
     ))
 
     const closeButton = screen.getByLabelText('Close modal')
-    fireEvent.click(closeButton)
+    flush(() => fireEvent.click(closeButton))
 
     await waitFor(() => {
       expect(onClose).toHaveBeenCalledTimes(1)
@@ -114,7 +115,7 @@ describe('ModalRenderer', () => {
     ))
 
     const backdrop = screen.getByRole('dialog')
-    fireEvent.click(backdrop)
+    flush(() => fireEvent.click(backdrop))
 
     await waitFor(() => {
       expect(onClose).toHaveBeenCalledTimes(1)
@@ -135,7 +136,7 @@ describe('ModalRenderer', () => {
     ))
 
     const backdrop = screen.getByRole('dialog')
-    fireEvent.click(backdrop)
+    flush(() => fireEvent.click(backdrop))
 
     await waitFor(() => {
       expect(onClose).not.toHaveBeenCalled()
@@ -155,7 +156,7 @@ describe('ModalRenderer', () => {
       </ModalRenderer>
     ))
 
-    fireEvent.keyDown(document, { key: 'Escape' })
+    flush(() => fireEvent.keyDown(document, { key: 'Escape' }))
 
     await waitFor(() => {
       expect(onClose).toHaveBeenCalledTimes(1)
@@ -175,7 +176,7 @@ describe('ModalRenderer', () => {
       </ModalRenderer>
     ))
 
-    fireEvent.keyDown(document, { key: 'Escape' })
+    flush(() => fireEvent.keyDown(document, { key: 'Escape' }))
 
     await waitFor(() => {
       expect(onClose).not.toHaveBeenCalled()
@@ -220,11 +221,11 @@ describe('ModalRenderer', () => {
       const [isOpen, setIsOpen] = createSignal(false)
       return (
         <>
-          <button onClick={() => setIsOpen(true)}>Open</button>
+          <button onClick={() => flush(() => setIsOpen(true))}>Open</button>
           <ModalRenderer
             params={{ title: 'Test Modal' }}
             isOpen={isOpen()}
-            onClose={() => setIsOpen(false)}
+            onClose={() => flush(() => setIsOpen(false))}
           >
             <p>Content</p>
           </ModalRenderer>
@@ -237,7 +238,7 @@ describe('ModalRenderer', () => {
     expect(document.body.style.overflow).toBe('')
 
     const openButton = screen.getByText('Open')
-    fireEvent.click(openButton)
+    flush(() => fireEvent.click(openButton))
 
     await waitFor(() => {
       expect(document.body.style.overflow).toBe('hidden')
@@ -311,12 +312,12 @@ describe('useModal hook', () => {
 
     expect(screen.getByText('closed')).toBeTruthy()
 
-    fireEvent.click(screen.getByText('Open'))
+    flush(() => fireEvent.click(screen.getByText('Open')))
     await waitFor(() => {
       expect(screen.getByText('open')).toBeTruthy()
     })
 
-    fireEvent.click(screen.getByText('Close'))
+    flush(() => fireEvent.click(screen.getByText('Close')))
     await waitFor(() => {
       expect(screen.getByText('closed')).toBeTruthy()
     })
@@ -335,12 +336,12 @@ describe('useModal hook', () => {
 
     render(() => <TestComponent />)
 
-    fireEvent.click(screen.getByText('Toggle'))
+    flush(() => fireEvent.click(screen.getByText('Toggle')))
     await waitFor(() => {
       expect(screen.getByText('open')).toBeTruthy()
     })
 
-    fireEvent.click(screen.getByText('Toggle'))
+    flush(() => fireEvent.click(screen.getByText('Toggle')))
     await waitFor(() => {
       expect(screen.getByText('closed')).toBeTruthy()
     })
@@ -374,13 +375,13 @@ describe('useConfirmModal hook', () => {
 
     render(() => <TestComponent />)
 
-    fireEvent.click(screen.getByText('Show Confirm'))
+    flush(() => fireEvent.click(screen.getByText('Show Confirm')))
 
     await waitFor(() => {
       expect(screen.getByText('Confirm dialog')).toBeTruthy()
     })
 
-    fireEvent.click(screen.getByText('Yes'))
+    flush(() => fireEvent.click(screen.getByText('Yes')))
 
     await waitFor(() => {
       expect(confirmResult).toBe(true)
@@ -414,13 +415,13 @@ describe('useConfirmModal hook', () => {
 
     render(() => <TestComponent />)
 
-    fireEvent.click(screen.getByText('Show Confirm'))
+    flush(() => fireEvent.click(screen.getByText('Show Confirm')))
 
     await waitFor(() => {
       expect(screen.getByText('Confirm dialog')).toBeTruthy()
     })
 
-    fireEvent.click(screen.getByText('No'))
+    flush(() => fireEvent.click(screen.getByText('No')))
 
     await waitFor(() => {
       expect(confirmResult).toBe(false)

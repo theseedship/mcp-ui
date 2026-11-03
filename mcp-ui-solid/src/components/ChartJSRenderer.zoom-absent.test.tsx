@@ -1,3 +1,4 @@
+import { flush } from 'solid-js';
 /**
  * Chart zoom with the `chartjs-plugin-zoom` peer NOT installed (v6.22.0).
  *
@@ -99,7 +100,7 @@ describe('<ChartJSRenderer> when chartjs-plugin-zoom is unimportable', () => {
     const { getByLabelText } = render(() => <ChartJSRenderer component={chartComponent()} />);
     await waitFor(() => expect(chartHarness.instances).toHaveLength(1));
 
-    fireEvent.click(getByLabelText('Expand'));
+    flush(() => fireEvent.click(getByLabelText('Expand')));
     await waitFor(() =>
       expect(document.querySelector('[role="dialog"][aria-label="Quarterly sales"]')).toBeTruthy(),
     );

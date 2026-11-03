@@ -10,7 +10,7 @@ import { gunzipSync } from 'node:zlib'
 
 export const POLICY = Object.freeze({
   repository: 'theseedship/mcp-ui', sourceBranch: 'feat/solid2-preview', sourcePr: 34,
-  packageName: '@seed-ship/mcp-ui-solid', version: '8.0.0-solid2.0', tag: 'solid2',
+  packageName: '@seed-ship/mcp-ui-solid', version: '8.0.0-solid2.1', tag: 'solid2',
   artifactName: 'solid2-preview-qualification', workflowPath: '.github/workflows/ci.yml',
 })
 const sha = value => typeof value === 'string' && /^[a-f0-9]{40}$/.test(value)
@@ -21,8 +21,8 @@ const solidFilename = `seed-ship-mcp-ui-solid-${POLICY.version}.tgz`
 const specFilename = 'seed-ship-mcp-ui-spec-6.0.0.tgz'
 const cliFilename = 'seed-ship-mcp-ui-cli-5.0.2.tgz'
 const runtimePins = Object.freeze({
-  'solid-js': '2.0.0-rc.19', '@solidjs/web': '2.0.0-rc.19', '@solidjs/signals': '2.0.0-rc.19',
-  '@solidjs/compiler': '2.0.0-rc.19', '@solidjs/babel-plugin': '2.0.0-rc.19',
+  'solid-js': '2.0.0-rc.20', '@solidjs/web': '2.0.0-rc.20', '@solidjs/signals': '2.0.0-rc.20',
+  '@solidjs/compiler': '2.0.0-rc.20', '@solidjs/babel-plugin': '2.0.0-rc.20',
   '@solidjs/vite-plugin': '3.0.0-next.51',
 })
 const publicEntries = { '.': 'index', './components': 'components', './hooks': 'hooks', './types': 'types',

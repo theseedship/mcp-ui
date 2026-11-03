@@ -1,6 +1,7 @@
 import { cleanup, render } from '@solidjs/testing-library'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { createSignal, type JSX } from 'solid-js'
+import { createSignal, flush } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import { MCPUIMathProvider, type MathRenderer, useMCPUIMath } from './MCPUIMathContext'
 
 function capture(ui: (probe: () => JSX.Element) => JSX.Element) {
@@ -42,6 +43,7 @@ describe('MCPUIMathProvider', () => {
     expect(accessor()).toBeUndefined()
     const next: MathRenderer = () => '<math />'
     setRenderer(next)
+    flush()
     expect(accessor()).toBe(next)
   })
 

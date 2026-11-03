@@ -17,7 +17,7 @@
 
 import { describe, it, expect, vi } from 'vitest'
 
-vi.mock('solid-js/web', () => ({ isServer: true }))
+vi.mock('@solidjs/web', () => ({ isServer: true }))
 vi.mock('dompurify', () => ({
   default: {
     isSupported: true,

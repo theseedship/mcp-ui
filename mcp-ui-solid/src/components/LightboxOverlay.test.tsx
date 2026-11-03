@@ -1,3 +1,4 @@
+import { flush } from 'solid-js';
 /**
  * LightboxOverlay — zoom & pan (v6.22.0).
  *
@@ -49,7 +50,7 @@ const translation = () => {
 
 /** One wheel notch on the backdrop. Negative `deltaY` zooms in. */
 const wheel = (deltaY: number, at: { x: number; y: number } = { x: 400, y: 300 }) =>
-  fireEvent.wheel(backdrop(), { deltaY, clientX: at.x, clientY: at.y })
+  flush(() => fireEvent.wheel(backdrop(), { deltaY, clientX: at.x, clientY: at.y }))
 
 /** A full press → move → release, as a browser would deliver it. */
 const drag = (
@@ -57,13 +58,13 @@ const drag = (
   to: { x: number; y: number },
   target: HTMLElement = backdrop()
 ) => {
-  fireEvent.pointerDown(target, { clientX: from.x, clientY: from.y, pointerId: 7 })
-  fireEvent.pointerMove(target, { clientX: to.x, clientY: to.y, pointerId: 7 })
-  fireEvent.pointerUp(target, { clientX: to.x, clientY: to.y, pointerId: 7 })
+  flush(() => fireEvent.pointerDown(target, { clientX: from.x, clientY: from.y, pointerId: 7 }))
+  flush(() => fireEvent.pointerMove(target, { clientX: to.x, clientY: to.y, pointerId: 7 }))
+  flush(() => fireEvent.pointerUp(target, { clientX: to.x, clientY: to.y, pointerId: 7 }))
 }
 
 /** Zooms in far enough for panning to be allowed. */
-const zoomIn = () => fireEvent.click(labelled('Zoom in') as HTMLElement)
+const zoomIn = () => flush(() => fireEvent.click(labelled('Zoom in') as HTMLElement))
 
 describe('LightboxOverlay', () => {
   let onClose: ReturnType<typeof vi.fn>
@@ -210,7 +211,7 @@ describe('LightboxOverlay', () => {
       drag({ x: 200, y: 200 }, { x: 320, y: 240 })
       // The browser fires this click on the common ancestor of the press and
       // the release — the backdrop — once the gesture is over.
-      fireEvent.click(backdrop())
+      flush(() => fireEvent.click(backdrop()))
 
       expect(onClose).not.toHaveBeenCalled()
     })
@@ -219,7 +220,7 @@ describe('LightboxOverlay', () => {
       mount()
 
       drag({ x: 200, y: 200 }, { x: 320, y: 240 })
-      fireEvent.click(backdrop())
+      flush(() => fireEvent.click(backdrop()))
 
       expect(onClose).not.toHaveBeenCalled()
     })
@@ -229,9 +230,9 @@ describe('LightboxOverlay', () => {
       zoomIn()
 
       // A press and a release in the same place is a click, not a drag.
-      fireEvent.pointerDown(backdrop(), { clientX: 200, clientY: 200, pointerId: 7 })
-      fireEvent.pointerUp(backdrop(), { clientX: 201, clientY: 200, pointerId: 7 })
-      fireEvent.click(backdrop())
+      flush(() => fireEvent.pointerDown(backdrop(), { clientX: 200, clientY: 200, pointerId: 7 }))
+      flush(() => fireEvent.pointerUp(backdrop(), { clientX: 201, clientY: 200, pointerId: 7 }))
+      flush(() => fireEvent.click(backdrop()))
 
       expect(onClose).toHaveBeenCalledTimes(1)
     })
@@ -241,12 +242,12 @@ describe('LightboxOverlay', () => {
       zoomIn()
 
       drag({ x: 200, y: 200 }, { x: 320, y: 240 })
-      fireEvent.click(backdrop())
+      flush(() => fireEvent.click(backdrop()))
       expect(onClose).not.toHaveBeenCalled()
 
-      fireEvent.pointerDown(backdrop(), { clientX: 200, clientY: 200, pointerId: 7 })
-      fireEvent.pointerUp(backdrop(), { clientX: 200, clientY: 200, pointerId: 7 })
-      fireEvent.click(backdrop())
+      flush(() => fireEvent.pointerDown(backdrop(), { clientX: 200, clientY: 200, pointerId: 7 }))
+      flush(() => fireEvent.pointerUp(backdrop(), { clientX: 200, clientY: 200, pointerId: 7 }))
+      flush(() => fireEvent.click(backdrop()))
 
       expect(onClose).toHaveBeenCalledTimes(1)
     })
@@ -258,10 +259,10 @@ describe('LightboxOverlay', () => {
       zoomIn()
       expect(backdrop().style.cursor).toBe('grab')
 
-      fireEvent.pointerDown(backdrop(), { clientX: 200, clientY: 200, pointerId: 7 })
+      flush(() => fireEvent.pointerDown(backdrop(), { clientX: 200, clientY: 200, pointerId: 7 }))
       expect(backdrop().style.cursor).toBe('grabbing')
 
-      fireEvent.pointerUp(backdrop(), { clientX: 200, clientY: 200, pointerId: 7 })
+      flush(() => fireEvent.pointerUp(backdrop(), { clientX: 200, clientY: 200, pointerId: 7 }))
       expect(backdrop().style.cursor).toBe('grab')
     })
 
@@ -271,11 +272,11 @@ describe('LightboxOverlay', () => {
 
       // Pressing "next" must not arm a pan: the pan handler would take the
       // pointer capture and preventDefault the button's focus.
-      fireEvent.pointerDown(labelled('Next image') as HTMLElement, {
+      flush(() => fireEvent.pointerDown(labelled('Next image') as HTMLElement, {
         clientX: 900,
         clientY: 300,
         pointerId: 7,
-      })
+      }))
 
       expect(backdrop().style.cursor).toBe('grab')
     })
@@ -285,10 +286,10 @@ describe('LightboxOverlay', () => {
     it('toggles between fitted and 200%', () => {
       mount()
 
-      fireEvent.dblClick(image(), { clientX: 100, clientY: 100 })
+      flush(() => fireEvent.dblClick(image(), { clientX: 100, clientY: 100 }))
       expect(scale()).toBe(2)
 
-      fireEvent.dblClick(image(), { clientX: 100, clientY: 100 })
+      flush(() => fireEvent.dblClick(image(), { clientX: 100, clientY: 100 }))
       expect(scale()).toBe(1)
       expect(translation()).toEqual({ x: 0, y: 0 })
     })
@@ -297,7 +298,7 @@ describe('LightboxOverlay', () => {
       mount()
 
       const cursor = { x: 150, y: 80 }
-      fireEvent.dblClick(image(), { clientX: cursor.x, clientY: cursor.y })
+      flush(() => fireEvent.dblClick(image(), { clientX: cursor.x, clientY: cursor.y }))
 
       const { x, y } = translation()
       expect(x + 2 * cursor.x).toBeCloseTo(cursor.x, 6)
@@ -307,7 +308,7 @@ describe('LightboxOverlay', () => {
     it('does not close the overlay', () => {
       mount()
 
-      fireEvent.dblClick(image(), { clientX: 100, clientY: 100 })
+      flush(() => fireEvent.dblClick(image(), { clientX: 100, clientY: 100 }))
 
       expect(onClose).not.toHaveBeenCalled()
     })
@@ -317,22 +318,22 @@ describe('LightboxOverlay', () => {
     it('zooms in on "+" and on "="', () => {
       mount()
 
-      fireEvent.keyDown(document, { key: '=' })
+      flush(() => fireEvent.keyDown(document, { key: '=' }))
       expect(scale()).toBeCloseTo(1.5, 10)
 
-      fireEvent.keyDown(document, { key: '+' })
+      flush(() => fireEvent.keyDown(document, { key: '+' }))
       expect(scale()).toBeCloseTo(2.25, 10)
     })
 
     it('zooms out on "-" and resets on "0"', () => {
       mount()
 
-      fireEvent.keyDown(document, { key: '=' })
-      fireEvent.keyDown(document, { key: '-' })
+      flush(() => fireEvent.keyDown(document, { key: '=' }))
+      flush(() => fireEvent.keyDown(document, { key: '-' }))
       expect(scale()).toBeCloseTo(1, 10)
 
-      fireEvent.keyDown(document, { key: '=' })
-      fireEvent.keyDown(document, { key: '0' })
+      flush(() => fireEvent.keyDown(document, { key: '=' }))
+      flush(() => fireEvent.keyDown(document, { key: '0' }))
       expect(scale()).toBe(1)
       expect(translation()).toEqual({ x: 0, y: 0 })
     })
@@ -340,8 +341,8 @@ describe('LightboxOverlay', () => {
     it('leaves the browser its own Ctrl/Cmd page zoom', () => {
       mount()
 
-      fireEvent.keyDown(document, { key: '=', ctrlKey: true })
-      fireEvent.keyDown(document, { key: '0', metaKey: true })
+      flush(() => fireEvent.keyDown(document, { key: '=', ctrlKey: true }))
+      flush(() => fireEvent.keyDown(document, { key: '0', metaKey: true }))
 
       expect(scale()).toBe(1)
     })
@@ -349,13 +350,13 @@ describe('LightboxOverlay', () => {
     it('still closes on Escape and navigates on the arrows', () => {
       mount(1)
 
-      fireEvent.keyDown(document, { key: 'ArrowLeft' })
+      flush(() => fireEvent.keyDown(document, { key: 'ArrowLeft' }))
       expect(onNavigate).toHaveBeenLastCalledWith(0)
 
-      fireEvent.keyDown(document, { key: 'ArrowRight' })
+      flush(() => fireEvent.keyDown(document, { key: 'ArrowRight' }))
       expect(onNavigate).toHaveBeenLastCalledWith(2)
 
-      fireEvent.keyDown(document, { key: 'Escape' })
+      flush(() => fireEvent.keyDown(document, { key: 'Escape' }))
       expect(onClose).toHaveBeenCalledTimes(1)
     })
 
@@ -363,7 +364,7 @@ describe('LightboxOverlay', () => {
       mount(1)
       zoomIn()
 
-      fireEvent.keyDown(document, { key: 'ArrowRight' })
+      flush(() => fireEvent.keyDown(document, { key: 'ArrowRight' }))
 
       expect(onNavigate).toHaveBeenCalledWith(2)
     })
@@ -372,13 +373,13 @@ describe('LightboxOverlay', () => {
       mount(1)
       zoomIn()
 
-      fireEvent.pointerDown(backdrop(), { clientX: 200, clientY: 200, pointerId: 7 })
-      fireEvent.pointerMove(backdrop(), { clientX: 260, clientY: 200, pointerId: 7 })
-      fireEvent.keyDown(document, { key: 'ArrowRight' })
+      flush(() => fireEvent.pointerDown(backdrop(), { clientX: 200, clientY: 200, pointerId: 7 }))
+      flush(() => fireEvent.pointerMove(backdrop(), { clientX: 260, clientY: 200, pointerId: 7 }))
+      flush(() => fireEvent.keyDown(document, { key: 'ArrowRight' }))
       expect(onNavigate).not.toHaveBeenCalled()
 
-      fireEvent.pointerUp(backdrop(), { clientX: 260, clientY: 200, pointerId: 7 })
-      fireEvent.keyDown(document, { key: 'ArrowRight' })
+      flush(() => fireEvent.pointerUp(backdrop(), { clientX: 260, clientY: 200, pointerId: 7 }))
+      flush(() => fireEvent.keyDown(document, { key: 'ArrowRight' }))
       expect(onNavigate).toHaveBeenCalledWith(2)
     })
   })
@@ -390,7 +391,7 @@ describe('LightboxOverlay', () => {
       wheel(-100, { x: 120, y: 90 })
       expect(scale()).toBeGreaterThan(1)
 
-      setSelected(1)
+      flush(() => setSelected(1))
 
       expect(scale()).toBe(1)
       expect(translation()).toEqual({ x: 0, y: 0 })
@@ -406,10 +407,10 @@ describe('LightboxOverlay', () => {
       // `selectedIndex` never moves, but index 1 is now a different photo.
       // Carrying the old transform over is the black frame the reset exists
       // to prevent — a zoomed corner of one picture, shown on another.
-      setGallery([
+      flush(() => setGallery([
         { url: 'https://example.com/a.jpg', alt: 'A' },
         { url: 'https://example.com/b.jpg', alt: 'B' },
-      ])
+      ]))
 
       expect(image().getAttribute('src')).toBe('https://example.com/b.jpg')
       expect(scale()).toBe(1)
@@ -424,11 +425,11 @@ describe('LightboxOverlay', () => {
 
       // Same `url`, different candidates: the browser may well paint another
       // image entirely, so this counts as a new picture too.
-      setGallery(
+      flush(() => setGallery(
         images.map((img, i) =>
           i === 1 ? { ...img, srcset: 'https://example.com/2@2x.jpg 2x' } : img
         )
-      )
+      ))
 
       expect(scale()).toBe(1)
     })
@@ -442,7 +443,7 @@ describe('LightboxOverlay', () => {
 
       // A fresh array on an unrelated parent update is not a new picture, and
       // must not throw away a zoom the user is in the middle of.
-      setGallery([...images])
+      flush(() => setGallery([...images]))
 
       expect(scale()).toBe(zoomed)
       expect(translation()).toEqual(panned)
@@ -454,10 +455,10 @@ describe('LightboxOverlay', () => {
       wheel(-100)
       expect(scale()).toBeGreaterThan(1)
 
-      setSelected(null)
+      flush(() => setSelected(null))
       expect(backdrop()).toBeNull()
 
-      setSelected(0)
+      flush(() => setSelected(0))
       expect(scale()).toBe(1)
     })
   })
@@ -471,22 +472,22 @@ describe('LightboxOverlay', () => {
       // inside the `<Show>`, the controller does not — and `ImageGalleryRenderer`
       // never unmounts this component — so the backdrop is detached before its
       // `pointerup`, which the browser then delivers to whatever is underneath.
-      fireEvent.pointerDown(backdrop(), { clientX: 200, clientY: 200, pointerId: 7 })
-      fireEvent.pointerMove(backdrop(), { clientX: 260, clientY: 220, pointerId: 7 })
-      fireEvent.keyDown(document, { key: 'Escape' })
+      flush(() => fireEvent.pointerDown(backdrop(), { clientX: 200, clientY: 200, pointerId: 7 }))
+      flush(() => fireEvent.pointerMove(backdrop(), { clientX: 260, clientY: 220, pointerId: 7 }))
+      flush(() => fireEvent.keyDown(document, { key: 'Escape' }))
       expect(onClose).toHaveBeenCalledTimes(1)
-      setSelected(null)
+      flush(() => setSelected(null))
 
-      setSelected(0)
+      flush(() => setSelected(0))
 
       // Nothing is being held, so the surface does not claim to be.
       expect(backdrop().style.cursor).toBe('auto')
       // The arrows are not swallowed by their "not while panning" guard…
-      fireEvent.keyDown(document, { key: 'ArrowRight' })
+      flush(() => fireEvent.keyDown(document, { key: 'ArrowRight' }))
       expect(onNavigate).toHaveBeenCalledWith(1)
       // …and a bare move over the reopened backdrop — a mouse reuses one
       // stable pointerId — does not pan a fitted image with no button down.
-      fireEvent.pointerMove(backdrop(), { clientX: 400, clientY: 400, pointerId: 7 })
+      flush(() => fireEvent.pointerMove(backdrop(), { clientX: 400, clientY: 400, pointerId: 7 }))
       expect(translation()).toEqual({ x: 0, y: 0 })
     })
   })
@@ -505,16 +506,16 @@ describe('LightboxOverlay', () => {
 
       // The backdrop suppresses the UA's own pinch so that a one-finger drag
       // can pan; the library therefore owes the touch user this gesture back.
-      fireEvent.pointerDown(backdrop(), finger(1, 100))
-      fireEvent.pointerDown(backdrop(), finger(2, 200))
-      fireEvent.pointerMove(backdrop(), finger(2, 300))
+      flush(() => fireEvent.pointerDown(backdrop(), finger(1, 100)))
+      flush(() => fireEvent.pointerDown(backdrop(), finger(2, 200)))
+      flush(() => fireEvent.pointerMove(backdrop(), finger(2, 300)))
 
       expect(scale()).toBeCloseTo(2, 10)
 
       // And a pinch is never the click that dismisses the overlay.
-      fireEvent.pointerUp(backdrop(), finger(2, 300))
-      fireEvent.pointerUp(backdrop(), finger(1, 100))
-      fireEvent.click(backdrop())
+      flush(() => fireEvent.pointerUp(backdrop(), finger(2, 300)))
+      flush(() => fireEvent.pointerUp(backdrop(), finger(1, 100)))
+      flush(() => fireEvent.click(backdrop()))
       expect(onClose).not.toHaveBeenCalled()
     })
 
@@ -523,25 +524,25 @@ describe('LightboxOverlay', () => {
 
       // 4px on each axis: well inside what a browser itself forgives before
       // it cancels a tap's `click`, and the dismiss tap has to survive it.
-      fireEvent.pointerDown(backdrop(), {
+      flush(() => fireEvent.pointerDown(backdrop(), {
         clientX: 200,
         clientY: 200,
         pointerId: 3,
         pointerType: 'touch',
-      })
-      fireEvent.pointerMove(backdrop(), {
+      }))
+      flush(() => fireEvent.pointerMove(backdrop(), {
         clientX: 204,
         clientY: 204,
         pointerId: 3,
         pointerType: 'touch',
-      })
-      fireEvent.pointerUp(backdrop(), {
+      }))
+      flush(() => fireEvent.pointerUp(backdrop(), {
         clientX: 204,
         clientY: 204,
         pointerId: 3,
         pointerType: 'touch',
-      })
-      fireEvent.click(backdrop())
+      }))
+      flush(() => fireEvent.click(backdrop()))
 
       expect(onClose).toHaveBeenCalledTimes(1)
     })
@@ -575,7 +576,7 @@ describe('LightboxOverlay', () => {
           // `false` would mean the overlay called preventDefault() and the
           // character never reached the field — typing a date would zoom the
           // photo and leave the composer holding `226918`.
-          expect(fireEvent.keyDown(input, { key })).toBe(true)
+          expect(flush(() => fireEvent.keyDown(input, { key }))).toBe(true)
         }
 
         expect(scale()).toBe(zoomed)
@@ -586,12 +587,12 @@ describe('LightboxOverlay', () => {
       mount(1)
 
       withHostInput((input) => {
-        fireEvent.keyDown(input, { key: 'ArrowRight' })
+        flush(() => fireEvent.keyDown(input, { key: 'ArrowRight' }))
         expect(onNavigate).not.toHaveBeenCalled()
 
         // Escape produces no character, and dismissing the modal is what it
         // is for — it worked from anywhere before the zoom keys existed.
-        fireEvent.keyDown(input, { key: 'Escape' })
+        flush(() => fireEvent.keyDown(input, { key: 'Escape' }))
         expect(onClose).toHaveBeenCalledTimes(1)
       })
     })
@@ -599,7 +600,7 @@ describe('LightboxOverlay', () => {
     it('still honours the zoom keys everywhere else', () => {
       mount()
 
-      fireEvent.keyDown(document.body, { key: '=' })
+      flush(() => fireEvent.keyDown(document.body, { key: '=' }))
       expect(scale()).toBeCloseTo(1.5, 10)
     })
   })
@@ -631,7 +632,7 @@ describe('LightboxOverlay', () => {
       mount()
 
       zoomIn()
-      fireEvent.click(labelled('Zoom out') as HTMLElement)
+      flush(() => fireEvent.click(labelled('Zoom out') as HTMLElement))
 
       expect(scale()).toBeCloseTo(1, 10)
     })
@@ -643,7 +644,7 @@ describe('LightboxOverlay', () => {
       zoomIn()
       expect(labelled('Reset zoom')).not.toBeNull()
 
-      fireEvent.click(labelled('Reset zoom') as HTMLElement)
+      flush(() => fireEvent.click(labelled('Reset zoom') as HTMLElement))
       expect(scale()).toBe(1)
       expect(labelled('Reset zoom')).toBeNull()
     })
@@ -652,7 +653,7 @@ describe('LightboxOverlay', () => {
       mount()
 
       zoomIn()
-      fireEvent.click(labelled('Reset zoom') as HTMLElement)
+      flush(() => fireEvent.click(labelled('Reset zoom') as HTMLElement))
 
       expect(onClose).not.toHaveBeenCalled()
     })
@@ -682,7 +683,7 @@ describe('LightboxOverlay', () => {
       expect(labelled('Réduire')).not.toBeNull()
       expect(backdrop().querySelector('[aria-live="polite"]')?.textContent).toBe('Zoom 100 %')
 
-      fireEvent.click(labelled('Agrandir') as HTMLElement)
+      flush(() => fireEvent.click(labelled('Agrandir') as HTMLElement))
       expect(labelled('Taille réelle')).not.toBeNull()
     })
   })

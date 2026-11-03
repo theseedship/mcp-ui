@@ -1,3 +1,4 @@
+import { flush } from 'solid-js';
 /**
  * `MCPUIConfig.chartZoom: 'never'` (v6.22.0) — the opt-out.
  *
@@ -75,7 +76,7 @@ describe('<ChartJSRenderer> with chartZoom "never"', () => {
     await waitFor(() => expect(chartHarness.instances).toHaveLength(1));
     expect(chartHarness.configs[0].options.plugins.zoom).toBeUndefined();
 
-    fireEvent.click(getByLabelText('Expand'));
+    flush(() => fireEvent.click(getByLabelText('Expand')));
     await waitFor(() =>
       expect(document.querySelector('[role="dialog"][aria-label="Quarterly sales"]')).toBeTruthy(),
     );

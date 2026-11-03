@@ -8,13 +8,12 @@
 import {
   createSignal,
   createEffect,
-  on,
   Accessor,
   onCleanup,
-  batch,
-  createMemo
+  createMemo,
+  untrack
 } from 'solid-js'
-import { isServer } from 'solid-js/web'
+import { isServer } from "@solidjs/web";
 import { useAutocompleteContextSafe } from '../context/AutocompleteContext'
 import type {
   AutocompleteOption,
@@ -236,12 +235,10 @@ export function useAutocomplete(options: UseAutocompleteOptions): UseAutocomplet
     }
 
     if (input.length < config().minChars) {
-      batch(() => {
-        setCompletion(null)
-        setOptions([])
-        setIsOpen(false)
-        setResultType(null)
-      })
+      setCompletion(null)
+      setOptions([])
+      setIsOpen(false)
+      setResultType(null)
       return
     }
 
@@ -266,52 +263,49 @@ export function useAutocomplete(options: UseAutocompleteOptions): UseAutocomplet
         return
       }
 
-      batch(() => {
-        setResultType(result.type)
+      setResultType(result.type)
 
-        if (result.type === 'completion') {
-          setCompletion(result.completion || null)
-          setOptions([])
-          setIsOpen(!!result.completion)
-        } else {
-          setCompletion(null)
-          setOptions(result.options || [])
-          setSelectedIndex(-1)
-          setIsOpen((result.options?.length || 0) > 0)
-        }
+      if (result.type === 'completion') {
+        setCompletion(result.completion || null)
+        setOptions([])
+        setIsOpen(!!result.completion)
+      } else {
+        setCompletion(null)
+        setOptions(result.options || [])
+        setSelectedIndex(-1)
+        setIsOpen((result.options?.length || 0) > 0)
+      }
 
-        setIsLoading(false)
-      })
+      setIsLoading(false)
     } catch (e) {
       // Ignore errors from stale requests
       if (requestId !== currentRequestId) {
         return
       }
 
-      batch(() => {
-        setError(e instanceof Error ? e.message : 'Unknown error')
-        setIsLoading(false)
-        setIsOpen(false)
-      })
+      setError(e instanceof Error ? e.message : 'Unknown error')
+      setIsLoading(false)
+      setIsOpen(false)
     }
   }
 
   // Debounced fetch
-  const debouncedFetch = debounce(fetchSuggestions, config().debounceMs)
+  const debouncedFetch = debounce(fetchSuggestions, untrack(() => config().debounceMs))
 
   // Watch input value changes
   createEffect(
-    on(inputValue, (value) => {
+    inputValue, (value) => {
       if (!enabled || !autocompleteCtx || isServer) {
         return
       }
 
       debouncedFetch.call(value)
-    })
+    }
   )
 
   // Cleanup
   onCleanup(() => {
+    currentRequestId++
     debouncedFetch.cancel()
   })
 
@@ -322,10 +316,8 @@ export function useAutocomplete(options: UseAutocompleteOptions): UseAutocomplet
     const comp = completion()
     if (comp && onInputChange) {
       onInputChange(comp)
-      batch(() => {
-        setCompletion(null)
-        setIsOpen(false)
-      })
+      setCompletion(null)
+      setIsOpen(false)
     }
   }
 
@@ -336,11 +328,9 @@ export function useAutocomplete(options: UseAutocompleteOptions): UseAutocomplet
     if (onInputChange) {
       onInputChange(option.value)
     }
-    batch(() => {
-      setOptions([])
-      setSelectedIndex(-1)
-      setIsOpen(false)
-    })
+    setOptions([])
+    setSelectedIndex(-1)
+    setIsOpen(false)
   }
 
   /**
@@ -385,13 +375,11 @@ export function useAutocomplete(options: UseAutocompleteOptions): UseAutocomplet
    */
   const dismiss = () => {
     debouncedFetch.cancel()
-    batch(() => {
-      setCompletion(null)
-      setOptions([])
-      setSelectedIndex(-1)
-      setIsOpen(false)
-      setError(null)
-    })
+    setCompletion(null)
+    setOptions([])
+    setSelectedIndex(-1)
+    setIsOpen(false)
+    setError(null)
   }
 
   /**

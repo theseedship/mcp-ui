@@ -19,11 +19,11 @@ const SOURCE_SHA = '271e92434696f14ba0fdaaa3e91b242819820a16';
 const TARBALL_SHA = 'a'.repeat(64);
 const OTHER_SHA = 'b'.repeat(64);
 const PACKAGE = '@seed-ship/mcp-ui-solid';
-const VERSION = '8.0.0-solid2.0';
+const VERSION = '8.0.0-solid2.1';
 const SPEC_SHA = 'c'.repeat(64);
 const RUNTIME_PINS = {
-  'solid-js': '2.0.0-rc.19', '@solidjs/web': '2.0.0-rc.19', '@solidjs/signals': '2.0.0-rc.19',
-  '@solidjs/compiler': '2.0.0-rc.19', '@solidjs/babel-plugin': '2.0.0-rc.19',
+  'solid-js': '2.0.0-rc.20', '@solidjs/web': '2.0.0-rc.20', '@solidjs/signals': '2.0.0-rc.20',
+  '@solidjs/compiler': '2.0.0-rc.20', '@solidjs/babel-plugin': '2.0.0-rc.20',
   '@solidjs/vite-plugin': '3.0.0-next.51',
 };
 const PUBLIC_ENTRIES = {
@@ -275,7 +275,8 @@ test('accepts a fully pinned main manual request; CLI rejects unsafe input befor
 test('staging requires explicit approval bound to the package, source, bytes and non-latest channel', () => {
   const approval = `STAGE ${PACKAGE}@${VERSION} FROM ${SOURCE_SHA} SHA256 ${TARBALL_SHA} AS solid2`;
   assert.doesNotThrow(() => validateRequest(request({ stage: true, approval })));
-  for (const invalid of ['', approval.replace(SOURCE_SHA, 'c'.repeat(40)), approval.replace('AS solid2', 'AS latest')]) {
+  for (const invalid of ['', approval.replace(SOURCE_SHA, 'c'.repeat(40)),
+    approval.replace(VERSION, '8.0.0-solid2.0'), approval.replace('AS solid2', 'AS latest')]) {
     assert.throws(() => validateRequest(request({ stage: true, approval: invalid })));
   }
 });
@@ -374,9 +375,11 @@ for (const [name, packageJson] of [
   ['wrong package', manifest({ name: '@seed-ship/mcp-ui-spec' })],
   ['stable or different version', manifest({ version: '6.25.1' })],
   ['old Solid2 preview version', manifest({ version: '7.0.0-solid2.0' })],
+  ['published Solid2 preview version', manifest({ version: '8.0.0-solid2.0' })],
   ['Solid1 peer', manifest({ peerDependencies: { 'solid-js': '^1.9.0', '@solidjs/web': RUNTIME_PINS['@solidjs/web'] } })],
   ['RC18 peer', manifest({ peerDependencies: { 'solid-js': '2.0.0-rc.18', '@solidjs/web': '2.0.0-rc.18' } })],
-  ['mixed RC18 and RC19 peers', manifest({ peerDependencies: { 'solid-js': '2.0.0-rc.18', '@solidjs/web': RUNTIME_PINS['@solidjs/web'] } })],
+  ['old RC19 peers', manifest({ peerDependencies: { 'solid-js': '2.0.0-rc.19', '@solidjs/web': '2.0.0-rc.19' } })],
+  ['mixed RC19 and RC20 peers', manifest({ peerDependencies: { 'solid-js': '2.0.0-rc.19', '@solidjs/web': RUNTIME_PINS['@solidjs/web'] } })],
   ['old Spec floor', manifest({ dependencies: { '@seed-ship/mcp-ui-spec': '^5.7.0' } })],
   ['workspace runtime dependency', manifest({ dependencies: { '@seed-ship/mcp-ui-spec': 'workspace:^6.0.0' } })],
   ['publishConfig latest override', manifest({ publishConfig: { tag: 'latest' } })],
@@ -393,7 +396,7 @@ test('requires successful source and compiled-browser qualification of the same 
 });
 
 for (const [name, options, passes] of [
-  ['matching RC19, Spec 6 and CLI 5.0.2 fixtures', {}, true],
+  ['matching RC20, Spec 6 and CLI 5.0.2 fixtures', {}, true],
   ['missing Spec 6 fixture', { includeSpec: false }, false],
   ['Spec fixture with old manifest', { specVersion: '5.7.0' }, false],
   ['Spec fixture hash forged in profile evidence', { reportSpecSha: OTHER_SHA }, false],
@@ -427,8 +430,9 @@ for (const [name, mutate] of [
   ['missing optional-absent profile', (e) => { delete e.absent; }],
   ['failed production source mode', (e) => { e.full.modes.production.status = 'failed'; }],
   ['source report bound to different archive', (e) => { e.absent.input.tarball.sha256 = OTHER_SHA; }],
-  ['prepared RC18 runtime', (e) => { e.full.input.pins['solid-js'] = '2.0.0-rc.18'; }],
-  ['installed mixed RC18 cohort', (e) => { e.full.actualPins['@solidjs/compiler'] = '2.0.0-rc.18'; }],
+  ['published preview version in profile report', (e) => { e.full.version = '8.0.0-solid2.0'; }],
+  ['prepared old RC19 runtime', (e) => { e.full.input.pins['solid-js'] = '2.0.0-rc.19'; }],
+  ['installed mixed RC19/RC20 cohort', (e) => { e.full.actualPins['@solidjs/compiler'] = '2.0.0-rc.19'; }],
   ['wrong installed plugin', (e) => { e.absent.actualPins['@solidjs/vite-plugin'] = '3.0.0-next.50'; }],
   ['missing installed cohort proof', (e) => { delete e.full.actualPins; }],
   ['wrong Spec fixture hash', (e) => { e.full.input.spec.sha256 = OTHER_SHA; }],
@@ -501,7 +505,9 @@ test('only the protected stage step receives the npm token, with fixed bytes/tag
   assert.match(stage, /working-directory: \$\{\{ runner\.temp \}\}\/solid2-stage-empty/);
   assert.match(stage, /NPM_CONFIG_IGNORE_SCRIPTS: 'true'/);
   assert.match(stage, /NPM_CONFIG_GLOBALCONFIG: \/dev\/null/);
-  assert.match(stage, /npm stage publish "\$RUNNER_TEMP\/solid2-reviewed\/seed-ship-mcp-ui-solid-8\.0\.0-solid2\.0\.tgz" --access public --tag solid2 --ignore-scripts --registry=https:\/\/registry\.npmjs\.org --json/);
+  assert.match(stage, /npm stage publish "\$RUNNER_TEMP\/solid2-reviewed\/seed-ship-mcp-ui-solid-8\.0\.0-solid2\.1\.tgz" --access public --tag solid2 --ignore-scripts --registry=https:\/\/registry\.npmjs\.org --json/);
+  assert.match(workflow, /index\("8\.0\.0-solid2\.1"\) == null/);
+  assert.doesNotMatch(workflow, /8\.0\.0-solid2\.0/);
   assert.doesNotMatch(stage, /--tag\s+["']?\$|\bnpm (?:install|ci|run|exec)\b|\bpnpm\b/);
   const latestGuard = blocks.find((block) => block.includes('Verify latest even when the staging command failed'));
   assert.ok(latestGuard);

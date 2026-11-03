@@ -13,6 +13,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { flush } from 'solid-js'
 import { render, cleanup, fireEvent } from '@solidjs/testing-library'
 import { PresentationFeedback } from './PresentationFeedback'
 import type { ConnectorRenderFeedback } from '@seed-ship/mcp-ui-spec'
@@ -45,6 +46,7 @@ describe('PresentationFeedback (v6.6.0)', () => {
       <PresentationFeedback {...BASE} onSubmit={onSubmit} />
     ))
     fireEvent.click(container.querySelector('[data-presentation-feedback-verdict="readable"]')!)
+    flush()
     expect(onSubmit).toHaveBeenCalledTimes(1)
     const payload = onSubmit.mock.calls[0][0] as ConnectorRenderFeedback
     expect(payload.verdict).toBe('readable')
@@ -53,6 +55,7 @@ describe('PresentationFeedback (v6.6.0)', () => {
     expect(payload.renderKind).toBe('primary')
     expect(payload.layoutType).toBe('table')
   })
+    flush()
 
   it('"Not clear" opens the detail step without submitting', () => {
     const onSubmit = vi.fn()
@@ -60,10 +63,12 @@ describe('PresentationFeedback (v6.6.0)', () => {
       <PresentationFeedback {...BASE} onSubmit={onSubmit} />
     ))
     fireEvent.click(container.querySelector('[data-presentation-feedback-verdict="not_readable"]')!)
+    flush()
     expect(onSubmit).not.toHaveBeenCalled()
     expect(container.querySelector('[data-presentation-feedback-step="detail"]')).toBeTruthy()
     expect(container.querySelector('[data-presentation-feedback-submit]')).toBeTruthy()
   })
+    flush()
 
   it('detail step assembles problems + preferredLayout + comment', () => {
     const onSubmit = vi.fn()
@@ -75,14 +80,20 @@ describe('PresentationFeedback (v6.6.0)', () => {
       />
     ))
     fireEvent.click(container.querySelector('[data-presentation-feedback-verdict="not_readable"]')!)
+    flush()
     fireEvent.click(container.querySelector('[data-presentation-feedback-problem="too_raw"]')!)
+    flush()
     fireEvent.click(
       container.querySelector('[data-presentation-feedback-problem="wrong_columns"]')!
     )
+    flush()
     fireEvent.click(container.querySelector('[data-presentation-feedback-layout="bar"]')!)
+    flush()
     const textarea = container.querySelector('[data-presentation-feedback-comment]') as HTMLTextAreaElement
     fireEvent.input(textarea, { target: { value: 'prefer a chart' } })
+    flush()
     fireEvent.click(container.querySelector('[data-presentation-feedback-submit]')!)
+    flush()
 
     expect(onSubmit).toHaveBeenCalledTimes(1)
     const payload = onSubmit.mock.calls[0][0] as ConnectorRenderFeedback
@@ -91,6 +102,7 @@ describe('PresentationFeedback (v6.6.0)', () => {
     expect(payload.preferredLayout).toBe('bar')
     expect(payload.comment).toBe('prefer a chart')
   })
+    flush()
 
   it('deselecting a problem chip removes it from the payload', () => {
     const onSubmit = vi.fn()
@@ -98,21 +110,28 @@ describe('PresentationFeedback (v6.6.0)', () => {
       <PresentationFeedback {...BASE} onSubmit={onSubmit} />
     ))
     fireEvent.click(container.querySelector('[data-presentation-feedback-verdict="not_readable"]')!)
+    flush()
     const chip = container.querySelector('[data-presentation-feedback-problem="wrong_chart"]')!
-    fireEvent.click(chip) // select
-    fireEvent.click(chip) // deselect
+    fireEvent.click(chip)
+    flush() // select
+    fireEvent.click(chip)
+    flush() // deselect
     fireEvent.click(container.querySelector('[data-presentation-feedback-submit]')!)
+    flush()
     const payload = onSubmit.mock.calls[0][0] as ConnectorRenderFeedback
     expect(payload.problems).toBeUndefined()
   })
+    flush()
 
   it('flips to the ack step after submitting', () => {
     const { container } = render(() => (
       <PresentationFeedback {...BASE} onSubmit={() => {}} />
     ))
     fireEvent.click(container.querySelector('[data-presentation-feedback-verdict="readable"]')!)
+    flush()
     expect(container.querySelector('[data-presentation-feedback-ack]')).toBeTruthy()
   })
+    flush()
 
   it('submission is best-effort — a rejected onSubmit promise does not throw', () => {
     const onSubmit = vi.fn(() => Promise.reject(new Error('network down')))
@@ -122,8 +141,10 @@ describe('PresentationFeedback (v6.6.0)', () => {
     expect(() =>
       fireEvent.click(container.querySelector('[data-presentation-feedback-verdict="readable"]')!)
     ).not.toThrow()
+    flush()
     expect(container.querySelector('[data-presentation-feedback-ack]')).toBeTruthy()
   })
+    flush()
 
   it('labels are overridable via the labels prop', () => {
     const { container } = render(() => (
@@ -144,8 +165,10 @@ describe('PresentationFeedback (v6.6.0)', () => {
       <PresentationFeedback {...BASE} onSubmit={() => {}} />
     ))
     fireEvent.click(container.querySelector('[data-presentation-feedback-verdict="not_readable"]')!)
+    flush()
     expect(container.querySelector('[data-presentation-feedback-layout]')).toBeNull()
   })
+    flush()
 
   it('omits queryHash from the payload when not provided', () => {
     const onSubmit = vi.fn()
@@ -157,7 +180,10 @@ describe('PresentationFeedback (v6.6.0)', () => {
       />
     ))
     fireEvent.click(container.querySelector('[data-presentation-feedback-verdict="readable"]')!)
+    flush()
     const payload = onSubmit.mock.calls[0][0] as ConnectorRenderFeedback
     expect(payload.queryHash).toBeUndefined()
   })
+    flush()
 })
+    flush()

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render } from '@solidjs/testing-library'
-import { createSignal } from 'solid-js'
+import { createSignal, flush } from 'solid-js'
 import { UIResourceRenderer } from './UIResourceRenderer'
 import { EditableUIResourceRenderer } from './EditableUIResourceRenderer'
 import { GridRenderer } from './GridRenderer'
@@ -17,6 +17,7 @@ function resize(element: Element, width: number) {
   const observer = observers.find((item) => item.element === element)
   expect(observer).toBeDefined()
   observer!.callback([{ target: element, contentRect: { width } } as ResizeObserverEntry], {} as ResizeObserver)
+    flush()
 }
 
 function textComponent(id: string, colStart = 1, colSpan = 6): UIComponent {
@@ -47,10 +48,26 @@ afterEach(() => {
 })
 
 describe('responsive read-only grids', () => {
+  it('switches an existing renderer between read-only and editable modes reactively', () => {
+    const [enabled, setEnabled] = createSignal(false)
+    const { container } = render(() => <EditableUIResourceRenderer layout={layout()} dragDrop={{ enabled: enabled() }} />)
+    expect(container.querySelector('.editable-ui-renderer')).toBeNull()
+    setEnabled(true)
+    flush()
+    const grid = container.querySelector<HTMLElement>('[data-grid-container]')!
+    expect(grid.dataset.mcpUiGrid).toBe('true')
+    expect(grid.dataset.mcpUiStacked).toBe('false')
+    setEnabled(false)
+    flush()
+    expect(container.querySelector('.editable-ui-renderer')).toBeNull()
+    expect(container.querySelector('[data-mcp-ui-grid]')).not.toBeNull()
+  })
+
   it('stacks inside a narrow container and restores explicit desktop positions without mutating input', () => {
     const input = layout()
     const original = JSON.stringify(input)
     const { container } = render(() => <UIResourceRenderer content={input} />)
+    flush()
     const grid = container.querySelector<HTMLElement>('[data-mcp-ui-grid]')!
     const first = grid.children[0] as HTMLElement
     const second = grid.children[1] as HTMLElement
@@ -71,12 +88,14 @@ describe('responsive read-only grids', () => {
   it('uses the container width on initial mount, independently of the viewport', () => {
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 360 } as DOMRect)
     const { container } = render(() => <UIResourceRenderer content={layout()} />)
+    flush()
     expect(window.innerWidth).toBeGreaterThan(640)
     expect(container.querySelector<HTMLElement>('[data-mcp-ui-grid]')!.dataset.mcpUiStacked).toBe('true')
   })
 
   it('does not switch on hidden or invalid observer measurements and disconnects on unmount', () => {
     const { container, unmount } = render(() => <UIResourceRenderer content={layout()} />)
+    flush()
     const grid = container.querySelector<HTMLElement>('[data-mcp-ui-grid]')!
     resize(grid, 320)
     for (const width of [0, -1, Number.NaN]) resize(grid, width)
@@ -91,6 +110,7 @@ describe('responsive read-only grids', () => {
     input.grid.columns = 2
     input.components = [{ id: 'unpositioned', type: 'text', params: { content: 'Full width' } } as UIComponent]
     const { container } = render(() => <UIResourceRenderer content={input} />)
+    flush()
     const grid = container.querySelector<HTMLElement>('[data-mcp-ui-grid]')!
     expect((grid.children[0] as HTMLElement).style.gridColumn).toBe('1 / -1')
   })
@@ -105,6 +125,7 @@ describe('responsive read-only grids', () => {
         <GridRenderer component={input} />
       </RenderProvider>
     ))
+    flush()
     const grid = container.querySelector<HTMLElement>('[data-mcp-ui-grid]')!
     expect(grid.style.gridTemplateAreas).toBe('"left right"')
     resize(grid, 500)
@@ -118,9 +139,11 @@ describe('responsive read-only grids', () => {
   it('updates layout components while retaining the narrow-container presentation', () => {
     const [input, setInput] = createSignal(layout())
     const { container } = render(() => <UIResourceRenderer content={input()} />)
+    flush()
     const grid = container.querySelector<HTMLElement>('[data-mcp-ui-grid]')!
     resize(grid, 400)
     setInput({ ...layout(), components: [textComponent('replacement')] })
+    flush()
     expect(grid.children.length).toBe(1)
     expect(grid.textContent).toContain('replacement')
     expect((grid.children[0] as HTMLElement).style.gridColumn).toBe('1 / -1')
@@ -132,9 +155,11 @@ describe('responsive read-only grids', () => {
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(() => ({ width }) as DOMRect)
     const removeListener = vi.spyOn(window, 'removeEventListener')
     const { container, unmount } = render(() => <UIResourceRenderer content={layout()} />)
+    flush()
     const grid = container.querySelector<HTMLElement>('[data-mcp-ui-grid]')!
     width = 400
     window.dispatchEvent(new Event('resize'))
+    flush()
     expect(grid.dataset.mcpUiStacked).toBe('true')
     unmount()
     expect(removeListener).toHaveBeenCalledWith('resize', expect.any(Function))
@@ -150,6 +175,7 @@ describe('responsive read-only grids', () => {
       id: 'editor-layout', grid: { columns: 12, gap: '1rem' }, components: [nested],
     }
     const { container } = render(() => <EditableUIResourceRenderer layout={editableLayout} dragDrop={{ enabled: true }} />)
+    flush()
     const nestedGrid = container.querySelector<HTMLElement>(
       '[data-component-type="grid"][data-component-id="editor-nested"] > [data-mcp-ui-grid]'
     )!
@@ -161,6 +187,7 @@ describe('responsive read-only grids', () => {
   it('keeps the disabled editor fallback responsive', () => {
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 420 } as DOMRect)
     const { container } = render(() => <EditableUIResourceRenderer layout={layout()} />)
+    flush()
     expect(container.querySelector<HTMLElement>('[data-mcp-ui-grid]')?.dataset.mcpUiStacked).toBe('true')
   })
 })

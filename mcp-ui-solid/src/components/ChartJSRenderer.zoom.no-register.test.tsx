@@ -1,3 +1,4 @@
+import { flush } from 'solid-js';
 /**
  * Chart zoom against a PARTIAL Chart.js build — one with no `register`
  * (v6.22.0).
@@ -111,7 +112,7 @@ describe('<ChartJSRenderer> against a Chart build without register()', () => {
     // time. Nothing was registered on the previous attempt either, so the
     // renderer must not have cached a false "registered" and started handing
     // the plugin out.
-    fireEvent.click(getByLabelText('Expand'));
+    flush(() => fireEvent.click(getByLabelText('Expand')));
     await waitFor(() =>
       expect(document.querySelector('[role="dialog"][aria-label="Quarterly sales"]')).toBeTruthy(),
     );

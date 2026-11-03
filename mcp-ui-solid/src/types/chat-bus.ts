@@ -6,7 +6,7 @@
  * See CHANGELOG for breaking changes on experimental types.
  */
 
-import type { JSX } from 'solid-js'
+import type { JSX } from "@solidjs/web";
 import type { UIComponent, UILayout } from './index'
 
 // ─── Event Base ──────────────────────────────────────────────

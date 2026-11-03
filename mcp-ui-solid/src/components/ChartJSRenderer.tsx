@@ -24,12 +24,14 @@ import {
   createMemo,
   createUniqueId,
   onCleanup,
-  onMount,
+  onSettled,
+  deep,
   createSignal,
   untrack,
   Show,
 } from 'solid-js';
-import type { Accessor, JSX } from 'solid-js';
+import type { Accessor } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import type { UIComponent, ChartComponentParams } from '../types';
 import { ExpandableWrapper, useExpanded } from './ExpandableWrapper';
 import { DegradedFallback } from './DegradedFallback';
@@ -316,20 +318,18 @@ let zoomPluginRegistered = false;
  * SSR never reaches `hammerjs` (a plugin dependency that reads `document` as
  * it loads).
  *
- * `@vite-ignore` for the same reason `duckdb.ts` and `MapRenderer.tsx` carry
- * it on THEIR optional peers: this library is built with the peer externalised,
- * so the bare specifier survives into the published bundle and a consumer's
- * bundler resolves it statically — an app that never installed the plugin then
- * fails its own dependency scan at build time, long before the `.catch()`
- * below could turn the absence into the supported `null`. The four peers that
- * anyone using the feature at all has installed (`chart.js`, `leaflet`,
- * `@antv/g6`, `highlight.js`) stay bare on purpose: they benefit from the
- * pre-bundling this comment opts out of.
+ * Keep the namespace import visible to the host bundler. Ignoring it leaves a
+ * native bare import in optimized output, which browsers cannot resolve. Vite
+ * recognizes the optional peer metadata; a missing-peer stub is rejected below
+ * rather than presented as an installed plugin with a nonfunctional toolbar.
  */
 const loadZoomPlugin = (): Promise<unknown | null> => {
   if (!zoomPluginPromise) {
-    zoomPluginPromise = import(/* @vite-ignore */ 'chartjs-plugin-zoom')
-      .then((module: any) => module.default ?? module)
+    zoomPluginPromise = import('chartjs-plugin-zoom')
+      .then((module: any) => {
+        const plugin = module.default ?? module;
+        return plugin?.id === 'zoom' ? plugin : null;
+      })
       .catch(() => null);
   }
 
@@ -529,12 +529,12 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
   let chartTheme: ReturnType<typeof createChartTheme> | undefined;
   let renderVersion = 0;
 
-  onMount(() => {
+  onSettled(() => {
     if (themeRoot) {
       const stop = observeTheme(themeRoot, () => {
         if (chartInstance) chartTheme?.refresh(chartInstance);
       });
-      onCleanup(stop);
+      return stop;
     }
   });
 
@@ -634,11 +634,13 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
 
   // Download + register the plugin the first time a surface asks for zoom.
   // `zoomPlugin` is read untracked: setting it must not re-run this effect.
-  createEffect(() => {
-    if (!zoomWanted() || untrack(zoomPlugin)) return;
+  createEffect(zoomWanted, (wanted) => {
+    if (!wanted || untrack(zoomPlugin)) return;
+    let cancelled = false;
     void ensureZoomPlugin().then((plugin) => {
-      if (plugin) setZoomPlugin(() => plugin);
+      if (plugin && !cancelled) setZoomPlugin(() => plugin);
     });
+    return () => { cancelled = true; };
   });
 
   /**
@@ -717,24 +719,21 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
   };
 
   // Create/update chart when params change
-  createEffect(async () => {
+  createEffect(() => ({
+    chartParams: deep(params()),
+    chartMissing: missingSummary(),
+    chartUnit: unit(),
+    zoom: zoomOptions(),
+  }), ({ chartParams, chartMissing, chartUnit, zoom }) => {
     if (!canvasRef) return;
-
-    // Access params to track dependencies. `zoomOptions()` is read here, before
-    // the first `await`, for the same reason: an async effect only tracks what
-    // it reads synchronously, and toggling the expanded state has to rebuild
-    // the chart rather than leave it on a stale config (Chart.js reads the
-    // plugin options at construction and the plugin only hooks charts created
-    // after it was registered).
-    const chartParams = params();
-    const chartMissing = missingSummary();
-    const chartUnit = unit();
-    const zoom = zoomOptions();
     const version = ++renderVersion;
 
     setIsLoading(true);
     setError(undefined);
 
+    // Keep optional-engine loading outside the reactive graph: it must not
+    // hold unrelated host writes while the module downloads.
+    void (async () => {
     try {
       const Chart = await loadChartJS();
 
@@ -899,13 +898,19 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
       });
       props.onError?.(error);
     }
+    })();
+    return () => {
+      if (renderVersion === version) renderVersion += 1;
+    };
   });
 
   // Chart.js may measure a zero-sized canvas while the data view is visible.
   // Resize once Solid has revealed it again.
-  createEffect(() => {
-    if (activeView() !== 'chart' || !chartInstance) return;
-    queueMicrotask(() => chartInstance?.resize?.());
+  createEffect(activeView, (view) => {
+    if (view !== 'chart' || !chartInstance) return;
+    let cancelled = false;
+    queueMicrotask(() => { if (!cancelled) chartInstance?.resize?.(); });
+    return () => { cancelled = true; };
   });
 
   // Cleanup on unmount
@@ -949,7 +954,7 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
                 >
                   <button
                     type="button"
-                    aria-pressed={activeView() === 'chart'}
+                    aria-pressed={activeView() === 'chart' ? 'true' : 'false'}
                     class={`rounded px-2 py-1 text-xs font-medium transition-colors ${
                       activeView() === 'chart'
                         ? 'bg-[color:var(--mcp-ui-accent,var(--color-gray-900,#111827))] text-[color:var(--mcp-ui-accent-fg,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-accent,var(--color-gray-100,#f3f4f6))] dark:text-[color:var(--mcp-ui-accent-fg,var(--color-gray-900,#111827))]'
@@ -961,7 +966,7 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
                   </button>
                   <button
                     type="button"
-                    aria-pressed={activeView() === 'data'}
+                    aria-pressed={activeView() === 'data' ? 'true' : 'false'}
                     class={`rounded px-2 py-1 text-xs font-medium transition-colors ${
                       activeView() === 'data'
                         ? 'bg-[color:var(--mcp-ui-accent,var(--color-gray-900,#111827))] text-[color:var(--mcp-ui-accent-fg,var(--color-white,#fff))] dark:bg-[color:var(--mcp-ui-accent,var(--color-gray-100,#f3f4f6))] dark:text-[color:var(--mcp-ui-accent-fg,var(--color-gray-900,#111827))]'
@@ -1142,7 +1147,7 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
                     <Show when={tableData().rows.length === 0}>
                       <tr>
                         <td
-                          colSpan={Math.max(1, tableData().columns.length)}
+                          colspan={Math.max(1, tableData().columns.length)}
                           class="px-3 py-6 text-center text-[color:var(--mcp-ui-fg-muted,var(--color-gray-500,#6b7280))] dark:text-[color:var(--mcp-ui-fg-subtle,var(--color-gray-400,#9ca3af))]"
                         >
                           {strings.chartNoData}
@@ -1172,7 +1177,7 @@ export const ChartJSRenderer: Component<ChartJSRendererProps> = (props) => {
                 role="img"
                 aria-label={title()}
                 aria-describedby={notesShown() ? `${descriptionId} ${notesId}` : descriptionId}
-                aria-hidden={activeView() !== 'chart' || Boolean(error())}
+                aria-hidden={activeView() !== 'chart' || Boolean(error()) ? 'true' : 'false'}
               />
               <Show when={isLoading() && activeView() === 'chart'}>
                 <div class="absolute inset-0 flex items-center justify-center bg-[color:var(--mcp-ui-surface,color-mix(in_oklab,var(--color-white,#fff)_80%,transparent))] dark:bg-[color:var(--mcp-ui-surface,color-mix(in_oklab,var(--color-gray-800,#1f2937)_80%,transparent))]">

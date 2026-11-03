@@ -68,7 +68,8 @@
  * markup and the hydrated markup agree: both start at `min` scale, no offset.
  */
 
-import { createSignal, onCleanup, untrack, type Accessor, type JSX } from 'solid-js'
+import { createSignal, onCleanup, untrack, type Accessor } from "solid-js";
+import type { JSX } from "@solidjs/web";
 
 /** A point in one of the two spaces described above. Plain data, no units. */
 export interface PanZoomPoint {

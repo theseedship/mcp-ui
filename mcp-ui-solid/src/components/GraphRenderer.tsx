@@ -18,7 +18,7 @@
  * data). All three are computed lazily on click.
  */
 
-import { Component, createSignal, onCleanup, onMount, Show, For } from 'solid-js';
+import { Component, createSignal, onSettled, flush, Show, For } from 'solid-js';
 import type { UIComponent } from '../types';
 import type { GraphComponentParams, GraphLayout } from '@seed-ship/mcp-ui-spec';
 import { ExpandableWrapper, useExpanded } from './ExpandableWrapper';
@@ -279,10 +279,13 @@ export const GraphRenderer: Component<GraphRendererProps> = (props) => {
   let stopTheme: (() => void) | undefined;
   let disposed = false;
 
-  onMount(async () => {
+  onSettled(() => {
+    void (async () => {
     const g6Available = await isG6Available();
     if (disposed) return;
-    setAvailable(g6Available);
+    // The canvas lives behind <Show>. This imperative engine boundary must
+    // observe the committed DOM before reading its ref, not a staged write.
+    flush(() => setAvailable(g6Available));
     if (!g6Available || !containerRef) return;
 
     try {
@@ -323,9 +326,8 @@ export const GraphRenderer: Component<GraphRendererProps> = (props) => {
         ts: Date.now(),
       });
     }
-  });
-
-  onCleanup(() => {
+    })();
+    return () => {
     disposed = true;
     stopTheme?.();
     try {
@@ -335,6 +337,7 @@ export const GraphRenderer: Component<GraphRendererProps> = (props) => {
       // init failures — silent because the component is unmounting anyway.
     }
     graphInstance = undefined;
+    };
   });
 
   // ─── Export handlers ────────────────────────────────────────────────
@@ -418,7 +421,7 @@ export const GraphRenderer: Component<GraphRendererProps> = (props) => {
               title={strings.graphExport}
               aria-label={strings.graphExport}
               aria-haspopup="menu"
-              aria-expanded={exportMenuOpen()}
+              aria-expanded={exportMenuOpen() ? 'true' : 'false'}
             >
               {strings.graphExportMenu}
             </button>

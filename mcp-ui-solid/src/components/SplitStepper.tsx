@@ -61,7 +61,7 @@ export function SplitStepper(props: SplitStepperProps) {
                   {(step) => (
                     <div class="flex items-center gap-2 text-xs">
                       <span class="flex-shrink-0 w-4 text-center">{STEP_ICONS[step.status] || STEP_ICONS.pending}</span>
-                      <span classList={{
+                      <span class={{
                         'text-gray-900 dark:text-white font-medium': step.status === 'active',
                         'text-gray-500 dark:text-gray-400': step.status !== 'active',
                         'line-through opacity-50': step.status === 'skipped',
@@ -95,7 +95,7 @@ export function SplitStepper(props: SplitStepperProps) {
               <Show when={syn().status === 'pending'}>
                 <span class="text-gray-400">{STEP_ICONS.pending}</span>
               </Show>
-              <span classList={{
+              <span class={{
                 'font-medium text-blue-700 dark:text-blue-300': syn().status === 'active',
                 'font-medium text-green-700 dark:text-green-300': syn().status === 'done',
                 'text-gray-500 dark:text-gray-400': syn().status === 'pending',

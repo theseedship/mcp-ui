@@ -12,7 +12,7 @@
 
 import { describe, it, expect } from 'vitest'
 import DOMPurify from 'dompurify'
-import { isServer } from 'solid-js/web'
+import { isServer } from "@solidjs/web";
 import { sanitizeHtml, SANITIZE_PROFILES } from './sanitize-html'
 
 const HOSTILE = '<img src=x onerror=alert(1)>hello <b>x</b>'
