@@ -190,10 +190,11 @@ for token setup, tags, and recovery of an interrupted release.
 | `8.0.0-solid2.N` (next candidate: `8.0.0-solid2.1`) | Solid 2 | `solid2`, explicit opt-in | Manual review of the exact CI artifact; upload requires separate approval |
 
 **Solid 2 preview:** a separate, manual
-[preview channel](./.github/SOLID2_PREVIEW_RELEASE.md) checks the qualified RC.20
-artifact before any upload and preserves `latest`. No preview is published by
-merging this infrastructure. The source stays on PR #34, not stable main.
-There is no need to publish 8 while the host migration is unfinished. Install a
+[preview channel](./.github/SOLID2_PREVIEW_RELEASE.md) will check a new RC.20
+artifact for `.1` before any upload and preserves `latest`. The published `.0`
+remains on `solid2` until separate staging and npm 2FA approval for `.1`.
+Merging this infrastructure publishes nothing. The source stays on PR #34, not stable main.
+There is no need to publish `.1` while the host migration is unfinished. Install a
 future approved preview only in an isolated Solid 2 pilot. A future stable
 `8.0.0` / `latest` switch requires another reviewed release-policy change.
 
