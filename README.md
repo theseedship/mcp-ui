@@ -1,11 +1,11 @@
 # MCP UI Components
 
-> **Solid 2 source preparation resumed — 2026-10-27.** Target RC.19 and carry
+> **Solid 2 preview update — 2026-11-03.** Target RC.20 and carry
 > the stable Zod 4 / fast-uri fixes; PR #34 is for review only. No merge, release
 > dispatch, npm publication or Deposium change is authorized. See the
-> [current Deposium handoff](./mcp-ui-solid/docs/SOLID2-DEPOSIUM-HANDOFF-2026-10-27.md).
+> [current Scratchpad/Deposium handoff](./mcp-ui-solid/docs/SOLID2-SCRATCHPAD-LAZY-PROPS-2026-11-03.md).
 
-> This branch prepares the isolated **Solid 2 preview**, `8.0.0-solid2.0`,
+> This branch prepares the isolated **Solid 2 preview**, `8.0.0-solid2.1`,
 > not a published release. Stable **7.x remains Solid 1** (`latest`), including
 > future `7.1.x` releases; **8.x targets Solid 2** (`solid2`, opt-in).
 > The old 7.x preview archive cannot qualify the new 8.x package. Do not install
@@ -187,10 +187,10 @@ for token setup, tags, and recovery of an interrupted release.
 | MCPUI Solid line | Host framework | npm channel | Release path |
 | --- | --- | --- | --- |
 | `7.x` (including future `7.1.x`) | Solid 1 | `latest` | Reviewed bump + stable Git tag, then npm staging and human 2FA approval |
-| `8.0.0-solid2.N` (first candidate: `8.0.0-solid2.0`) | Solid 2 | `solid2`, explicit opt-in | Manual review of the exact CI artifact; upload requires separate approval |
+| `8.0.0-solid2.N` (next candidate: `8.0.0-solid2.1`) | Solid 2 | `solid2`, explicit opt-in | Manual review of the exact CI artifact; upload requires separate approval |
 
 **Solid 2 preview:** a separate, manual
-[preview channel](./.github/SOLID2_PREVIEW_RELEASE.md) checks the qualified RC.19
+[preview channel](./.github/SOLID2_PREVIEW_RELEASE.md) checks the qualified RC.20
 artifact before any upload and preserves `latest`. No preview is published by
 merging this infrastructure. The source stays on PR #34, not stable main.
 There is no need to publish 8 while the host migration is unfinished. Install a

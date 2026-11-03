@@ -1,7 +1,8 @@
 # Solid 2 preview qualification
 
-> Source preparation explicitly resumed on 2026-10-27 for the `8.0.0-solid2.0`
-> candidate: RC.19, stable security carry-over and fresh package qualification
+> Current candidate: `8.0.0-solid2.1`, prepared on 2026-11-03 for RC.20 and
+> the Scratchpad lazy-prop fix. See the [current handoff](./SOLID2-SCRATCHPAD-LAZY-PROPS-2026-11-03.md).
+> The original preparation resumed on 2026-10-27 for stable security carry-over and fresh package qualification
 > only. The pause and qualification results below describe the earlier
 > `7.0.0-solid2.0` candidate (including historical RC.18 / RC.19 records).
 > See the
@@ -12,18 +13,20 @@
 
 ## Current source candidate and release boundary
 
-The candidate manifest is now `8.0.0-solid2.0`, targeting the exact RC.19
+The candidate manifest is now `8.0.0-solid2.1`, targeting the exact RC.20
 runtime/toolchain and the stable Spec 6 / CLI 5.0.2 line. Stable `7.x`, including
 future `7.1.x`, remains Solid 1 on npm `latest`; Solid 2 is the opt-in `8.x` line
 on `solid2`. Qualification must bind to this exact source HEAD and its archive;
 the historical `7.0.0-solid2.0` SHA, archive and checksum do not qualify it.
 
-The separate RC.19 / Spec 6 / CLI 5.0.2 infrastructure PR #42 is merged into
+The original RC.19 / Spec 6 / CLI 5.0.2 infrastructure PR #42 is merged into
 stable main at `54c49dca5a049eeddb70aae7e9df1055ec3d50e3`, and is synchronized
 into this branch. PR #34 is review-only; it is not merged by that operation.
 Dispatch, upload, tag, runtime merge and app
 installation remain unauthorized. The Deposium host migration is in progress;
-installation requires the application team's approval.
+installation requires the application team's approval. A separate RC.20 / `.1`
+policy update must be merged before any future promotion of this new candidate;
+the original `.0` policy cannot upload `.1`.
 
 ## Historical source, workbench and qualification (through 2026-10-24)
 
@@ -253,8 +256,9 @@ Do not use the legacy stable publication workflow: it matches prerelease tags
 but stages with `--tag latest`, and the GitHub release workflow marks releases
 as stable.
 
-The manual preview channel on main now uses the RC.19 / Spec 6 / CLI 5.0.2
-policy for `8.0.0-solid2.0`, after infrastructure PR #42. That merge does not
+The original manual preview policy from #42 targets RC.19 / Spec 6 / CLI 5.0.2
+and `8.0.0-solid2.0`. The RC.20 / `8.0.0-solid2.1` update needs its own reviewed
+infrastructure change before promotion. Neither infrastructure merge merges
 merge the runtime PR. Later review-only and staging operations still require
 their own exact source/CI/artifact binding and explicit approvals; the source
 PR must remain open. Follow the current

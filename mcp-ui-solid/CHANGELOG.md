@@ -5,9 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [8.0.0-solid2.0] - Unreleased Solid 2 preview candidate
+## [8.0.0-solid2.1] - Unreleased Solid 2 RC.20 preview
 
-### 2026-10-27 — source preparation, not a qualification or release
+### Fixed
+
+- Resolve Scratchpad mount-log props during component setup, not owner-backed
+  `onSettled`. A host JSX conditional for `pinned` no longer creates a memo in
+  a forbidden lifecycle scope (`PRIMITIVE_IN_FORBIDDEN_SCOPE`).
+- Capture the Scratchpad debug flag/id in effect compute and pass them to a
+  prop-free logger in apply, also preventing `PRIMITIVE_IN_EFFECT_CALLBACK`.
+- Preserve reactive pin changes, auto-close suppression, timer cleanup and the
+  once-per-mount creation log. Add real compiler-conditional prop regressions and
+  full/optional-absent public-tarball browser probes.
+
+### Changed
+
+- Pin core/web/signals/compiler/Babel together to `2.0.0-rc.20`, matching the
+  reported host cohort. Keep Vite plugin next.51, Spec 6 and CLI 5.0.2 unchanged.
+- The bug was reproduced and the focused fix checked on RC.19 before the cohort
+  update; `.1` has separate RC.20 qualification, not reused `.0` archive evidence.
+- Prepare publication through the separate `solid2` policy only; no runtime-PR
+  merge, npm upload, host change or stable `latest` change is implied.
+
+## [8.0.0-solid2.0] - 2026-11-01 — published Solid 2 RC.19 preview
+
+### Historical 2026-10-27 source preparation
 
 - Candidate source identity is `8.0.0-solid2.0`, on the Solid 2 line. Stable
   `7.x` (including future `7.1.x`) remains Solid 1 and npm `latest`; Solid 2 is

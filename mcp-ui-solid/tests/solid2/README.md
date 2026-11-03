@@ -1,6 +1,6 @@
 # Solid 2 clean-tarball qualification
 
-The current source candidate is `8.0.0-solid2.0` for the opt-in Solid 2 `solid2`
+The current source candidate is `8.0.0-solid2.1` for the opt-in Solid 2 `solid2`
 channel. Stable `7.x` / `latest` remains Solid 1. The version string alone is
 not qualification or release proof: qualify the exact source HEAD and archive.
 The old `7.0.0-solid2.0` archive and checksum cannot qualify this candidate.
@@ -41,7 +41,7 @@ Run after the library has been built and the maintainer supplies its tarball:
 
 ```sh
 node mcp-ui-solid/tests/solid2/run.mjs prepare \
-  --tarball /absolute/artifacts/seed-ship-mcp-ui-solid-8.0.0-solid2.0.tgz \
+  --tarball /absolute/artifacts/seed-ship-mcp-ui-solid-8.0.0-solid2.1.tgz \
   --spec-tarball /absolute/artifacts/seed-ship-mcp-ui-spec-6.0.0.tgz \
   --consumer /home/nico/worktrees/mcp-ui-solid2-consumer-full \
   --profile full
@@ -62,7 +62,7 @@ pnpm install --ignore-scripts
 The generated `.npmrc` disables automatic peer installation. Full profile lists
 every browser engine explicitly at the exact locally inspected versions, including
 KaTeX `0.18.4` and TanStack virtual-core `3.13.18`. It pins Solid/web/signals/compiler/
-  Babel `2.0.0-rc.19`, scoped Vite plugin `3.0.0-next.51`, Vite `8.3.5`, explicit
+  Babel `2.0.0-rc.20`, scoped Vite plugin `3.0.0-next.51`, Vite `8.3.5`, explicit
   Babel core `7.29.6`, and Node types `22.19.11`.
 The runner rejects package realpaths outside its own consumer. pnpm's internal
 consumer-local symlinks are normal; linking to the MCPUI source checkout is not.

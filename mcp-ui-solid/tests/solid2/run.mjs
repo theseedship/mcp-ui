@@ -31,8 +31,8 @@ async function auditClientZoomGraph(root) {
   return { javascript, bareImports }
 }
 export const pins = Object.freeze({
-  'solid-js': '2.0.0-rc.19', '@solidjs/web': '2.0.0-rc.19', '@solidjs/signals': '2.0.0-rc.19',
-  '@solidjs/compiler': '2.0.0-rc.19', '@solidjs/babel-plugin': '2.0.0-rc.19',
+  'solid-js': '2.0.0-rc.20', '@solidjs/web': '2.0.0-rc.20', '@solidjs/signals': '2.0.0-rc.20',
+  '@solidjs/compiler': '2.0.0-rc.20', '@solidjs/babel-plugin': '2.0.0-rc.20',
   '@solidjs/vite-plugin': '3.0.0-next.51', '@babel/core': '7.29.6', '@types/node': '22.19.11', vite: '8.3.5', typescript: '5.9.3',
   '@tailwindcss/vite': '4.3.3', tailwindcss: '4.3.3',
 })
@@ -96,7 +96,7 @@ async function verifyConsumer(consumer) {
   const packageRoot = await realpath(resolve(consumer, 'node_modules/@seed-ship/mcp-ui-solid'))
   assert(packageRoot.startsWith((await realpath(consumer)) + sep), 'Package realpath escapes the isolated consumer')
   const installed = JSON.parse(await readFile(resolve(packageRoot, 'package.json'), 'utf8'))
-  assert.equal(installed.version, '8.0.0-solid2.0', 'Review harness pins for another preview version')
+  assert.equal(installed.version, '8.0.0-solid2.1', 'Review harness pins for another preview version')
   const req = createRequire(resolve(consumer, 'package.json')), actualPins = {}
   for (const [name, expected] of Object.entries(pins)) {
     let entry

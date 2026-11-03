@@ -86,11 +86,13 @@ export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
   const [eventCount, setEventCount] = createSignal(0)
   const [lastEvent, setLastEvent] = createSignal('')
 
-  const debugLog = (event: string, data?: any) => {
-    if (!props.debug) return
+  // Apply callbacks must not resolve host prop getters: a JSX conditional can
+  // create a memo when read. Pass an already-computed context instead.
+  const debugLog = (event: string, data: unknown, enabled: boolean | undefined, id: string) => {
+    if (!enabled) return
     setEventCount(c => c + 1)
     setLastEvent(event)
-    console.log(`[ScratchpadPanel:${props.state.id}] ${event}`, data || '')
+    console.log(`[ScratchpadPanel:${id}] ${event}`, data || '')
   }
 
   // ─── DX1: Proactive console messages (always, not just debug) ───
@@ -105,9 +107,18 @@ export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
   }
   let prevStatus = untrack(() => props.state.status)
 
+  // This is deliberately a mount-only snapshot. Owner-backed onSettled is a
+  // children-forbidden scope, so resolve lazy host getters during setup.
+  const created = untrack(() => ({
+    id: props.state.id,
+    sections: props.state.sections?.length || 0,
+    status: props.state.status,
+    pinned: props.pinned,
+  }))
+
   // Etape 1: create log
   onSettled(() => console.info(
-    `%c[MCP-UI] Scratchpad created%c id=${props.state.id} sections=${props.state.sections?.length || 0} status=${props.state.status}${props.pinned ? ' pinned=true' : ''}`,
+    `%c[MCP-UI] Scratchpad created%c id=${created.id} sections=${created.sections} status=${created.status}${created.pinned ? ' pinned=true' : ''}`,
     'color: #10b981; font-weight: bold', 'color: inherit'
   ))
 
@@ -136,7 +147,7 @@ export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
     if (!props.asyncAction && /^(try_alt:|retry|fetch|load)/.test(action)) {
       console.warn(`[MCP-UI] ScratchpadPanel: action '${action}' looks async but asyncAction prop is not set. The button will NOT show a loading state.`)
     }
-    debugLog('onAction', { action, asyncAction: props.asyncAction, data })
+    debugLog('onAction', { action, asyncAction: props.asyncAction, data }, props.debug, props.state.id)
     if (props.asyncAction && !CLOSE_ALIASES.has(action)) {
       setLoadingAction(action)
     }
@@ -147,9 +158,10 @@ export const ScratchpadPanel: Component<ScratchpadPanelProps> = (props) => {
   }
 
   // Debug: log state changes
-  createEffect(() => ({ status: props.state.status, sections: props.state.sections?.length,
-    filters: Object.keys(props.state.filters || {}), turn: props.state.turn }),
-    state => debugLog('state', state))
+  createEffect(() => ({ enabled: props.debug, id: props.state.id,
+    state: { status: props.state.status, sections: props.state.sections?.length,
+      filters: Object.keys(props.state.filters || {}), turn: props.state.turn } }),
+    ({ enabled, id, state }) => debugLog('state', state, enabled, id))
 
   // Auto-close on complete (unless pinned)
   createEffect(() => ({ status: props.state.status, delay: props.autoCloseDelay,

@@ -3,6 +3,7 @@ import { UIResourceRenderer } from '@seed-ship/mcp-ui-solid'
 import { SafeHtml } from '@seed-ship/mcp-ui-solid/src/components/SafeHtml.tsx'
 import type { UIComponent } from '@seed-ship/mcp-ui-solid/types'
 import './style.css'
+import { ScratchpadProbe } from './ScratchpadProbe'
 
 const text: UIComponent = { id: 'optional-text-item', type: 'text', position: { colStart: 1, colSpan: 12 }, params: { content: 'Optional consumer text', markdown: false } }
 const table: UIComponent = { id: 'optional-table-item', type: 'table', position: { colStart: 1, colSpan: 12 }, params: {
@@ -19,5 +20,6 @@ export default function OptionalApp() {
     <section id="optional-table"><UIResourceRenderer content={table} /></section>
     <section id="optional-graph"><UIResourceRenderer content={graph} /></section>
     <section id="source-fixture"><SafeHtml html={() => 'Optional source entry'} /></section>
+    <ScratchpadProbe />
   </main>
 }

@@ -2,21 +2,21 @@
 
 ## Solid 2 preview (unpublished)
 
-**Source preparation resumed on 2026-10-27:** RC.19, stable security carry-over
-and fresh qualification only. Keep PR #34 separate and review-only; no release dispatch,
+**Preview fix prepared on 2026-11-03:** RC.20 and Scratchpad lazy-prop regressions.
+Keep PR #34 separate and review-only; no release dispatch,
 staging, publication, merge or application installation is authorized.
-See the [current Deposium handoff](./docs/SOLID2-DEPOSIUM-HANDOFF-2026-10-27.md).
+See the [current Scratchpad/Deposium handoff](./docs/SOLID2-SCRATCHPAD-LAZY-PROPS-2026-11-03.md).
 The [pause/resumption handoff](./docs/SOLID2-PREVIEW-HANDOFF-2026-10-23.md)
 records the preserved source, checksums, known gaps and restart checklist.
 
-This branch prepares `8.0.0-solid2.0` as an **opt-in preview for a separate
+This branch prepares `8.0.0-solid2.1` as an **opt-in preview for a separate
 Solid 2 host**. The stable `7.x` line, including future `7.1.x` releases, remains
 Solid 1 on npm `latest`; Solid 2 belongs to `8.x` and the separate `solid2` tag.
-The `8.0.0-solid2.0` source version alone proves neither qualification nor
+The `8.0.0-solid2.1` source version alone proves neither qualification nor
 release approval: bind later proof to the exact source HEAD and archive. Zod is
 4.6.6 and Spec is 6.x. This is not a
-dual-runtime package: required peers are exactly `solid-js@2.0.0-rc.19` and
-`@solidjs/web@2.0.0-rc.19` (Node >=22.12.0). DOM types/imports move to
+dual-runtime package: required peers are exactly `solid-js@2.0.0-rc.20` and
+`@solidjs/web@2.0.0-rc.20` (Node >=22.12.0). DOM types/imports move to
 `@solidjs/web`; core and draft-store APIs come from `solid-js`.
 
 For any later host qualification, use an identified archive qualified from the
@@ -26,6 +26,12 @@ The [preview guide](./docs/SOLID2-PREVIEW.md) records the compiler/testing pins,
 optional peers, real-package qualification, consumer integration and rollback
 boundaries. Large-table virtualization uses optional
 `@tanstack/virtual-core@3.13.18`; the Solid 1 adapter is not compatible.
+
+Scratchpad `pinned` and `debug` may be ordinary reactive JSX conditionals.
+Lifecycle logging snapshots the initial props during setup; debug effects read
+props in compute and consume that snapshot in apply. Host-side memo hoisting is
+not required for this regression. The published `.0` targeted RC.19; `.1` targets
+RC.20 and needs its own successful CI/archive and release approval.
 
 Public component names, MCP wire payloads, HTML trust policy, callbacks and CSS
 tokens are retained. Imperative store/controller methods commit before returning;

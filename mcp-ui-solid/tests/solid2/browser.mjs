@@ -62,6 +62,23 @@ export async function qualifyBrowser({ url, resultDir, mode, profile = 'full' })
   try {
     await page.goto(url, { waitUntil: 'networkidle' })
     await page.waitForSelector('html[data-fixture-hydrated="true"]')
+    await check('Public tarball Scratchpad lazy host props, reactive pin, auto-close and unmount', async () => {
+      const panel = page.locator('#scratchpad-probe .mcp-ui-root')
+      await panel.waitFor()
+      assert(await panel.evaluate(element => element.classList.contains('sticky')), 'Initially pinned Scratchpad is not sticky')
+      await page.locator('#scratchpad-toggle-pin').click()
+      await page.waitForFunction(() => !document.querySelector('#scratchpad-probe .mcp-ui-root')?.classList.contains('sticky'))
+      await page.locator('#scratchpad-toggle-pin').click()
+      await page.waitForFunction(() => document.querySelector('#scratchpad-probe .mcp-ui-root')?.classList.contains('sticky'))
+      await page.locator('#scratchpad-toggle-debug').click()
+      await page.locator('#scratchpad-complete').click()
+      await page.waitForFunction(() => !document.querySelector('#scratchpad-probe .mcp-ui-root')?.classList.contains('sticky'))
+      await page.waitForFunction(() => document.getElementById('scratchpad-close-count')?.textContent === '1')
+      assert((await panel.innerText()).includes('last:state'), 'Conditional debug prop did not log the completed state')
+      await page.locator('#scratchpad-unmount').click()
+      await panel.waitFor({ state: 'detached' })
+      assert.equal(await page.locator('#scratchpad-close-count').innerText(), '1', 'Unmount changed the close count')
+    })
     if (profile === 'optional-absent') {
       await check('Real optional-absent browser graph: text/table/source and missing G6 fallback', async () => {
         assert(await page.evaluate(() => window.__mcpBrowserEvidence.ssrNode === document.getElementById('ssr-sentinel')))

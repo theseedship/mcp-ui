@@ -1,5 +1,9 @@
 # MCP UI → Deposium Solid 2 : handoff de préparation, 2026-10-27
 
+> Archive du portage RC.19 / preview `.0`. La préparation courante est RC.20 /
+> `8.0.0-solid2.1` : lire le [handoff Scratchpad du 2026-11-03](./SOLID2-SCRATCHPAD-LAZY-PROPS-2026-11-03.md).
+> Les résultats et commandes ci-dessous restent attachés à l'ancien candidat.
+
 ## Décision et périmètre
 
 Le mainteneur a explicitement repris la préparation du portage MCP UI pour
