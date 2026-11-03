@@ -144,16 +144,17 @@ maintainer rejection and correct restaging, not automatic tag repair.
 
 ## 3. Handoff to the ongoing Deposium migration
 
-Do not install the preview into the existing Solid 1 root application.
-The current target is the private isolated package `experiments/solid2-server`
-on Deposium branch `feat/solid2-server-integration`. Align the pilot runtime,
+Do not install the preview into a Solid 1 application. The application team
+chooses the current Solid 2 migration branch and package; the old experimental
+pilot path is historical, not an installation target. Align the host runtime,
 compiler and tooling coherently with the qualified RC.20 cohort before
-installing this package; the application team's migration is independent and
+installing this package. The application team's migration is independent and
 is not declared complete by MCPUI qualification.
-Pin the exact preview version and commit that pilot's independent lockfile.
+Pin the exact preview version and commit the host's own matching lockfile.
 
 The source preview includes `mcp-ui-solid/docs/SOLID2-PREVIEW.md` and
-`SOLID2-DEPOSIUM-HANDOFF-2026-10-27.md`. The real Deposium chat, bus, sources and
+the current `SOLID2-SCRATCHPAD-LAZY-PROPS-2026-11-03.md` handoff; the October 27
+handoff remains historical RC.19 provenance. The real Deposium chat, bus, sources and
 visualizations still need integration qualification. A local identified `.tgz`
 can be used without waiting for npm. Application staging is a later, separately
 authorized step; production is not authorized here. Rollback means the old
