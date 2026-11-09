@@ -3,8 +3,6 @@ import { createRequire } from 'node:module'
 import { writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
-const migration = /\[(?:STRICT_READ_UNTRACKED|REACTIVE_WRITE_IN_OWNED_SCOPE|EFFECT_RELAY_TEAR|EFFECT_WRITES_OWN_SOURCE|PRIMITIVE_IN_[A-Z_]+|MISSING_EFFECT_FN|NO_OWNER_[A-Z_]+|SSR_[A-Z_]+)\]|hydration|mismatch/i
-
 export async function qualifyBrowser({ url, mode, version, resultDir }) {
   const deps = process.env.MCP_THEME_BROWSER_DEPS
   assert(deps, 'Set MCP_THEME_BROWSER_DEPS to external node_modules containing playwright')
@@ -91,7 +89,7 @@ export async function qualifyBrowser({ url, mode, version, resultDir }) {
     }
     assert.deepEqual(report.externalRequests, [], 'External network request')
     assert.deepEqual(report.pageErrors, [], 'Browser runtime error')
-    assert.deepEqual(report.console.filter(entry => entry.type === 'error' || migration.test(entry.text)), [], 'Browser/migration diagnostics')
+    assert.deepEqual(report.console, [], 'Browser diagnostics (warnings and errors)')
     report.status = 'passed'
     return report
   } catch (error) { report.status = 'failed'; report.failure = error.stack || String(error); throw error }
