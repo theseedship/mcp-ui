@@ -187,15 +187,15 @@ for token setup, tags, and recovery of an interrupted release.
 | MCPUI Solid line | Host framework | npm channel | Release path |
 | --- | --- | --- | --- |
 | `7.x` (including future `7.1.x`) | Solid 1 | `latest` | Reviewed bump + stable Git tag, then npm staging and human 2FA approval |
-| `8.0.0-solid2.N` (next candidate: `8.0.0-solid2.1`) | Solid 2 | `solid2`, explicit opt-in | Manual review of the exact CI artifact; upload requires separate approval |
+| `8.0.0-solid2.N` (next candidate: `8.0.0-solid2.2`) | Solid 2 | `solid2`, explicit opt-in | Manual review of the exact CI artifact; upload requires separate approval |
 
 **Solid 2 preview:** a separate, manual
-[preview channel](./.github/SOLID2_PREVIEW_RELEASE.md) will check a new RC.20
-artifact for `.1` before any upload and preserves `latest`. The published `.0`
-remains on `solid2` until separate staging and npm 2FA approval for `.1`.
-Merging this infrastructure publishes nothing. The source stays on PR #34, not stable main.
-There is no need to publish `.1` while the host migration is unfinished. Install a
-future approved preview only in an isolated Solid 2 pilot. A future stable
+[preview channel](./.github/SOLID2_PREVIEW_RELEASE.md) currently binds the
+published `.1` RC.20 release and preserves `latest`. The next `.2` candidate
+needs a separately reviewed promotion-policy update, staging and npm 2FA
+approval; this qualification PR publishes nothing. The source stays on PR #34,
+not stable main. Install a future approved preview only in a coherent Solid 2
+host. A future stable
 `8.0.0` / `latest` switch requires another reviewed release-policy change.
 
 This monorepo contains three packages published under `@seed-ship/`:
