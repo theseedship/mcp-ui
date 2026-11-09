@@ -5,7 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [8.0.0-solid2.1] - Unreleased Solid 2 RC.20 preview
+## [8.0.0-solid2.2] - Unreleased KaTeX compatibility candidate
+
+### Changed
+
+- Accept only the explicitly qualified optional KaTeX versions `0.18.4 || 0.18.5`.
+  Keep the adapter, public exports, Solid RC.20 cohort, development KaTeX 0.18.4
+  baseline and other components unchanged. Add a genuine packed-consumer matrix
+  for both versions and for KaTeX absent, including SSR/hydration and Chromium.
+- Candidate channel is `solid2`; this source PR neither publishes nor moves any
+  dist-tag. The existing promotion policy still binds the published `.1` and
+  requires separate review before a future `.2` release.
+- This is compatibility qualification, not remediation of GHSA-238p-pmpm-9mq7
+  in direct 0.18.4 (already patched). Mermaid's older transitive KaTeX remains
+  an application-owned follow-up. See the dated KaTeX qualification handoff.
+
+## [8.0.0-solid2.1] - Published Solid 2 RC.20 preview
 
 ### Fixed
 

@@ -1,11 +1,11 @@
 # MCP UI Components
 
-> **Solid 2 preview update — 2026-11-03.** Target RC.20 and carry
-> the stable Zod 4 / fast-uri fixes; PR #34 is for review only. No merge, release
-> dispatch, npm publication or Deposium change is authorized. See the
-> [current Scratchpad/Deposium handoff](./mcp-ui-solid/docs/SOLID2-SCRATCHPAD-LAZY-PROPS-2026-11-03.md).
+> **KaTeX qualification candidate — 2026-11-09.** Based on published Solid 2
+> `8.0.0-solid2.1` (`f2efd50`), with the same RC.20 cohort and renderers.
+> Only KaTeX `0.18.4 || 0.18.5` is accepted; future versions are not qualified.
+> See the [candidate and host handoff](./mcp-ui-solid/docs/KATEX-COMPATIBILITY-2026-11-09.md).
 
-> This branch prepares the isolated **Solid 2 preview**, `8.0.0-solid2.1`,
+> This branch prepares the isolated **Solid 2 preview**, `8.0.0-solid2.2`,
 > not a published release. Stable **7.x remains Solid 1** (`latest`), including
 > future `7.1.x` releases; **8.x targets Solid 2** (`solid2`, opt-in).
 > The old 7.x preview archive cannot qualify the new 8.x package. Do not install
