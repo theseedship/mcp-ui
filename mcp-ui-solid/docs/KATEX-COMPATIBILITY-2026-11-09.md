@@ -13,9 +13,11 @@ adapter, public exports, Solid/core/web/signals/compiler/Babel RC.20 cohort,
 Vite plugin next.51, lockfile, Spec 6.0.0 and CLI 5.0.2 remain unchanged.
 
 This PR does not publish/stage anything or move `latest`. The trusted preview
-release policy and older generic Solid 2 harness still bind `.1`; a future
-`.2` promotion needs a separately reviewed policy/qualification update, after
-this candidate is validated. Do not merge the full Solid 2 port into main or
+release policy still binds `.1`; a future `.2` promotion needs a separately
+reviewed policy/qualification update, after this candidate is validated. The
+generic source CI/harness identity follows `.2`, so merging the focused PR into
+the Solid 2 branch does not leave a stale tarball filename/version check.
+Do not merge the full Solid 2 port into main or
 push a preview Git tag to obtain a build.
 
 ## Qualification contract

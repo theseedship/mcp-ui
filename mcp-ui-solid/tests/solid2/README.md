@@ -1,6 +1,6 @@
 # Solid 2 clean-tarball qualification
 
-The current source candidate is `8.0.0-solid2.1` for the opt-in Solid 2 `solid2`
+The current source candidate is `8.0.0-solid2.2` for the opt-in Solid 2 `solid2`
 channel. Stable `7.x` / `latest` remains Solid 1. The version string alone is
 not qualification or release proof: qualify the exact source HEAD and archive.
 The old `7.0.0-solid2.0` archive and checksum cannot qualify this candidate.
@@ -41,7 +41,7 @@ Run after the library has been built and the maintainer supplies its tarball:
 
 ```sh
 node mcp-ui-solid/tests/solid2/run.mjs prepare \
-  --tarball /absolute/artifacts/seed-ship-mcp-ui-solid-8.0.0-solid2.1.tgz \
+  --tarball /absolute/artifacts/seed-ship-mcp-ui-solid-8.0.0-solid2.2.tgz \
   --spec-tarball /absolute/artifacts/seed-ship-mcp-ui-spec-6.0.0.tgz \
   --consumer /home/nico/worktrees/mcp-ui-solid2-consumer-full \
   --profile full
