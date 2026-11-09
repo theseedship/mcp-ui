@@ -1,6 +1,6 @@
 {
   "name": "@seed-ship/mcp-ui-solid",
-  "version": "8.0.0-solid2.1",
+  "version": "8.0.0-solid2.2",
   "description": "SolidJS components for rendering MCP-generated UI resources",
   "type": "module",
   "files": [
@@ -17,6 +17,7 @@
     "docs/SOLID2-PREVIEW-HANDOFF-2026-10-23.md",
     "docs/SOLID2-DEPOSIUM-HANDOFF-2026-10-27.md",
     "docs/SOLID2-SCRATCHPAD-LAZY-PROPS-2026-11-03.md",
+    "docs/KATEX-COMPATIBILITY-2026-11-09.md",
     "docs/ZOD4-STABLE-MIGRATION-2026-10-26.md",
     "LICENSE"
   ],
@@ -253,7 +254,7 @@
     "chart.js": "^4.0.0",
     "chartjs-plugin-zoom": "^2.0.0",
     "highlight.js": "^11.9.0",
-    "katex": "0.18.4",
+    "katex": "0.18.4 || 0.18.5",
     "leaflet": "^1.9.4",
     "leaflet.markercluster": "^1.5.0",
     "protomaps-leaflet": "^4.0.0",

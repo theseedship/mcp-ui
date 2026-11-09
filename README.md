@@ -1,11 +1,11 @@
 # MCP UI Components
 
-> **Solid 2 preview update — 2026-11-03.** Target RC.20 and carry
-> the stable Zod 4 / fast-uri fixes; PR #34 is for review only. No merge, release
-> dispatch, npm publication or Deposium change is authorized. See the
-> [current Scratchpad/Deposium handoff](./mcp-ui-solid/docs/SOLID2-SCRATCHPAD-LAZY-PROPS-2026-11-03.md).
+> **KaTeX qualification candidate — 2026-11-09.** Based on published Solid 2
+> `8.0.0-solid2.1` (`f2efd50`), with the same RC.20 cohort and renderers.
+> Only KaTeX `0.18.4 || 0.18.5` is accepted; future versions are not qualified.
+> See the [candidate and host handoff](./mcp-ui-solid/docs/KATEX-COMPATIBILITY-2026-11-09.md).
 
-> This branch prepares the isolated **Solid 2 preview**, `8.0.0-solid2.1`,
+> This branch prepares the isolated **Solid 2 preview**, `8.0.0-solid2.2`,
 > not a published release. Stable **7.x remains Solid 1** (`latest`), including
 > future `7.1.x` releases; **8.x targets Solid 2** (`solid2`, opt-in).
 > The old 7.x preview archive cannot qualify the new 8.x package. Do not install
@@ -187,15 +187,15 @@ for token setup, tags, and recovery of an interrupted release.
 | MCPUI Solid line | Host framework | npm channel | Release path |
 | --- | --- | --- | --- |
 | `7.x` (including future `7.1.x`) | Solid 1 | `latest` | Reviewed bump + stable Git tag, then npm staging and human 2FA approval |
-| `8.0.0-solid2.N` (next candidate: `8.0.0-solid2.1`) | Solid 2 | `solid2`, explicit opt-in | Manual review of the exact CI artifact; upload requires separate approval |
+| `8.0.0-solid2.N` (next candidate: `8.0.0-solid2.2`) | Solid 2 | `solid2`, explicit opt-in | Manual review of the exact CI artifact; upload requires separate approval |
 
 **Solid 2 preview:** a separate, manual
-[preview channel](./.github/SOLID2_PREVIEW_RELEASE.md) will check a new RC.20
-artifact for `.1` before any upload and preserves `latest`. The published `.0`
-remains on `solid2` until separate staging and npm 2FA approval for `.1`.
-Merging this infrastructure publishes nothing. The source stays on PR #34, not stable main.
-There is no need to publish `.1` while the host migration is unfinished. Install a
-future approved preview only in an isolated Solid 2 pilot. A future stable
+[preview channel](./.github/SOLID2_PREVIEW_RELEASE.md) currently binds the
+published `.1` RC.20 release and preserves `latest`. The next `.2` candidate
+needs a separately reviewed promotion-policy update, staging and npm 2FA
+approval; this qualification PR publishes nothing. The source stays on PR #34,
+not stable main. Install a future approved preview only in a coherent Solid 2
+host. A future stable
 `8.0.0` / `latest` switch requires another reviewed release-policy change.
 
 This monorepo contains three packages published under `@seed-ship/`:

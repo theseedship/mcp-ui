@@ -2,17 +2,18 @@
 
 ## Solid 2 preview (unpublished)
 
-**Preview fix prepared on 2026-11-03:** RC.20 and Scratchpad lazy-prop regressions.
-Keep PR #34 separate and review-only; no release dispatch,
-staging, publication, merge or application installation is authorized.
-See the [current Scratchpad/Deposium handoff](./docs/SOLID2-SCRATCHPAD-LAZY-PROPS-2026-11-03.md).
+**KaTeX candidate prepared on 2026-11-09:** based on published `.1`, with the
+same RC.20 cohort and Scratchpad fix. This qualification PR does not authorize
+staging, publication, a dist-tag change or application installation.
+See the [current KaTeX/Deposium handoff](./docs/KATEX-COMPATIBILITY-2026-11-09.md).
+The [Scratchpad handoff](./docs/SOLID2-SCRATCHPAD-LAZY-PROPS-2026-11-03.md) records the prior fix.
 The [pause/resumption handoff](./docs/SOLID2-PREVIEW-HANDOFF-2026-10-23.md)
 records the preserved source, checksums, known gaps and restart checklist.
 
-This branch prepares `8.0.0-solid2.1` as an **opt-in preview for a separate
+This branch prepares `8.0.0-solid2.2` as an **opt-in preview for a separate
 Solid 2 host**. The stable `7.x` line, including future `7.1.x` releases, remains
 Solid 1 on npm `latest`; Solid 2 belongs to `8.x` and the separate `solid2` tag.
-The `8.0.0-solid2.1` source version alone proves neither qualification nor
+The `8.0.0-solid2.2` source version alone proves neither qualification nor
 release approval: bind later proof to the exact source HEAD and archive. Zod is
 4.6.6 and Spec is 6.x. This is not a
 dual-runtime package: required peers are exactly `solid-js@2.0.0-rc.20` and
@@ -30,8 +31,8 @@ boundaries. Large-table virtualization uses optional
 Scratchpad `pinned` and `debug` may be ordinary reactive JSX conditionals.
 Lifecycle logging snapshots the initial props during setup; debug effects read
 props in compute and consume that snapshot in apply. Host-side memo hoisting is
-not required for this regression. The published `.0` targeted RC.19; `.1` targets
-RC.20 and needs its own successful CI/archive and release approval.
+not required for this regression. The published `.0` targeted RC.19; `.1` and
+the `.2` candidate target RC.20. Each release needs its own CI/archive approval.
 
 Public component names, MCP wire payloads, HTML trust policy, callbacks and CSS
 tokens are retained. Imperative store/controller methods commit before returning;
@@ -115,7 +116,7 @@ currency guards and sanitized MathML output. No change without a provider;
 Install the optional peer only if the host wants the supplied KaTeX adapter:
 
 ```bash
-pnpm add --save-exact katex@0.18.4
+pnpm add --save-exact katex@0.18.5
 ```
 
 ```tsx
@@ -127,9 +128,11 @@ import { renderKatexMath } from '@seed-ship/mcp-ui-solid/plugins/katex'
 </MCPUIMathProvider>
 ```
 
-The adapter's optional peer is pinned to 0.18.4 to retain Node 20 installation
-compatibility. KaTeX 0.18.5–0.18.7 pull in Commander 15 (Node >=22.12);
-do not replace the pin with a caret range on Node 20.
+The candidate's optional peer explicitly accepts `0.18.4 || 0.18.5`, not a
+caret or an untested future range. Its development baseline remains 0.18.4.
+KaTeX 0.18.5 pulls in Commander 15 (Node >=22.12); use the host's supported
+Node version before upgrading. This does not change MCPUI's Solid RC.20 cohort.
+See the [version-specific qualification and Deposium handoff](./docs/KATEX-COMPATIBILITY-2026-11-09.md).
 
 The provider applies to `text` with `markdown: true` and string-valued table
 cells, including virtualized rows. It recognizes `$...$` inline and `$$...$$`
