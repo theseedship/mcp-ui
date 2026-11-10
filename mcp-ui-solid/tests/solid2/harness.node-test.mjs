@@ -23,6 +23,11 @@ test('full host pins runtime/compiler and explicit optional engines without work
   for (const [key, value] of Object.entries(enginePins)) assert.equal(manifest.dependencies[key], value)
   assert(!JSON.stringify(manifest).includes('workspace:'))
 })
+
+test('production consumer explicitly retains the client manifest inspected by the runner', async () => {
+  const config = await readFile(new URL('./consumer/vite.config.ts', import.meta.url), 'utf8')
+  assert.match(config, /build:\s*\{\s*manifest:\s*true\s*\}/)
+})
 test('optional-absent host declares no optional engines and fixes Spec version', () => {
   const manifest = manifestFor('/durable/solid.tgz', undefined, 'optional-absent')
   for (const key of Object.keys(enginePins)) assert.equal(manifest.dependencies[key], undefined)

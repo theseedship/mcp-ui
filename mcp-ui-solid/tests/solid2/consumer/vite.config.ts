@@ -13,6 +13,9 @@ const nestedCommonJS = ['leaflet', 'leaflet.markercluster', '@antv/g6', 'highlig
 
 export default defineConfig({
   plugins: [solid({ start: { nodeServer: true, middleware: './src/middleware.ts' }, ssr: true }), tailwind()],
+  // next.57 otherwise removes the internally owned manifest after SSR embeds it.
+  // Keep it explicitly so qualification can inspect the real client build output.
+  build: { manifest: true },
   // Compile the package's public `solid` source condition for both SSR and
   // hydration. No source aliases and no access to the library workspace.
   ssr: { noExternal: ['@seed-ship/mcp-ui-solid', '@seed-ship/mcp-ui-spec'] },

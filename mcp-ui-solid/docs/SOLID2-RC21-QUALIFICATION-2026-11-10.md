@@ -39,6 +39,9 @@ Existing diagnostic gates remain strict; the new RC.21
 regression. Browser math qualification rejects all console warnings/errors.
 The next.57 consumer fixtures use `start.nodeServer`, replacing the removed
 `start.node` option; the middleware contract remains `(event, next)`.
+The full consumer explicitly sets `build.manifest: true` to retain the client
+manifest inspected by qualification; next.57 otherwise removes this internal
+metadata after embedding it in the server. The manifest assertion is retained.
 Both runners await log finalization before checking SSR diagnostics, with
 delayed-write regressions, so late diagnostics cannot escape the gate.
 Do not mask diagnostics or widen peers to an untested RC range to get a pass.
