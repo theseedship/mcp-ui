@@ -19,13 +19,29 @@ const SOURCE_SHA = '271e92434696f14ba0fdaaa3e91b242819820a16';
 const TARBALL_SHA = 'a'.repeat(64);
 const OTHER_SHA = 'b'.repeat(64);
 const PACKAGE = '@seed-ship/mcp-ui-solid';
-const VERSION = '8.0.0-solid2.1';
+const VERSION = '8.0.0-solid2.3';
 const SPEC_SHA = 'c'.repeat(64);
 const RUNTIME_PINS = {
-  'solid-js': '2.0.0-rc.20', '@solidjs/web': '2.0.0-rc.20', '@solidjs/signals': '2.0.0-rc.20',
-  '@solidjs/compiler': '2.0.0-rc.20', '@solidjs/babel-plugin': '2.0.0-rc.20',
-  '@solidjs/vite-plugin': '3.0.0-next.51',
+  'solid-js': '2.0.0-rc.21', '@solidjs/web': '2.0.0-rc.21', '@solidjs/signals': '2.0.0-rc.21',
+  '@solidjs/compiler': '2.0.0-rc.21', '@solidjs/babel-plugin': '2.0.0-rc.21',
+  '@solidjs/vite-plugin': '3.0.0-next.57',
 };
+const MATH_PINS = { ...RUNTIME_PINS, '@babel/core': '7.29.6', '@types/node': '22.19.11',
+  vite: '8.3.5', typescript: '5.9.3' };
+const MATH_VERSIONS = ['0.18.4', '0.18.5', 'absent'];
+const MATH_ADAPTER_CHECKS = ['inline fraction', 'subscript', 'display fraction', 'matrix',
+  'invalid TeX returns null', 'macro scope does not leak', 'recursive macro is bounded',
+  'untrusted commands emit no active resource or markup', 'oversized dimensions are clamped'];
+const mathProbeChecks = version => version === 'absent'
+  ? ['public ESM root', 'public CJS root', 'absent peer: only plugin ESM fails for missing katex',
+    'absent peer: only plugin CJS fails for missing katex']
+  : ['public ESM root', 'public CJS root', 'public ESM/CJS plugin exports',
+    ...['ESM', 'CJS'].flatMap(format => MATH_ADAPTER_CHECKS.map(check => `${format}: ${check}`))];
+const mathBrowserChecks = version => ['SSR sentinel preserved across hydration',
+  ...(version === 'absent' ? ['root renderer works without KaTeX and leaves source literal'] : [
+    'client upgrades text and table to sanitized MathML',
+    'malformed TeX, currency, and hostile source remain inert',
+    'browser preserves expansion and dimension limits', 'reactive source update and unmount'])];
 const PUBLIC_ENTRIES = {
   '.': 'index', './components': 'components', './hooks': 'hooks', './types': 'types',
   './validation': 'validation', './types-only': 'types-export', './adapters': 'adapters',
@@ -92,7 +108,9 @@ function manifest(overrides = {}) {
     module: './dist/index.js',
     types: './dist/index.d.ts',
     exports: { '.': { solid: './src/index.ts', import: './dist/index.js', require: './dist/index.cjs' } },
-    peerDependencies: { 'solid-js': RUNTIME_PINS['solid-js'], '@solidjs/web': RUNTIME_PINS['@solidjs/web'] },
+    peerDependencies: { 'solid-js': RUNTIME_PINS['solid-js'], '@solidjs/web': RUNTIME_PINS['@solidjs/web'],
+      katex: '0.18.4 || 0.18.5' },
+    peerDependenciesMeta: { katex: { optional: true } },
     dependencies: { '@seed-ship/mcp-ui-spec': '^6.0.0' },
     ...overrides,
   };
@@ -188,6 +206,22 @@ function probe(profile) {
   };
 }
 
+function mathReport(version) {
+  const input = { version, tarball: { path: `/fixture/seed-ship-mcp-ui-solid-${VERSION}.tgz`, sha256: TARBALL_SHA },
+    spec: { path: '/fixture/seed-ship-mcp-ui-spec-6.0.0.tgz', sha256: SPEC_SHA }, pins: { ...MATH_PINS } };
+  const mode = name => ({ mode: name, version, browser: 'fixture-chromium', status: 'passed',
+    checks: mathBrowserChecks(version), console: [], pageErrors: [], externalRequests: [],
+    counts: version === 'absent' ? {} : { total: 6, text: 3, table: 3, block: 1, fraction: 2,
+      subscript: 2, matrix: 2, positiveGeometry: 6, annotations: 0, htmlLayout: 0, forbidden: 0 } });
+  return { status: 'passed', input, installedVersion: VERSION, peer: '0.18.4 || 0.18.5',
+    optional: true, actualPins: { ...MATH_PINS }, pluginKatexVersion: version === 'absent' ? null : version,
+    modes: { dev: mode('dev'), production: mode('production') } };
+}
+
+function mathProbe(version) {
+  return { version, status: 'passed', checks: mathProbeChecks(version) };
+}
+
 async function qualification(t, change = () => {}) {
   const dir = await temp(t);
   const evidence = {
@@ -199,6 +233,7 @@ async function qualification(t, change = () => {}) {
       publicDefaults: Object.fromEntries(Object.entries(PUBLIC_ENTRIES).map(([entry, stem]) => [entry, `./dist/${stem}.js`])),
       modes: { dev: mode('full', true), production: mode('full', true) },
     },
+    math: Object.fromEntries(MATH_VERSIONS.map(version => [version, mathReport(version)])),
   };
   change(evidence);
   for (const [key, profile] of [['full', 'full'], ['absent', 'optional-absent']]) {
@@ -211,6 +246,13 @@ async function qualification(t, change = () => {}) {
   }
   if (evidence.compiled) {
     await json(join(dir, 'mcpui-solid2-full', 'dist-client-probe', 'fixture', 'report.json'), evidence.compiled);
+  }
+  for (const [version, report] of Object.entries(evidence.math)) {
+    const consumer = join(dir, `mcpui-katex-${version}`);
+    await json(join(consumer, 'qualification-results', 'fixture', 'report.json'), report);
+    await json(join(consumer, 'qualification-input.json'), report.input);
+    await json(join(consumer, 'import-probe-result.json'), mathProbe(version));
+    await writeFile(join(consumer, 'pnpm-lock.yaml'), 'lockfileVersion: 9.0\n');
   }
   return dir;
 }
@@ -228,6 +270,10 @@ async function promotionArtifact(t, { includeSpec = true, specVersion = '6.0.0',
       evidence[profile].input.spec.sha256 = reportSpecSha ?? spec.sha;
     }
     evidence.compiled.tarball.sha256 = solid.sha;
+    for (const report of Object.values(evidence.math)) {
+      report.input.tarball.sha256 = solid.sha;
+      report.input.spec.sha256 = reportSpecSha ?? spec.sha;
+    }
   });
   await writeFile(join(dir, `seed-ship-mcp-ui-solid-${VERSION}.tgz`), await readFile(solid.file));
   if (includeSpec) await writeFile(join(dir, 'seed-ship-mcp-ui-spec-6.0.0.tgz'), await readFile(spec.file));
@@ -379,7 +425,9 @@ for (const [name, packageJson] of [
   ['Solid1 peer', manifest({ peerDependencies: { 'solid-js': '^1.9.0', '@solidjs/web': RUNTIME_PINS['@solidjs/web'] } })],
   ['RC18 peer', manifest({ peerDependencies: { 'solid-js': '2.0.0-rc.18', '@solidjs/web': '2.0.0-rc.18' } })],
   ['old RC19 peers', manifest({ peerDependencies: { 'solid-js': '2.0.0-rc.19', '@solidjs/web': '2.0.0-rc.19' } })],
-  ['mixed RC19 and RC20 peers', manifest({ peerDependencies: { 'solid-js': '2.0.0-rc.19', '@solidjs/web': RUNTIME_PINS['@solidjs/web'] } })],
+  ['mixed RC20 and RC21 peers', manifest({ peerDependencies: { 'solid-js': '2.0.0-rc.20', '@solidjs/web': RUNTIME_PINS['@solidjs/web'] } })],
+  ['old KaTeX-only peer', manifest({ peerDependencies: { ...manifest().peerDependencies, katex: '0.18.4' } })],
+  ['nonoptional KaTeX peer', manifest({ peerDependenciesMeta: { katex: { optional: false } } })],
   ['old Spec floor', manifest({ dependencies: { '@seed-ship/mcp-ui-spec': '^5.7.0' } })],
   ['workspace runtime dependency', manifest({ dependencies: { '@seed-ship/mcp-ui-spec': 'workspace:^6.0.0' } })],
   ['publishConfig latest override', manifest({ publishConfig: { tag: 'latest' } })],
@@ -396,7 +444,7 @@ test('requires successful source and compiled-browser qualification of the same 
 });
 
 for (const [name, options, passes] of [
-  ['matching RC20, Spec 6 and CLI 5.0.2 fixtures', {}, true],
+  ['matching RC21, KaTeX matrix, Spec 6 and CLI 5.0.2 fixtures', {}, true],
   ['missing Spec 6 fixture', { includeSpec: false }, false],
   ['Spec fixture with old manifest', { specVersion: '5.7.0' }, false],
   ['Spec fixture hash forged in profile evidence', { reportSpecSha: OTHER_SHA }, false],
@@ -432,7 +480,7 @@ for (const [name, mutate] of [
   ['source report bound to different archive', (e) => { e.absent.input.tarball.sha256 = OTHER_SHA; }],
   ['published preview version in profile report', (e) => { e.full.version = '8.0.0-solid2.0'; }],
   ['prepared old RC19 runtime', (e) => { e.full.input.pins['solid-js'] = '2.0.0-rc.19'; }],
-  ['installed mixed RC19/RC20 cohort', (e) => { e.full.actualPins['@solidjs/compiler'] = '2.0.0-rc.19'; }],
+  ['installed mixed RC20/RC21 cohort', (e) => { e.full.actualPins['@solidjs/compiler'] = '2.0.0-rc.20'; }],
   ['wrong installed plugin', (e) => { e.absent.actualPins['@solidjs/vite-plugin'] = '3.0.0-next.50'; }],
   ['missing installed cohort proof', (e) => { delete e.full.actualPins; }],
   ['wrong Spec fixture hash', (e) => { e.full.input.spec.sha256 = OTHER_SHA; }],
@@ -443,12 +491,57 @@ for (const [name, mutate] of [
   ['missing compiled-browser report', (e) => { delete e.compiled; }],
   ['compiled-browser diagnostic', (e) => { e.compiled.modes.production.diagnostics = ['STRICT_READ_UNTRACKED']; }],
   ['compiled-browser source substitution', (e) => { e.compiled.modes.dev.compiledModules = ['/fixture/src/index.ts']; }],
+  ['missing KaTeX 0.18.5 profile', (e) => { delete e.math['0.18.5']; }],
+  ['failed KaTeX production browser', (e) => { e.math['0.18.4'].modes.production.status = 'failed'; }],
+  ['KaTeX report bound to another Solid tarball', (e) => { e.math['0.18.5'].input.tarball.sha256 = OTHER_SHA; }],
+  ['KaTeX report bound to another Spec fixture', (e) => { e.math.absent.input.spec.sha256 = OTHER_SHA; }],
+  ['KaTeX wrong installed package', (e) => { e.math['0.18.4'].installedVersion = '8.0.0-solid2.2'; }],
+  ['KaTeX wrong peer range', (e) => { e.math['0.18.5'].peer = '0.18.4'; }],
+  ['KaTeX peer not optional', (e) => { e.math.absent.optional = false; }],
+  ['KaTeX plugin resolved another version', (e) => { e.math['0.18.4'].pluginKatexVersion = '0.18.5'; }],
+  ['KaTeX prepared old cohort', (e) => { e.math['0.18.4'].input.pins['solid-js'] = '2.0.0-rc.20'; }],
+  ['KaTeX installed old cohort', (e) => { e.math['0.18.5'].actualPins['@solidjs/compiler'] = '2.0.0-rc.20'; }],
+  ['KaTeX browser warning', (e) => { e.math['0.18.5'].modes.dev.console = [{ type: 'warning', text: 'hydration' }]; }],
+  ['KaTeX browser external request', (e) => { e.math.absent.modes.dev.externalRequests = ['https://example.test']; }],
+  ['KaTeX missing math geometry', (e) => { e.math['0.18.4'].modes.dev.counts.positiveGeometry = 0; }],
 ]) {
   test(`qualification rejects ${name}`, async (t) => {
     const dir = await qualification(t, mutate);
     await assert.rejects(() => verifyQualification(dir, TARBALL_SHA, SPEC_SHA));
   });
 }
+
+test('qualification rejects duplicate KaTeX profile reports', async (t) => {
+  const dir = await qualification(t);
+  await json(join(dir, 'mcpui-katex-0.18.4', 'qualification-results', 'duplicate', 'report.json'), mathReport('0.18.4'));
+  await assert.rejects(() => verifyQualification(dir, TARBALL_SHA, SPEC_SHA));
+});
+
+test('qualification rejects KaTeX evidence outside its fixed consumer root', async (t) => {
+  const dir = await qualification(t);
+  await json(join(dir, 'mcpui-katex-unreviewed', 'qualification-results', 'fixture', 'report.json'), mathReport('0.18.4'));
+  await assert.rejects(() => verifyQualification(dir, TARBALL_SHA, SPEC_SHA));
+});
+
+test('qualification rejects unknown report directories instead of ignoring them', async (t) => {
+  const dir = await qualification(t);
+  await json(join(dir, 'unreviewed', 'report.json'), { status: 'passed' });
+  await assert.rejects(() => verifyQualification(dir, TARBALL_SHA, SPEC_SHA));
+});
+
+for (const missing of ['qualification-input.json', 'import-probe-result.json', 'pnpm-lock.yaml']) {
+  test(`qualification rejects a missing KaTeX ${missing}`, async (t) => {
+    const dir = await qualification(t);
+    await rm(join(dir, 'mcpui-katex-0.18.5', missing));
+    await assert.rejects(() => verifyQualification(dir, TARBALL_SHA, SPEC_SHA));
+  });
+}
+
+test('qualification rejects a failed KaTeX ESM/CJS import probe', async (t) => {
+  const dir = await qualification(t);
+  await json(join(dir, 'mcpui-katex-0.18.4', 'import-probe-result.json'), { version: '0.18.4', status: 'failed', checks: [] });
+  await assert.rejects(() => verifyQualification(dir, TARBALL_SHA, SPEC_SHA));
+});
 
 test('qualification does not follow evidence symlinks outside its directory', async (t) => {
   const dir = await qualification(t);
@@ -505,9 +598,9 @@ test('only the protected stage step receives the npm token, with fixed bytes/tag
   assert.match(stage, /working-directory: \$\{\{ runner\.temp \}\}\/solid2-stage-empty/);
   assert.match(stage, /NPM_CONFIG_IGNORE_SCRIPTS: 'true'/);
   assert.match(stage, /NPM_CONFIG_GLOBALCONFIG: \/dev\/null/);
-  assert.match(stage, /npm stage publish "\$RUNNER_TEMP\/solid2-reviewed\/seed-ship-mcp-ui-solid-8\.0\.0-solid2\.1\.tgz" --access public --tag solid2 --ignore-scripts --registry=https:\/\/registry\.npmjs\.org --json/);
-  assert.match(workflow, /index\("8\.0\.0-solid2\.1"\) == null/);
-  assert.doesNotMatch(workflow, /8\.0\.0-solid2\.0/);
+  assert.match(stage, /npm stage publish "\$RUNNER_TEMP\/solid2-reviewed\/seed-ship-mcp-ui-solid-8\.0\.0-solid2\.3\.tgz" --access public --tag solid2 --ignore-scripts --registry=https:\/\/registry\.npmjs\.org --json/);
+  assert.match(workflow, /index\("8\.0\.0-solid2\.3"\) == null/);
+  assert.doesNotMatch(workflow, /8\.0\.0-solid2\.[012]/);
   assert.doesNotMatch(stage, /--tag\s+["']?\$|\bnpm (?:install|ci|run|exec)\b|\bpnpm\b/);
   const latestGuard = blocks.find((block) => block.includes('Verify latest even when the staging command failed'));
   assert.ok(latestGuard);

@@ -10,7 +10,7 @@ import { gunzipSync } from 'node:zlib'
 
 export const POLICY = Object.freeze({
   repository: 'theseedship/mcp-ui', sourceBranch: 'feat/solid2-preview', sourcePr: 34,
-  packageName: '@seed-ship/mcp-ui-solid', version: '8.0.0-solid2.1', tag: 'solid2',
+  packageName: '@seed-ship/mcp-ui-solid', version: '8.0.0-solid2.3', tag: 'solid2',
   artifactName: 'solid2-preview-qualification', workflowPath: '.github/workflows/ci.yml',
 })
 const sha = value => typeof value === 'string' && /^[a-f0-9]{40}$/.test(value)
@@ -21,10 +21,26 @@ const solidFilename = `seed-ship-mcp-ui-solid-${POLICY.version}.tgz`
 const specFilename = 'seed-ship-mcp-ui-spec-6.0.0.tgz'
 const cliFilename = 'seed-ship-mcp-ui-cli-5.0.2.tgz'
 const runtimePins = Object.freeze({
-  'solid-js': '2.0.0-rc.20', '@solidjs/web': '2.0.0-rc.20', '@solidjs/signals': '2.0.0-rc.20',
-  '@solidjs/compiler': '2.0.0-rc.20', '@solidjs/babel-plugin': '2.0.0-rc.20',
-  '@solidjs/vite-plugin': '3.0.0-next.51',
+  'solid-js': '2.0.0-rc.21', '@solidjs/web': '2.0.0-rc.21', '@solidjs/signals': '2.0.0-rc.21',
+  '@solidjs/compiler': '2.0.0-rc.21', '@solidjs/babel-plugin': '2.0.0-rc.21',
+  '@solidjs/vite-plugin': '3.0.0-next.57',
 })
+const mathPins = Object.freeze({ ...runtimePins, '@babel/core': '7.29.6', '@types/node': '22.19.11',
+  vite: '8.3.5', typescript: '5.9.3' })
+const mathVersions = ['0.18.4', '0.18.5', 'absent']
+const mathAdapterChecks = ['inline fraction', 'subscript', 'display fraction', 'matrix',
+  'invalid TeX returns null', 'macro scope does not leak', 'recursive macro is bounded',
+  'untrusted commands emit no active resource or markup', 'oversized dimensions are clamped']
+const mathProbeChecks = version => version === 'absent'
+  ? ['public ESM root', 'public CJS root', 'absent peer: only plugin ESM fails for missing katex',
+    'absent peer: only plugin CJS fails for missing katex']
+  : ['public ESM root', 'public CJS root', 'public ESM/CJS plugin exports',
+    ...['ESM', 'CJS'].flatMap(format => mathAdapterChecks.map(check => `${format}: ${check}`))]
+const mathBrowserChecks = version => ['SSR sentinel preserved across hydration',
+  ...(version === 'absent' ? ['root renderer works without KaTeX and leaves source literal'] : [
+    'client upgrades text and table to sanitized MathML',
+    'malformed TeX, currency, and hostile source remain inert',
+    'browser preserves expansion and dimension limits', 'reactive source update and unmount'])]
 const publicEntries = { '.': 'index', './components': 'components', './hooks': 'hooks', './types': 'types',
   './validation': 'validation', './types-only': 'types-export', './adapters': 'adapters',
   './adapters/presentation': 'adapters/presentation', './plugins/duckdb': 'plugins/duckdb', './plugins/katex': 'plugins/katex' }
@@ -134,6 +150,8 @@ function validateManifest(manifest, files) {
     assert.equal(manifest.peerDependencies?.[peer], runtimePins[peer], `Unexpected ${peer} peer`)
     assert.notEqual(manifest.peerDependenciesMeta?.[peer]?.optional, true, 'Solid runtime cannot be optional')
   }
+  assert.equal(manifest.peerDependencies?.katex, '0.18.4 || 0.18.5', 'Unexpected KaTeX peer')
+  assert.equal(manifest.peerDependenciesMeta?.katex?.optional, true, 'KaTeX peer must be optional')
   assert.equal(manifest.dependencies?.['@seed-ship/mcp-ui-spec'], '^6.0.0', 'Unexpected Spec dependency floor')
   for (const group of ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies']) {
     for (const value of Object.values(manifest[group] || {})) {
@@ -210,11 +228,56 @@ export async function verifyQualification(directory, sha256, specSha256) {
   assert(digest(specSha256), 'Invalid Spec fixture SHA-256')
   directory = resolve(directory)
   const reports = (await walk(resolve(directory))).filter(file => basename(file) === 'report.json')
-  const core = new Map(), compiled = []
+  const core = new Map(), compiled = [], math = new Map()
   for (const file of reports) {
-    if (!file.includes(`${sep}qualification-results${sep}`) && !file.includes(`${sep}dist-client-probe${sep}`)) continue
+    assert(file.includes(`${sep}qualification-results${sep}`) || file.includes(`${sep}dist-client-probe${sep}`),
+      'Unexpected qualification report path')
     const report = await json(file)
     assert.equal(report.status, 'passed', 'Qualification report is not passed')
+    if (file.includes(`${sep}mcpui-katex-`)) {
+      const version = report.input?.version
+      assert(mathVersions.includes(version) && !math.has(version), 'Missing, duplicate or unexpected KaTeX profile')
+      const consumer = join(directory, `mcpui-katex-${version}`)
+      assert(file.startsWith(join(consumer, 'qualification-results') + sep), 'KaTeX evidence is outside its fixed consumer root')
+      const input = await json(join(consumer, 'qualification-input.json'))
+      const probe = await json(join(consumer, 'import-probe-result.json'))
+      assert.deepEqual(report.input, input, 'KaTeX report does not match preparation input')
+      assert.equal(input.tarball?.sha256, sha256, 'KaTeX qualified another Solid tarball')
+      assert.equal(input.spec?.sha256, specSha256, 'KaTeX qualified another Spec fixture')
+      assert(typeof input.tarball.path === 'string' && isAbsolute(input.tarball.path) && basename(input.tarball.path) === solidFilename,
+        'KaTeX Solid tarball path mismatch')
+      assert(typeof input.spec.path === 'string' && isAbsolute(input.spec.path) && basename(input.spec.path) === specFilename,
+        'KaTeX Spec fixture path mismatch')
+      assert.deepEqual(input.pins, mathPins, 'Unexpected prepared KaTeX cohort')
+      assert.deepEqual(report.actualPins, mathPins, 'Unexpected installed KaTeX cohort')
+      assert.equal(report.installedVersion, POLICY.version, 'KaTeX package version mismatch')
+      assert.equal(report.peer, '0.18.4 || 0.18.5', 'KaTeX peer mismatch')
+      assert.equal(report.optional, true, 'KaTeX peer is not optional')
+      assert.equal(report.pluginKatexVersion, version === 'absent' ? null : version, 'Plugin resolved another KaTeX version')
+      assert((await readFile(join(consumer, 'pnpm-lock.yaml'), 'utf8')).trim().length > 0, 'KaTeX consumer lockfile is missing or empty')
+      assert.equal(probe.status, 'passed', 'KaTeX import probe did not pass')
+      assert.equal(probe.version, version, 'KaTeX import probe version mismatch')
+      assert.deepEqual(probe.checks, mathProbeChecks(version), 'KaTeX ESM/CJS or adapter probe evidence mismatch')
+      for (const mode of ['dev', 'production']) {
+        const result = report.modes?.[mode]
+        assert.equal(result?.status, 'passed', `Missing or failed KaTeX ${mode} qualification`)
+        assert.equal(result.mode, mode, 'KaTeX browser mode mismatch')
+        assert.equal(result.version, version, 'KaTeX browser peer version mismatch')
+        assert.deepEqual(result.checks, mathBrowserChecks(version), 'KaTeX browser check evidence mismatch')
+        empty(result.console, 'KaTeX browser warning or error was recorded')
+        empty(result.pageErrors, 'KaTeX browser error was recorded')
+        empty(result.externalRequests, 'KaTeX browser external request was recorded')
+        if (version !== 'absent') {
+          const counts = result.counts
+          assert(counts && counts.total >= 6 && counts.text >= 3 && counts.table >= 3 && counts.block >= 1 &&
+            counts.fraction >= 2 && counts.subscript >= 2 && counts.matrix >= 2 &&
+            counts.positiveGeometry === counts.total && counts.annotations === 0 &&
+            counts.htmlLayout === 0 && counts.forbidden === 0, 'KaTeX MathML browser counts mismatch')
+        }
+      }
+      math.set(version, file)
+      continue
+    }
     const isCore = file.includes(`${sep}qualification-results${sep}`)
     if (isCore) {
       const profile = report.input?.profile
@@ -273,7 +336,8 @@ export async function verifyQualification(directory, sha256, specSha256) {
     }
   }
   assert(core.has('full') && core.has('optional-absent') && compiled.length === 1, 'Both profiles and exactly one compiled probe are required')
-  return { sha256, profiles: Object.fromEntries(core), compiled: compiled[0] }
+  assert(math.size === mathVersions.length && mathVersions.every(version => math.has(version)), 'All three KaTeX profiles are required')
+  return { sha256, profiles: Object.fromEntries(core), compiled: compiled[0], math: Object.fromEntries(math) }
 }
 
 export function assertLatestUnchanged(before, after) {
