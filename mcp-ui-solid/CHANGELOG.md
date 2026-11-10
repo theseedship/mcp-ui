@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.0.0-solid2.3] - Unreleased Solid 2 RC.21 qualification candidate
+
+### Changed
+
+- Align core/web/signals/compiler/Babel to exact `2.0.0-rc.21` and the scoped
+  Vite plugin to `3.0.0-next.57`. Keep Vite 8.3.5, renderer-owned Seroval 1.7.0,
+  virtual-core 3.13.18, Spec 6 and CLI 5.0.2 unchanged.
+- Preserve the exact optional KaTeX peer `0.18.4 || 0.18.5` and requalify both
+  versions plus the absent peer against real RC.21 tarballs.
+- Reject RC.20/RC.21 mixing and the RC.21 `CAUGHT_REACTIVE_READ` diagnostic in
+  consumer SSR gates. Full source CI now also runs on PRs into the preview
+  branch; no push or release trigger is added.
+- Update test hosts to the plugin's `start.nodeServer` option, wait for complete
+  server-log writes before inspection, and bind the KaTeX matrix to the same
+  CI artifact and tarball as the main runtime qualification.
+- `.2` remains the RC.20 qualification identity; `.3` needs separate review,
+  exact-head CI evidence and publication authorization. No tag/channel or
+  stable main/runtime change is made by qualification.
+
 ## [8.0.0-solid2.2] - Unreleased KaTeX compatibility candidate
 
 ### Changed

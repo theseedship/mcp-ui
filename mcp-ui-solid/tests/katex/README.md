@@ -1,6 +1,6 @@
 # KaTeX exact-peer tarball matrix
 
-This is a test-only consumer of the packed `@seed-ship/mcp-ui-solid@8.0.0-solid2.2` and Spec packages. It never installs during `prepare`, aliases source, overrides the KaTeX peer, publishes, or deploys. Run the three consumers in separate empty durable directories outside this repository:
+This is a test-only consumer of the packed RC.21 candidate `@seed-ship/mcp-ui-solid@8.0.0-solid2.3` and Spec packages. Prior RC.20 `8.0.0-solid2.2` qualification is separate. It never installs during `prepare`, aliases source, overrides the KaTeX peer, publishes, or deploys. Run the three consumers in separate empty durable directories outside this repository:
 
 ```sh
 node mcp-ui-solid/tests/katex/run.mjs prepare --tarball /absolute/solid.tgz --spec-tarball /absolute/spec.tgz --consumer /durable/katex-0184 --version 0.18.4

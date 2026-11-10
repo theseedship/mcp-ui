@@ -9,6 +9,7 @@ on:
     branches:
       - main
       - develop
+      - feat/solid2-preview
 
 jobs:
   preview-channel-guards:
@@ -103,7 +104,7 @@ jobs:
           for profile in full optional-absent; do
             consumer="$RUNNER_TEMP/mcpui-solid2-$profile"
             node mcp-ui-solid/tests/solid2/run.mjs prepare \
-              --tarball "$RUNNER_TEMP/mcpui-solid2-artifacts/seed-ship-mcp-ui-solid-8.0.0-solid2.2.tgz" \
+              --tarball "$RUNNER_TEMP/mcpui-solid2-artifacts/seed-ship-mcp-ui-solid-8.0.0-solid2.3.tgz" \
               --spec-tarball "$RUNNER_TEMP/mcpui-solid2-artifacts/seed-ship-mcp-ui-spec-6.0.0.tgz" \
               --consumer "$consumer" --profile "$profile"
             pnpm --dir "$consumer" install --ignore-scripts
@@ -111,6 +112,22 @@ jobs:
             node mcp-ui-solid/tests/solid2/run.mjs run --consumer "$consumer" --mode both
           done
           node mcp-ui-solid/tests/solid2/dist-browser.mjs --consumer "$RUNNER_TEMP/mcpui-solid2-full"
+
+      - name: Qualify KaTeX versions against the same candidate tarball
+        env:
+          MCP_THEME_BROWSER_DEPS: ${{ runner.temp }}/mcp-ui-theme-tools/node_modules
+        run: |
+          set -euo pipefail
+          for version in 0.18.4 0.18.5 absent; do
+            consumer="$RUNNER_TEMP/mcpui-katex-$version"
+            node mcp-ui-solid/tests/katex/run.mjs prepare \
+              --tarball "$RUNNER_TEMP/mcpui-solid2-artifacts/seed-ship-mcp-ui-solid-8.0.0-solid2.3.tgz" \
+              --spec-tarball "$RUNNER_TEMP/mcpui-solid2-artifacts/seed-ship-mcp-ui-spec-6.0.0.tgz" \
+              --consumer "$consumer" --version "$version"
+            pnpm --dir "$consumer" install --ignore-scripts
+            node mcp-ui-solid/tests/katex/run.mjs probe --consumer "$consumer"
+            node mcp-ui-solid/tests/katex/run.mjs run --consumer "$consumer"
+          done
 
       - name: Qualify packed CLI resolver
         shell: bash
@@ -135,6 +152,10 @@ jobs:
             ${{ runner.temp }}/mcpui-solid2-*/pnpm-lock.yaml
             ${{ runner.temp }}/mcpui-solid2-*/qualification-results/
             ${{ runner.temp }}/mcpui-solid2-*/dist-client-probe/
+            ${{ runner.temp }}/mcpui-katex-*/qualification-input.json
+            ${{ runner.temp }}/mcpui-katex-*/import-probe-result.json
+            ${{ runner.temp }}/mcpui-katex-*/pnpm-lock.yaml
+            ${{ runner.temp }}/mcpui-katex-*/qualification-results/
             ${{ runner.temp }}/mcpui-fast-uri-report*
 
   solid1-baseline:

@@ -52,7 +52,7 @@ jobs:
           for version in 0.18.4 0.18.5 absent; do
             consumer="$RUNNER_TEMP/mcp-ui-katex-$version"
             node mcp-ui-solid/tests/katex/run.mjs prepare \
-              --tarball "$RUNNER_TEMP/mcp-ui-katex-artifacts/seed-ship-mcp-ui-solid-8.0.0-solid2.2.tgz" \
+              --tarball "$RUNNER_TEMP/mcp-ui-katex-artifacts/seed-ship-mcp-ui-solid-8.0.0-solid2.3.tgz" \
               --spec-tarball "$RUNNER_TEMP/mcp-ui-katex-artifacts/seed-ship-mcp-ui-spec-6.0.0.tgz" \
               --consumer "$consumer" --version "$version"
             pnpm --dir "$consumer" install --ignore-scripts

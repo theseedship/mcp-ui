@@ -12,7 +12,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import { qualifyBrowser } from './browser.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url)), sourceRoot = resolve(here, '../../..')
-export const hasMigrationDiagnostic = text => /\[(?:STRICT_READ_UNTRACKED|REACTIVE_WRITE_IN_OWNED_SCOPE|EFFECT_RELAY_TEAR|EFFECT_WRITES_OWN_SOURCE|PRIMITIVE_IN_[A-Z_]+|MISSING_EFFECT_FN|NO_OWNER_[A-Z_]+|SSR_[A-Z_]+)\]|hydration (?:key miss|completed[^\n]*unclaimed|mismatch|error)/i.test(text)
+export const hasMigrationDiagnostic = text => /\[(?:CAUGHT_REACTIVE_READ|STRICT_READ_UNTRACKED|REACTIVE_WRITE_IN_OWNED_SCOPE|EFFECT_RELAY_TEAR|EFFECT_WRITES_OWN_SOURCE|PRIMITIVE_IN_[A-Z_]+|MISSING_EFFECT_FN|NO_OWNER_[A-Z_]+|SSR_[A-Z_]+)\]|hydration (?:key miss|completed[^\n]*unclaimed|mismatch|error)/i.test(text)
 export const hasBareZoomImport = text => /\bimport\s*\(\s*(?:\/\*[\s\S]*?\*\/\s*)?(['"`])chartjs-plugin-zoom\1\s*\)/.test(text)
 
 async function auditClientZoomGraph(root) {
@@ -31,9 +31,9 @@ async function auditClientZoomGraph(root) {
   return { javascript, bareImports }
 }
 export const pins = Object.freeze({
-  'solid-js': '2.0.0-rc.20', '@solidjs/web': '2.0.0-rc.20', '@solidjs/signals': '2.0.0-rc.20',
-  '@solidjs/compiler': '2.0.0-rc.20', '@solidjs/babel-plugin': '2.0.0-rc.20',
-  '@solidjs/vite-plugin': '3.0.0-next.51', '@babel/core': '7.29.6', '@types/node': '22.19.11', vite: '8.3.5', typescript: '5.9.3',
+  'solid-js': '2.0.0-rc.21', '@solidjs/web': '2.0.0-rc.21', '@solidjs/signals': '2.0.0-rc.21',
+  '@solidjs/compiler': '2.0.0-rc.21', '@solidjs/babel-plugin': '2.0.0-rc.21',
+  '@solidjs/vite-plugin': '3.0.0-next.57', '@babel/core': '7.29.6', '@types/node': '22.19.11', vite: '8.3.5', typescript: '5.9.3',
   '@tailwindcss/vite': '4.3.3', tailwindcss: '4.3.3',
 })
 export const enginePins = Object.freeze({
@@ -96,7 +96,7 @@ async function verifyConsumer(consumer) {
   const packageRoot = await realpath(resolve(consumer, 'node_modules/@seed-ship/mcp-ui-solid'))
   assert(packageRoot.startsWith((await realpath(consumer)) + sep), 'Package realpath escapes the isolated consumer')
   const installed = JSON.parse(await readFile(resolve(packageRoot, 'package.json'), 'utf8'))
-  assert.equal(installed.version, '8.0.0-solid2.2', 'Review harness pins for another preview version')
+  assert.equal(installed.version, '8.0.0-solid2.3', 'Review harness pins for another preview version')
   const req = createRequire(resolve(consumer, 'package.json')), actualPins = {}
   for (const [name, expected] of Object.entries(pins)) {
     let entry
@@ -120,22 +120,30 @@ async function freePort() {
   await new Promise((done, reject) => server.close(error => error ? reject(error) : done()))
   return port
 }
-function subprocess(command, args, cwd, log, env = {}) {
-  const output = createWriteStream(log, { flags: 'wx' }), child = spawn(command, args, {
+export function subprocess(command, args, cwd, log, env = {}, outputFactory = path => createWriteStream(path, { flags: 'wx' })) {
+  const output = outputFactory(log), child = spawn(command, args, {
     cwd, env: { ...process.env, ...env }, detached: true, stdio: ['ignore', 'pipe', 'pipe'],
   })
   child.stdout.pipe(output, { end: false }); child.stderr.pipe(output, { end: false })
   let settled = false
   const done = new Promise((accept, reject) => {
-    child.once('error', error => { settled = true; output.end(); reject(error) })
-    child.once('close', (code, signal) => { settled = true; output.end(); accept({ code, signal }) })
+    let finishing = false
+    output.once('error', reject)
+    const finish = (result, childError) => {
+      if (finishing) return
+      finishing = true; settled = true
+      output.end(logError => childError || logError ? reject(childError || logError) : accept(result))
+    }
+    child.once('error', error => finish(undefined, error))
+    child.once('close', (code, signal) => finish({ code, signal }))
   })
   void done.catch(() => {})
   return { child, done, async stop() {
-    if (settled) return
+    if (settled) return await done
     process.kill(-child.pid, 'SIGTERM')
     await Promise.race([done, new Promise(done => setTimeout(done, 3000))])
-    if (!settled) { process.kill(-child.pid, 'SIGKILL'); await done }
+    if (!settled) process.kill(-child.pid, 'SIGKILL')
+    return await done
   } }
 }
 async function ready(url, handle) {
