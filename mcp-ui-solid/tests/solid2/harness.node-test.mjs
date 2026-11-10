@@ -1,7 +1,18 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { manifestFor, pins, enginePins, validateDestination, hasMigrationDiagnostic, hasBareZoomImport } from './run.mjs'
+import { Writable } from 'node:stream'
+import { readFile } from 'node:fs/promises'
+import { manifestFor, pins, enginePins, validateDestination, hasMigrationDiagnostic, hasBareZoomImport, subprocess } from './run.mjs'
 import { EXPECTED_STREAM_ERROR, isExpectedStreamError } from './browser.mjs'
+import { hasMathServerMigrationDiagnostic, processHandle } from '../katex/run.mjs'
+
+test('RC.21 consumers use the current Vite plugin Node server option', async () => {
+  for (const relative of ['./consumer/vite.config.ts', '../katex/consumer/vite.config.ts']) {
+    const config = await readFile(new URL(relative, import.meta.url), 'utf8')
+    assert.match(config, /nodeServer:\s*true/)
+    assert.doesNotMatch(config, /\bnode:\s*true/)
+  }
+})
 
 test('full host pins runtime/compiler and explicit optional engines without workspace dependencies', () => {
   const manifest = manifestFor('/durable/solid.tgz', '/durable/spec.tgz')
@@ -30,6 +41,41 @@ test('server gate rejects ownership and both hydration namespace failure diagnos
     '[EFFECT_WRITES_OWN_SOURCE]', '[SSR_UNSAFE_WRITE]']) assert(hasMigrationDiagnostic(text), text)
   assert(!hasMigrationDiagnostic('SSR ready; HTTP 200'))
 })
+test('RC.21 CAUGHT_REACTIVE_READ remains fatal in general and KaTeX SSR gates', () => {
+  for (const guard of [hasMigrationDiagnostic, hasMathServerMigrationDiagnostic]) {
+    assert(guard('[CAUGHT_REACTIVE_READ] read was caught by an error boundary'))
+    assert(!guard('SSR ready; HTTP 200'))
+  }
+})
+for (const [name, start, guard] of [
+  ['Solid 2 runner', subprocess, hasMigrationDiagnostic],
+  ['KaTeX runner', processHandle, hasMathServerMigrationDiagnostic],
+]) {
+  test(`${name} waits for a delayed log finalization before done and stop settle`, async () => {
+    let releaseFinal, finalStarted
+    const finalizing = new Promise(resolve => { finalStarted = resolve })
+    const chunks = []
+    const output = new Writable({
+      write(chunk, _encoding, callback) { chunks.push(Buffer.from(chunk)); callback() },
+      final(callback) { releaseFinal = callback; finalStarted() },
+    })
+    const handle = start(process.execPath, ['-e', "process.stderr.write('[CAUGHT_REACTIVE_READ] tail')"],
+      process.cwd(), 'unused-test-log', {}, () => output)
+    let doneSettled = false, stopSettled = false
+    void handle.done.then(() => { doneSettled = true }, () => { doneSettled = true })
+    await finalizing
+    assert.equal(doneSettled, false, 'done settled before the writable finalized')
+    assert(guard(Buffer.concat(chunks).toString('utf8')), 'stderr diagnostic tail was not captured')
+    const stopped = handle.stop()
+    void stopped.then(() => { stopSettled = true }, () => { stopSettled = true })
+    await Promise.resolve()
+    assert.equal(stopSettled, false, 'stop settled before the writable finalized')
+    releaseFinal()
+    assert.deepEqual(await handle.done, { code: 0, signal: null })
+    await stopped
+    assert(doneSettled && stopSettled, 'done and stop did not settle after finalization')
+  })
+}
 test('only the exact intentional SSE scope/message is classified as expected', () => {
   assert(isExpectedStreamError({ type: 'error', text: EXPECTED_STREAM_ERROR }))
   assert(!isExpectedStreamError({ type: 'warning', text: EXPECTED_STREAM_ERROR }))

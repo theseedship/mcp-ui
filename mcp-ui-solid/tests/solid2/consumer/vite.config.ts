@@ -12,7 +12,7 @@ const nestedCommonJS = ['leaflet', 'leaflet.markercluster', '@antv/g6', 'highlig
   .map(name => `@seed-ship/mcp-ui-solid > ${name}`)
 
 export default defineConfig({
-  plugins: [solid({ start: { node: true, middleware: './src/middleware.ts' }, ssr: true }), tailwind()],
+  plugins: [solid({ start: { nodeServer: true, middleware: './src/middleware.ts' }, ssr: true }), tailwind()],
   // Compile the package's public `solid` source condition for both SSR and
   // hydration. No source aliases and no access to the library workspace.
   ssr: { noExternal: ['@seed-ship/mcp-ui-solid', '@seed-ship/mcp-ui-spec'] },

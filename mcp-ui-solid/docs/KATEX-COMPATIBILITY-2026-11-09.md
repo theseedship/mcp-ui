@@ -1,5 +1,9 @@
 # KaTeX compatibility candidate — 2026-11-09
 
+> Historical `.2` / RC.20 qualification. For the `.3` / RC.21 candidate and
+> the subsequently merged Deposium Mermaid fix, use the
+> [current handoff](./SOLID2-RC21-QUALIFICATION-2026-11-10.md).
+
 ## Source, candidate and release boundary
 
 Start: published `@seed-ship/mcp-ui-solid@8.0.0-solid2.1`, source

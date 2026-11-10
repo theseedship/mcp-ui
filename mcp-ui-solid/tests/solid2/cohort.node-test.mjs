@@ -9,9 +9,10 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..')
 const solidRoot = resolve(repoRoot, 'mcp-ui-solid')
 const cohort = ['solid-js', '@solidjs/web', '@solidjs/signals', '@solidjs/compiler', '@solidjs/babel-plugin']
 const rc19 = '2.0.0-rc.19'
-const targetRuntime = '2.0.0-rc.20'
+const rc20 = '2.0.0-rc.20'
+const targetRuntime = '2.0.0-rc.21'
 const plugin = '@solidjs/vite-plugin'
-const pluginVersion = '3.0.0-next.51'
+const pluginVersion = '3.0.0-next.57'
 const virtualCore = '@tanstack/virtual-core'
 const virtualCoreVersion = '3.13.18'
 
@@ -112,14 +113,14 @@ function assertSolid2Cohort({ producer, workspace, lockText }) {
   const peers = producer.peerDependencies ?? {}
   const peerMeta = producer.peerDependenciesMeta ?? {}
   const dev = producer.devDependencies ?? {}
-  assert.equal(peers['solid-js'], targetRuntime, 'solid-js must remain a required RC.20 peer')
-  assert.equal(peers['@solidjs/web'], targetRuntime, '@solidjs/web must remain a required RC.20 peer')
+  assert.equal(peers['solid-js'], targetRuntime, 'solid-js must remain a required RC.21 peer')
+  assert.equal(peers['@solidjs/web'], targetRuntime, '@solidjs/web must remain a required RC.21 peer')
   for (const name of ['solid-js', '@solidjs/web']) {
     assert.notEqual(peerMeta[name]?.optional, true, `${name} cannot be optional`)
     assert.equal(dev[name], targetRuntime, `${name} dev dependency must match its peer pin`)
   }
   for (const name of ['@solidjs/signals', '@solidjs/compiler', '@solidjs/babel-plugin']) {
-    assert.equal(dev[name], targetRuntime, `${name} must use the same RC.20 cohort`)
+    assert.equal(dev[name], targetRuntime, `${name} must use the same RC.21 cohort`)
   }
   assert.equal(dev[plugin], pluginVersion, `${plugin} must stay on the reviewed compatible plugin pin`)
 
@@ -137,20 +138,20 @@ function assertSolid2Cohort({ producer, workspace, lockText }) {
   for (const name of cohort) {
     const locations = allImporterResolutions(importers, name)
     assert(locations.length > 0, `${name} missing from mcp-ui-solid lock importer`)
-    assert(locations.every(entry => resolutionVersion(entry.version) === targetRuntime), `${name} importer resolution is outside RC.20`)
-    assert.deepEqual(versionsFor(lockText, name), new Set([targetRuntime]), `${name} lock package versions must be one RC.20 cohort`)
+    assert(locations.every(entry => resolutionVersion(entry.version) === targetRuntime), `${name} importer resolution is outside RC.21`)
+    assert.deepEqual(versionsFor(lockText, name), new Set([targetRuntime]), `${name} lock package versions must be one RC.21 cohort`)
   }
   const pluginResolutions = allImporterResolutions(importers, plugin)
   assert(pluginResolutions.length > 0, `${plugin} missing from mcp-ui-solid lock importer`)
   assert(pluginResolutions.every(entry => resolutionVersion(entry.version) === pluginVersion &&
-    entry.version.includes(`@solidjs/web@${targetRuntime}`) && entry.version.includes(`solid-js@${targetRuntime}`)), `${plugin} lock resolution must bind to RC.20 runtime peers`)
+    entry.version.includes(`@solidjs/web@${targetRuntime}`) && entry.version.includes(`solid-js@${targetRuntime}`)), `${plugin} lock resolution must bind to RC.21 runtime peers`)
   assert.deepEqual(versionsFor(lockText, plugin), new Set([pluginVersion]), `${plugin} lock version drifted`)
   const pluginRecords = lockPackageRecords(lockText, plugin)
   assert(pluginRecords.length > 0, `${plugin} package record missing from lock`)
   for (const record of pluginRecords) {
     const resolved = record.sections.get('dependencies')
     for (const name of ['@solidjs/babel-plugin', '@solidjs/compiler', '@solidjs/web', 'solid-js']) {
-      assert.equal(resolutionVersion(resolved?.get(name)), targetRuntime, `${plugin} must resolve ${name} from the RC.20 cohort`)
+      assert.equal(resolutionVersion(resolved?.get(name)), targetRuntime, `${plugin} must resolve ${name} from the RC.21 cohort`)
     }
   }
   const virtualResolutions = allImporterResolutions(importers, virtualCore)
@@ -198,7 +199,7 @@ function syntheticCase() {
   return { producer, workspace, lockText }
 }
 
-test('current producer and lockfile use one Solid 2 RC.20 cohort and renderer-owned Seroval pair', async () => {
+test('current producer and lockfile use one Solid 2 RC.21 cohort and renderer-owned Seroval pair', async () => {
   const [producer, workspace, lockText] = await Promise.all([
     readFile(resolve(solidRoot, 'package.json'), 'utf8').then(JSON.parse),
     readFile(resolve(repoRoot, 'package.json'), 'utf8').then(JSON.parse),
@@ -207,14 +208,26 @@ test('current producer and lockfile use one Solid 2 RC.20 cohort and renderer-ow
   assertSolid2Cohort({ producer, workspace, lockText })
 })
 
-test('validator accepts a coherent synthetic RC.20 lock and matching renderer-owned pair', () => {
+test('validator accepts a coherent synthetic RC.21 lock and matching renderer-owned pair', () => {
   assert.equal(assertSolid2Cohort(syntheticCase()), true)
 })
 
-test('validator rejects an RC.19/RC.20 producer mixture', () => {
+test('validator rejects an RC.19/RC.21 producer mixture', () => {
   const input = syntheticCase()
   input.producer.devDependencies['@solidjs/compiler'] = rc19
-  assert.throws(() => assertSolid2Cohort(input), /same RC\.20 cohort/)
+  assert.throws(() => assertSolid2Cohort(input), /same RC\.21 cohort/)
+})
+
+test('validator rejects RC.20/RC.21 producer and lock mixtures', () => {
+  const producer = syntheticCase()
+  producer.producer.devDependencies['@solidjs/compiler'] = rc20
+  assert.throws(() => assertSolid2Cohort(producer), /same RC\.21 cohort/)
+  const lock = syntheticCase()
+  const oldEntry = `'@solidjs/compiler':\n        specifier: ${targetRuntime}\n        version: ${targetRuntime}`
+  const mixedEntry = `'@solidjs/compiler':\n        specifier: ${rc20}\n        version: ${rc20}`
+  assert(lock.lockText.includes(oldEntry), 'Synthetic compiler importer entry missing')
+  lock.lockText = lock.lockText.replace(oldEntry, mixedEntry)
+  assert.throws(() => assertSolid2Cohort(lock), /importer resolution is outside RC\.21/)
 })
 
 test('validator rejects a Solid 1 virtual adapter even when the RC cohort is otherwise coherent', () => {

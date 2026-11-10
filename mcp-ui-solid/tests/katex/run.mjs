@@ -13,16 +13,17 @@ import { qualifyBrowser } from './browser.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const repo = resolve(here, '../../..')
-const expectedVersion = '8.0.0-solid2.2'
+const expectedVersion = '8.0.0-solid2.3'
 const expectedPeer = '0.18.4 || 0.18.5'
 const pins = Object.freeze({
-  'solid-js': '2.0.0-rc.20', '@solidjs/web': '2.0.0-rc.20',
-  '@solidjs/signals': '2.0.0-rc.20', '@solidjs/compiler': '2.0.0-rc.20',
-  '@solidjs/babel-plugin': '2.0.0-rc.20', '@solidjs/vite-plugin': '3.0.0-next.51',
+  'solid-js': '2.0.0-rc.21', '@solidjs/web': '2.0.0-rc.21',
+  '@solidjs/signals': '2.0.0-rc.21', '@solidjs/compiler': '2.0.0-rc.21',
+  '@solidjs/babel-plugin': '2.0.0-rc.21', '@solidjs/vite-plugin': '3.0.0-next.57',
   '@babel/core': '7.29.6', '@types/node': '22.19.11',
   vite: '8.3.5', typescript: '5.9.3',
 })
-const migration = /\[(?:STRICT_READ_UNTRACKED|REACTIVE_WRITE_IN_OWNED_SCOPE|EFFECT_RELAY_TEAR|EFFECT_WRITES_OWN_SOURCE|PRIMITIVE_IN_[A-Z_]+|MISSING_EFFECT_FN|NO_OWNER_[A-Z_]+|SSR_[A-Z_]+)\]|hydration (?:key miss|completed[^\n]*unclaimed|mismatch|error)/i
+const migration = /\[(?:CAUGHT_REACTIVE_READ|STRICT_READ_UNTRACKED|REACTIVE_WRITE_IN_OWNED_SCOPE|EFFECT_RELAY_TEAR|EFFECT_WRITES_OWN_SOURCE|PRIMITIVE_IN_[A-Z_]+|MISSING_EFFECT_FN|NO_OWNER_[A-Z_]+|SSR_[A-Z_]+)\]|hydration (?:key miss|completed[^\n]*unclaimed|mismatch|error)/i
+export const hasMathServerMigrationDiagnostic = text => migration.test(text)
 
 function destination(path) {
   assert(path && isAbsolute(path), '--consumer needs an absolute dedicated directory')
@@ -113,21 +114,29 @@ async function freePort() {
   await new Promise((ok, fail) => server.close(error => error ? fail(error) : ok()))
   return port
 }
-function processHandle(command, args, cwd, log, env = {}) {
-  const output = createWriteStream(log, { flags: 'wx' })
+export function processHandle(command, args, cwd, log, env = {}, outputFactory = path => createWriteStream(path, { flags: 'wx' })) {
+  const output = outputFactory(log)
   const child = spawn(command, args, { cwd, env: { ...process.env, ...env }, detached: true, stdio: ['ignore', 'pipe', 'pipe'] })
   child.stdout.pipe(output, { end: false }); child.stderr.pipe(output, { end: false })
   let closed = false
   const done = new Promise((ok, fail) => {
-    child.once('error', error => { closed = true; output.end(); fail(error) })
-    child.once('close', (code, signal) => { closed = true; output.end(); ok({ code, signal }) })
+    let finishing = false
+    output.once('error', fail)
+    const finish = (result, childError) => {
+      if (finishing) return
+      finishing = true; closed = true
+      output.end(logError => childError || logError ? fail(childError || logError) : ok(result))
+    }
+    child.once('error', error => finish(undefined, error))
+    child.once('close', (code, signal) => finish({ code, signal }))
   })
   void done.catch(() => {})
   return { child, done, async stop() {
-    if (closed) return
+    if (closed) return await done
     process.kill(-child.pid, 'SIGTERM')
     await Promise.race([done, new Promise(ok => setTimeout(ok, 3000))])
-    if (!closed) { process.kill(-child.pid, 'SIGKILL'); await done }
+    if (!closed) process.kill(-child.pid, 'SIGKILL')
+    return await done
   } }
 }
 async function ready(url, handle) {
@@ -172,7 +181,7 @@ async function run(consumer) {
         assert(!html.includes('<img src=x'), 'SSR emitted live hostile markup')
         report.modes[mode] = await qualifyBrowser({ url, mode, version: info.input.version, resultDir })
       } finally { await server.stop() }
-      assert(!migration.test(await readFile(log, 'utf8')), 'SSR migration/hydration diagnostic; inspect server log')
+      assert(!hasMathServerMigrationDiagnostic(await readFile(log, 'utf8')), 'SSR migration/hydration diagnostic; inspect server log')
     }
     report.status = 'passed'
   } catch (error) { report.status = 'failed'; report.failure = error.stack || String(error); throw error }
