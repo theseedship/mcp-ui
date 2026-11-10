@@ -5,7 +5,8 @@
  * Sprint Autocomplete Feature
  */
 
-import { Component, Show, JSX, createMemo } from 'solid-js'
+import { Component, Show, createMemo } from "solid-js";
+import type { JSX } from "@solidjs/web";
 
 /**
  * Props for GhostText component

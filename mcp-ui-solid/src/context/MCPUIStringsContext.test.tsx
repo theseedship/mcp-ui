@@ -11,7 +11,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest'
 import { render, cleanup, fireEvent } from '@solidjs/testing-library'
-import { createSignal } from 'solid-js'
+import { createSignal, flush } from 'solid-js'
 import {
   MCPUIStringsContext,
   MCPUIStringsProvider,
@@ -88,6 +88,7 @@ describe('MCPUIStringsContext (v6.6.0)', () => {
     ))
     expect(captured!.locale).toBe('en-US')
     setLocale('de-de')
+    flush()
     expect(captured!.locale).toBe('de-DE')
   })
 
@@ -129,9 +130,9 @@ describe('MCPUIStringsContext (v6.6.0)', () => {
     }
 
     render(() => (
-      <MCPUIStringsContext.Provider value={legacyStrings}>
+      <MCPUIStringsContext value={legacyStrings}>
         <Probe />
-      </MCPUIStringsContext.Provider>
+      </MCPUIStringsContext>
     ))
 
     expect(captured!.expand).toBe('Legacy expand')
@@ -162,6 +163,7 @@ describe('MCPUIStringsContext (v6.6.0)', () => {
 
     expect(button.textContent).toBe('Diagram|Data')
     fireEvent.click(button)
+    flush()
     expect(button.textContent).toBe('Graphique|Data')
   })
 
@@ -178,6 +180,7 @@ describe('MCPUIStringsContext (v6.6.0)', () => {
     expect(upBtn?.getAttribute('title')).toBe('Utile')
     // Ack from provider after click
     fireEvent.click(upBtn!)
+    flush()
     expect(getByText('Merci !')).toBeTruthy()
   })
 
@@ -185,6 +188,7 @@ describe('MCPUIStringsContext (v6.6.0)', () => {
     const { getByText, container } = render(() => <FeedbackInline onSubmit={() => {}} />)
     const upBtn = container.querySelector('[data-feedback-inline-rating="positive"]')
     fireEvent.click(upBtn!)
+    flush()
     expect(getByText('Thanks!')).toBeTruthy()
   })
 
@@ -196,6 +200,7 @@ describe('MCPUIStringsContext (v6.6.0)', () => {
     ))
     const upBtn = container.querySelector('[data-feedback-inline-rating="positive"]')
     fireEvent.click(upBtn!)
+    flush()
     expect(getByText('FromProp')).toBeTruthy()
   })
 

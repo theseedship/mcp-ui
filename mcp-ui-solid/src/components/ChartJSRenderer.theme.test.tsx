@@ -1,3 +1,4 @@
+import { flush } from 'solid-js';
 import { cleanup, render, waitFor } from '@solidjs/testing-library';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { UIComponent } from '../types';
@@ -272,7 +273,7 @@ describe('ChartJSRenderer scoped canvas theme', () => {
     ));
     await waitFor(() => expect(harness.instances).toHaveLength(1));
     expect((original.params as any).data.datasets[0].backgroundColor).toBeUndefined();
-    setValue({ ...original, params: { ...original.params, title: 'Rebuilt' } });
+    flush(() => setValue({ ...original, params: { ...original.params, title: 'Rebuilt' } }));
     await waitFor(() => expect(harness.instances).toHaveLength(2));
     const scope = container.firstElementChild as HTMLElement;
     scope.style.setProperty('--mcp-ui-chart-1', '#112233');

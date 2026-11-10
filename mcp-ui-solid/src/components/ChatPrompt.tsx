@@ -43,7 +43,7 @@
  * direction (auto-reject with `PromptReplacedError`).
  */
 
-import { Component, Show, For, createSignal, createEffect, onCleanup, Switch, Match } from 'solid-js'
+import { Component, Show, For, createSignal, createEffect, onCleanup, Switch, Match, deep } from 'solid-js'
 import type {
   ChatPromptConfig,
   ChatPromptResponse,
@@ -264,9 +264,8 @@ const FormBody: Component<{
   }
 
   // --- depends_on: fetch child options when parent changes ---
-  createEffect(() => {
-    const data = formData()
-    for (const field of props.config.fields || []) {
+  createEffect(() => ({ data: formData(), fields: deep(props.config.fields || []) }), ({ data, fields }) => {
+    for (const field of fields) {
       const dep = field.dependsOn || (field as any).depends_on
       if (!dep) continue
       const parentValue = data[dep.field]
@@ -295,11 +294,9 @@ const FormBody: Component<{
   })
 
   // --- preview: debounced live preview ---
-  createEffect(() => {
-    const preview = props.config.preview
+  createEffect(() => ({ preview: props.config.preview ? deep(props.config.preview) : undefined, data: formData() }), ({ preview, data }) => {
     if (!preview) return
 
-    const data = formData()
     // Check if any preview field has a value
     const hasValues = preview.fields.some((f) => {
       const v = data[f]
@@ -330,6 +327,7 @@ const FormBody: Component<{
       }
       setPreviewLoading(false)
     }, preview.debounceMs || 500)
+    return () => { if (previewTimer) clearTimeout(previewTimer) }
   })
 
   onCleanup(() => { if (previewTimer) clearTimeout(previewTimer) })

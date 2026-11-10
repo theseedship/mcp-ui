@@ -4,7 +4,7 @@
  * Sprint 2: Conditional field visibility (showWhen)
  */
 
-import { Component, Show, For, Switch, Match, Accessor, createSignal, createEffect, onCleanup } from 'solid-js'
+import { Component, Show, For, Switch, Match, Accessor, createSignal, createEffect, onCleanup, untrack } from 'solid-js'
 import type { FormFieldParams, PrefillSource } from '../types'
 import { useConditionalField } from '../hooks/useConditionalField'
 import { formatMCPUIString, useMCPUIStrings } from '../context/MCPUIStringsContext'
@@ -41,12 +41,12 @@ export const FormFieldRenderer: Component<FormFieldRendererProps> = (props) => {
 
   // Conditional visibility based on showWhen
   const { isVisible } = useConditionalField({
-    condition: props.field.showWhen,
-    formData: props.formData || (() => ({})),
+    get condition() { return props.field.showWhen },
+    get formData() { return props.formData || (() => ({})) },
   })
 
   // Muted state — starts muted if field says so, clears on focus/click
-  const [isMuted, setIsMuted] = createSignal(!!props.field.muted)
+  const [isMuted, setIsMuted] = createSignal(untrack(() => !!props.field.muted))
 
   const handleFieldFocus = () => {
     if (isMuted()) setIsMuted(false)
@@ -114,10 +114,10 @@ export const FormFieldRenderer: Component<FormFieldRendererProps> = (props) => {
             placeholder={props.field.placeholder}
             disabled={props.disabled}
             required={props.field.required}
-            minLength={props.field.minLength}
-            maxLength={props.field.maxLength}
+            minlength={props.field.minLength}
+            maxlength={props.field.maxLength}
             pattern={props.field.pattern}
-            aria-invalid={!!props.error}
+            aria-invalid={props.error ? 'true' : 'false'}
             aria-describedby={props.error ? errorId() : undefined}
             class={baseInputClass()}
           />
@@ -137,7 +137,7 @@ export const FormFieldRenderer: Component<FormFieldRendererProps> = (props) => {
             min={props.field.min}
             max={props.field.max}
             step={props.field.step}
-            aria-invalid={!!props.error}
+            aria-invalid={props.error ? 'true' : 'false'}
             aria-describedby={props.error ? errorId() : undefined}
             class={baseInputClass()}
           />
@@ -155,7 +155,7 @@ export const FormFieldRenderer: Component<FormFieldRendererProps> = (props) => {
             required={props.field.required}
             min={props.field.minDate}
             max={props.field.maxDate}
-            aria-invalid={!!props.error}
+            aria-invalid={props.error ? 'true' : 'false'}
             aria-describedby={props.error ? errorId() : undefined}
             class={baseInputClass()}
           />
@@ -172,9 +172,9 @@ export const FormFieldRenderer: Component<FormFieldRendererProps> = (props) => {
             disabled={props.disabled}
             required={props.field.required}
             rows={props.field.rows || 4}
-            minLength={props.field.minLength}
-            maxLength={props.field.maxLength}
-            aria-invalid={!!props.error}
+            minlength={props.field.minLength}
+            maxlength={props.field.maxLength}
+            aria-invalid={props.error ? 'true' : 'false'}
             aria-describedby={props.error ? errorId() : undefined}
             class={baseInputClass()}
           />
@@ -189,7 +189,7 @@ export const FormFieldRenderer: Component<FormFieldRendererProps> = (props) => {
             onChange={(e) => props.onChange(e.currentTarget.value)}
             disabled={props.disabled}
             required={props.field.required}
-            aria-invalid={!!props.error}
+            aria-invalid={props.error ? 'true' : 'false'}
             aria-describedby={props.error ? errorId() : undefined}
             class={baseInputClass()}
           >
@@ -216,7 +216,7 @@ export const FormFieldRenderer: Component<FormFieldRendererProps> = (props) => {
               checked={props.value || false}
               onChange={(e) => props.onChange(e.currentTarget.checked)}
               disabled={props.disabled}
-              aria-invalid={!!props.error}
+              aria-invalid={props.error ? 'true' : 'false'}
               aria-describedby={props.error ? errorId() : undefined}
               class="w-4 h-4 rounded border-[color:var(--mcp-ui-border-control,var(--color-gray-300,#d1d5db))] text-[color:var(--mcp-ui-accent,var(--color-blue-600))] focus:ring-[color:var(--mcp-ui-focus,var(--color-blue-500))] dark:border-[color:var(--mcp-ui-border-control,var(--color-gray-600,#4b5563))] dark:bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-700,#374151))]"
             />
@@ -257,7 +257,7 @@ export const FormFieldRenderer: Component<FormFieldRendererProps> = (props) => {
             class="space-y-2"
             role="radiogroup"
             aria-labelledby={props.field.label ? `${fieldId()}-label` : undefined}
-            aria-invalid={!!props.error}
+            aria-invalid={props.error ? 'true' : 'false'}
             aria-describedby={props.error ? errorId() : undefined}
           >
             <For each={props.field.options}>
@@ -312,7 +312,7 @@ export const FormFieldRenderer: Component<FormFieldRendererProps> = (props) => {
             <button
               type="button"
               role="switch"
-              aria-checked={!!props.value}
+              aria-checked={props.value ? 'true' : 'false'}
               onClick={() => props.onChange(!props.value)}
               disabled={isFieldDisabled()}
               class={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${props.value ? 'bg-[color:var(--mcp-ui-accent,var(--color-blue-600))]' : 'bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-300,#d1d5db))] dark:bg-[color:var(--mcp-ui-surface-muted,var(--color-gray-600,#4b5563))]'} ${isFieldDisabled() ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -560,6 +560,7 @@ const AutocompleteField: Component<{
 
     try {
       const resolvedValues: string[] = []
+      const resolvedLabels = new Map(selectedLabels())
       for (const pv of prefillValues) {
         const params = new URLSearchParams({ [props.field.searchParam]: pv, limit: '1' })
         if (props.field.extraParams) {
@@ -573,17 +574,18 @@ const AutocompleteField: Component<{
           const code = String(items[0][valueField] || pv)
           const label = items[0][labelField] || pv
           resolvedValues.push(code)
-          setSelectedLabels((prev) => new Map(prev).set(code, label))
+          resolvedLabels.set(code, label)
         } else {
           resolvedValues.push(pv)
-          setSelectedLabels((prev) => new Map(prev).set(pv, pv))
+          resolvedLabels.set(pv, pv)
         }
       }
+      setSelectedLabels(resolvedLabels)
       if (isMultiple()) {
         props.onChange(resolvedValues)
       } else {
         props.onChange(resolvedValues[0] || '')
-        const label = selectedLabels().get(resolvedValues[0])
+        const label = resolvedLabels.get(resolvedValues[0])
         if (label) setQuery(label)
       }
     } catch {
@@ -594,24 +596,24 @@ const AutocompleteField: Component<{
   }
 
   // On mount: handle prefill
-  createEffect(() => {
-    const prefill = props.field.prefill
+  createEffect(() => ({ prefill: props.field.prefill, mode: props.field.prefillMode,
+    hint: props.field.displayHint, multiple: isMultiple() }), ({ prefill, mode, hint, multiple }) => {
     if (!prefill) return
     const values = Array.isArray(prefill) ? prefill : [prefill]
     if (values.length === 0) return
 
-    if (props.field.prefillMode === 'resolve') {
+    if (mode === 'resolve') {
       // Proposal 1: resolve display names to codes via API
       resolvePrefill(values)
     } else {
       // Proposal 2 + 6: exact mode — prefill is a code, show displayHint or label as tag
       for (const v of values) {
         if (!selectedLabels().has(v)) {
-          setSelectedLabels((prev) => new Map(prev).set(v, props.field.displayHint || v))
+          setSelectedLabels((prev) => new Map(prev).set(v, hint || v))
         }
       }
-      if (!isMultiple() && values[0]) {
-        const label = props.field.displayHint || values[0]
+      if (!multiple && values[0]) {
+        const label = hint || values[0]
         setQuery(label)
       }
     }

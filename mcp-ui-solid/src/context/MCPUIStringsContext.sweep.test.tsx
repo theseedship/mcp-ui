@@ -1,3 +1,4 @@
+import { flush } from 'solid-js'
 /**
  * Chrome-strings i18n sweep — DOM-level coverage.
  *
@@ -9,7 +10,7 @@
 
 import { describe, it, expect, afterEach, vi } from 'vitest'
 import { render, cleanup, fireEvent, waitFor } from '@solidjs/testing-library'
-import type { JSX } from 'solid-js'
+import type { JSX } from "@solidjs/web";
 import { MCPUIStringsProvider, useMCPUIStrings } from './MCPUIStringsContext'
 import { MCPUIConfigProvider } from './MCPUIConfigContext'
 import { ChatPrompt } from '../components/ChatPrompt'
@@ -208,7 +209,7 @@ describe('sweep — table chrome (UIResourceRenderer)', () => {
   it('localizes the search reset button once a query is typed', () => {
     const type = (root: ParentNode) => {
       const input = root.querySelector('input[type="text"]') as HTMLInputElement
-      fireEvent.input(input, { target: { value: 'x' } })
+      flush(() => fireEvent.input(input, { target: { value: 'x' } }))
     }
 
     const withProvider = render(() => (
@@ -291,7 +292,7 @@ describe('sweep — ExpandableWrapper copyLabel (VideoRenderer)', () => {
 
   /** The copy button only exists inside the fullscreen modal (a Portal). */
   const expand = (root: ParentNode) =>
-    fireEvent.click(root.querySelector('[data-mcp-ui-action="expand"]') as HTMLElement)
+    flush(() => fireEvent.click(root.querySelector('[data-mcp-ui-action="expand"]') as HTMLElement))
 
   const copyTitle = (): string | null =>
     document.querySelector('[data-mcp-ui-portal="dialog"] [data-mcp-ui-action="copy"]')
@@ -361,7 +362,7 @@ describe('sweep — table export menu labels (UIResourceRenderer)', () => {
 
   /** The menu items live in a <PortalDropdownMenu> mounted on document.body. */
   const openMenu = (root: ParentNode) =>
-    fireEvent.click(root.querySelector('button[aria-haspopup="menu"]') as HTMLElement)
+    flush(() => fireEvent.click(root.querySelector('button[aria-haspopup="menu"]') as HTMLElement))
 
   const itemTexts = (): string[] =>
     Array.from(document.querySelectorAll('body > div button')).map((b) => b.textContent ?? '')
@@ -521,7 +522,7 @@ describe('sweep — VerifiedText confidence summary', () => {
 describe('sweep — ImageGalleryRenderer / VideoRenderer untitled fallbacks', () => {
   /** Both titles surface as the fullscreen dialog's accessible name. */
   const expand = (root: ParentNode) =>
-    fireEvent.click(root.querySelector('[data-mcp-ui-action="expand"]') as HTMLElement)
+    flush(() => fireEvent.click(root.querySelector('[data-mcp-ui-action="expand"]') as HTMLElement))
 
   const dialogLabel = (): string | null =>
     document.querySelector('[data-mcp-ui-portal="dialog"]')?.getAttribute('aria-label') ?? null
@@ -656,7 +657,7 @@ describe('sweep — chart error overlay (UIResourceRenderer)', () => {
       expect(found).toBeDefined()
       return found as HTMLImageElement
     })
-    fireEvent.error(img)
+    flush(() => fireEvent.error(img))
   }
 
   it('localizes the error heading', async () => {
@@ -701,14 +702,14 @@ describe('sweep — GraphRenderer export menu', () => {
     )).container
     const providerTrigger = await trigger(withProvider)
     expect(providerTrigger.textContent?.trim()).toBe('Exporter ▾')
-    fireEvent.click(providerTrigger)
+    flush(() => fireEvent.click(providerTrigger))
     expect(itemTexts().join(' | ')).toContain('Télécharger le PNG')
     cleanup()
 
     const withDefaults = render(() => <GraphRenderer component={graph()} />).container
     const defaultTrigger = await trigger(withDefaults)
     expect(defaultTrigger.textContent?.trim()).toBe('Export ▾')
-    fireEvent.click(defaultTrigger)
+    flush(() => fireEvent.click(defaultTrigger))
     const defaults = itemTexts().join(' | ')
     expect(defaults).toContain('Download PNG')
     expect(defaults).toContain('visual snapshot')
@@ -746,7 +747,7 @@ describe('sweep — ScratchpadPanel', () => {
     /** Clicking the chip's own button opens the inline value editor. */
     const openEditor = (root: ParentNode) => {
       const chip = root.querySelector('span.rounded-full button') as HTMLElement
-      fireEvent.click(chip)
+      flush(() => fireEvent.click(chip))
     }
 
     const withProvider = render(() => (
@@ -1349,7 +1350,7 @@ describe('sweep — DegradedFallback through a renderer that falls back', () => 
         expect(found).toBeTruthy()
         return found as HTMLImageElement
       })
-      fireEvent.error(img)
+      flush(() => fireEvent.error(img))
       await waitFor(() => {
         expect(root.textContent ?? '').toContain(expected)
       })

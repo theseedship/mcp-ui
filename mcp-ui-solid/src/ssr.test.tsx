@@ -44,7 +44,7 @@ describe('SSR Compatibility Tests', () => {
     it('should detect server environment correctly', async () => {
       // In SSR, isServer from solid-js/web should be true
       // We test our components handle this gracefully
-      const { isServer } = await import('solid-js/web')
+      const { isServer } = await import('@solidjs/web')
       // Note: In test environment this might still be false
       // The important thing is components check for it
       expect(typeof isServer).toBe('boolean')

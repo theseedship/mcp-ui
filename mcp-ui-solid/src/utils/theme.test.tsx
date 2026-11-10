@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createRoot, createSignal, type Setter } from 'solid-js'
+import { createRoot, createSignal, flush, type Setter } from 'solid-js'
 import { bindPortalTheme, observeTheme, readThemeTokens } from './theme'
 
 const disposers: Array<() => void> = []
@@ -150,6 +150,7 @@ describe('bindPortalTheme', () => {
       disposers.push(dispose)
       bindPortalTheme(portal, () => anchor)
     })
+    flush()
     expect(portal.style.getPropertyValue('--mcp-ui-surface')).toBe('plum')
     expect(portal.style.getPropertyValue('--mcp-ui-fg')).toBe('indigo')
     expect(portal.style.getPropertyValue('--unrelated')).toBe('')
@@ -188,6 +189,7 @@ describe('bindPortalTheme', () => {
       disposers.push(dispose)
       bindPortalTheme(portal, () => anchor)
     })
+    flush()
     expect(computed).toHaveBeenCalledWith(anchor)
     expect(computed).toHaveBeenCalledWith(portal.parentElement)
     expect(portal.style.getPropertyValue('--mcp-ui-surface')).toBe('initial')
@@ -220,13 +222,14 @@ describe('bindPortalTheme', () => {
       setAnchor = update
       bindPortalTheme(portal, anchor)
     })
+    flush()
     expect(portal.style.getPropertyValue('--mcp-ui-surface')).toBe('plum')
     expect(portal.classList.contains('dark')).toBe(true)
-    setAnchor(anchorB)
+    flush(() => setAnchor(anchorB))
     expect(portal.style.getPropertyValue('--mcp-ui-surface')).toBe('')
     expect(portal.style.getPropertyValue('--mcp-ui-fg')).toBe('navy')
     expect(portal.classList.contains('dark')).toBe(false)
-    setAnchor(undefined)
+    flush(() => setAnchor(undefined))
     expect(portal.style.getPropertyValue('--mcp-ui-surface')).toBe('')
     expect(portal.style.getPropertyValue('--mcp-ui-fg')).toBe('')
     expect(portal.classList.contains('dark')).toBe(false)
@@ -245,6 +248,7 @@ describe('bindPortalTheme', () => {
       disposers.push(dispose)
       bindPortalTheme(portal, () => host)
     })
+    flush()
     expect(portal.style.getPropertyValue('--mcp-ui-surface')).toBe('plum')
     disposeOwner()
     expect(disconnect).toHaveBeenCalledTimes(1)

@@ -35,7 +35,7 @@
  * ```
  */
 
-import { Show, For, createSignal, onMount } from 'solid-js'
+import { Show, For, createSignal, onSettled } from 'solid-js'
 import {
   useStreamingUI,
   type StreamingUIMessages,
@@ -94,13 +94,13 @@ export function StreamingUIRenderer(props: StreamingUIRendererProps) {
   }
   const { components, isLoading, isStreaming, error, progress, metadata, startStreaming } =
     useStreamingUI({
-      query: props.query,
-      spaceIds: props.spaceIds,
-      sessionId: props.sessionId,
-      options: props.options,
-      onComplete: props.onComplete,
-      onError: props.onError,
-      onComponentReceived: props.onComponentReceived,
+      get query() { return props.query },
+      get spaceIds() { return props.spaceIds },
+      get sessionId() { return props.sessionId },
+      get options() { return props.options },
+      get onComplete() { return props.onComplete },
+      get onError() { return props.onError },
+      get onComponentReceived() { return props.onComponentReceived },
       messages,
     })
 
@@ -111,13 +111,14 @@ export function StreamingUIRenderer(props: StreamingUIRendererProps) {
     setAnimatingComponents((prev) => new Set([...prev, componentId]))
 
     // Remove from animating set after animation completes
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       setAnimatingComponents((prev) => {
         const next = new Set(prev)
         next.delete(componentId)
         return next
       })
     }, 500)
+    return () => clearTimeout(timer)
   }
 
   return (
@@ -200,7 +201,7 @@ export function StreamingUIRenderer(props: StreamingUIRendererProps) {
         <For each={components()}>
           {(component) => {
             // Trigger animation on mount (SSR-safe, no 'use' directive needed)
-            onMount(() => handleComponentRender(component.id))
+            onSettled(() => handleComponentRender(component.id))
 
             return (
               <div

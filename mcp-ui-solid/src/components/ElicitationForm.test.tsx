@@ -7,6 +7,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { flush } from 'solid-js'
 import { render, fireEvent, cleanup } from '@solidjs/testing-library'
 import { ElicitationForm } from './ElicitationForm'
 import type { ElicitationEvent } from '../types/chat-bus'
@@ -36,10 +37,12 @@ describe('ElicitationForm — v5.3.0', () => {
     // ChatPrompt renders a Confirm button — find and click it.
     const confirmBtn = getByText('Confirm') as HTMLElement
     fireEvent.click(confirmBtn)
+    flush()
 
     expect(onAccept).toHaveBeenCalledTimes(1)
     expect(onAccept).toHaveBeenCalledWith({ consent: true })
   })
+    flush()
 
   it('single enum property → choice UI → onAccept gets { propName: enumValue }', () => {
     const onAccept = vi.fn()
@@ -62,9 +65,11 @@ describe('ElicitationForm — v5.3.0', () => {
     ))
 
     fireEvent.click(getByText('Pro') as HTMLElement)
+    flush()
 
     expect(onAccept).toHaveBeenCalledWith({ tier: 'pro' })
   })
+    flush()
 
   it('numeric enum property → onAccept coerces value to number', () => {
     const onAccept = vi.fn()
@@ -83,9 +88,11 @@ describe('ElicitationForm — v5.3.0', () => {
     ))
 
     fireEvent.click(getByText('2') as HTMLElement)
+    flush()
 
     expect(onAccept).toHaveBeenCalledWith({ level: 2 })
   })
+    flush()
 
   it('multi-property schema → form UI → onAccept gets formValues unchanged', () => {
     const onAccept = vi.fn()
@@ -111,15 +118,19 @@ describe('ElicitationForm — v5.3.0', () => {
     expect(spaceInput).toBeTruthy()
 
     fireEvent.input(tenantInput, { target: { value: 'acme-co' } })
+    flush()
     fireEvent.input(spaceInput, { target: { value: 'prod' } })
+    flush()
 
     const submitBtn = getByText('Submit') as HTMLElement
     fireEvent.click(submitBtn)
+    flush()
 
     expect(onAccept).toHaveBeenCalledTimes(1)
     const [content] = onAccept.mock.calls[0]
     expect(content).toMatchObject({ tenant_id: 'acme-co', space_id: 'prod' })
   })
+    flush()
 
   it('X dismiss → onCancel fires, onAccept does NOT', () => {
     const onAccept = vi.fn()
@@ -140,10 +151,12 @@ describe('ElicitationForm — v5.3.0', () => {
 
     const dismissBtn = container.querySelector('[aria-label="Dismiss"]') as HTMLElement
     fireEvent.click(dismissBtn)
+    flush()
 
     expect(onCancel).toHaveBeenCalledTimes(1)
     expect(onAccept).not.toHaveBeenCalled()
   })
+    flush()
 
   it('onDecline takes precedence over onCancel when provided', () => {
     const onAccept = vi.fn()
@@ -168,11 +181,13 @@ describe('ElicitationForm — v5.3.0', () => {
     ))
 
     fireEvent.click(getByText('Decline') as HTMLElement)
+    flush()
 
     expect(onDecline).toHaveBeenCalledTimes(1)
     expect(onCancel).not.toHaveBeenCalled()
     expect(onAccept).not.toHaveBeenCalled()
   })
+    flush()
 
   it('confirm cancel button → onCancel fires (dismissed=true via cancel button)', () => {
     const onAccept = vi.fn()
@@ -190,8 +205,11 @@ describe('ElicitationForm — v5.3.0', () => {
     ))
 
     fireEvent.click(getByText('Cancel') as HTMLElement)
+    flush()
 
     expect(onCancel).toHaveBeenCalledTimes(1)
     expect(onAccept).not.toHaveBeenCalled()
   })
+    flush()
 })
+    flush()

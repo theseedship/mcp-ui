@@ -46,7 +46,7 @@
  * 'AbortError'` without importing any mcp-ui type.
  */
 
-import { createSignal, type Accessor } from 'solid-js'
+import { createSignal, flush, type Accessor } from 'solid-js'
 import type { ChatPromptConfig, ChatPromptResponse } from '../types/chat-bus'
 
 // ─── Error class ─────────────────────────────────────────────
@@ -141,7 +141,7 @@ export function createChatPromptController(): ChatPromptController {
     // Abort already tripped on entry : return a rejected Promise without
     // ever showing the UI.
     if (signal?.aborted) {
-      setActivePrompt(null)
+      flush(() => setActivePrompt(null))
       return Promise.reject(new DOMException('Prompt aborted', 'AbortError'))
     }
 
@@ -155,7 +155,7 @@ export function createChatPromptController(): ChatPromptController {
           if (pending === entry) {
             pending = null
             cleanupAbort(entry)
-            setActivePrompt(null)
+            flush(() => setActivePrompt(null))
             reject(new DOMException('Prompt aborted', 'AbortError'))
           }
         }
@@ -163,7 +163,8 @@ export function createChatPromptController(): ChatPromptController {
       }
 
       pending = entry
-      setActivePrompt(config)
+      // Bus commands preserve immediate public accessor visibility.
+      flush(() => setActivePrompt(config))
     })
   }
 
@@ -172,7 +173,7 @@ export function createChatPromptController(): ChatPromptController {
     const entry = pending
     pending = null
     cleanupAbort(entry)
-    setActivePrompt(null)
+    flush(() => setActivePrompt(null))
     entry.resolve(response)
   }
 
@@ -181,7 +182,7 @@ export function createChatPromptController(): ChatPromptController {
     const entry = pending
     pending = null
     cleanupAbort(entry)
-    setActivePrompt(null)
+    flush(() => setActivePrompt(null))
     // Surface as a resolved Promise with dismissed: true — matches existing
     // ChatPrompt onDismiss contract from v4.x.
     entry.resolve({ type: entry.type, value: '', label: '', dismissed: true })
@@ -192,7 +193,7 @@ export function createChatPromptController(): ChatPromptController {
     const entry = pending
     pending = null
     cleanupAbort(entry)
-    setActivePrompt(null)
+    flush(() => setActivePrompt(null))
     entry.reject(new DOMException(reason, 'AbortError'))
   }
 

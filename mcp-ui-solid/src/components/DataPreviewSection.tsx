@@ -5,7 +5,7 @@
  * @experimental
  */
 
-import { createSignal, createMemo, createEffect, For, Show, onMount } from 'solid-js'
+import { createSignal, createMemo, createEffect, For, Show, onSettled, untrack } from 'solid-js'
 import type { DataPreviewContent, DataPreviewColumn } from '../types/chat-bus'
 import {
   DEFAULT_MCPUI_STRINGS,
@@ -158,17 +158,15 @@ export function DataPreviewSection(props: DataPreviewSectionProps) {
   const pageSizeVal = () => content()?.pageSize ?? 25
   const showPageInfo = () => content()?.showPageInfo !== false
 
-  const [page, setPage] = createSignal(content()?.initialPage ?? 0)
+  const [page, setPage] = createSignal(untrack(() => content()?.initialPage ?? 0))
   const [mounted, setMounted] = createSignal(false)
-  onMount(() => setMounted(true))
+  onSettled(() => { setMounted(true) })
   const [sortKey, setSortKey] = createSignal<string | null>(null)
   const [sortDir, setSortDir] = createSignal<SortDir>(null)
 
   // Notify parent on page change
-  createEffect(() => {
-    const p = page()
-    content()?.onPageChange?.(p)
-  })
+  createEffect(() => ({ page: page(), onPageChange: content()?.onPageChange }),
+    ({ page, onPageChange }) => onPageChange?.(page))
 
   const handleSort = (key: string) => {
     if (sortKey() === key) {
@@ -285,11 +283,10 @@ export function DataPreviewSection(props: DataPreviewSectionProps) {
                         <span class="inline-flex items-center gap-1">
                           {col.label}
                           <span
-                            class="text-[10px] leading-none"
-                            classList={{
+                            class={["text-[10px] leading-none", {
                               'opacity-30': sortKey() !== col.key,
                               'opacity-100 text-blue-600 dark:text-blue-400': sortKey() === col.key,
-                            }}
+                            }]}
                           >
                             {sortIndicator(col.key)}
                           </span>
@@ -303,8 +300,7 @@ export function DataPreviewSection(props: DataPreviewSectionProps) {
                 <For each={visibleRows()}>
                   {(row, i) => (
                     <tr
-                      class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-                      classList={{ 'bg-gray-25 dark:bg-gray-850': i() % 2 === 1 }}
+                      class={["border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors", { 'bg-gray-25 dark:bg-gray-850': i() % 2 === 1 }]}
                     >
                       <For each={columns()}>
                         {(col) => (

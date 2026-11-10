@@ -63,6 +63,26 @@ describe('createScratchpadStore — v5.2.0', () => {
     expect(storeB.pinned()).toBe(false)
   })
 
+  it('commits consecutive parser updates synchronously without changing section merge semantics', () => {
+    const store = createScratchpadStore()
+    const section = (id: string, title: string) => ({
+      id, title, type: 'message' as const, content: title, editable: false, source: 'agent' as const,
+    })
+    store.dispatch({ ...createEvent('stream', 'Scratchpad'), sections: [section('a', 'First')] })
+    store.dispatch({ id: 'stream', action: 'update', sectionMode: 'append', sections: [section('b', 'Second')] })
+    expect(store.state()?.sections.map((value) => value.id)).toEqual(['a', 'b'])
+    store.dispatch({ id: 'stream', action: 'update', sectionMode: 'upsert', sections: [section('a', 'Updated')] })
+    expect(store.state()?.sections.map((value) => value.title)).toEqual(['Updated', 'Second'])
+    store.dispatch({ id: 'different-stream', action: 'update', sections: [] })
+    expect(store.state()?.sections).toHaveLength(2)
+    store.dispatch({ id: 'stream', action: 'update', sections: [section('c', 'Replacement')], pinned: true })
+    expect(store.state()?.sections.map((value) => value.id)).toEqual(['c'])
+    expect(store.pinned()).toBe(true)
+    store.close()
+    expect(store.state()).toBeNull()
+    expect(store.pinned()).toBe(false)
+  })
+
   it('ScratchpadStoreProvider without store prop creates a fresh store', () => {
     let capturedState: ReturnType<typeof useScratchpadState> | null = null
 

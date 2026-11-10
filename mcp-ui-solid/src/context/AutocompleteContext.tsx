@@ -12,7 +12,8 @@ import {
   Accessor,
   createSignal,
   createMemo,
-  onCleanup
+  onCleanup,
+  untrack
 } from 'solid-js'
 import type {
   AutocompletePlugin,
@@ -88,8 +89,8 @@ export interface AutocompleteContextValue {
   }
 }
 
-// Create context with undefined default
-const AutocompleteCtx = createContext<AutocompleteContextValue>()
+// Null explicitly represents an absent provider; the safe hook normalizes to undefined.
+const AutocompleteCtx = createContext<AutocompleteContextValue | null>(null)
 
 /**
  * Props for AutocompleteProvider
@@ -112,7 +113,7 @@ function getCacheKey(input: string, pluginId: string, context?: AutocompleteCont
  */
 export const AutocompleteProvider: ParentComponent<AutocompleteProviderProps> = (props) => {
   // Plugin registry
-  const [plugins, setPlugins] = createSignal<AutocompletePlugin[]>(props.plugins || [])
+  const [plugins, setPlugins] = createSignal<AutocompletePlugin[]>(untrack(() => props.plugins || []))
 
   // Result cache
   const [cache, setCache] = createSignal<Map<string, CacheEntry>>(new Map())
@@ -283,13 +284,13 @@ export const AutocompleteProvider: ParentComponent<AutocompleteProviderProps> = 
     registerPlugin,
     unregisterPlugin,
     clearCache,
-    config: config()
+    get config() { return config() }
   }
 
   return (
-    <AutocompleteCtx.Provider value={contextValue}>
+    <AutocompleteCtx value={contextValue}>
       {props.children}
-    </AutocompleteCtx.Provider>
+    </AutocompleteCtx>
   )
 }
 
@@ -311,7 +312,7 @@ export function useAutocompleteContext(): AutocompleteContextValue {
  * Safe hook that returns undefined if outside provider
  */
 export function useAutocompleteContextSafe(): AutocompleteContextValue | undefined {
-  return useContext(AutocompleteCtx)
+  return useContext(AutocompleteCtx) ?? undefined
 }
 
 export { AutocompleteCtx }

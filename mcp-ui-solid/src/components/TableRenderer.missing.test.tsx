@@ -1,3 +1,4 @@
+import { flush } from 'solid-js';
 /**
  * Missing table cells (v6.24.0) — "absence is never zero".
  *
@@ -13,7 +14,7 @@ import { cleanup, fireEvent, render, waitFor } from '@solidjs/testing-library'
 import { readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type { JSX } from 'solid-js'
+import type { JSX } from "@solidjs/web";
 import { renderCellValue, UIResourceRenderer } from './UIResourceRenderer'
 import {
   DEFAULT_MCPUI_STRINGS,
@@ -22,15 +23,17 @@ import {
 } from '../context/MCPUIStringsContext'
 import type { UIComponent } from '../types'
 
-// Virtualized mode needs @tanstack/solid-virtual to hand out virtual rows in
-// jsdom (no layout): two fixed items, rows 0 and 1.
-vi.mock('@tanstack/solid-virtual', () => ({
-  createVirtualizer: () => ({
+// This suite tests virtual-branch cell dispatch, not viewport measurements:
+// two fixed rows in jsdom. solid2-virtualizer.test.ts covers the real core.
+vi.mock('../utils/solid2-virtualizer', () => ({
+  createTableVirtualizer: () => ({
     getVirtualItems: () => [
       { index: 0, key: 0, start: 0, size: 48, end: 48, lane: 0 },
       { index: 1, key: 1, start: 48, size: 48, end: 96, lane: 0 },
     ],
     getTotalSize: () => 96,
+    update: () => {},
+    dispose: () => {},
   }),
 }))
 
@@ -186,11 +189,11 @@ describe('missing-value legend', () => {
     const { container, getByText } = view(table(manyRows(25, 15)))
     expect(container.querySelector(MARK)).toBeNull() // page 1 shows none
     expect(container.querySelectorAll(LEGEND)).toHaveLength(1)
-    fireEvent.click(container.querySelector('[data-mcp-ui-action="page-next"]')!)
+    flush(() => fireEvent.click(container.querySelector('[data-mcp-ui-action="page-next"]')!))
     expect(getByText('2 / 3')).toBeTruthy()
     expect(container.querySelectorAll(MARK)).toHaveLength(1)
     expect(container.querySelectorAll(LEGEND)).toHaveLength(1)
-    fireEvent.click(container.querySelector('[data-mcp-ui-action="page-next"]')!)
+    flush(() => fireEvent.click(container.querySelector('[data-mcp-ui-action="page-next"]')!))
     expect(container.querySelector(MARK)).toBeNull()
     expect(container.querySelectorAll(LEGEND)).toHaveLength(1)
   })
@@ -214,7 +217,7 @@ describe('missing-value legend', () => {
   it('stays while a search hides every missing row', async () => {
     const { container } = view(table([{ v: 'alpha' }, { v: null }]))
     const input = container.querySelector('input[type="text"]') as HTMLInputElement
-    fireEvent.input(input, { target: { value: 'alpha' } })
+    flush(() => fireEvent.input(input, { target: { value: 'alpha' } }))
     await waitFor(() => expect(container.querySelectorAll('tbody tr')).toHaveLength(1))
     expect(container.querySelector(MARK)).toBeNull()
     expect(container.querySelectorAll(LEGEND)).toHaveLength(1)
@@ -222,7 +225,7 @@ describe('missing-value legend', () => {
 })
 
 describe('sorting', () => {
-  const clickHeader = (container: HTMLElement) => fireEvent.click(container.querySelector('thead th')!)
+  const clickHeader = (container: HTMLElement) => flush(() => fireEvent.click(container.querySelector('thead th')!))
 
   it('puts missing values last, ascending and descending', () => {
     const { container } = view(table([{ v: 5 }, { v: null }, { v: 3 }, { v: undefined }, { v: '' }, { v: 4 }], { chatPageSize: 50 }))
@@ -268,7 +271,7 @@ describe('sorting', () => {
 
 describe('search', () => {
   const search = async (container: HTMLElement, query: string) => {
-    fireEvent.input(container.querySelector('input[type="text"]')!, { target: { value: query } })
+    flush(() => fireEvent.input(container.querySelector('input[type="text"]')!, { target: { value: query } }))
     await new Promise((r) => setTimeout(r, 260)) // 200ms debounce
   }
 
@@ -301,19 +304,20 @@ describe('exports are unchanged', () => {
 
   it("copy CSV writes '' for null/undefined/'' (no marker, no 'Missing value')", async () => {
     const { container } = view(table(rows, {}, columns))
-    fireEvent.click(container.querySelector(`button[aria-label="${DEFAULT_MCPUI_STRINGS.tableCopyCsv}"]`)!)
+    flush(() => fireEvent.click(container.querySelector(`button[aria-label="${DEFAULT_MCPUI_STRINGS.tableCopyCsv}"]`)!))
     await waitFor(() => expect(writeText).toHaveBeenCalled())
     expect(writeText).toHaveBeenCalledWith('Name,Qty\nA,\nB,\nC,\nD,-\nE,0')
   })
 
   it('TSV copy is unchanged', async () => {
     const { container } = view(table(rows, { exportable: { formats: ['tsv'] } }, columns))
-    fireEvent.click(container.querySelector(`button[aria-label="${DEFAULT_MCPUI_STRINGS.tableExport}"]`)!)
+    flush(() => fireEvent.click(container.querySelector(`button[aria-label="${DEFAULT_MCPUI_STRINGS.tableExport}"]`)!))
     fireEvent.click(await waitFor(() => {
       const el = Array.from(document.body.querySelectorAll('button')).find((b) => b.textContent === DEFAULT_MCPUI_STRINGS.tableCopyTsv)
       if (!el) throw new Error('menu not open')
       return el
     }))
+    flush();
     expect(writeText).toHaveBeenCalledWith('Name\tQty\nA\t\nB\t\nC\t\nD\t-\nE\t0')
   })
 
@@ -324,12 +328,13 @@ describe('exports are unchanged', () => {
     Object.defineProperty(URL, 'revokeObjectURL', { value: vi.fn(), configurable: true })
     const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
     const { container } = view(table(rows, { exportable: { formats: ['json'] } }, columns))
-    fireEvent.click(container.querySelector(`button[aria-label="${DEFAULT_MCPUI_STRINGS.tableExport}"]`)!)
+    flush(() => fireEvent.click(container.querySelector(`button[aria-label="${DEFAULT_MCPUI_STRINGS.tableExport}"]`)!))
     fireEvent.click(await waitFor(() => {
       const el = Array.from(document.body.querySelectorAll('button')).find((b) => b.textContent === DEFAULT_MCPUI_STRINGS.tableDownloadJson)
       if (!el) throw new Error('menu not open')
       return el
     }))
+    flush();
     expect(click).toHaveBeenCalled()
     const text = await new Promise<string>((res) => {
       const reader = new FileReader()
@@ -343,17 +348,35 @@ describe('exports are unchanged', () => {
   })
 })
 
-describe('a table without missing cells is structurally identical to 6.23.0 apart from theme classes', () => {
+describe('a table without missing cells preserves 6.23.0 DOM apart from theme classes and renderer anchors', () => {
   // `table-dom-6.23.0.json` was captured from the 6.23.0 renderer (before this
   // change) with the three payloads below; random ids are normalised.
   const baseline = JSON.parse(
     readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '../../test-support/fixtures/table-dom-6.23.0.json'), 'utf8')
   ) as Record<'plain' | 'paged' | 'virt', string>
   // Keep the immutable baseline intact. Only reverse the explicit 6.25 theme
-  // migration inside class attributes; text, DOM, attributes and other classes
-  // must still match. Both sides receive the same class-whitespace treatment.
-  const norm = (html: string) => html.replace(/table-[a-z0-9]{7}/g, 'table-ID')
-    .replace(/class="([^"]*)"/g, (_attribute, classes: string) => {
+  // migration inside class attributes and remove empty compiler-generated
+  // anchors (Solid 2 emits them around dynamic branches). Text, element DOM,
+  // every attribute and meaningful comments must still match. Attribute order
+  // is not DOM structure: Solid 1 serialized virtual <tr> style before class,
+  // while Solid 2 uses source order. Sort attributes without dropping any.
+  // Never recapture the baseline merely because the compiler changed.
+  const norm = (html: string) => {
+    const template = document.createElement('template')
+    template.innerHTML = html
+    const comments = document.createTreeWalker(template.content, NodeFilter.SHOW_COMMENT)
+    const emptyAnchors: Node[] = []
+    while (comments.nextNode()) if (comments.currentNode.nodeValue === '') emptyAnchors.push(comments.currentNode)
+    for (const node of emptyAnchors) node.parentNode?.removeChild(node)
+    for (const element of template.content.querySelectorAll('*')) {
+      // Operate on actual attributes, never attribute-looking user text/code.
+      for (const name of ['id', 'aria-labelledby']) {
+        if (/^table-(?:[a-z0-9]{7}|cl-\d+)-title$/.test(element.getAttribute(name) ?? '')) {
+          element.setAttribute(name, 'table-ID-title')
+        }
+      }
+      const classes = element.getAttribute('class')
+      if (classes !== null) {
       const normalized = classes.split(/\s+/).filter((token) => token &&
         token !== 'mcp-ui-root' && token !== '[background-color:var(--mcp-ui-bg)]')
         .map((token) => {
@@ -368,8 +391,14 @@ describe('a table without missing cells is structurally identical to 6.23.0 apar
           const shadow = /^shadow-\[var\(--mcp-ui-shadow,var\(--shadow-(sm|md|lg|xl|2xl)\)\)\]$/.exec(token)
           return shadow ? `shadow-${shadow[1]}` : token
         })
-      return `class="${normalized.join(' ')}"`
-    })
+        element.setAttribute('class', normalized.join(' '))
+      }
+      const attributes = Array.from(element.attributes).sort((a, b) => a.name.localeCompare(b.name))
+      for (const attribute of attributes) element.removeAttribute(attribute.name)
+      for (const attribute of attributes) element.setAttribute(attribute.name, attribute.value)
+    }
+    return template.innerHTML
+  }
   const cols = [
     { key: 'name', label: 'Name' }, { key: 'n', label: 'N' }, { key: 'ok', label: 'Ok' },
     { key: 'link', label: 'Link' }, { key: 'md', label: 'Md' },
@@ -387,8 +416,15 @@ describe('a table without missing cells is structurally identical to 6.23.0 apar
     const legacy = `<a href="/a" class="text-blue-600 dark:bg-gray-800/50 shadow-sm keep">${text}</a>`
     const themed = `<a href="/a" class="mcp-ui-root text-[color:var(--mcp-ui-accent,var(--color-blue-600))] dark:bg-[color:var(--mcp-ui-surface,color-mix(in_oklab,var(--color-gray-800,#1f2937)_50%,transparent))] shadow-[var(--mcp-ui-shadow,var(--shadow-sm))] [background-color:var(--mcp-ui-bg)] keep">${text}</a>`
     expect(norm(themed)).toBe(norm(legacy))
+    expect(norm(themed + '<!---->')).toBe(norm(legacy))
+    expect(norm(themed + '<!--meaningful-->')).not.toBe(norm(legacy))
+    expect(norm('<div style="height: 48px;" class="keep"></div>'))
+      .toBe(norm('<div class="keep" style="height: 48px;"></div>'))
     expect(norm(themed)).toContain(`>${text}</a>`)
+    const literalAttributes = 'literal class="mcp-ui-root" id="table-cl-39-title"'
+    expect(norm(`<code>${literalAttributes}</code>`)).toBe(`<code>${literalAttributes}</code>`)
     expect(norm(themed.replace('href="/a"', 'href="/b"'))).not.toBe(norm(legacy))
+    expect(norm(themed.replace('href="/a"', 'href="/a" data-evidence="changed"'))).not.toBe(norm(legacy))
     expect(norm(themed.replace(' keep"', ' different"'))).not.toBe(norm(legacy))
     expect(norm(themed.replace('</a>', '</a><span>extra</span>'))).not.toBe(norm(legacy))
   })

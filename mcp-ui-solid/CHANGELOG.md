@@ -5,19 +5,110 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [7.0.0] - Unreleased
+## [8.0.0-solid2.3] - Unreleased Solid 2 RC.21 qualification candidate
 
-### Breaking — Zod types, not the Solid engine
+### Changed
 
-- Use Zod 4.6.6 and Spec ^6.0.0 while retaining Solid 1 and the existing renderer,
-  peer range, engine loading, sanitizer and MCP wire contracts. Adapt connector
-  records and preserve application validation codes/paths; native Zod messages
-  can change. The paused Solid 2 preview is not resumed.
-- Qualify emitted ESM/CJS declarations with a real packed-consumer TypeScript
-  gate and retain the existing resource-size behavior explicitly as a limitation.
-- See `docs/ZOD4-STABLE-MIGRATION-2026-10-26.md` for compatibility and release gates.
+- Align core/web/signals/compiler/Babel to exact `2.0.0-rc.21` and the scoped
+  Vite plugin to `3.0.0-next.57`. Keep Vite 8.3.5, renderer-owned Seroval 1.7.0,
+  virtual-core 3.13.18, Spec 6 and CLI 5.0.2 unchanged.
+- Preserve the exact optional KaTeX peer `0.18.4 || 0.18.5` and requalify both
+  versions plus the absent peer against real RC.21 tarballs.
+- Reject RC.20/RC.21 mixing and the RC.21 `CAUGHT_REACTIVE_READ` diagnostic in
+  consumer SSR gates. Full source CI now also runs on PRs into the preview
+  branch; no push or release trigger is added.
+- Update test hosts to the plugin's `start.nodeServer` option, wait for complete
+  server-log writes before inspection, and bind the KaTeX matrix to the same
+  CI artifact and tarball as the main runtime qualification.
+- `.2` remains the RC.20 qualification identity; `.3` needs separate review,
+  exact-head CI evidence and publication authorization. No tag/channel or
+  stable main/runtime change is made by qualification.
 
-## Historical tooling follow-up before Zod 4
+## [8.0.0-solid2.2] - Unreleased KaTeX compatibility candidate
+
+### Changed
+
+- Accept only the explicitly qualified optional KaTeX versions `0.18.4 || 0.18.5`.
+  Keep the adapter, public exports, Solid RC.20 cohort, development KaTeX 0.18.4
+  baseline and other components unchanged. Add a genuine packed-consumer matrix
+  for both versions and for KaTeX absent, including SSR/hydration and Chromium.
+- Candidate channel is `solid2`; this source PR neither publishes nor moves any
+  dist-tag. The existing promotion policy still binds the published `.1` and
+  requires separate review before a future `.2` release.
+- This is compatibility qualification, not remediation of GHSA-238p-pmpm-9mq7
+  in direct 0.18.4 (already patched). Mermaid's older transitive KaTeX remains
+  an application-owned follow-up. See the dated KaTeX qualification handoff.
+
+## [8.0.0-solid2.1] - Published Solid 2 RC.20 preview
+
+### Fixed
+
+- Resolve Scratchpad mount-log props during component setup, not owner-backed
+  `onSettled`. A host JSX conditional for `pinned` no longer creates a memo in
+  a forbidden lifecycle scope (`PRIMITIVE_IN_FORBIDDEN_SCOPE`).
+- Capture the Scratchpad debug flag/id in effect compute and pass them to a
+  prop-free logger in apply, also preventing `PRIMITIVE_IN_EFFECT_CALLBACK`.
+- Preserve reactive pin changes, auto-close suppression, timer cleanup and the
+  once-per-mount creation log. Add real compiler-conditional prop regressions and
+  full/optional-absent public-tarball browser probes.
+
+### Changed
+
+- Pin core/web/signals/compiler/Babel together to `2.0.0-rc.20`, matching the
+  reported host cohort. Keep Vite plugin next.51, Spec 6 and CLI 5.0.2 unchanged.
+- The bug was reproduced and the focused fix checked on RC.19 before the cohort
+  update; `.1` has separate RC.20 qualification, not reused `.0` archive evidence.
+- Prepare publication through the separate `solid2` policy only; no runtime-PR
+  merge, npm upload, host change or stable `latest` change is implied.
+
+## [8.0.0-solid2.0] - 2026-11-01 — published Solid 2 RC.19 preview
+
+### Historical 2026-10-27 source preparation
+
+- Candidate source identity is `8.0.0-solid2.0`, on the Solid 2 line. Stable
+  `7.x` (including future `7.1.x`) remains Solid 1 and npm `latest`; Solid 2 is
+  opt-in on the separate `solid2` tag, only after a separately reviewed gate.
+- Carry stable #40/#41: Spec 6, Zod 4.6.6, patched CLI `fast-uri` 3.1.9 and
+  complete declaration graphs. Keep the Solid 2 SSR/runtime.
+- Target the exact RC.19 cohort (including compiler/signals/web), reject native
+  effect-relay/own-source diagnostics, and qualify against Spec 6 tarballs.
+- The source version alone is not CI qualification or release proof. Qualify
+  the exact source HEAD and archive; never reuse the historical
+  `7.0.0-solid2.0` qualification archive or checksum as proof for 8.0.0.
+- The RC.19 / Spec 6 / CLI 5.0.2 promotion policy must first be reviewed and
+  merged as an infrastructure-only PR to stable main. That does not authorize
+  dispatch, staging, publication, runtime-PR merge, or application installation.
+
+## [7.0.0-solid2.0] - Historical, unpublished Solid 2 qualification identity
+
+This section records historical RC.18 and RC.19 preview-source work under the
+earlier identity only.
+Its version, source, CI reports, tarball and checksums are historical evidence;
+none qualifies the current `8.0.0-solid2.0` candidate.
+
+- Port runtime, DOM renderer, JSX compiler and testing to the exact Solid 2
+  RC.18 toolchain; leave the stable Solid 1 line and MCP schemas unchanged.
+- Adapt compute/apply effects, ownership, cleanup, context fallbacks, draft
+  stores and imperative store/controller observation boundaries.
+- Replace the Solid 1 virtualizer adapter with a lazy optional TanStack core
+  bridge, qualified against the real core including disposal and two instances.
+- Keep browser engines lazy and guard late imports after unmount; cancel fetch
+  readers and reconnect timers on streaming stop/disposal.
+- Preserve portal DOM identity and local live themes, use hydration-stable table
+  ids, and revalidate changed component payloads in a tracked computation.
+- Add migration regressions and a clean-tarball Solid 2 consumer harness. This
+  preview is a local artefact and review branch, not an npm release.
+
+### Security — historical preview development tooling
+
+- Carry the compatible tooling fixes from stable PR #38 into this preview:
+  Vitest and `@vitest/ui` 4.1.12, with `@vitest/mocker` 4.1.12 in the lockfile.
+  Retain Vite 8.3.5 and the exact Solid 2 RC.18 runtime/compiler pair; CLI and
+  Spec use Vite 6.4.5. No preview runtime, schema or package version changes.
+- Runtime Zod remains 3.25.76 with its advisory unresolved. Stable audit counts
+  below are not a fresh audit of this preview lockfile.
+
+## [Unreleased] — stable Solid 1 / 7.x line
 
 ### Security — development tooling only
 

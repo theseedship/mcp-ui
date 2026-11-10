@@ -9,10 +9,11 @@
  * lightbox and needs no host opt-in.
  */
 
-import { Component, Show, createEffect, createMemo, onCleanup } from 'solid-js'
-import { Portal } from 'solid-js/web'
+import { Component, Show, createEffect, createMemo } from 'solid-js'
+import { Portal } from "@solidjs/web";
 import type { GalleryImage } from '../types'
 import { safeUrl } from '../utils/safe-url'
+import { lockOverlayScroll } from '../utils/overlay-lifecycle'
 import { createPanZoom, type PanZoomPoint } from '../utils/pan-zoom'
 import { formatMCPUIString, useMCPUIStrings } from '../context/MCPUIStringsContext'
 
@@ -136,8 +137,7 @@ export const LightboxOverlay: Component<LightboxOverlayProps> = (props) => {
    * overlay would reopen stuck at `cursor: grabbing`, with `isPanning()` true
    * and the arrow keys dead behind their pan guards.
    */
-  createEffect(() => {
-    displayedImage()
+  createEffect(displayedImage, () => {
     panZoom.cancelGesture()
     panZoom.reset()
   })
@@ -163,8 +163,8 @@ export const LightboxOverlay: Component<LightboxOverlayProps> = (props) => {
   }
 
   // Keyboard navigation
-  createEffect(() => {
-    if (!isOpen()) return
+  createEffect(isOpen, (open) => {
+    if (!open) return
 
     const handleKeydown = (e: KeyboardEvent) => {
       // Ctrl/Cmd + `+` / `-` / `0` is the browser's own page zoom; the overlay
@@ -209,12 +209,12 @@ export const LightboxOverlay: Component<LightboxOverlayProps> = (props) => {
     }
 
     document.addEventListener('keydown', handleKeydown)
-    document.body.style.overflow = 'hidden'
+    const releaseScroll = lockOverlayScroll(document)
 
-    onCleanup(() => {
+    return () => {
       document.removeEventListener('keydown', handleKeydown)
-      document.body.style.overflow = ''
-    })
+      releaseScroll()
+    }
   })
 
   /**
