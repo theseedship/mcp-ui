@@ -296,7 +296,11 @@ async function qualification(t, change = () => {}) {
   for (const [key, profile] of [['full', 'full'], ['absent', 'optional-absent']]) {
     if (!evidence[key]) continue;
     const consumer = join(dir, `mcpui-solid2-${profile}`);
-    await json(join(consumer, 'qualification-results', 'fixture', 'report.json'), evidence[key]);
+    const results = join(consumer, 'qualification-results', 'fixture');
+    await json(join(results, 'report.json'), evidence[key]);
+    for (const mode of ['dev', 'production']) {
+      await writeFile(join(results, `${mode}-server.log`), 'Fixture SSR server started\n');
+    }
     await json(join(consumer, 'qualification-input.json'), evidence[key].input);
     await json(join(consumer, 'import-probe-result.json'), probe(profile));
     await writeFile(join(consumer, 'pnpm-lock.yaml'), 'lockfileVersion: 9.0\n');
@@ -515,6 +519,25 @@ for (const [name, packageJson] of [
 
 test('requires successful source and compiled-browser qualification of the same archive', async (t) => {
   await verifyQualification(await qualification(t), TARBALL_SHA, SPEC_SHA);
+});
+
+for (const profile of ['full', 'optional-absent']) {
+  for (const mode of ['dev', 'production']) {
+    test(`qualification requires the raw ${profile} ${mode} SSR log beside its report`, async (t) => {
+      const dir = await qualification(t);
+      const log = join(dir, `mcpui-solid2-${profile}`, 'qualification-results', 'fixture', `${mode}-server.log`);
+      await rm(log);
+      await assert.rejects(() => verifyQualification(dir, TARBALL_SHA, SPEC_SHA),
+        { message: `Missing raw SSR server log for ${profile} ${mode}` });
+    });
+  }
+}
+
+test('qualification rejects an empty raw SSR server log', async (t) => {
+  const dir = await qualification(t);
+  await writeFile(join(dir, 'mcpui-solid2-full', 'qualification-results', 'fixture', 'dev-server.log'), ' \n');
+  await assert.rejects(() => verifyQualification(dir, TARBALL_SHA, SPEC_SHA),
+    { message: 'Empty raw SSR server log for full dev' });
 });
 
 test('accepts a fourth full dev SSR request only with its exact contained diagnostic', async (t) => {

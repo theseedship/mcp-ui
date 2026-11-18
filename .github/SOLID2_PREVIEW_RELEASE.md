@@ -90,7 +90,8 @@ native Chart.js series and pixels, and the pinned local Mermaid iframe's
 inline, fullscreen and restored diagram with stable iframe identity and focus
 restoration. The full dev SSR negative fixture must report exactly one known
 contained error per independently counted document request (at least three).
-Raw server logs are retained; production and the optional-absent profile must
+Both modes of each core profile must retain a nonempty raw server log beside
+the report. Production and the optional-absent profile must
 not claim that exception. The same artifact must
 also contain exact KaTeX `0.18.4`, `0.18.5`
 and absent-peer clean-consumer reports, import probes and lockfiles for that

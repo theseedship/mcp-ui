@@ -336,7 +336,8 @@ export async function verifyQualification(directory, sha256, specSha256) {
   assert(digest(sha256), 'Invalid qualification SHA-256')
   assert(digest(specSha256), 'Invalid Spec fixture SHA-256')
   directory = resolve(directory)
-  const reports = (await walk(resolve(directory))).filter(file => basename(file) === 'report.json')
+  const files = await walk(directory)
+  const reports = files.filter(file => basename(file) === 'report.json')
   const core = new Map(), compiled = [], math = new Map()
   let ciTarballPath
   const checkRuntime = (report, consumer) => {
@@ -450,6 +451,10 @@ export async function verifyQualification(directory, sha256, specSha256) {
         assert.equal(result.mode, mode, 'Source browser mode mismatch')
         assert.equal(result.profile, report.input.profile, 'Source browser profile mismatch')
         verifyServerDiagnostics(report.serverDiagnostics[mode], report.input.profile, mode)
+        const rawServerLog = join(dirname(file), `${mode}-server.log`)
+        const logContext = `${report.input.profile} ${mode}`
+        assert(files.includes(rawServerLog), `Missing raw SSR server log for ${logContext}`)
+        assert((await readFile(rawServerLog, 'utf8')).trim().length > 0, `Empty raw SSR server log for ${logContext}`)
         if (report.input.profile === 'full') {
           verifyBoundaryProof(result.boundary)
           assert.equal(result.engines?.mode, mode, 'Full engine browser mode mismatch')
