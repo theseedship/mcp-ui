@@ -12,6 +12,7 @@ import type { UIComponent } from '@seed-ship/mcp-ui-solid/types'
 import './style.css'
 import { Engines } from './Engines'
 import { ScratchpadProbe } from './ScratchpadProbe'
+import { BoundaryProbe } from './BoundaryProbe'
 
 const metrics = { mounts: { A: 0, B: 0, visual: 0, stream: 0 }, unmounts: { A: 0, B: 0, visual: 0, stream: 0 },
   listeners: { A: 0, B: 0 }, callbacks: { A: 0, B: 0, stream: 0, complete: 0, error: 0, citation: 0 },
@@ -119,6 +120,7 @@ export default function App() {
     <section id="persistent-fixture"><ExpandableWrapper title="Persistent visual" toolbarVariant="always-visible"><PersistentVisual /></ExpandableWrapper></section>
     <section id="virtual-fixture"><UIResourceRenderer content={large} /></section>
     <ScratchpadProbe />
+    <BoundaryProbe />
     <Show keyed when={mode()}>{value => <StreamProbe mode={value} />}</Show>
     <Engines />
   </main>

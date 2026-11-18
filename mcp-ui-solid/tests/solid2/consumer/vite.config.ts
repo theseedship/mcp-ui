@@ -20,5 +20,6 @@ export default defineConfig({
   // hydration. No source aliases and no access to the library workspace.
   ssr: { noExternal: ['@seed-ship/mcp-ui-solid', '@seed-ship/mcp-ui-spec'] },
   optimizeDeps: { include: nestedCommonJS },
-  server: { host: '127.0.0.1' },
+  // Writing captured HTML must not trigger an unrelated fixture page reload.
+  server: { host: '127.0.0.1', watch: { ignored: ['**/qualification-results/**'] } },
 })

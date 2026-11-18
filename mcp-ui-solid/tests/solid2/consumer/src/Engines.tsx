@@ -1,6 +1,6 @@
 import { createSignal, onSettled, Show, type ParentComponent } from 'solid-js'
-import { Chart } from 'chart.js'
-import { ExpandableWrapper, GraphRenderer } from '@seed-ship/mcp-ui-solid'
+import { Chart, type BarElement } from 'chart.js'
+import { ExpandableWrapper, GraphRenderer, UIResourceRenderer } from '@seed-ship/mcp-ui-solid'
 import { ChartJSRenderer, CodeBlockRenderer, MapRenderer } from '@seed-ship/mcp-ui-solid/components'
 import type { UIComponent } from '@seed-ship/mcp-ui-solid/types'
 
@@ -19,6 +19,19 @@ const evidence = {
   citations: { chart: 0, map: 0, graph: 0, code: 0 },
   chartInstanceId: () => nativeChart()?.id ?? null,
   chartObservedCanvas: () => observedChartCanvas ?? null,
+  chartSeries: () => {
+    const chart = nativeChart()
+    if (!chart) return null
+    return {
+      instanceId: chart.id,
+      labels: [...(chart.data.labels ?? [])],
+      datasets: chart.data.datasets.map(dataset => ({ label: dataset.label, values: [...dataset.data] })),
+      barHeights: chart.getDatasetMeta(0).data.map(item => {
+        const { y, base } = (item as BarElement).getProps(['y', 'base'], true)
+        return Math.abs(y - base)
+      }),
+    }
+  },
   inspectChartCanvas: (canvas: HTMLCanvasElement) => {
     // Read the public SDK registry for THIS exact DOM node. This does not
     // choose another canvas or construct/rebind an engine instance.
@@ -57,13 +70,25 @@ const EngineCase: ParentComponent<{ kind: Engine }> = (props) => {
   </section>
 }
 
-const chart: UIComponent = {
+const chart = {
   id: 'fixture-native-chart', type: 'chart', position: { colStart: 1, colSpan: 12 },
   params: { type: 'bar', title: 'Synthetic native chart', height: '280px',
     data: { labels: ['Synthetic A', 'Synthetic B', 'Synthetic C', 'Synthetic D', 'Synthetic E', 'Synthetic F', 'Synthetic G', 'Synthetic H'],
       datasets: [{ label: 'Fixture', data: [2, 5, 3, 7, 4, 8, 6, 9], backgroundColor: '#347853' }] },
     options: { animation: false, responsive: true, maintainAspectRatio: false },
   },
+} satisfies UIComponent
+const updatedChart = {
+  ...chart, params: { ...chart.params, data: {
+    labels: [...chart.params.data.labels],
+    datasets: [{ label: 'Updated Fixture', data: [9, 3, 8, 4, 7, 5, 6, 2], backgroundColor: '#5357a8' }],
+  } },
+} satisfies UIComponent
+const mermaidFrame: UIComponent = {
+  id: 'fixture-mermaid-iframe', type: 'iframe', position: { colStart: 1, colSpan: 12 },
+  // The browser gate fulfills only this document and its pinned script from
+  // local test assets. The production iframe's allowlist and sandbox stay on.
+  params: { url: 'https://mermaid.live/__mcpui-fixture__/diagram', title: 'Synthetic Mermaid flowchart', height: '320px' },
 }
 const graph: UIComponent = {
   id: 'fixture-native-graph', type: 'graph', position: { colStart: 1, colSpan: 12 },
@@ -83,17 +108,24 @@ const graph: UIComponent = {
 /** SSR intentionally emits only a button. Engines start after the main host gate. */
 export function Engines() {
   const [started, setStarted] = createSignal(false)
+  const [chartUpdated, setChartUpdated] = createSignal(false)
   onSettled(() => { window.__mcpEngines = evidence })
   return <section id="engines-fixture">
     <button id="engine-start" onClick={() => setStarted(true)}>Start real optional engines</button>
     <Show when={started()}>
-      <EngineCase kind="chart"><ChartJSRenderer component={chart} toolbarVariant="always-visible" /></EngineCase>
+      <button id="engine-update-chart" onClick={() => setChartUpdated(true)}>Update synthetic chart series</button>
+      <EngineCase kind="chart"><ChartJSRenderer component={chartUpdated() ? updatedChart : chart} toolbarVariant="always-visible" /></EngineCase>
       <EngineCase kind="map"><MapRenderer params={{ height: '300px', center: [48.85, 2.35], zoom: 11,
         tileLayer: '/__fixture/engine-tiles/{z}/{x}/{y}.png', attribution: '', clustering: false,
         markers: [{ position: [48.85, 2.35], tooltip: 'Synthetic marker A' }, { position: [48.86, 2.36], tooltip: 'Synthetic marker B' }],
       }} toolbarVariant="always-visible" /></EngineCase>
       <EngineCase kind="graph"><GraphRenderer component={graph} toolbarVariant="always-visible" /></EngineCase>
       <EngineCase kind="code"><CodeBlockRenderer params={{ language: 'typescript', code: 'const syntheticValue: number = 42;', filename: 'synthetic.ts' }} toolbarVariant="always-visible" /></EngineCase>
+      <section id="engine-mermaid">
+        <ExpandableWrapper title="Synthetic Mermaid fullscreen" toolbarVariant="always-visible">
+          <UIResourceRenderer content={mermaidFrame} />
+        </ExpandableWrapper>
+      </section>
     </Show>
   </section>
 }

@@ -27,10 +27,21 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        with:
+          # Qualify the exact source head, not the synthetic PR merge.
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Verify qualification source
+        env:
+          EXPECTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
 
       # IMPORTANT: pnpm must be installed BEFORE setup-node@v5, otherwise
       # setup-node's auto-detected package-manager-cache feature fails to
@@ -70,14 +81,14 @@ jobs:
         run: pnpm typecheck
 
       - name: Test clean-consumer harness and release safeguards
-        run: node --test scripts/finalize-declarations.test.mjs scripts/solid2-preview/verify.test.mjs scripts/stable-release/verify.test.mjs mcp-ui-solid/tests/solid2/cohort.node-test.mjs mcp-ui-solid/tests/solid2/harness.node-test.mjs mcp-ui-solid/tests/solid2/dist-browser.node-test.mjs mcp-ui-solid/tests/solid2/optional-loader.node-test.mjs
+        run: node --test scripts/finalize-declarations.test.mjs scripts/solid2-preview/verify.test.mjs scripts/stable-release/verify.test.mjs mcp-ui-solid/tests/solid2/cohort.node-test.mjs mcp-ui-solid/tests/solid2/harness.node-test.mjs mcp-ui-solid/tests/solid2/dist-browser.node-test.mjs mcp-ui-solid/tests/solid2/optional-loader.node-test.mjs mcp-ui-solid/tests/solid2/boundary-proofs.node-test.mjs mcp-ui-solid/tests/solid2/ssr-boundary-diagnostics.node-test.mjs
 
       - name: Test
         run: pnpm -r exec vitest run --maxWorkers=4
 
       # Browser tooling is isolated from the published package and its lockfile.
       - name: Install theme regression tooling
-        run: npm install --prefix "$RUNNER_TEMP/mcp-ui-theme-tools" --no-package-lock --ignore-scripts playwright@1.63.0 @tailwindcss/vite@4.3.3 tailwindcss@4.3.3
+        run: npm install --prefix "$RUNNER_TEMP/mcp-ui-theme-tools" --no-package-lock --ignore-scripts playwright@1.63.0 @tailwindcss/vite@4.3.3 tailwindcss@4.3.3 mermaid@12.3.0
 
       - name: Install theme regression browser
         run: npm exec --prefix "$RUNNER_TEMP/mcp-ui-theme-tools" -- playwright install --with-deps chromium
@@ -104,7 +115,7 @@ jobs:
           for profile in full optional-absent; do
             consumer="$RUNNER_TEMP/mcpui-solid2-$profile"
             node mcp-ui-solid/tests/solid2/run.mjs prepare \
-              --tarball "$RUNNER_TEMP/mcpui-solid2-artifacts/seed-ship-mcp-ui-solid-8.0.0-solid2.3.tgz" \
+              --tarball "$RUNNER_TEMP/mcpui-solid2-artifacts/seed-ship-mcp-ui-solid-8.0.0-solid2.4.tgz" \
               --spec-tarball "$RUNNER_TEMP/mcpui-solid2-artifacts/seed-ship-mcp-ui-spec-6.0.0.tgz" \
               --consumer "$consumer" --profile "$profile"
             pnpm --dir "$consumer" install --ignore-scripts
@@ -121,7 +132,7 @@ jobs:
           for version in 0.18.4 0.18.5 absent; do
             consumer="$RUNNER_TEMP/mcpui-katex-$version"
             node mcp-ui-solid/tests/katex/run.mjs prepare \
-              --tarball "$RUNNER_TEMP/mcpui-solid2-artifacts/seed-ship-mcp-ui-solid-8.0.0-solid2.3.tgz" \
+              --tarball "$RUNNER_TEMP/mcpui-solid2-artifacts/seed-ship-mcp-ui-solid-8.0.0-solid2.4.tgz" \
               --spec-tarball "$RUNNER_TEMP/mcpui-solid2-artifacts/seed-ship-mcp-ui-spec-6.0.0.tgz" \
               --consumer "$consumer" --version "$version"
             pnpm --dir "$consumer" install --ignore-scripts

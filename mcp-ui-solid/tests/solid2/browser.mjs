@@ -9,6 +9,32 @@ import { runEngines } from './engines-browser.mjs'
 export const EXPECTED_STREAM_ERROR = '[@seed-ship/mcp-ui-solid:useStreamingUI] Stream error received {"error":"fixture-error","message":"Local fixture failed","recoverable":false}'
 export const isExpectedStreamError = entry => entry.type === 'error' && entry.text === EXPECTED_STREAM_ERROR
 
+const boundaryErrorPrefix = '[@seed-ship/mcp-ui-solid:generative-ui] Component render failed: text '
+const boundaryMessages = {
+  'packed-ssr-boundary': '<mcpui-fixture-ssr-error>',
+  'packed-client-boundary': '<mcpui-fixture-client-error>',
+}
+
+export function intentionalBoundaryError(entry, userAgent) {
+  if (entry.type !== 'error' || !entry.text.startsWith(boundaryErrorPrefix)) return null
+  // A migration diagnostic is never expected, even if one is embedded in
+  // otherwise valid structured output from an intentional fixture throw.
+  if (/\[[A-Z][A-Z_]+\]|hydration|mismatch/i.test(entry.text)) return null
+  let context
+  try { context = JSON.parse(entry.text.slice(boundaryErrorPrefix.length)) } catch { return null }
+  if (!context || !Object.hasOwn(boundaryMessages, context.componentId) ||
+    context.errorMessage !== boundaryMessages[context.componentId] || context.componentType !== 'text' ||
+    typeof context.errorStack !== 'string' || !context.errorStack.startsWith('Error: ' + context.errorMessage) ||
+    !Number.isFinite(context.renderDuration) || context.renderDuration < 0 || context.retryCount !== 0 ||
+    context.userAgent !== userAgent || !Number.isFinite(Date.parse(context.timestamp)) ||
+    !Number.isInteger(context.viewport?.width) || context.viewport.width <= 0 ||
+    !Number.isInteger(context.viewport?.height) || context.viewport.height <= 0 ||
+    Object.keys(context.viewport).sort().join(',') !== 'height,width') return null
+  const keys = ['componentId', 'componentType', 'errorMessage', 'errorStack', 'renderDuration', 'retryCount', 'timestamp', 'userAgent', 'viewport']
+  if (Object.keys(context).sort().join(',') !== keys.sort().join(',')) return null
+  return context
+}
+
 export async function qualifyBrowser({ url, resultDir, mode, profile = 'full' }) {
   const deps = process.env.MCP_THEME_BROWSER_DEPS
   assert(deps, 'Set MCP_THEME_BROWSER_DEPS to the existing external node_modules containing playwright')
@@ -60,6 +86,19 @@ export async function qualifyBrowser({ url, resultDir, mode, profile = 'full' })
   })
   const check = async (name, fn) => { await fn(); report.checks.push(name) }
   try {
+    if (profile === 'full') {
+      await check('Packed error boundary calls onError once during SSR and escapes its fallback', async () => {
+        const response = await page.request.get(url, { headers: { accept: 'text/html' } })
+        assert.equal(response.status(), 200, 'Packed SSR boundary fixture failed')
+        const rawHtml = await response.text()
+        assert.equal((rawHtml.match(/\bid="boundary-ssr-fallback"/g) ?? []).length, 1, 'SSR must render exactly one boundary fallback')
+        assert.match(rawHtml, /<output\b(?=[^>]*\bid="boundary-ssr-callback-proof")(?=[^>]*\bdata-result="one-valid-server-callback")[^>]*>/)
+        if (mode === 'production') assert(rawHtml.includes('Internal Server Error'), 'Production SSR did not redact the private error')
+        else assert.match(rawHtml, /&lt;mcpui-fixture-ssr-error(?:>|&gt;)/)
+        assert(!rawHtml.includes(boundaryMessages['packed-ssr-boundary']), 'SSR emitted an unescaped error message')
+        report.boundary = { ssr: { callbackCount: 1, fallbackCount: 1, escaped: true } }
+      })
+    }
     await page.goto(url, { waitUntil: 'networkidle' })
     await page.waitForSelector('html[data-fixture-hydrated="true"]')
     await check('Public tarball Scratchpad lazy host props, reactive pin, auto-close and unmount', async () => {
@@ -97,6 +136,20 @@ export async function qualifyBrowser({ url, resultDir, mode, profile = 'full' })
       report.status = 'passed'
       return report
     }
+    await check('Hydrated packed error boundary delivers one interactive render-error callback', async () => {
+      assert.equal(await page.locator('#boundary-ssr-fallback').count(), 1)
+      assert.equal(await page.locator('#boundary-ssr-fallback').textContent(), mode === 'production' ? 'Internal Server Error' : boundaryMessages['packed-ssr-boundary'])
+      await page.locator('#boundary-trigger').click()
+      await page.waitForFunction(() => JSON.parse(document.getElementById('boundary-client-errors').textContent).length === 1)
+      const callbacks = JSON.parse(await page.locator('#boundary-client-errors').textContent())
+      const userAgent = await page.evaluate(() => navigator.userAgent)
+      assert.deepEqual(callbacks, [{ type: 'render', componentId: 'packed-client-boundary',
+        message: boundaryMessages['packed-client-boundary'], retryCount: 0, userAgent }])
+      assert.equal(await page.locator('#boundary-client-fallback').count(), 1)
+      assert.equal(await page.locator('#boundary-client-fallback').textContent(), boundaryMessages['packed-client-boundary'])
+      assert.equal(await page.locator('mcpui-fixture-client-error').count(), 0, 'Fallback interpreted the error as markup')
+      report.boundary.client = { callbacks, fallbackCount: 1, escaped: true }
+    })
     await check('SSR node identity, public/source imports, text/KaTeX, sanitizer and table IDs', async () => {
       assert(await page.evaluate(() => window.__mcpBrowserEvidence.ssrNode === document.getElementById('ssr-sentinel')), 'Hydration replaced the SSR sentinel')
       assert(await page.locator('#source-fixture').innerText() === 'Exported source entry fixture')
@@ -224,7 +277,7 @@ export async function qualifyBrowser({ url, resultDir, mode, profile = 'full' })
     })
     report.expectedConsoleErrors = report.console.filter(isExpectedStreamError)
     assert.equal(report.expectedConsoleErrors.length, 1, 'The intentional fixture SSE error must log exactly once')
-    report.engines = await runEngines(page, { resultDir, mode })
+    report.engines = await runEngines(page, { resultDir, mode, browserTools: req })
     report.metrics = await page.evaluate(() => ({ fixture: window.__mcpFixture, browser: {
       fetchStarted: window.__mcpBrowserEvidence.fetchStarted, fetchAborted: window.__mcpBrowserEvidence.fetchAborted,
       keyListeners: window.__mcpBrowserEvidence.keyListeners.size, clipboardWrites: window.__mcpBrowserEvidence.clipboard.length,
@@ -232,7 +285,15 @@ export async function qualifyBrowser({ url, resultDir, mode, profile = 'full' })
     assert.deepEqual(report.metrics.fixture.duplicateMounts, [], 'Duplicate package mount notifications')
     assert.deepEqual(report.externalRequests, [], 'Fixture attempted external network access')
     assert.deepEqual(report.errors, [], 'Browser runtime/hydration error')
-    const diagnostics = report.console.filter(entry => !isExpectedStreamError(entry) && (entry.type === 'error' || /\[[A-Z][A-Z_]+\]|hydration|mismatch/i.test(entry.text)))
+    const userAgent = await page.evaluate(() => navigator.userAgent)
+    const boundaryConsoleErrors = report.console.map(entry => intentionalBoundaryError(entry, userAgent)).filter(Boolean)
+    report.boundary.expectedConsoleErrors = boundaryConsoleErrors
+    assert.equal(boundaryConsoleErrors.filter(context => context.componentId === 'packed-client-boundary').length, 1,
+      'The interactive boundary must log its exact structured error once')
+    assert(boundaryConsoleErrors.filter(context => context.componentId === 'packed-ssr-boundary').length <= 1,
+      'Hydration repeated the initial boundary error')
+    const diagnostics = report.console.filter(entry => !isExpectedStreamError(entry) && !intentionalBoundaryError(entry, userAgent) &&
+      (entry.type === 'error' || /\[[A-Z][A-Z_]+\]|hydration|mismatch/i.test(entry.text)))
     assert.deepEqual(diagnostics, [], 'Browser migration diagnostics; see console evidence')
     report.status = 'passed'
     return report

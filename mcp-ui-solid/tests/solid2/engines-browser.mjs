@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { writeFile } from 'node:fs/promises'
+import { readFile, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
 // Tiny synthetic PNG. It is deliberately not fetched from a provider/CDN.
@@ -9,6 +9,9 @@ const markerImages = new Set([
   'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
   'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 ])
+const mermaidVersion = '12.3.0'
+const mermaidPage = 'https://mermaid.live/__mcpui-fixture__/diagram'
+const mermaidScript = 'https://mermaid.live/__mcpui-fixture__/mermaid.min.js'
 
 async function readinessSnapshot(page) {
   return page.evaluate(() => {
@@ -67,11 +70,21 @@ async function readinessSnapshot(page) {
 }
 
 /** Run after the main full-consumer gate; no mocks, engine aliases, or external fetches. */
-export async function runEngines(page, { resultDir, mode }) {
+export async function runEngines(page, { resultDir, mode, browserTools }) {
   const report = { mode, status: 'running', checks: [], syntheticAssetRequests: [], evidence: null, failureReadinessSnapshot: null }
   const origin = new URL(page.url()).origin
+  const mermaidRequestCounts = { document: 0, script: 0 }
+  let mermaidHtml, mermaidJavaScript
   const routeAssets = async route => {
     const url = route.request().url()
+    if (url === mermaidPage && route.request().resourceType() === 'document') {
+      mermaidRequestCounts.document++
+      return route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: mermaidHtml })
+    }
+    if (url === mermaidScript && route.request().resourceType() === 'script') {
+      mermaidRequestCounts.script++
+      return route.fulfill({ status: 200, contentType: 'application/javascript', body: mermaidJavaScript })
+    }
     if (url.startsWith(origin + '/__fixture/engine-tiles/') || markerImages.has(url)) {
       report.syntheticAssetRequests.push(url)
       return route.fulfill({ status: 200, contentType: 'image/png', body: pixel })
@@ -83,6 +96,12 @@ export async function runEngines(page, { resultDir, mode }) {
   await page.route('**/*', routeAssets)
   const check = async (name, run) => { await run(); report.checks.push(name) }
   try {
+    const manifest = JSON.parse(await readFile(browserTools.resolve('mermaid/package.json'), 'utf8'))
+    assert.equal(manifest.version, mermaidVersion, 'Unexpected isolated Mermaid browser tooling version')
+    ;[mermaidHtml, mermaidJavaScript] = await Promise.all([
+      readFile(new URL('./mermaid-iframe.html', import.meta.url), 'utf8'),
+      readFile(browserTools.resolve('mermaid/dist/mermaid.min.js')),
+    ])
     await page.locator('#engine-start').click()
     await check('Actual native engines mounted; no degraded rendering', async () => {
       await page.waitForFunction(() => {
@@ -112,6 +131,34 @@ export async function runEngines(page, { resultDir, mode }) {
       assert(await page.locator('#engine-map .leaflet-tile-loaded').count() > 0, 'Local synthetic map tiles never loaded')
       assert.equal(await page.locator('#engine-map .leaflet-marker-icon').count(), 2)
       assert.equal(await page.locator('#engine-code .hljs-keyword').first().textContent(), 'const')
+    })
+    await check('Native Chart.js draws the exact updated host series', async () => {
+      const canvas = page.locator('#engine-chart canvas')
+      const before = await page.evaluate(() => window.__mcpEngines.chartSeries())
+      const labels = ['Synthetic A', 'Synthetic B', 'Synthetic C', 'Synthetic D', 'Synthetic E', 'Synthetic F', 'Synthetic G', 'Synthetic H']
+      assert.deepEqual(before.labels, labels)
+      assert.deepEqual(before.datasets, [{ label: 'Fixture', values: [2, 5, 3, 7, 4, 8, 6, 9] }])
+      assert.equal(before.barHeights.length, 8)
+      assert(before.barHeights.every(height => Number.isFinite(height) && height > 0))
+      const pixelsBefore = await canvas.evaluate(node => node.toDataURL())
+      const values = [9, 3, 8, 4, 7, 5, 6, 2]
+      await page.locator('#engine-update-chart').click()
+      await page.waitForFunction(expected => {
+        const series = window.__mcpEngines.chartSeries()
+        return series?.datasets.length === 1 && series.datasets[0].label === 'Updated Fixture' &&
+          series.datasets[0].values.length === expected.length && series.datasets[0].values.every((value, index) => value === expected[index]) &&
+          series.barHeights.length === expected.length && series.barHeights.every(height => Number.isFinite(height) && height > 0)
+      }, values)
+      const after = await page.evaluate(() => window.__mcpEngines.chartSeries())
+      assert.deepEqual(after.labels, labels)
+      assert.deepEqual(after.datasets, [{ label: 'Updated Fixture', values }])
+      assert(after.barHeights[0] > before.barHeights[0] && after.barHeights[7] < before.barHeights[7],
+        'Chart.js bar geometry did not track the changed values')
+      const paintChanged = await canvas.evaluate((node, previous) => node.toDataURL() !== previous &&
+        node.getContext('2d')?.getImageData(0, 0, node.width, node.height).data
+          .some((channel, index) => index % 4 === 3 && channel !== 0) === true, pixelsBefore)
+      assert(paintChanged, 'Updated chart did not paint changed pixels')
+      report.chartSeriesUpdate = { before, after, paintChanged }
     })
     await check('Native inner Chart.js fullscreen activates zoom; real Zoom in and reset work', async () => {
       report.chartZoom = { policy: 'expanded (default)',
@@ -201,6 +248,46 @@ export async function runEngines(page, { resultDir, mode }) {
         assert(await page.evaluate(() => window.__mcpBrowserEvidence.keyListeners.size === window.__engineKeyBaseline), `${kind}: Escape listeners leaked`)
       })
     }
+    await check('Pinned Mermaid renders a flowchart inline, fullscreen and after close', async () => {
+      const iframe = '#engine-mermaid iframe[title="Synthetic Mermaid flowchart"]'
+      const iframeInline = page.locator(iframe)
+      const trigger = page.locator('#engine-mermaid > .mcp-ui-root > button[data-mcp-ui-action="expand"]')
+      const dialog = page.getByRole('dialog', { name: 'Synthetic Mermaid fullscreen' })
+      const expandedIframe = '[data-mcp-ui-portal="dialog"] iframe[title="Synthetic Mermaid flowchart"]'
+      const readDiagram = async selector => {
+        const frame = page.frameLocator(selector)
+        await frame.locator('html[data-diagram-ready="true"]').waitFor({ state: 'attached' })
+        const svg = frame.locator('#mermaid-diagram svg[aria-roledescription="flowchart-v2"]')
+        await svg.waitFor({ state: 'visible' })
+        const labels = (await svg.locator('g.node').allTextContents()).map(label => label.trim())
+        const edges = await svg.locator('path.flowchart-link').count()
+        assert.deepEqual(labels, ['Synthetic start', 'Synthetic end'])
+        assert.equal(edges, 1)
+        return { labels, edges, iframeWidth: (await page.locator(selector).boundingBox())?.width ?? 0 }
+      }
+      await iframeInline.scrollIntoViewIfNeeded()
+      assert.equal(await iframeInline.getAttribute('src'), mermaidPage)
+      assert.equal(await iframeInline.getAttribute('sandbox'), 'allow-scripts allow-popups')
+      await iframeInline.evaluate(node => { window.__mermaidFixtureIframe = node })
+      const inline = await readDiagram(iframe)
+      assert(inline.iframeWidth > 0)
+      await trigger.click()
+      await dialog.waitFor()
+      const expanded = await readDiagram(expandedIframe)
+      assert(expanded.iframeWidth > inline.iframeWidth, 'The fullscreen iframe did not gain visible width')
+      assert(await page.locator(expandedIframe).evaluate(node => node === window.__mermaidFixtureIframe))
+      await page.keyboard.press('Escape')
+      await dialog.waitFor({ state: 'detached' })
+      const focusRestored = await trigger.evaluate(node => node === document.activeElement)
+      assert(focusRestored, 'Mermaid fullscreen did not restore trigger focus')
+      const restored = await readDiagram(iframe)
+      const iframeElementStable = await iframeInline.evaluate(node => node === window.__mermaidFixtureIframe)
+      assert(iframeElementStable, 'Fullscreen replaced the production iframe element')
+      assert(mermaidRequestCounts.document >= 1 && mermaidRequestCounts.script >= 1, 'The real local Mermaid script was not loaded')
+      // Reparenting can reload the frame document. The proof is real diagram
+      // rendering in all three states and iframe element—not document—identity.
+      report.mermaid = { version: mermaidVersion, inline, expanded, restored, iframeElementStable, focusRestored, requests: mermaidRequestCounts }
+    })
     report.evidence = await page.evaluate(() => ({
       mounts: window.__mcpEngines.mounts, unmounts: window.__mcpEngines.unmounts,
       citations: window.__mcpEngines.citations, chartInstanceId: window.__mcpEngines.chartInstanceId(),

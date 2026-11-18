@@ -2,24 +2,25 @@
 
 ## Solid 2 preview (unpublished)
 
-**RC.21 candidate prepared on 2026-11-10:** based on the `.2` KaTeX
-qualification, carrying the Scratchpad fix and coherent RC.21 toolchain.
+**Stable-runtime candidate prepared on 2026-11-18:** recompiles the existing
+8.x adapter from `feat/solid2-preview` with Solid 2.0.0 and Vite plugin 3.0.1.
 This qualification PR does not authorize
 staging, publication, a dist-tag change or application installation.
-See the [current RC.21/Deposium handoff](./docs/SOLID2-RC21-QUALIFICATION-2026-11-10.md).
+See the [current stable/Deposium handoff](./docs/SOLID2-STABLE-QUALIFICATION-2026-11-18.md).
+The [RC.21 handoff](./docs/SOLID2-RC21-QUALIFICATION-2026-11-10.md) records the published `.3` cohort.
 The [KaTeX handoff](./docs/KATEX-COMPATIBILITY-2026-11-09.md) records `.2` / RC.20 qualification.
 The [Scratchpad handoff](./docs/SOLID2-SCRATCHPAD-LAZY-PROPS-2026-11-03.md) records the prior fix.
 The [pause/resumption handoff](./docs/SOLID2-PREVIEW-HANDOFF-2026-10-23.md)
 records the preserved source, checksums, known gaps and restart checklist.
 
-This branch prepares `8.0.0-solid2.3` as an **opt-in preview for a separate
+This branch prepares `8.0.0-solid2.4` as an **opt-in preview for a separate
 Solid 2 host**. The stable `7.x` line, including future `7.1.x` releases, remains
 Solid 1 on npm `latest`; Solid 2 belongs to `8.x` and the separate `solid2` tag.
-The `8.0.0-solid2.3` source version alone proves neither qualification nor
+The `8.0.0-solid2.4` source version alone proves neither qualification nor
 release approval: bind later proof to the exact source HEAD and archive. Zod is
 4.6.6 and Spec is 6.x. This is not a
-dual-runtime package: required peers are exactly `solid-js@2.0.0-rc.21` and
-`@solidjs/web@2.0.0-rc.21` (Node >=22.12.0). DOM types/imports move to
+dual-runtime package: required peers are exactly `solid-js@2.0.0` and
+`@solidjs/web@2.0.0` (Node >=22.12.0). DOM types/imports stay on
 `@solidjs/web`; core and draft-store APIs come from `solid-js`.
 
 For any later host qualification, use an identified archive qualified from the
@@ -34,7 +35,9 @@ Scratchpad `pinned` and `debug` may be ordinary reactive JSX conditionals.
 Lifecycle logging snapshots the initial props during setup; debug effects read
 props in compute and consume that snapshot in apply. Host-side memo hoisting is
 not required for this regression. The published `.0` targeted RC.19; `.1` and
-the `.2` candidate target RC.20; `.3` targets RC.21. Each release needs its own CI/archive approval.
+the `.2` candidate target RC.20; published `.3` requires RC.21 and `.4` targets
+2.0.0 stable. `.3` is not compatible with the stable runtime: keep that peer
+failure visible rather than overriding it. Each release needs its own CI/archive approval.
 
 Public component names, MCP wire payloads, HTML trust policy, callbacks and CSS
 tokens are retained. Imperative store/controller methods commit before returning;
@@ -134,7 +137,7 @@ The candidate's optional peer explicitly accepts `0.18.4 || 0.18.5`, not a
 caret or an untested future range. Its development baseline remains 0.18.4.
 KaTeX 0.18.5 pulls in Commander 15 (Node >=22.12); use the host's supported
 Node version before upgrading. The KaTeX adapter does not choose the Solid
-runtime; this `.3` preview requires the coherent RC.21 cohort.
+runtime; this `.4` preview requires the coherent 2.0.0 stable cohort.
 See the [version-specific qualification and Deposium handoff](./docs/KATEX-COMPATIBILITY-2026-11-09.md).
 
 The provider applies to `text` with `markdown: true` and string-valued table

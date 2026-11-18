@@ -1,5 +1,5 @@
 /** Local synthetic endpoint: never forwards accounts, prompts, or network data. */
-const stats = { requests: 0, active: 0, cancelled: 0, completed: 0, errors: 0 }
+const stats = { requests: 0, active: 0, cancelled: 0, completed: 0, errors: 0, documents: 0 }
 const encoder = new TextEncoder()
 const component = (index: number) => ({
   id: `stream-item-${index}`, type: 'text', position: { colStart: 1, colSpan: 12 },
@@ -9,6 +9,7 @@ const component = (index: number) => ({
 export default async function middleware(event: { request: Request }, next: () => Promise<Response>) {
   const request = event.request
   const path = new URL(request.url).pathname
+  if (path === '/' && request.method === 'GET') stats.documents++
   if (path === '/__fixture/stats') return Response.json(stats)
   if (path !== '/api/mcp/generative-ui-stream') return next()
   if (request.method !== 'POST') return new Response('POST required', { status: 405 })

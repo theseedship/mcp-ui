@@ -10,15 +10,15 @@ import { createServer } from 'node:net'
 import { dirname, isAbsolute, relative, resolve, sep } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { qualifyBrowser } from './browser.mjs'
+import { assertSolid2HostCompatibility, verifyRuntimeIdentity } from '../solid2/run.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const repo = resolve(here, '../../..')
-const expectedVersion = '8.0.0-solid2.3'
 const expectedPeer = '0.18.4 || 0.18.5'
 const pins = Object.freeze({
-  'solid-js': '2.0.0-rc.21', '@solidjs/web': '2.0.0-rc.21',
-  '@solidjs/signals': '2.0.0-rc.21', '@solidjs/compiler': '2.0.0-rc.21',
-  '@solidjs/babel-plugin': '2.0.0-rc.21', '@solidjs/vite-plugin': '3.0.0-next.57',
+  'solid-js': '2.0.0', '@solidjs/web': '2.0.0',
+  '@solidjs/signals': '2.0.0', '@solidjs/compiler': '2.0.0',
+  '@solidjs/babel-plugin': '2.0.0', '@solidjs/vite-plugin': '3.0.1',
   '@babel/core': '7.29.6', '@types/node': '22.19.11',
   vite: '8.3.5', typescript: '5.9.3',
 })
@@ -46,6 +46,7 @@ function manifest(tarball, spec, version) {
     packageManager: 'pnpm@8.15.0',
     scripts: { dev: 'vite', build: 'vite build', serve: 'node dist/server/node.js' },
     dependencies, devDependencies: Object.fromEntries(Object.entries(pins).filter(([key]) => !['solid-js', '@solidjs/web'].includes(key))),
+    pnpm: { overrides: Object.fromEntries(Object.entries(pins).filter(([key]) => key.startsWith('@solidjs/') || key === 'solid-js')) },
   }
 }
 async function prepare(options) {
@@ -80,7 +81,7 @@ async function verify(consumer) {
   assert.equal((await artifact(input.tarball.path)).sha256, input.tarball.sha256, 'Solid tarball changed')
   assert.equal((await artifact(input.spec.path)).sha256, input.spec.sha256, 'Spec tarball changed')
   const pkg = await installedPackage(consumer, '@seed-ship/mcp-ui-solid')
-  assert.equal(pkg.version, expectedVersion)
+  assertSolid2HostCompatibility(pkg)
   assert.equal(pkg.peerDependencies?.katex, expectedPeer)
   assert.equal(pkg.peerDependenciesMeta?.katex?.optional, true)
   assert(pkg.exports?.['.']?.import && pkg.exports?.['.']?.require && pkg.exports?.['./plugins/katex']?.import && pkg.exports?.['./plugins/katex']?.require,
@@ -104,8 +105,8 @@ async function verify(consumer) {
     await assert.rejects(() => realpath(resolve(consumer, 'node_modules/katex')), { code: 'ENOENT' })
     assert.throws(() => pluginRequire.resolve('katex'), { code: 'MODULE_NOT_FOUND' })
   }
-  assert(req.resolve('@seed-ship/mcp-ui-solid'))
-  return { input, installedVersion: pkg.version, peer: pkg.peerDependencies.katex, optional: true, actualPins, pluginKatexVersion }
+  const runtimePaths = await verifyRuntimeIdentity(consumer)
+  return { input, installedVersion: pkg.version, peer: pkg.peerDependencies.katex, optional: true, actualPins, pluginKatexVersion, runtimePaths }
 }
 async function freePort() {
   const server = createServer()
