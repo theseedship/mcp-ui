@@ -1,58 +1,45 @@
 # Security dependency notes
 
-## 2026-10-26 — stable fast-uri follow-up after PR #40
+## 2026-10-27 — resumed Solid 2 source preparation
 
-The workspace override floor moves from `^3.1.6` to `^3.1.9`; the pnpm 8.15.0
-lockfile resolves **3.1.9**, without a major-4 upgrade or unrelated updates.
-The upstream [3.1.9 release](https://github.com/fastify/fast-uri/releases/tag/v3.1.9)
-fixes these four advisory entries:
+Stable main #40/#41 is integrated: Spec 6, Zod 4.6.6, root fast-uri floor
+^3.1.9 and the CLI's directly injected corrected resolver. Runtime/compiler
+move together to RC.19, without a Solid 1 virtualizer or forced serializer override.
+The records below describe earlier states; their advisory counts do not apply
+to this new source. Fresh preview audits/CI are reported in the
+[current handoff](./SOLID2-DEPOSIUM-HANDOFF-2026-10-27.md).
+No release dispatch, npm staging/publication or application change is included.
 
-- Moderate: [percent-decoded scheme spoofing](https://github.com/advisories/GHSA-w74x-v6f9-j3xg)
-  and [authority host confusion](https://github.com/advisories/GHSA-wjr9-j795-jxcr).
-- Low: [relative-reference path equivalence](https://github.com/advisories/GHSA-xhq7-xmqj-769h)
-  and [suffix-reference scheme injection](https://github.com/advisories/GHSA-333x-w4r6-6crp).
+> Solid 2 work is paused by the maintainer as of 2026-10-24. The observations
+> below are dated evidence, not a claim of a current clean audit or release
+> approval. The [pause/resumption handoff](./SOLID2-PREVIEW-HANDOFF-2026-10-23.md)
+> also records the subsequent GitHub `fast-uri` alerts (#103–106), absent from
+> the pnpm feed used here, and the requirement to re-audit before resumption.
 
-The CLI publishes a direct `fast-uri: ^3.1.9` dependency and injects its default
-import into **both** Ajv instances with the documented
-[`uriResolver` option](https://ajv.js.org/options.html#uriresolver).
-Ajv 8.18.0 itself requests `^3.0.1`: a workspace override or a direct dependency
-without explicit injection cannot guarantee which copy Ajv uses in a consumer.
-Vite leaves the dependency external in ESM and CJS, as it does for Ajv.
+## 2026-10-24 — Solid 2 preview carry-over of stable PR #38
 
-This protects the CLI's schema-ID and `$ref` resolution, not every URI policy
-in a host. `validate` compiles the fixed Spec JSON Schema; `test-examples`
-compiles registry-supplied component schemas. Format checks are a separate Ajv
-formats path. The suffix advisory requires a non-default option not used by
-these commands; this is not a claim that all four exploits were CLI-reachable.
+The preview integrates stable main commit
+`725f862ac76170c40ab796a1d4773b0dbb90be27` (#38), keeping its own runtime and
+compiler contract. Vitest, `@vitest/ui` and the resolved `@vitest/mocker` move
+from 4.1.11 to 4.1.12. CLI and Spec use Vite 6.4.5, while this Solid 2 renderer
+retains Vite 8.3.5 and the exact Solid/core/web/compiler RC.18 pins. The Solid 1
+compiler plugin is not reintroduced. Runtime dependencies, public schemas,
+package versions and publishing workflows are unchanged by this integration;
+Zod remains 3.25.76 and is not remediated.
 
-Fresh full and production workspace `pnpm audit --json` runs move from four
-entries (two moderate, two low) to **zero**, both exiting 0 after the update.
-GitHub alerts require a separate merge/rescan; none is dismissed or suppressed.
-An independent packed-consumer gate intentionally retains `fast-uri` 3.1.8
-under Ajv and checks that both public CLI module formats use the direct 3.1.9
-resolver instead. That control consumer is deliberately not audit-clean;
-applications must update and audit their own complete dependency trees.
+Fresh `pnpm audit --json` against this merged preview lockfile reports one HIGH
+advisory: runtime Zod `GHSA-mrhx-c7xc-m3w5`. The audit exits 1; this is not a
+clean audit. The seven tooling advisories targeted by #38 are absent. This is
+an independent preview audit, not a preview before/after measurement; the
+comparison in the following section belongs to stable PR #38.
 
-No renderer, Solid peer, Zod schema, package version or release workflow changes.
-The prepared Spec 6.0.0 / Solid 7.0.0 (Solid 1) / CLI 5.0.2 versions are retained.
-This PR neither stages nor publishes them and does not resume Solid 2 PR #34.
+The merged functional preview `96715b9` passed CI `40036418438`, attempt 1,
+before the pause. Its archived qualification is historical; resumption or any
+new source requires fresh CI and artifact bindings. No Git tag, npm
+stage/publication, dist-tag change or application migration is performed by
+this branch synchronization or its pause documentation.
 
-## 2026-10-26 — prepared stable-line Zod 4 migration
-
-Spec 6.0.0, MCPUI Solid 7.0.0 (still Solid 1) and CLI 5.0.2 prepare real Zod
-4.6.6 with preserved JSON omission/error-code contracts and qualified emitted
-package declarations. This is not a Solid 2 migration or publication approval.
-See the [decision and qualification record](./ZOD4-STABLE-MIGRATION-2026-10-26.md).
-
-Fresh baseline full audit: one HIGH Zod plus four fast-uri entries. After the
-upgrade, Zod is absent but the two moderate/two low fast-uri advisories remain
-in full and production audits. Both still exit nonzero. Reconcile GitHub alerts
-after a merge/rescan separately; no advisory is dismissed by this change.
-
-The records below describe their dated pre-migration state; they do not override
-the newer evidence or establish a current clean security audit.
-
-## 2026-10-24 — compatible tooling fixes, runtime Zod still unresolved
+## 2026-10-24 — stable Solid 1 tooling fixes, runtime Zod still unresolved
 
 This follow-up updates development tooling on the stable Solid 1 line. It does
 not migrate Zod, change public schemas, dismiss advisories, or publish a package.
@@ -77,8 +64,9 @@ Fresh full-workspace `pnpm audit --json` comparison on this date:
 - Updated lock: **1 high**, runtime Zod
   [`GHSA-mrhx-c7xc-m3w5`](https://github.com/advisories/GHSA-mrhx-c7xc-m3w5).
 - Audit exit status remains nonzero. This is not a clean security audit.
-- GitHub's 11 open Dependabot alerts include four occurrences of the same Zod
-  advisory across manifests/lockfile. Removing seven tooling advisory entries
+- At the stable PR #38 review, GitHub listed 11 open Dependabot alerts,
+  including four occurrences of the same Zod advisory across manifests/lockfile.
+  Removing seven tooling advisory entries
   from this lock does not by itself close GitHub alerts: merge and rescan are
   separate evidence, and package publication is separate again.
 
@@ -124,6 +112,10 @@ This compatible tooling follow-up does not adopt that resolution or claim to
 supersede the remaining Zod work. Reassess any later revision of #37 separately.
 
 ## Historical record: 6.25.1, verified 2026-10-18
+
+This is the historical Solid 1 remediation record. The separate Solid 2 preview
+uses the RC.18 runtime/web pair and renderer-owned Seroval 1.7.0; the audit counts
+below are not a fresh audit of that preview. See [preview qualification](./SOLID2-PREVIEW.md).
 
 Verified on 2026-10-18. This is a dependency-remediation record, not a claim
 that every renderer or consuming application has been security-audited.

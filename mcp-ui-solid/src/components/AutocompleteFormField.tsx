@@ -5,7 +5,7 @@
  * Sprint Autocomplete Feature
  */
 
-import { Component, Show, createSignal, createMemo, Accessor, createEffect, on } from 'solid-js'
+import { Component, Show, createSignal, createMemo, Accessor, createEffect, untrack } from 'solid-js'
 import type { FormFieldParams, FieldAutocompleteConfig, AutocompleteContext } from '../types'
 import { useConditionalField } from '../hooks/useConditionalField'
 import { useAutocomplete } from '../hooks/useAutocomplete'
@@ -69,17 +69,17 @@ export const AutocompleteFormField: Component<AutocompleteFormFieldProps> = (pro
 
   // Conditional visibility
   const { isVisible } = useConditionalField({
-    condition: props.field.showWhen,
-    formData: props.formData || (() => ({}))
+    get condition() { return props.field.showWhen },
+    get formData() { return props.formData || (() => ({})) }
   })
 
   // Local input value for autocomplete (may differ during suggestion)
-  const [localValue, setLocalValue] = createSignal(String(props.value || ''))
+  const [localValue, setLocalValue] = createSignal(untrack(() => String(props.value || '')))
 
   // Sync external value changes
-  createEffect(on(() => props.value, (newValue) => {
+  createEffect(() => props.value, (newValue) => {
     setLocalValue(String(newValue || ''))
-  }))
+  })
 
   // Build autocomplete context
   const autocompleteContext = createMemo((): AutocompleteContext | undefined => {
@@ -108,12 +108,12 @@ export const AutocompleteFormField: Component<AutocompleteFormFieldProps> = (pro
   // Initialize autocomplete hook
   const autocomplete = useAutocomplete({
     inputValue: localValue,
-    pluginId: props.field.autocomplete?.plugin,
-    fieldConfig: props.field.autocomplete,
+    get pluginId() { return props.field.autocomplete?.plugin },
+    get fieldConfig() { return props.field.autocomplete },
     context: () => autocompleteContext() || { fieldName: props.field.name },
-    enabled: !!(props.field.autocomplete?.enabled && autocompleteCtx),
-    minChars: props.field.autocomplete?.minChars,
-    debounceMs: props.field.autocomplete?.debounceMs,
+    get enabled() { return !!(props.field.autocomplete?.enabled && autocompleteCtx) },
+    get minChars() { return props.field.autocomplete?.minChars },
+    get debounceMs() { return props.field.autocomplete?.debounceMs },
     onInputChange: (value) => {
       setLocalValue(value)
       props.onChange(value)
@@ -191,10 +191,10 @@ export const AutocompleteFormField: Component<AutocompleteFormFieldProps> = (pro
                 placeholder={props.field.placeholder}
                 disabled={props.disabled}
                 required={props.field.required}
-                minLength={props.field.minLength}
-                maxLength={props.field.maxLength}
+                minlength={props.field.minLength}
+                maxlength={props.field.maxLength}
                 pattern={props.field.pattern}
-                aria-invalid={!!props.error}
+                aria-invalid={props.error ? 'true' : 'false'}
                 aria-describedby={props.error ? errorId() : undefined}
                 class={baseInputClass()}
               />
@@ -234,13 +234,13 @@ export const AutocompleteFormField: Component<AutocompleteFormFieldProps> = (pro
                 placeholder={props.field.placeholder}
                 disabled={props.disabled}
                 required={props.field.required}
-                minLength={props.field.minLength}
-                maxLength={props.field.maxLength}
+                minlength={props.field.minLength}
+                maxlength={props.field.maxLength}
                 pattern={props.field.pattern}
-                aria-invalid={!!props.error}
+                aria-invalid={props.error ? 'true' : 'false'}
                 aria-describedby={props.error ? errorId() : undefined}
                 aria-autocomplete="list"
-                aria-expanded={autocomplete.isOpen()}
+                aria-expanded={autocomplete.isOpen() ? 'true' : 'false'}
                 aria-haspopup="listbox"
                 class={`${baseInputClass()} ${autocomplete.resultType() === 'completion' ? 'bg-transparent' : ''}`}
                 style={{

@@ -1,4 +1,4 @@
-import { createSignal, onCleanup, onMount } from 'solid-js'
+import { createSignal, onSettled } from 'solid-js'
 import { useEditableLayoutPositions } from '../components/EditableLayoutContext'
 
 /** Stack read-only layouts in narrow containers, including desktop chat panels. */
@@ -13,7 +13,7 @@ export function createResponsiveGrid(breakpoint = 640) {
   // context-only opt-out, so ordinary/read-only renderers retain responsiveness.
   if (preserveEditablePositions) return { stacked: () => false, ref }
 
-  onMount(() => {
+  onSettled(() => {
     if (!container) return
     const element = container
     const updateWidth = (width: number) => {
@@ -30,10 +30,10 @@ export function createResponsiveGrid(breakpoint = 640) {
         }
       })
       observer.observe(element)
-      onCleanup(() => observer.disconnect())
+      return () => observer.disconnect()
     } else if (typeof window !== 'undefined') {
       window.addEventListener('resize', measure)
-      onCleanup(() => window.removeEventListener('resize', measure))
+      return () => window.removeEventListener('resize', measure)
     }
   })
 

@@ -8,7 +8,7 @@
  * suite also keeps the fixture valid when Vitest discovers `*.test.tsx`.
  */
 
-import type { ComponentProps } from 'solid-js'
+import type { ComponentProps } from "@solidjs/web";
 import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_MCPUI_CONFIG,
@@ -42,9 +42,9 @@ describe('public package-root config contract', () => {
       </MCPUIConfigProvider>
     )
     const contextElement = (
-      <MCPUIConfigContext.Provider value={AUGMENTED_CONFIG}>
+      <MCPUIConfigContext value={AUGMENTED_CONFIG}>
         consumer
-      </MCPUIConfigContext.Provider>
+      </MCPUIConfigContext>
     )
 
     expect(PROVIDER_CONFIG.publicConsumerExtension).toBe('partial')

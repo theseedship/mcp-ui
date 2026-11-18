@@ -1,3 +1,4 @@
+import { flush } from 'solid-js';
 /**
  * v6.4.0 — Portal-mounted dropdown for table + graph Export menus.
  *
@@ -24,12 +25,12 @@ describe('PortalDropdownMenu (v6.4.0)', () => {
     let triggerRef: HTMLButtonElement | undefined
     const result = render(() => (
       <div id="harness-root">
-        <button ref={triggerRef} onClick={() => setOpen((v) => !v)}>
+        <button ref={triggerRef} onClick={() => flush(() => setOpen((v) => !v))}>
           Open
         </button>
         <PortalDropdownMenu
           open={open()}
-          onClose={() => setOpen(false)}
+          onClose={() => flush(() => setOpen(false))}
           trigger={triggerRef}
           width={144}
         >
@@ -84,7 +85,7 @@ describe('PortalDropdownMenu (v6.4.0)', () => {
     // Click on a brand-new element appended to body, outside the menu
     const stranger = document.createElement('div')
     document.body.appendChild(stranger)
-    fireEvent.mouseDown(stranger)
+    flush(() => fireEvent.mouseDown(stranger))
     expect(getOpen()).toBe(false)
     document.body.removeChild(stranger)
   })
@@ -92,14 +93,14 @@ describe('PortalDropdownMenu (v6.4.0)', () => {
   it('closes on Escape', () => {
     const { getOpen } = harness(true)
     expect(getOpen()).toBe(true)
-    fireEvent.keyDown(document, { key: 'Escape' })
+    flush(() => fireEvent.keyDown(document, { key: 'Escape' }))
     expect(getOpen()).toBe(false)
   })
 
   it('does not close when mousedown lands on the trigger (parent owns toggle)', () => {
     const { getOpen, getTrigger } = harness(true)
     expect(getOpen()).toBe(true)
-    fireEvent.mouseDown(getTrigger()!)
+    flush(() => fireEvent.mouseDown(getTrigger()!))
     // Menu should still be open — trigger toggle is parent's responsibility
     expect(getOpen()).toBe(true)
   })
@@ -107,7 +108,7 @@ describe('PortalDropdownMenu (v6.4.0)', () => {
   it('does not close when mousedown lands inside the menu', () => {
     const { getOpen } = harness(true)
     const item = document.body.querySelector('[data-testid="menu-item"]') as HTMLElement
-    fireEvent.mouseDown(item)
+    flush(() => fireEvent.mouseDown(item))
     expect(getOpen()).toBe(true)
   })
 

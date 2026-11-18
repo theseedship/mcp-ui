@@ -4,8 +4,8 @@
  * Sprint Ultimate: Theme Synchronization (U.1)
  */
 
-import { Component, createEffect, onCleanup, createSignal, Show, For } from 'solid-js'
-import { isServer } from 'solid-js/web'
+import { Component, createEffect, onCleanup, onSettled, createSignal, Show, For } from 'solid-js'
+import { isServer } from "@solidjs/web";
 import type { UIComponent, CodeComponentParams } from '../types'
 import { ExpandableWrapper, useExpanded } from './ExpandableWrapper'
 import { highlightQuery } from './UIResourceRenderer'
@@ -52,6 +52,12 @@ export const CodeBlockRenderer: Component<CodeBlockRendererProps> = (props) => {
     const [isHljsLoaded, setIsHljsLoaded] = createSignal(false)
     const [activeTheme, setActiveTheme] = createSignal<'light' | 'dark'>('dark')
     const [wordWrap, setWordWrap] = createSignal(false)
+    let disposed = false
+    let copyTimer: ReturnType<typeof setTimeout> | undefined
+    onCleanup(() => {
+        disposed = true
+        clearTimeout(copyTimer)
+    })
 
     const params = () => props.params || (props.component?.params as CodeComponentParams)
     const isExpanded = useExpanded()
@@ -85,11 +91,13 @@ export const CodeBlockRenderer: Component<CodeBlockRendererProps> = (props) => {
     }
 
     // Load highlight.js on mount
-    createEffect(async () => {
+    onSettled(() => {
+        void (async () => {
         if (!hljs) {
             try {
                 // Use the full highlight.js bundle with all languages for simplicity
                 const module = await import('highlight.js')
+                if (disposed) return
                 const resolved = module.default || module
                 // Guard: verify the resolved module has the expected API
                 if (typeof resolved?.highlight === 'function') {
@@ -99,6 +107,7 @@ export const CodeBlockRenderer: Component<CodeBlockRendererProps> = (props) => {
                 }
                 setIsHljsLoaded(true)
             } catch (e) {
+                if (disposed) return
                 console.warn('Failed to load highlight.js', e)
                 // Continue without highlighting - fallback to plain text
                 setIsHljsLoaded(true)
@@ -106,12 +115,14 @@ export const CodeBlockRenderer: Component<CodeBlockRendererProps> = (props) => {
         } else {
             setIsHljsLoaded(true)
         }
+        })()
     })
 
     // Theme management - Sprint Ultimate U.1: Reactive theme synchronization
     // Load both theme stylesheets once, then toggle via data-attribute
-    createEffect(async () => {
+    onSettled(() => {
         if (isServer || stylesLoaded) return
+        void (async () => {
 
         // Load both themes upfront for instant switching
         try {
@@ -123,14 +134,14 @@ export const CodeBlockRenderer: Component<CodeBlockRendererProps> = (props) => {
         } catch (e) {
             console.warn('Failed to load highlight.js themes', e)
         }
+        })()
     })
 
     // Reactive theme detection - listens to system preference changes
-    createEffect(() => {
+    createEffect(() => params()?.theme, (paramTheme) => {
         if (isServer) return
 
         // Priority 1: Explicit theme from params
-        const paramTheme = params()?.theme
         if (paramTheme) {
             setActiveTheme(paramTheme)
             return
@@ -150,16 +161,17 @@ export const CodeBlockRenderer: Component<CodeBlockRendererProps> = (props) => {
             }
 
             mediaQuery.addEventListener('change', handleChange)
-            onCleanup(() => mediaQuery.removeEventListener('change', handleChange))
+            return () => mediaQuery.removeEventListener('change', handleChange)
         }
     })
 
     // Apply highlighting
-    createEffect(() => {
-        const code = params()?.code || ''
-        const language = params()?.language || ''
-
-        if (hljs && isHljsLoaded()) {
+    createEffect(() => ({
+        code: params()?.code || '',
+        language: params()?.language || '',
+        loaded: isHljsLoaded(),
+    }), ({ code, language, loaded }) => {
+        if (hljs && loaded) {
             try {
                 let result
                 if (language && hljs.getLanguage(language)) {
@@ -194,8 +206,10 @@ export const CodeBlockRenderer: Component<CodeBlockRendererProps> = (props) => {
         if (code) {
             try {
                 await navigator.clipboard.writeText(code)
+                if (disposed) return
                 setIsCopied(true)
-                setTimeout(() => setIsCopied(false), 2000)
+                clearTimeout(copyTimer)
+                copyTimer = setTimeout(() => setIsCopied(false), 2000)
             } catch (e) {
                 console.error('Failed to copy code', e)
             }

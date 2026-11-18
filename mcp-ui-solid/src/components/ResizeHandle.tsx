@@ -5,7 +5,8 @@
  * Sprint Drag-Drop Feature
  */
 
-import { Component, JSX, createMemo, mergeProps } from 'solid-js'
+import { Component, createMemo, merge } from "solid-js";
+import type { JSX } from "@solidjs/web";
 
 /**
  * Resize edge types
@@ -179,14 +180,14 @@ function getIndicatorStyle(
  * ResizeHandle Component
  */
 export const ResizeHandle: Component<ResizeHandleProps> = (props) => {
-  const merged = mergeProps(
+  const merged = merge(
     {
       disabled: false,
       isActive: false,
       size: 4,
       hitAreaSize: 12
     },
-    props
+    () => Object.fromEntries(Object.entries(props).filter(([, value]) => value !== undefined)) as Partial<ResizeHandleProps>
   )
 
   const handlePointerDown = (e: PointerEvent) => {
@@ -240,7 +241,7 @@ export const ResizeHandle: Component<ResizeHandleProps> = (props) => {
           : 'horizontal'
       }
       aria-valuenow={undefined}
-      tabIndex={merged.disabled ? -1 : 0}
+      tabindex={merged.disabled ? -1 : 0}
       onKeyDown={(e) => {
         // Allow keyboard resizing
         if (merged.disabled) return

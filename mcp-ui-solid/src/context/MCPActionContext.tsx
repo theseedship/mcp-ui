@@ -3,7 +3,7 @@
  * Phase 5.0: Quick Wins - Replaces CustomEvent with typed context for Mastra integration
  */
 
-import { createContext, createSignal, useContext, ParentComponent, Accessor } from 'solid-js'
+import { createContext, createSignal, useContext, ParentComponent, Accessor, untrack } from 'solid-js'
 import { useMCPUIStrings } from './MCPUIStringsContext'
 
 /**
@@ -145,7 +145,7 @@ export interface MCPActionProviderProps {
 }
 
 // Create the context with undefined default
-const MCPActionContext = createContext<MCPActionContextValue>()
+const MCPActionContext = createContext<MCPActionContextValue | null>(null)
 
 /**
  * Default action executor using CustomEvent fallback
@@ -229,11 +229,11 @@ export const MCPActionProvider: ParentComponent<MCPActionProviderProps> = (props
   const [isExecuting, setIsExecuting] = createSignal(false)
   const [lastResult, setLastResult] = createSignal<ActionResult>()
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [spaceIds, _setSpaceIds] = createSignal<string[]>(props.spaceIds || [])
+  const [spaceIds, _setSpaceIds] = createSignal<string[]>(untrack(() => props.spaceIds || []))
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [macroId, _setMacroId] = createSignal<string | undefined>(props.macroId)
+  const [macroId, _setMacroId] = createSignal<string | undefined>(untrack(() => props.macroId))
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [availableTools, _setAvailableTools] = createSignal<string[]>(props.availableTools || [])
+  const [availableTools, _setAvailableTools] = createSignal<string[]>(untrack(() => props.availableTools || []))
 
   // Update signals when props change
   // Note: This is a simple approach; for more complex scenarios, consider createEffect
@@ -297,9 +297,9 @@ export const MCPActionProvider: ParentComponent<MCPActionProviderProps> = (props
   }
 
   return (
-    <MCPActionContext.Provider value={contextValue}>
+    <MCPActionContext value={contextValue}>
       {props.children}
-    </MCPActionContext.Provider>
+    </MCPActionContext>
   )
 }
 

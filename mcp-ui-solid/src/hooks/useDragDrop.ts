@@ -5,7 +5,7 @@
  * Sprint Drag-Drop Feature
  */
 
-import { createSignal, Accessor, batch, onCleanup } from 'solid-js'
+import { createSignal, Accessor, onCleanup } from 'solid-js'
 import type { UIComponent } from '../types'
 
 /**
@@ -199,11 +199,9 @@ function recalculatePositions(components: UIComponent[]): UIComponent[] {
  * Hook for handling drag-and-drop reordering of grid components
  */
 export function useDragDrop(options: UseDragDropOptions): UseDragDropReturn {
-  const {
-    components,
-    onReorder,
-    enabled = true
-  } = options
+  // Read configuration at the event/JSX boundary, not once while constructing
+  // the hook: hosts pass getters that change when editing is toggled.
+  const enabled = () => options.enabled ?? true
 
   const [draggedId, setDraggedId] = createSignal<string | null>(null)
   const [dropTargetId, setDropTargetId] = createSignal<string | null>(null)
@@ -217,7 +215,7 @@ export function useDragDrop(options: UseDragDropOptions): UseDragDropReturn {
    * Handle drag start
    */
   const handleDragStart = (e: DragEvent, componentId: string) => {
-    if (!enabled) {
+    if (!enabled()) {
       e.preventDefault()
       return
     }
@@ -236,7 +234,7 @@ export function useDragDrop(options: UseDragDropOptions): UseDragDropReturn {
 
     // Delay setting state to allow drag image to be captured
     requestAnimationFrame(() => {
-      setDraggedId(componentId)
+      if (enabled()) setDraggedId(componentId)
     })
   }
 
@@ -244,7 +242,7 @@ export function useDragDrop(options: UseDragDropOptions): UseDragDropReturn {
    * Handle drag over
    */
   const handleDragOver = (e: DragEvent, componentId: string) => {
-    if (!enabled || !draggedId() || draggedId() === componentId) {
+    if (!enabled() || !draggedId() || draggedId() === componentId) {
       return
     }
 
@@ -261,7 +259,7 @@ export function useDragDrop(options: UseDragDropOptions): UseDragDropReturn {
    * Handle drag enter
    */
   const handleDragEnter = (e: DragEvent, componentId: string) => {
-    if (!enabled || !draggedId() || draggedId() === componentId) {
+    if (!enabled() || !draggedId() || draggedId() === componentId) {
       return
     }
 
@@ -274,7 +272,7 @@ export function useDragDrop(options: UseDragDropOptions): UseDragDropReturn {
    * Handle drag leave
    */
   const handleDragLeave = (_e: DragEvent) => {
-    if (!enabled) return
+    if (!enabled()) return
 
     dragCounter--
     if (dragCounter === 0) {
@@ -286,22 +284,20 @@ export function useDragDrop(options: UseDragDropOptions): UseDragDropReturn {
    * Handle drop
    */
   const handleDrop = (e: DragEvent, targetId: string) => {
-    if (!enabled) return
+    if (!enabled()) return
 
     e.preventDefault()
     dragCounter = 0
 
     const sourceId = e.dataTransfer!.getData('text/plain')
     if (!sourceId || sourceId === targetId) {
-      batch(() => {
-        setDraggedId(null)
-        setDropTargetId(null)
-      })
+      setDraggedId(null)
+      setDropTargetId(null)
       return
     }
 
     // Reorder components
-    const currentComponents = components()
+    const currentComponents = options.components()
     const reordered = reorderComponents(
       currentComponents,
       sourceId,
@@ -310,12 +306,10 @@ export function useDragDrop(options: UseDragDropOptions): UseDragDropReturn {
     )
 
     // Apply reorder
-    batch(() => {
-      setDraggedId(null)
-      setDropTargetId(null)
-    })
+    setDraggedId(null)
+    setDropTargetId(null)
 
-    onReorder(reordered)
+    options.onReorder(reordered)
   }
 
   /**
@@ -323,17 +317,15 @@ export function useDragDrop(options: UseDragDropOptions): UseDragDropReturn {
    */
   const handleDragEnd = (_e: DragEvent) => {
     dragCounter = 0
-    batch(() => {
-      setDraggedId(null)
-      setDropTargetId(null)
-    })
+    setDraggedId(null)
+    setDropTargetId(null)
   }
 
   /**
    * Get drag props for a component
    */
   const getDragProps = (componentId: string): DragProps => ({
-    draggable: enabled,
+    get draggable() { return enabled() },
     onDragStart: (e) => handleDragStart(e, componentId),
     onDragOver: (e) => handleDragOver(e, componentId),
     onDragEnter: (e) => handleDragEnter(e, componentId),

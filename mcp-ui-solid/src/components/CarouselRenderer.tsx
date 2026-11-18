@@ -1,5 +1,5 @@
 import { Component, For, createSignal } from 'solid-js'
-import { isServer } from 'solid-js/web'
+import { isServer } from "@solidjs/web";
 import { useRenderContext } from './RenderContext'
 import type { UIComponent } from '../types'
 import { ExpandableWrapper, useExpanded } from './ExpandableWrapper'

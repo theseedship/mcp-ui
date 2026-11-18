@@ -1,3 +1,4 @@
+import { flush } from 'solid-js'
 /**
  * FormRenderer Tests
  * Sprint 1: Form Foundation
@@ -89,9 +90,11 @@ describe('FormRenderer', () => {
 
     const input = screen.getByLabelText('Name')
     fireEvent.input(input, { target: { value: 'John Doe' } })
+    flush()
 
     const submitBtn = screen.getByRole('button', { name: 'Save' })
     fireEvent.click(submitBtn)
+    flush()
 
     await waitFor(() => {
       expect(onSubmit).toHaveBeenCalledWith({ name: 'John Doe' })
@@ -108,6 +111,7 @@ describe('FormRenderer', () => {
 
     const submitBtn = screen.getByRole('button', { name: 'Save' })
     fireEvent.click(submitBtn)
+    flush()
 
     await waitFor(() => {
       expect(screen.getByText('Username is required')).toBeTruthy()
@@ -124,6 +128,7 @@ describe('FormRenderer', () => {
 
     // Submit to trigger error
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    flush()
 
     await waitFor(() => {
       expect(screen.getByText('Email is required')).toBeTruthy()
@@ -132,6 +137,7 @@ describe('FormRenderer', () => {
     // Type in field to clear error - use getByRole instead because the label includes required indicator
     const input = screen.getByRole('textbox')
     fireEvent.input(input, { target: { value: 'test@example.com' } })
+    flush()
 
     await waitFor(() => {
       expect(screen.queryByText('Email is required')).toBeNull()
@@ -306,6 +312,7 @@ describe('FormFieldRenderer', () => {
 
     const input = screen.getByLabelText('Test Field')
     fireEvent.input(input, { target: { value: 'new value' } })
+    flush()
 
     expect(onChange).toHaveBeenCalledWith('new value')
   })
@@ -495,6 +502,7 @@ describe('FormRenderer with conditional fields', () => {
     // Check the checkbox
     const checkbox = screen.getByRole('checkbox')
     fireEvent.click(checkbox)
+    flush()
 
     // Email field should now be visible
     await waitFor(() => {
@@ -510,6 +518,7 @@ describe('FormRenderer with conditional fields', () => {
     // Submit without checking checkbox - email field is hidden, so no validation error
     const submitBtn = screen.getByRole('button', { name: 'Submit' })
     fireEvent.click(submitBtn)
+    flush()
 
     await waitFor(() => {
       expect(onSubmit).toHaveBeenCalledWith({ hasEmail: false })
@@ -524,10 +533,12 @@ describe('FormRenderer with conditional fields', () => {
     // Check the checkbox to show email field
     const checkbox = screen.getByRole('checkbox')
     fireEvent.click(checkbox)
+    flush()
 
     // Submit without filling email - should trigger validation error
     const submitBtn = screen.getByRole('button', { name: 'Submit' })
     fireEvent.click(submitBtn)
+    flush()
 
     await waitFor(() => {
       expect(onError).toHaveBeenCalled()

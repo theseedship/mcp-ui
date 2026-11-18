@@ -5,7 +5,8 @@
  * Sprint Drag-Drop Feature
  */
 
-import { Component, JSX, Show, createMemo, mergeProps } from 'solid-js'
+import { Component, Show, createMemo, merge } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import type { GridPosition, ResizeConstraints } from '../types'
 import { ResizeHandle } from './ResizeHandle'
 
@@ -123,7 +124,7 @@ function getGridStyle(position: GridPosition): JSX.CSSProperties {
  * DraggableGridItem Component
  */
 export const DraggableGridItem: Component<DraggableGridItemProps> = (props) => {
-  const merged = mergeProps(
+  const merged = merge(
     {
       draggable: false,
       resizable: false,
@@ -132,7 +133,7 @@ export const DraggableGridItem: Component<DraggableGridItemProps> = (props) => {
       isResizing: false,
       showGridOverlay: false
     },
-    props
+    () => Object.fromEntries(Object.entries(props).filter(([, value]) => value !== undefined))
   )
 
   // Use preview position during resize if available
@@ -199,7 +200,10 @@ export const DraggableGridItem: Component<DraggableGridItemProps> = (props) => {
       class={classNames()}
       style={combinedStyle()}
       data-component-id={props.id}
-      {...(merged.draggable && props.dragProps ? props.dragProps : {})}
+      {...(merged.draggable && props.dragProps ? {
+        ...props.dragProps,
+        draggable: props.dragProps.draggable ? 'true' as const : 'false' as const,
+      } : {})}
     >
       {/* Drag handle indicator */}
       <Show when={merged.draggable && !merged.isResizing}>

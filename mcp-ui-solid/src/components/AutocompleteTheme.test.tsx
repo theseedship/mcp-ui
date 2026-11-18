@@ -1,3 +1,4 @@
+import { flush } from 'solid-js'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render } from '@solidjs/testing-library'
 import { AutocompleteDropdown } from './AutocompleteDropdown'
@@ -43,8 +44,10 @@ describe('autocomplete theme token consumption', () => {
     expect(options[0].style.color).toBe('var(--mcp-ui-fg, #374151)')
     expect(options[1].style.color).toBe('var(--mcp-ui-fg-subtle, #9ca3af)')
     fireEvent.click(options[1])
+    flush()
     expect(onSelect).not.toHaveBeenCalled()
     fireEvent.click(options[0])
+    flush()
     expect(onSelect).toHaveBeenCalledWith({ value: 'a', label: 'Alpha' })
     for (const key of dropdown.querySelectorAll('kbd')) {
       expect(key.style.backgroundColor).toBe('var(--mcp-ui-surface-hover, #e5e7eb)')
@@ -89,6 +92,7 @@ describe('autocomplete theme token consumption', () => {
     const input = getByRole('textbox') as HTMLInputElement
     expect(input.style.backgroundColor).toBe('transparent')
     fireEvent.input(input, { target: { value: 'Alpha' } })
+    flush()
     expect(onInput).toHaveBeenCalledWith('Alpha')
   })
 

@@ -162,4 +162,27 @@ describe('GraphRenderer scoped canvas theme', () => {
     await Promise.resolve();
     expect(graph.draw).toHaveBeenCalledTimes(2);
   });
+
+  it('does not install a late theme observer after disposal during the initial layout', async () => {
+    let finish!: () => void;
+    harness.renderGate = new Promise<void>((resolve) => { finish = resolve; });
+    const component: UIComponent = {
+      id: 'disposed-layout', type: 'graph', position: { colStart: 1, colSpan: 6 }, params,
+    };
+    const { container, unmount } = render(() => (
+      <div style={{ '--mcp-ui-chart-1': 'red' }}>
+        <GraphRenderer component={component} />
+      </div>
+    ));
+    await waitFor(() => expect(harness.instances).toHaveLength(1));
+    const graph = harness.instances[0];
+    const scope = container.firstElementChild as HTMLElement;
+    unmount();
+    expect(graph.destroy).toHaveBeenCalledTimes(1);
+    scope.style.setProperty('--mcp-ui-chart-1', 'green');
+    finish();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(graph.draw).not.toHaveBeenCalled();
+    expect(harness.instances).toHaveLength(1);
+  });
 });

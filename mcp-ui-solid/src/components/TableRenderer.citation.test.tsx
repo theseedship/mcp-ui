@@ -1,3 +1,4 @@
+import { flush } from 'solid-js';
 /**
  * Citation chip rendering inside `<TableRenderer>` cells (v5.7.0).
  *
@@ -188,7 +189,7 @@ describe('<TableRenderer> — citationMap wiring (v5.7.0)', () => {
       </MCPUIStringsProvider>
     ))
     expect(container.querySelector('button[data-citation-page]')?.getAttribute('title')).toBe('View source - A.pdf - 5')
-    setFr(true)
+    flush(() => setFr(true))
     expect(container.querySelector('button[data-citation-page]')?.getAttribute('title')).toBe('Voir la source - A.pdf - 5')
   })
 })

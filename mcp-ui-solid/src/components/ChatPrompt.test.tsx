@@ -1,3 +1,4 @@
+import { flush } from 'solid-js'
 /**
  * Tests for ChatPrompt component
  * Phase 2: choice, confirm, form subtypes
@@ -53,6 +54,7 @@ describe('ChatPrompt', () => {
       ))
 
       fireEvent.click(getByText('CSV'))
+      flush()
 
       expect(onSubmit).toHaveBeenCalledWith({
         type: 'choice',
@@ -142,6 +144,7 @@ describe('ChatPrompt', () => {
 
         // The wrapping <button> is still mcp-ui's — clicking it fires onSubmit with the option value
         fireEvent.click(customX)
+        flush()
         expect(onSubmit).toHaveBeenCalledWith({ type: 'choice', value: 'x', label: 'X' })
       })
 
@@ -229,6 +232,7 @@ describe('ChatPrompt', () => {
       ))
 
       fireEvent.click(getByText('Delete'))
+      flush()
 
       expect(onSubmit).toHaveBeenCalledWith({
         type: 'confirm',
@@ -245,6 +249,7 @@ describe('ChatPrompt', () => {
       ))
 
       fireEvent.click(getByText('Keep'))
+      flush()
 
       expect(onSubmit).toHaveBeenCalledWith({
         type: 'confirm',
@@ -322,6 +327,7 @@ describe('ChatPrompt', () => {
 
       const titleInput = getByPlaceholderText('Enter title')
       fireEvent.input(titleInput, { target: { value: 'My Report' } })
+      flush()
 
       const submitBtn = getByText('Send')
       expect(submitBtn.hasAttribute('disabled')).toBe(false)
@@ -334,7 +340,9 @@ describe('ChatPrompt', () => {
       ))
 
       fireEvent.input(getByPlaceholderText('Enter title'), { target: { value: 'Q4 Report' } })
+      flush()
       fireEvent.click(getByText('Send'))
+      flush()
 
       expect(onSubmit).toHaveBeenCalledWith({
         type: 'form',
@@ -372,6 +380,7 @@ describe('ChatPrompt', () => {
       ))
 
       fireEvent.click(getByLabelText('Dismiss'))
+      flush()
 
       expect(onDismiss).toHaveBeenCalled()
       expect(onSubmit).toHaveBeenCalledWith({
@@ -427,6 +436,7 @@ describe('ChatPrompt', () => {
       ))
 
       fireEvent.click(getByText('Envoyer directement'))
+      flush()
 
       expect(onDismiss).toHaveBeenCalled()
       expect(onSubmit).toHaveBeenCalledWith({

@@ -3,6 +3,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { flush } from 'solid-js'
 import { render, fireEvent, cleanup } from '@solidjs/testing-library'
 import { FeedbackInline } from './FeedbackInline'
 
@@ -31,6 +32,7 @@ describe('FeedbackInline — v5.2.0', () => {
       '[data-feedback-inline-rating="positive"]'
     ) as HTMLElement
     fireEvent.click(positive)
+    flush()
 
     expect(onSubmit).toHaveBeenCalledTimes(1)
     expect(onSubmit).toHaveBeenCalledWith('positive', {
@@ -40,6 +42,7 @@ describe('FeedbackInline — v5.2.0', () => {
     // v6.6.0: default ack is now EN (MCPUIStrings.feedbackPositiveAck) — R4.
     expect(getByText('Thanks!')).toBeDefined()
   })
+    flush()
 
   it('click thumb-down calls onSubmit with negative and shows negative ack', () => {
     const onSubmit = vi.fn()
@@ -48,11 +51,13 @@ describe('FeedbackInline — v5.2.0', () => {
       '[data-feedback-inline-rating="negative"]'
     ) as HTMLElement
     fireEvent.click(negative)
+    flush()
 
     expect(onSubmit).toHaveBeenCalledWith('negative', undefined)
     // v6.6.0: default ack is now EN (MCPUIStrings.feedbackNegativeAck) — R4.
     expect(getByText("Noted — we'll improve")).toBeDefined()
   })
+    flush()
 
   it('second click after rating is a no-op (final state)', () => {
     const onSubmit = vi.fn()
@@ -61,11 +66,13 @@ describe('FeedbackInline — v5.2.0', () => {
       '[data-feedback-inline-rating="positive"]'
     ) as HTMLElement
     fireEvent.click(positive)
+    flush()
     // After first click, buttons are replaced by ack text — there's no button
     // to click, but verify onSubmit isn't called again via any stale ref
     expect(onSubmit).toHaveBeenCalledTimes(1)
     expect(container.querySelector('[data-feedback-inline-rating]')).toBeNull()
   })
+    flush()
 
   it('custom positiveAck / negativeAck text is rendered', () => {
     const { container, getByText, unmount } = render(() => (
@@ -79,6 +86,7 @@ describe('FeedbackInline — v5.2.0', () => {
       '[data-feedback-inline-rating="positive"]'
     ) as HTMLElement
     fireEvent.click(positive)
+    flush()
     expect(getByText('Thanks!')).toBeDefined()
     unmount()
 
@@ -93,8 +101,10 @@ describe('FeedbackInline — v5.2.0', () => {
       '[data-feedback-inline-rating="negative"]'
     ) as HTMLElement
     fireEvent.click(negative)
+    flush()
     expect(second.getByText('Got it, sorry')).toBeDefined()
   })
+    flush()
 
   it('onSubmit promise rejection is swallowed (best-effort, UI still flips)', () => {
     const onSubmit = vi.fn().mockRejectedValue(new Error('network down'))
@@ -104,9 +114,11 @@ describe('FeedbackInline — v5.2.0', () => {
     ) as HTMLElement
     // Should not throw even though onSubmit rejects
     expect(() => fireEvent.click(positive)).not.toThrow()
+    flush()
     // v6.6.0: default ack is now EN (MCPUIStrings.feedbackPositiveAck) — R4.
     expect(getByText('Thanks!')).toBeDefined()
   })
+    flush()
 
   it('works without messageHash or context', () => {
     const onSubmit = vi.fn()
@@ -115,6 +127,9 @@ describe('FeedbackInline — v5.2.0', () => {
       '[data-feedback-inline-rating="positive"]'
     ) as HTMLElement
     fireEvent.click(positive)
+    flush()
     expect(onSubmit).toHaveBeenCalledWith('positive', undefined)
   })
+    flush()
 })
+    flush()

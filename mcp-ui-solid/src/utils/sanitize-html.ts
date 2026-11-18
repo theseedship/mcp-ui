@@ -55,7 +55,7 @@
  */
 
 import DOMPurify, { type Config } from 'dompurify'
-import { isServer } from 'solid-js/web'
+import { isServer } from "@solidjs/web";
 import { escapeHtml } from './escape-html'
 
 /** DOMPurify configuration object (re-exported so call sites need not import dompurify). */

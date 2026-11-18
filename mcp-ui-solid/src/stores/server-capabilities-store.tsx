@@ -39,8 +39,9 @@
  * by your transport layer based on its own configuration).
  */
 
-import { createContext, useContext, type ParentComponent, type JSX } from 'solid-js'
-import { createStore } from 'solid-js/store'
+import { createContext, useContext, flush, untrack, type ParentComponent } from "solid-js";
+import type { JSX } from "@solidjs/web";
+import { createStore } from "solid-js";
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -105,7 +106,8 @@ export function createServerCapabilitiesStore(): ServerCapabilitiesStoreHandle {
   const [state, setState] = createStore<{ info: ServerInitializeInfo | null }>({ info: null })
 
   return {
-    set: (info) => setState('info', info),
+    // A transport adapter can immediately read the snapshot it just pushed.
+    set: (info) => flush(() => setState((draft) => { draft.info = info })),
     info: () => state.info,
     capabilities: () => state.info?.capabilities ?? null,
     serverInfo: () => state.info?.serverInfo ?? null,
@@ -148,8 +150,8 @@ export function setServerCapabilities(info: ServerInitializeInfo | null): void {
  * @experimental
  * @since v5.3.0
  */
-export const ServerCapabilitiesContext = createContext<ServerCapabilitiesStoreHandle | undefined>(
-  undefined
+export const ServerCapabilitiesContext = createContext<ServerCapabilitiesStoreHandle | null>(
+  null
 )
 
 /**
@@ -167,11 +169,11 @@ export const ServerCapabilitiesContext = createContext<ServerCapabilitiesStoreHa
 export const ServerCapabilitiesProvider: ParentComponent<{
   store?: ServerCapabilitiesStoreHandle
 }> = (props): JSX.Element => {
-  const store = props.store ?? createServerCapabilitiesStore()
+  const store = untrack(() => props.store) ?? createServerCapabilitiesStore()
   return (
-    <ServerCapabilitiesContext.Provider value={store}>
+    <ServerCapabilitiesContext value={store}>
       {props.children}
-    </ServerCapabilitiesContext.Provider>
+    </ServerCapabilitiesContext>
   )
 }
 

@@ -5,13 +5,13 @@
  * @experimental — This API may change without major bump until v2.5.0.
  */
 
-import { createContext, useContext, onCleanup, type ParentComponent } from 'solid-js'
+import { createContext, useContext, onCleanup, untrack, type ParentComponent } from 'solid-js'
 import { createChatBus } from '../services/chat-bus'
 import type { ChatBus } from '../types/chat-bus'
 
 // ─── Context ─────────────────────────────────────────────────
 
-const ChatBusContext = createContext<ChatBus>()
+const ChatBusContext = createContext<ChatBus | null>(null)
 
 /**
  * @experimental
@@ -26,16 +26,16 @@ const ChatBusContext = createContext<ChatBus>()
  * </ChatBusProvider>
  */
 export const ChatBusProvider: ParentComponent<{ bus?: ChatBus }> = (props) => {
-  const bus = props.bus ?? createChatBus()
+  const bus = untrack(() => props.bus) ?? createChatBus()
 
   onCleanup(() => {
     bus.events.clear()
   })
 
   return (
-    <ChatBusContext.Provider value={bus}>
+    <ChatBusContext value={bus}>
       {props.children}
-    </ChatBusContext.Provider>
+    </ChatBusContext>
   )
 }
 

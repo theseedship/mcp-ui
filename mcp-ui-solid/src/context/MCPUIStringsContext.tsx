@@ -39,7 +39,8 @@
  * ```
  */
 
-import { createContext, mergeProps, useContext, type JSX } from 'solid-js'
+import { createContext, merge, useContext } from "solid-js";
+import type { JSX } from "@solidjs/web";
 
 /**
  * The library's own chrome strings. Flat map, no interpolation.
@@ -1249,7 +1250,9 @@ export function resolveMCPUILocale(locale: unknown): string {
 export function useMCPUIStrings(): Required<MCPUIStrings> {
   const context = useContext(MCPUIStringsContext)
   // The last source wins: `locale` is always a valid tag, whatever the provider passed.
-  return mergeProps(DEFAULT_MCPUI_STRINGS, context, {
+  return merge(DEFAULT_MCPUI_STRINGS, () => Object.fromEntries(
+    Object.entries(context ?? {}).filter(([, value]) => value !== undefined),
+  ), {
     get locale() {
       return resolveMCPUILocale(context?.locale)
     },
@@ -1272,11 +1275,13 @@ export interface MCPUIStringsProviderProps {
  */
 export function MCPUIStringsProvider(props: MCPUIStringsProviderProps): JSX.Element {
   // The function source keeps replacement `strings` objects reactive while
-  // mergeProps fills any omitted key without taking a one-time snapshot.
-  const value = mergeProps(DEFAULT_MCPUI_STRINGS, () => props.strings)
+  // Undefined overrides retain the default, while `merge` keeps replacements reactive.
+  const value = merge(DEFAULT_MCPUI_STRINGS, () => Object.fromEntries(
+    Object.entries(props.strings ?? {}).filter(([, value]) => value !== undefined),
+  ))
   return (
-    <MCPUIStringsContext.Provider value={value}>
+    <MCPUIStringsContext value={value}>
       {props.children}
-    </MCPUIStringsContext.Provider>
+    </MCPUIStringsContext>
   )
 }

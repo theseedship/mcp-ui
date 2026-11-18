@@ -1,8 +1,7 @@
 /**
  * useStreamingUI — behavioral coverage for the SSE streaming engine.
  *
- * The hook does NOT use `EventSource` (the field of that name is vestigial);
- * it POSTs to /api/mcp/generative-ui-stream and reads an SSE-formatted body via
+ * The hook POSTs to /api/mcp/generative-ui-stream and reads an SSE-formatted body via
  * `response.body.getReader()`. These tests stub `fetch` + the reader to drive
  * scripted `status` / `component` / `complete` / `error` events and assert the
  * four behaviors that had zero coverage: progressive accumulation, out-of-order
@@ -14,7 +13,7 @@
  */
 
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { createRoot } from 'solid-js'
+import { createRoot, flush } from 'solid-js'
 import { useStreamingUI, type UseStreamingUIOptions } from './useStreamingUI'
 
 const T = '2026-07-03T00:00:00.000Z'
@@ -90,6 +89,7 @@ describe('useStreamingUI', () => {
     while (disposers.length) disposers.pop()!()
     vi.unstubAllGlobals()
     vi.clearAllMocks()
+    vi.useRealTimers()
   })
 
   it('accumulates components in sequence order and finalizes on complete', async () => {
@@ -190,5 +190,84 @@ describe('useStreamingUI', () => {
 
     expect(api.error()).toBeNull() // reconnect resets error state
     expect(api.components().map((c) => c.id)).toEqual(['c0'])
+  })
+
+  it('stops one instance without affecting another or accepting late reader callbacks', async () => {
+    const connections: Array<{
+      signal: AbortSignal
+      deliver: (chunk: string) => void
+      cancel: ReturnType<typeof vi.fn>
+    }> = []
+    const encoder = new TextEncoder()
+    vi.stubGlobal('fetch', vi.fn(async (_url: string, init: RequestInit) => {
+      let pendingRead!: (value: ReadableStreamReadResult<Uint8Array>) => void
+      const cancel = vi.fn(async () => {})
+      const reader = {
+        read: () => new Promise<ReadableStreamReadResult<Uint8Array>>((resolve) => { pendingRead = resolve }),
+        cancel,
+      }
+      connections.push({
+        signal: init.signal as AbortSignal,
+        deliver: (chunk) => pendingRead({ done: false, value: encoder.encode(chunk) }),
+        cancel,
+      })
+      return { ok: true, body: { getReader: () => reader } }
+    }))
+    const onFirstComplete = vi.fn()
+    const onSecondComplete = vi.fn()
+    const onError = vi.fn()
+    const first = renderHook({ query: 'first', onComplete: onFirstComplete, onError })
+    const second = renderHook({ query: 'second', onComplete: onSecondComplete, onError })
+    flush()
+    await vi.waitFor(() => expect(connections).toHaveLength(2))
+    first.stopStreaming()
+    flush()
+    expect(connections[0].signal.aborted).toBe(true)
+    expect(connections[0].cancel).toHaveBeenCalledTimes(1)
+    expect(connections[1].signal.aborted).toBe(false)
+    connections[0].deliver(sse('component', comp(0)) + sse('complete', completeMeta()))
+    connections[1].deliver(sse('component', comp(0)) + sse('complete', completeMeta()))
+    await vi.waitFor(() => expect(onSecondComplete).toHaveBeenCalledTimes(1))
+    expect(onFirstComplete).not.toHaveBeenCalled()
+    expect(first.components()).toEqual([])
+    expect(first.isStreaming()).toBe(false)
+    expect(second.components()).toHaveLength(1)
+    expect(onError).not.toHaveBeenCalled()
+  })
+
+  it('publishes each event before callbacks inspect state, including several events in one chunk', async () => {
+    const seen: number[] = []
+    const onComponentReceived = vi.fn(() => { seen.push(api.components().length) })
+    const onComplete = vi.fn(() => {
+      expect(api.isStreaming()).toBe(false)
+      expect(api.isLoading()).toBe(false)
+      expect(api.metadata()?.executionTime).toBe(1234)
+      expect(api.progress().receivedCount).toBe(2)
+    })
+    vi.stubGlobal('fetch', makeFetchStub([{ chunks: [
+      sse('component', comp(0)) + sse('component', comp(1)) + sse('complete', completeMeta()),
+    ] }]))
+    const api = renderHook({ query: 'q', onComponentReceived, onComplete })
+    flush()
+    await vi.waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1))
+    expect(seen).toEqual([1, 2])
+  })
+
+  it.each(['stop', 'dispose'] as const)('cancels a pending reconnect on %s', async (operation) => {
+    vi.useFakeTimers()
+    const onError = vi.fn()
+    const fetchStub = makeFetchStub([
+      { chunks: [sse('error', { error: 'net', message: 'transient', recoverable: true })] },
+    ])
+    vi.stubGlobal('fetch', fetchStub)
+    const api = renderHook({ query: 'q', onError })
+    flush()
+    await vi.waitFor(() => expect(onError).toHaveBeenCalledTimes(1))
+    if (operation === 'stop') api.stopStreaming()
+    else disposers.pop()!()
+    flush()
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(fetchStub).toHaveBeenCalledTimes(1)
+    expect(onError).toHaveBeenCalledTimes(1)
   })
 })
