@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { intentionalBoundaryError } from './browser.mjs'
+import { assertBoundarySSRHtml, intentionalBoundaryError } from './browser.mjs'
 
 const userAgent = 'Fixture Browser/1.0'
 const prefix = '[@seed-ship/mcp-ui-solid:generative-ui] Component render failed: text '
@@ -56,4 +56,29 @@ test('intentional boundary proof never classifies migration or random diagnostic
       assert.equal(intentionalBoundaryError(entry({ ...clientContext, errorStack: clientContext.errorStack + '\n' + diagnostic }), userAgent), null)
     }
   }
+})
+
+const ssrProof = (fallback, other = '') => '<p _hk=00100w300 id="boundary-ssr-fallback">' + fallback + '</p>' +
+  '<output id="boundary-ssr-callback-proof" data-result="one-valid-server-callback" hidden></output>' + other
+
+test('production SSR rejects private markers even outside the correctly redacted fallback', () => {
+  assert.doesNotThrow(() => assertBoundarySSRHtml(ssrProof('Internal Server Error'), 'production'))
+  for (const leak of [
+    '<p><mcpui-fixture-ssr-error></p>',
+    '<p>&lt;mcpui-fixture-ssr-error&gt;</p>',
+    '<p>&#60;mcpui-fixture-ssr-error&#62;</p>',
+    '<script type="application/json">{"message":"&lt;mcpui-fixture-ssr-error&gt;"}</script>',
+    '<script>const error = "\\u003cmcpui-fixture-ssr-error\\u003e"</script>',
+  ]) {
+    assert.throws(() => assertBoundarySSRHtml(ssrProof('Internal Server Error', leak), 'production'), /exposed the private error marker/)
+  }
+  assert.throws(() => assertBoundarySSRHtml(ssrProof('Unexpected fallback', '<p>Internal Server Error</p>'), 'production'), /did not redact the boundary fallback/)
+})
+
+test('development SSR still requires an escaped boundary fallback and rejects a raw private error', () => {
+  for (const fallback of ['&lt;mcpui-fixture-ssr-error>', '&lt;mcpui-fixture-ssr-error&gt;']) {
+    assert.doesNotThrow(() => assertBoundarySSRHtml(ssrProof(fallback), 'dev'))
+    assert.throws(() => assertBoundarySSRHtml(ssrProof(fallback, '<p><mcpui-fixture-ssr-error></p>'), 'dev'), /unescaped error message/)
+  }
+  assert.throws(() => assertBoundarySSRHtml(ssrProof('Wrong fallback', '<p>&lt;mcpui-fixture-ssr-error&gt;</p>'), 'dev'), /did not escape the boundary fallback/)
 })

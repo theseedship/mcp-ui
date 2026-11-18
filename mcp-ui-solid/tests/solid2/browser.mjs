@@ -10,8 +10,9 @@ export const EXPECTED_STREAM_ERROR = '[@seed-ship/mcp-ui-solid:useStreamingUI] S
 export const isExpectedStreamError = entry => entry.type === 'error' && entry.text === EXPECTED_STREAM_ERROR
 
 const boundaryErrorPrefix = '[@seed-ship/mcp-ui-solid:generative-ui] Component render failed: text '
+const privateSSRMarker = 'mcpui-fixture-ssr-error'
 const boundaryMessages = {
-  'packed-ssr-boundary': '<mcpui-fixture-ssr-error>',
+  'packed-ssr-boundary': '<' + privateSSRMarker + '>',
   'packed-client-boundary': '<mcpui-fixture-client-error>',
 }
 
@@ -33,6 +34,22 @@ export function intentionalBoundaryError(entry, userAgent) {
   const keys = ['componentId', 'componentType', 'errorMessage', 'errorStack', 'renderDuration', 'retryCount', 'timestamp', 'userAgent', 'viewport']
   if (Object.keys(context).sort().join(',') !== keys.sort().join(',')) return null
   return context
+}
+
+export function assertBoundarySSRHtml(rawHtml, mode) {
+  assert.equal((rawHtml.match(/\sid="boundary-ssr-fallback"/g) ?? []).length, 1, 'SSR must render exactly one boundary fallback')
+  assert.match(rawHtml, /<output\b(?=[^>]*\sid="boundary-ssr-callback-proof")(?=[^>]*\sdata-result="one-valid-server-callback")[^>]*>/)
+  const fallback = /<p\b[^>]*\sid="boundary-ssr-fallback"[^>]*>([^<]*)<\/p>/.exec(rawHtml)?.[1]
+  if (mode === 'production') {
+    assert.equal(fallback, 'Internal Server Error', 'Production SSR did not redact the boundary fallback')
+    // Check the entire response, including HTML entities and serialized data
+    // whose delimiters may be escaped. The private marker itself must be absent.
+    assert(!rawHtml.includes(privateSSRMarker), 'Production SSR exposed the private error marker')
+  } else {
+    assert(!rawHtml.includes(boundaryMessages['packed-ssr-boundary']), 'SSR emitted an unescaped error message')
+    assert(fallback === '&lt;' + privateSSRMarker + '>' || fallback === '&lt;' + privateSSRMarker + '&gt;',
+      'Development SSR did not escape the boundary fallback')
+  }
 }
 
 export async function qualifyBrowser({ url, resultDir, mode, profile = 'full' }) {
@@ -90,12 +107,7 @@ export async function qualifyBrowser({ url, resultDir, mode, profile = 'full' })
       await check('Packed error boundary calls onError once during SSR and escapes its fallback', async () => {
         const response = await page.request.get(url, { headers: { accept: 'text/html' } })
         assert.equal(response.status(), 200, 'Packed SSR boundary fixture failed')
-        const rawHtml = await response.text()
-        assert.equal((rawHtml.match(/\bid="boundary-ssr-fallback"/g) ?? []).length, 1, 'SSR must render exactly one boundary fallback')
-        assert.match(rawHtml, /<output\b(?=[^>]*\bid="boundary-ssr-callback-proof")(?=[^>]*\bdata-result="one-valid-server-callback")[^>]*>/)
-        if (mode === 'production') assert(rawHtml.includes('Internal Server Error'), 'Production SSR did not redact the private error')
-        else assert.match(rawHtml, /&lt;mcpui-fixture-ssr-error(?:>|&gt;)/)
-        assert(!rawHtml.includes(boundaryMessages['packed-ssr-boundary']), 'SSR emitted an unescaped error message')
+        assertBoundarySSRHtml(await response.text(), mode)
         report.boundary = { ssr: { callbackCount: 1, fallbackCount: 1, escaped: true } }
       })
     }
