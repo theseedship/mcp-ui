@@ -1,9 +1,10 @@
 # Solid 2 clean-tarball qualification
 
-The current RC.21 source candidate is `8.0.0-solid2.3` for the opt-in Solid 2 `solid2`
+The current stable-runtime candidate is `8.0.0-solid2.4` for the opt-in Solid 2 `solid2`
 channel. Stable `7.x` / `latest` remains Solid 1. The version string alone is
 not qualification or release proof: qualify the exact source HEAD and archive.
-Prior RC.20 `8.0.0-solid2.2` evidence remains separate and cannot qualify RC.21.
+Published `.3` requires RC.21 and cannot qualify Solid 2.0.0 stable. Its
+incompatibility with a stable host remains an explicit negative regression.
 Deposium host migration remains in progress; installation needs app-team approval.
 
 ### Native-engine identity and zoom scope
@@ -41,7 +42,7 @@ Run after the library has been built and the maintainer supplies its tarball:
 
 ```sh
 node mcp-ui-solid/tests/solid2/run.mjs prepare \
-  --tarball /absolute/artifacts/seed-ship-mcp-ui-solid-8.0.0-solid2.3.tgz \
+  --tarball /absolute/artifacts/seed-ship-mcp-ui-solid-8.0.0-solid2.4.tgz \
   --spec-tarball /absolute/artifacts/seed-ship-mcp-ui-spec-6.0.0.tgz \
   --consumer /home/nico/worktrees/mcp-ui-solid2-consumer-full \
   --profile full
@@ -62,7 +63,7 @@ pnpm install --ignore-scripts
 The generated `.npmrc` disables automatic peer installation. Full profile lists
 every browser engine explicitly at the exact locally inspected versions, including
 KaTeX `0.18.4` and TanStack virtual-core `3.13.18`. It pins Solid/web/signals/compiler/
-Babel `2.0.0-rc.21`, scoped Vite plugin `3.0.0-next.57`, Vite `8.3.5`, explicit
+Babel `2.0.0`, scoped Vite plugin `3.0.1`, Vite `8.3.5`, explicit
 Babel core `7.29.6`, and Node types `22.19.11`.
 The runner rejects package realpaths outside its own consumer. pnpm's internal
 consumer-local symlinks are normal; linking to the MCPUI source checkout is not.
@@ -92,7 +93,7 @@ Both compile the package's public `solid` source condition; an additional explic
 App and Document use the documented `HydrationScript` contract; no custom entry,
 legacy SolidStart/Vinxi server, alias, or interop wrapper is introduced.
 The pinned plugin's shipped README and generated handler take precedence over
-the older website middleware example: next.57 uses `start.nodeServer` (the old
+the older website middleware example: 3.0.1 uses `start.nodeServer` (the old
 `start.node` option is rejected) and calls `(event, next)` with
 `event.request` and an argument-free `next()`, not `(request, next)`.
 
@@ -116,6 +117,17 @@ plain text, a nonvirtualized sortable table, a source import, and the visible
 missing-G6 fallback. No synthetic resolver, alias, fake engine module, or test
 mock is provided: Vite resolves the installed package's optional-peer metadata.
 The full profile separately runs the richer browser qualification below.
+
+The full fixture deliberately throws a known SSR error to prove that the
+packed error boundary calls `onError` exactly once and escapes its fallback;
+it also triggers and inspects an interactive error after hydration. Raw logs
+retain the expected contained-error diagnostics. Only the exact negative
+fixture is classified as expected; every other reactive/SSR/hydration diagnostic
+remains fatal. Chart.js checks an exact signal-driven series replacement and
+changed geometry/paint. Mermaid 12.3.0 comes only from isolated browser tooling:
+the real engine renders a synthetic iframe diagram through exact intercepted
+routes, then the shipped wrapper expands/restores it and restores focus.
+This is not an E2E claim for the remote Mermaid provider application.
 
 Browser assertions cover:
 

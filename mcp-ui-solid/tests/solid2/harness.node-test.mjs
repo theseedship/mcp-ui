@@ -2,16 +2,37 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { Writable } from 'node:stream'
 import { readFile } from 'node:fs/promises'
-import { manifestFor, pins, enginePins, validateDestination, hasMigrationDiagnostic, hasBareZoomImport, subprocess } from './run.mjs'
+import { assertSolid2HostCompatibility, manifestFor, pins, enginePins, validateDestination, hasMigrationDiagnostic, hasBareZoomImport, subprocess } from './run.mjs'
 import { EXPECTED_STREAM_ERROR, isExpectedStreamError } from './browser.mjs'
 import { hasMathServerMigrationDiagnostic, processHandle } from '../katex/run.mjs'
 
-test('RC.21 consumers use the current Vite plugin Node server option', async () => {
+test('Solid 2.0.0 consumers use the current Vite plugin Node server option', async () => {
   for (const relative of ['./consumer/vite.config.ts', '../katex/consumer/vite.config.ts']) {
     const config = await readFile(new URL(relative, import.meta.url), 'utf8')
     assert.match(config, /nodeServer:\s*true/)
     assert.doesNotMatch(config, /\bnode:\s*true/)
   }
+})
+
+test('tarball workflows check out and verify the exact PR head instead of its synthetic merge', async () => {
+  const sourceSha = '${{ github.event.pull_request.head.sha || github.sha }}'
+  for (const filename of ['ci.yml', 'katex-compatibility.yml']) {
+    const workflow = await readFile(new URL(`../../../.github/workflows/${filename}`, import.meta.url), 'utf8')
+    assert(workflow.includes(`ref: ${sourceSha}`), `${filename} does not check out the exact source`)
+    assert(workflow.includes(`EXPECTED_SOURCE_SHA: ${sourceSha}`) &&
+      workflow.includes('run: test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"'), `${filename} does not verify the checked-out SHA`)
+  }
+})
+
+test('8.0.0-solid2.3 (RC.21) is still rejected by the Solid 2.0.0 stable host guard', () => {
+  const candidate = { version: '8.0.0-solid2.4', peerDependencies: { 'solid-js': '2.0.0', '@solidjs/web': '2.0.0' } }
+  const rc21 = { version: '8.0.0-solid2.3', peerDependencies: { 'solid-js': '2.0.0-rc.21', '@solidjs/web': '2.0.0-rc.21' } }
+  assert.doesNotThrow(() => assertSolid2HostCompatibility(candidate))
+  assert.throws(() => assertSolid2HostCompatibility(rc21), /peer must match the stable consumer pin 2\.0\.0/)
+  assert.throws(() => assertSolid2HostCompatibility({ ...rc21, peerDependencies: candidate.peerDependencies }), /Review harness pins/)
+  assert.throws(() => assertSolid2HostCompatibility({
+    ...candidate, peerDependencies: { ...candidate.peerDependencies, '@solidjs/web': '2.0.0-rc.21' },
+  }), /Packed @solidjs\/web peer must match/)
 })
 
 test('full host pins runtime/compiler and explicit optional engines without workspace dependencies', () => {
@@ -46,7 +67,7 @@ test('server gate rejects ownership and both hydration namespace failure diagnos
     '[EFFECT_WRITES_OWN_SOURCE]', '[SSR_UNSAFE_WRITE]']) assert(hasMigrationDiagnostic(text), text)
   assert(!hasMigrationDiagnostic('SSR ready; HTTP 200'))
 })
-test('RC.21 CAUGHT_REACTIVE_READ remains fatal in general and KaTeX SSR gates', () => {
+test('CAUGHT_REACTIVE_READ remains fatal in general and KaTeX SSR gates', () => {
   for (const guard of [hasMigrationDiagnostic, hasMathServerMigrationDiagnostic]) {
     assert(guard('[CAUGHT_REACTIVE_READ] read was caught by an error boundary'))
     assert(!guard('SSR ready; HTTP 200'))

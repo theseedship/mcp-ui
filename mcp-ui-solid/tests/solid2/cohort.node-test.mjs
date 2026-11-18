@@ -10,9 +10,10 @@ const solidRoot = resolve(repoRoot, 'mcp-ui-solid')
 const cohort = ['solid-js', '@solidjs/web', '@solidjs/signals', '@solidjs/compiler', '@solidjs/babel-plugin']
 const rc19 = '2.0.0-rc.19'
 const rc20 = '2.0.0-rc.20'
-const targetRuntime = '2.0.0-rc.21'
+const rc21 = '2.0.0-rc.21'
+const targetRuntime = '2.0.0'
 const plugin = '@solidjs/vite-plugin'
-const pluginVersion = '3.0.0-next.57'
+const pluginVersion = '3.0.1'
 const virtualCore = '@tanstack/virtual-core'
 const virtualCoreVersion = '3.13.18'
 
@@ -65,7 +66,8 @@ function lockPackageRecords(lockText, name) {
   for (let index = 0; index < lines.length; index++) {
     const header = lines[index]
     if (!header.startsWith(prefix) || !header.endsWith(':')) continue
-    const version = header.slice(prefix.length, -1).split('(')[0]
+    const resolution = header.slice(prefix.length, -1)
+    const version = resolutionVersion(resolution)
     let end = index + 1
     while (end < lines.length && !/^  \/[^\s]+:\s*$/.test(lines[end]) && !/^snapshots:\s*$/.test(lines[end])) end++
     const sections = new Map()
@@ -79,7 +81,7 @@ function lockPackageRecords(lockText, name) {
       const nameMatch = line.match(/^      (?:'([^']+)'|"([^"]+)"|([^:]+)):\s*(.*?)\s*$/)
       if (nameMatch) sections.get(section).set(nameMatch[1] ?? nameMatch[2] ?? nameMatch[3].trim(), nameMatch[4].replace(/^['"]|['"]$/g, ''))
     }
-    records.push({ version, sections })
+    records.push({ resolution, version, sections })
   }
   return records
 }
@@ -113,14 +115,14 @@ function assertSolid2Cohort({ producer, workspace, lockText }) {
   const peers = producer.peerDependencies ?? {}
   const peerMeta = producer.peerDependenciesMeta ?? {}
   const dev = producer.devDependencies ?? {}
-  assert.equal(peers['solid-js'], targetRuntime, 'solid-js must remain a required RC.21 peer')
-  assert.equal(peers['@solidjs/web'], targetRuntime, '@solidjs/web must remain a required RC.21 peer')
+  assert.equal(peers['solid-js'], targetRuntime, `solid-js must remain a required ${targetRuntime} peer`)
+  assert.equal(peers['@solidjs/web'], targetRuntime, `@solidjs/web must remain a required ${targetRuntime} peer`)
   for (const name of ['solid-js', '@solidjs/web']) {
     assert.notEqual(peerMeta[name]?.optional, true, `${name} cannot be optional`)
     assert.equal(dev[name], targetRuntime, `${name} dev dependency must match its peer pin`)
   }
   for (const name of ['@solidjs/signals', '@solidjs/compiler', '@solidjs/babel-plugin']) {
-    assert.equal(dev[name], targetRuntime, `${name} must use the same RC.21 cohort`)
+    assert.equal(dev[name], targetRuntime, `${name} must use the same ${targetRuntime} cohort`)
   }
   assert.equal(dev[plugin], pluginVersion, `${plugin} must stay on the reviewed compatible plugin pin`)
 
@@ -138,20 +140,20 @@ function assertSolid2Cohort({ producer, workspace, lockText }) {
   for (const name of cohort) {
     const locations = allImporterResolutions(importers, name)
     assert(locations.length > 0, `${name} missing from mcp-ui-solid lock importer`)
-    assert(locations.every(entry => resolutionVersion(entry.version) === targetRuntime), `${name} importer resolution is outside RC.21`)
-    assert.deepEqual(versionsFor(lockText, name), new Set([targetRuntime]), `${name} lock package versions must be one RC.21 cohort`)
+    assert(locations.every(entry => resolutionVersion(entry.version) === targetRuntime), `${name} importer resolution is outside ${targetRuntime}`)
+    assert.deepEqual(versionsFor(lockText, name), new Set([targetRuntime]), `${name} lock package versions must be one ${targetRuntime} cohort`)
   }
   const pluginResolutions = allImporterResolutions(importers, plugin)
   assert(pluginResolutions.length > 0, `${plugin} missing from mcp-ui-solid lock importer`)
   assert(pluginResolutions.every(entry => resolutionVersion(entry.version) === pluginVersion &&
-    entry.version.includes(`@solidjs/web@${targetRuntime}`) && entry.version.includes(`solid-js@${targetRuntime}`)), `${plugin} lock resolution must bind to RC.21 runtime peers`)
+    entry.version.includes(`(@solidjs/web@${targetRuntime})`) && entry.version.includes(`(solid-js@${targetRuntime})`)), `${plugin} lock resolution must bind to exact ${targetRuntime} runtime peers`)
   assert.deepEqual(versionsFor(lockText, plugin), new Set([pluginVersion]), `${plugin} lock version drifted`)
   const pluginRecords = lockPackageRecords(lockText, plugin)
   assert(pluginRecords.length > 0, `${plugin} package record missing from lock`)
   for (const record of pluginRecords) {
     const resolved = record.sections.get('dependencies')
     for (const name of ['@solidjs/babel-plugin', '@solidjs/compiler', '@solidjs/web', 'solid-js']) {
-      assert.equal(resolutionVersion(resolved?.get(name)), targetRuntime, `${plugin} must resolve ${name} from the RC.21 cohort`)
+      assert.equal(resolutionVersion(resolved?.get(name)), targetRuntime, `${plugin} must resolve ${name} from the ${targetRuntime} cohort`)
     }
   }
   const virtualResolutions = allImporterResolutions(importers, virtualCore)
@@ -171,10 +173,12 @@ function assertSolid2Cohort({ producer, workspace, lockText }) {
     const serovalVersion = resolutionVersion(serovalResolution)
     const pluginsVersion = resolutionVersion(pluginsResolution)
     assert(serovalVersion && pluginsVersion, '@solidjs/web lock record must declare both Seroval packages')
-    assert.equal(pluginsVersion, serovalVersion, 'seroval-plugins must resolve against the same seroval version')
-    assert(pluginsResolution.includes(`seroval@${serovalVersion}`), 'seroval-plugins lock peer context must match web-owned seroval')
+    assert(pluginsResolution.includes(`(seroval@${serovalVersion})`), 'seroval-plugins lock peer context must match web-owned seroval')
     assert(versionsFor(lockText, 'seroval').has(serovalVersion), 'web-owned seroval package is absent from lock')
-    assert(versionsFor(lockText, 'seroval-plugins').has(pluginsVersion), 'web-owned seroval-plugins package is absent from lock')
+    const pluginsRecord = lockPackageRecords(lockText, 'seroval-plugins').find(record => record.resolution === pluginsResolution)
+    assert(pluginsRecord, 'web-owned seroval-plugins package context is absent from lock')
+    assert.equal(resolutionVersion(pluginsRecord.sections.get('dependencies')?.get('seroval')), serovalVersion,
+      'seroval-plugins must resolve the same seroval peer as Solid Web')
   }
   return true
 }
@@ -192,14 +196,14 @@ function syntheticCase() {
   const packages = [...cohort.filter(name => name !== '@solidjs/web').map(name => `  /${name}@${targetRuntime}:\n    resolution: {integrity: fixture}\n`),
     `  /${plugin}@${pluginVersion}(@solidjs/web@${targetRuntime})(solid-js@${targetRuntime})(vite@8.3.5):\n    resolution: {integrity: fixture}\n    dependencies:\n      '@solidjs/babel-plugin': ${targetRuntime}(@babel/core@7.29.7)\n      '@solidjs/compiler': ${targetRuntime}\n      '@solidjs/web': ${targetRuntime}(solid-js@${targetRuntime})\n      solid-js: ${targetRuntime}\n`,
     `  /${virtualCore}@${virtualCoreVersion}:\n    resolution: {integrity: fixture}\n`,
-    `  /@solidjs/web@${targetRuntime}(solid-js@${targetRuntime}):\n    resolution: {integrity: fixture}\n    dependencies:\n      seroval: 99.1.0\n      seroval-plugins: 99.1.0(seroval@99.1.0)\n`,
+    `  /@solidjs/web@${targetRuntime}(solid-js@${targetRuntime}):\n    resolution: {integrity: fixture}\n    dependencies:\n      seroval: 99.1.0\n      seroval-plugins: 99.2.0(seroval@99.1.0)\n`,
     `  /seroval@99.1.0:\n    resolution: {integrity: fixture}\n`,
-    `  /seroval-plugins@99.1.0(seroval@99.1.0):\n    resolution: {integrity: fixture}\n`].join('\n')
+    `  /seroval-plugins@99.2.0(seroval@99.1.0):\n    resolution: {integrity: fixture}\n    dependencies:\n      seroval: 99.1.0\n`].join('\n')
   const lockText = `lockfileVersion: '6.0'\n\nimporters:\n  mcp-ui-solid:\n    dependencies:\n${entries}\n\npackages:\n${packages}\nsnapshots:\n`
   return { producer, workspace, lockText }
 }
 
-test('current producer and lockfile use one Solid 2 RC.21 cohort and renderer-owned Seroval pair', async () => {
+test('current producer and lockfile use one Solid 2.0.0 cohort and renderer-owned Seroval pair', async () => {
   const [producer, workspace, lockText] = await Promise.all([
     readFile(resolve(solidRoot, 'package.json'), 'utf8').then(JSON.parse),
     readFile(resolve(repoRoot, 'package.json'), 'utf8').then(JSON.parse),
@@ -208,29 +212,43 @@ test('current producer and lockfile use one Solid 2 RC.21 cohort and renderer-ow
   assertSolid2Cohort({ producer, workspace, lockText })
 })
 
-test('validator accepts a coherent synthetic RC.21 lock and matching renderer-owned pair', () => {
+test('validator accepts a stable lock whose renderer-owned Seroval packages share a peer despite different package versions', () => {
   assert.equal(assertSolid2Cohort(syntheticCase()), true)
 })
 
-test('validator rejects an RC.19/RC.21 producer mixture', () => {
-  const input = syntheticCase()
-  input.producer.devDependencies['@solidjs/compiler'] = rc19
-  assert.throws(() => assertSolid2Cohort(input), /same RC\.21 cohort/)
-})
+for (const rc of [rc19, rc20, rc21]) {
+  test(`validator rejects a ${rc}/stable producer mixture`, () => {
+    const input = syntheticCase()
+    input.producer.devDependencies['@solidjs/compiler'] = rc
+    assert.throws(() => assertSolid2Cohort(input), /same 2\.0\.0 cohort/)
+  })
+}
 
-test('validator rejects RC.20/RC.21 producer and lock mixtures', () => {
-  const producer = syntheticCase()
-  producer.producer.devDependencies['@solidjs/compiler'] = rc20
-  assert.throws(() => assertSolid2Cohort(producer), /same RC\.21 cohort/)
+test('validator rejects an RC.20 compiler importer and a second RC.21 runtime record', () => {
   const lock = syntheticCase()
   const oldEntry = `'@solidjs/compiler':\n        specifier: ${targetRuntime}\n        version: ${targetRuntime}`
   const mixedEntry = `'@solidjs/compiler':\n        specifier: ${rc20}\n        version: ${rc20}`
   assert(lock.lockText.includes(oldEntry), 'Synthetic compiler importer entry missing')
   lock.lockText = lock.lockText.replace(oldEntry, mixedEntry)
-  assert.throws(() => assertSolid2Cohort(lock), /importer resolution is outside RC\.21/)
+  assert.throws(() => assertSolid2Cohort(lock), /importer resolution is outside 2\.0\.0/)
+  const duplicate = syntheticCase()
+  duplicate.lockText = duplicate.lockText.replace('snapshots:\n',
+    `  /solid-js@${rc21}:\n    resolution: {integrity: fixture}\nsnapshots:\n`)
+  assert.throws(() => assertSolid2Cohort(duplicate), /solid-js lock package versions must be one 2\.0\.0 cohort/)
 })
 
-test('validator rejects a Solid 1 virtual adapter even when the RC cohort is otherwise coherent', () => {
+test('validator rejects RC.21 peers in an otherwise stable Vite plugin importer', () => {
+  const input = syntheticCase()
+  for (const name of ['solid-js', '@solidjs/web']) {
+    const stableContext = `(@solidjs/web@${targetRuntime})(solid-js@${targetRuntime})`
+    const mixedContext = stableContext.replace(`${name}@${targetRuntime})`, `${name}@${rc21})`)
+    const lockText = input.lockText.replace(stableContext, mixedContext)
+    assert.notEqual(lockText, input.lockText, 'Synthetic plugin importer context missing')
+    assert.throws(() => assertSolid2Cohort({ ...input, lockText }), /lock resolution must bind to exact 2\.0\.0 runtime peers/)
+  }
+})
+
+test('validator rejects a Solid 1 virtual adapter even when the stable cohort is otherwise coherent', () => {
   const input = syntheticCase()
   input.producer.dependencies = { '@tanstack/solid-virtual': '^3.0.0' }
   assert.throws(() => assertSolid2Cohort(input), /Solid 1 adapter is forbidden/)
@@ -238,8 +256,16 @@ test('validator rejects a Solid 1 virtual adapter even when the RC cohort is oth
 
 test('validator rejects an incoherent renderer-owned Seroval pair and forced override', () => {
   const input = syntheticCase()
-  input.lockText = input.lockText.replace('seroval-plugins: 99.1.0(seroval@99.1.0)', 'seroval-plugins: 99.2.0(seroval@99.1.0)')
-  assert.throws(() => assertSolid2Cohort(input), /same seroval version/)
+  input.lockText = input.lockText.replace('seroval-plugins: 99.2.0(seroval@99.1.0)', 'seroval-plugins: 99.2.0(seroval@99.1.0-rc.1)')
+  assert.throws(() => assertSolid2Cohort(input), /lock peer context must match web-owned seroval/)
+  const missingContext = syntheticCase()
+  missingContext.lockText = missingContext.lockText.replace('/seroval-plugins@99.2.0(seroval@99.1.0):', '/seroval-plugins@99.2.0(seroval@99.9.0):')
+  assert.throws(() => assertSolid2Cohort(missingContext), /package context is absent from lock/)
+  const mixedDependency = syntheticCase()
+  const pluginRecord = '/seroval-plugins@99.2.0(seroval@99.1.0):\n    resolution: {integrity: fixture}\n    dependencies:\n      seroval: '
+  assert(mixedDependency.lockText.includes(pluginRecord + '99.1.0'), 'Synthetic plugin record is missing')
+  mixedDependency.lockText = mixedDependency.lockText.replace(pluginRecord + '99.1.0', pluginRecord + '99.9.0')
+  assert.throws(() => assertSolid2Cohort(mixedDependency), /same seroval peer as Solid Web/)
   const override = syntheticCase()
   override.workspace = { pnpm: { overrides: { seroval: '1.0.0' } } }
   assert.throws(() => assertSolid2Cohort(override), /Workspace cannot force renderer Seroval/)

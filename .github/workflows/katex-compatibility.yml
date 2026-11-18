@@ -15,6 +15,11 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify qualification source
+        env:
+          EXPECTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
       - uses: pnpm/action-setup@v5
         with:
           version: 8.15.0
@@ -52,7 +57,7 @@ jobs:
           for version in 0.18.4 0.18.5 absent; do
             consumer="$RUNNER_TEMP/mcp-ui-katex-$version"
             node mcp-ui-solid/tests/katex/run.mjs prepare \
-              --tarball "$RUNNER_TEMP/mcp-ui-katex-artifacts/seed-ship-mcp-ui-solid-8.0.0-solid2.3.tgz" \
+              --tarball "$RUNNER_TEMP/mcp-ui-katex-artifacts/seed-ship-mcp-ui-solid-8.0.0-solid2.4.tgz" \
               --spec-tarball "$RUNNER_TEMP/mcp-ui-katex-artifacts/seed-ship-mcp-ui-spec-6.0.0.tgz" \
               --consumer "$consumer" --version "$version"
             pnpm --dir "$consumer" install --ignore-scripts

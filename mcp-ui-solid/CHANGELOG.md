@@ -5,7 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [8.0.0-solid2.3] - Unreleased Solid 2 RC.21 qualification candidate
+## [8.0.0-solid2.4] - Unreleased Solid 2.0.0 qualification candidate
+
+### Changed
+
+- Rebuild the existing 8.x adapter with exact core/web/signals/compiler/Babel
+  2.0.0 and the scoped Vite plugin 3.0.1. Do not repeat the Solid 2 port.
+- Require exact stable runtime peers. Preserve the rejection of `.3` / RC.21
+  in a stable host, runtime identity checks and all diagnostic gates.
+- Requalify distributed client/server entries and actual packed consumers,
+  including optional engines, error-boundary callbacks, Chart.js series updates,
+  Mermaid fixture rendering/fullscreen and the unchanged KaTeX peer matrix.
+- Keep Spec 6.0.0, CLI 5.0.2, public schema and the Solid 1 / `latest` line
+  unchanged. Publication remains a separately reviewed exact-artifact operation.
+
+## [8.0.0-solid2.3] - Published Solid 2 RC.21 preview
 
 ### Changed
 

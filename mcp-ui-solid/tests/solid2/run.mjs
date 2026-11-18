@@ -10,8 +10,10 @@ import { createServer } from 'node:net'
 import { dirname, isAbsolute, relative, resolve, sep } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { qualifyBrowser } from './browser.mjs'
+import { assessSSRBoundaryDiagnostics } from './ssr-boundary-diagnostics.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url)), sourceRoot = resolve(here, '../../..')
+const expectedVersion = '8.0.0-solid2.4'
 export const hasMigrationDiagnostic = text => /\[(?:CAUGHT_REACTIVE_READ|STRICT_READ_UNTRACKED|REACTIVE_WRITE_IN_OWNED_SCOPE|EFFECT_RELAY_TEAR|EFFECT_WRITES_OWN_SOURCE|PRIMITIVE_IN_[A-Z_]+|MISSING_EFFECT_FN|NO_OWNER_[A-Z_]+|SSR_[A-Z_]+)\]|hydration (?:key miss|completed[^\n]*unclaimed|mismatch|error)/i.test(text)
 export const hasBareZoomImport = text => /\bimport\s*\(\s*(?:\/\*[\s\S]*?\*\/\s*)?(['"`])chartjs-plugin-zoom\1\s*\)/.test(text)
 
@@ -31,9 +33,9 @@ async function auditClientZoomGraph(root) {
   return { javascript, bareImports }
 }
 export const pins = Object.freeze({
-  'solid-js': '2.0.0-rc.21', '@solidjs/web': '2.0.0-rc.21', '@solidjs/signals': '2.0.0-rc.21',
-  '@solidjs/compiler': '2.0.0-rc.21', '@solidjs/babel-plugin': '2.0.0-rc.21',
-  '@solidjs/vite-plugin': '3.0.0-next.57', '@babel/core': '7.29.6', '@types/node': '22.19.11', vite: '8.3.5', typescript: '5.9.3',
+  'solid-js': '2.0.0', '@solidjs/web': '2.0.0', '@solidjs/signals': '2.0.0',
+  '@solidjs/compiler': '2.0.0', '@solidjs/babel-plugin': '2.0.0',
+  '@solidjs/vite-plugin': '3.0.1', '@babel/core': '7.29.6', '@types/node': '22.19.11', vite: '8.3.5', typescript: '5.9.3',
   '@tailwindcss/vite': '4.3.3', tailwindcss: '4.3.3',
 })
 export const enginePins = Object.freeze({
@@ -88,6 +90,32 @@ async function prepare(options) {
   console.log(JSON.stringify({ consumer, profile, tarball, installed: false,
     next: 'Install explicitly with pnpm install --ignore-scripts, then use probe/run. No installation was performed.' }, null, 2))
 }
+export function assertSolid2HostCompatibility(manifest) {
+  for (const name of ['solid-js', '@solidjs/web']) {
+    assert.equal(manifest.peerDependencies?.[name], pins[name], `Packed ${name} peer must match the stable consumer pin ${pins[name]}`)
+    assert.notEqual(manifest.peerDependenciesMeta?.[name]?.optional, true, `Packed ${name} peer must be required`)
+  }
+  assert.equal(manifest.version, expectedVersion, 'Review harness pins for another preview version')
+}
+export async function verifyRuntimeIdentity(consumer) {
+  const consumerRoot = await realpath(consumer)
+  const host = createRequire(resolve(consumerRoot, 'package.json'))
+  const packed = createRequire(host.resolve('@seed-ship/mcp-ui-solid'))
+  const runtimePaths = {}
+  for (const name of ['solid-js', '@solidjs/web', '@solidjs/signals']) {
+    const path = await realpath(host.resolve(name))
+    assert(path.startsWith(consumerRoot + sep), `${name} escaped the isolated consumer`)
+    runtimePaths[name] = path
+  }
+  for (const name of ['solid-js', '@solidjs/web']) {
+    assert.equal(await realpath(packed.resolve(name)), runtimePaths[name], `Packed adapter resolves another ${name} runtime`)
+  }
+  const web = createRequire(runtimePaths['@solidjs/web'])
+  assert.equal(await realpath(web.resolve('solid-js')), runtimePaths['solid-js'], 'Solid Web resolves another solid-js runtime')
+  const solid = createRequire(runtimePaths['solid-js'])
+  assert.equal(await realpath(solid.resolve('@solidjs/signals')), runtimePaths['@solidjs/signals'], 'Solid core resolves another signals runtime')
+  return runtimePaths
+}
 async function verifyConsumer(consumer) {
   validateDestination(consumer)
   const input = JSON.parse(await readFile(resolve(consumer, 'qualification-input.json'), 'utf8'))
@@ -96,7 +124,7 @@ async function verifyConsumer(consumer) {
   const packageRoot = await realpath(resolve(consumer, 'node_modules/@seed-ship/mcp-ui-solid'))
   assert(packageRoot.startsWith((await realpath(consumer)) + sep), 'Package realpath escapes the isolated consumer')
   const installed = JSON.parse(await readFile(resolve(packageRoot, 'package.json'), 'utf8'))
-  assert.equal(installed.version, '8.0.0-solid2.3', 'Review harness pins for another preview version')
+  assertSolid2HostCompatibility(installed)
   const req = createRequire(resolve(consumer, 'package.json')), actualPins = {}
   for (const [name, expected] of Object.entries(pins)) {
     let entry
@@ -111,7 +139,7 @@ async function verifyConsumer(consumer) {
     }
     assert.equal(actualPins[name], expected, `Unexpected installed ${name}`)
   }
-  return { input, packageRoot, version: installed.version, actualPins }
+  return { input, packageRoot, version: installed.version, actualPins, runtimePaths: await verifyRuntimeIdentity(consumer) }
 }
 async function freePort() {
   const server = createServer()
@@ -183,6 +211,7 @@ async function run(options) {
       const server = current === 'dev'
         ? subprocess('pnpm', ['exec', 'vite', '--host', '127.0.0.1', '--port', String(port), '--strictPort'], consumer, log)
         : subprocess(process.execPath, ['dist/server/node.js'], consumer, log, { PORT: String(port), HOST: '127.0.0.1', NODE_ENV: 'production' })
+      let documentRequests
       try {
         const html = await ready(url, server)
         await writeFile(resolve(resultDir, `${current}-ssr.html`), html)
@@ -191,8 +220,14 @@ async function run(options) {
           : ['ssr-sentinel', 'Optional consumer text', 'Optional values']
         for (const marker of markers) assert(html.includes(marker), `SSR omitted ${marker}`)
         report.modes[current] = await qualifyBrowser({ url, resultDir, mode: current, profile: info.input.profile })
+        const stats = await (await fetch(new URL('/__fixture/stats', url))).json()
+        documentRequests = stats.documents
+        assert(Number.isInteger(documentRequests) && documentRequests >= (info.input.profile === 'full' ? 3 : 2), 'Missing SSR document request evidence')
       } finally { await server.stop() }
-      assert(!hasMigrationDiagnostic(await readFile(log, 'utf8')), 'SSR migration diagnostics emitted; inspect server log')
+      const assessed = assessSSRBoundaryDiagnostics(await readFile(log, 'utf8'), { profile: info.input.profile, mode: current, documentRequests })
+      report.serverDiagnostics ??= {}
+      report.serverDiagnostics[current] = { documentRequests, expectedContainedErrors: assessed.expectedContainedErrors }
+      assert(!hasMigrationDiagnostic(assessed.checkedLog), 'SSR migration diagnostics emitted; inspect server log')
     }
     report.status = 'passed'
   } catch (error) { report.status = 'failed'; report.error = error.stack || String(error); throw error }
