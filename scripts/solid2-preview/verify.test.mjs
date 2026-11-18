@@ -19,12 +19,15 @@ const SOURCE_SHA = '271e92434696f14ba0fdaaa3e91b242819820a16';
 const TARBALL_SHA = 'a'.repeat(64);
 const OTHER_SHA = 'b'.repeat(64);
 const PACKAGE = '@seed-ship/mcp-ui-solid';
-const VERSION = '8.0.0-solid2.3';
+const VERSION = '8.0.0-solid2.4';
 const SPEC_SHA = 'c'.repeat(64);
+const CI_PACK_DIR = '/fixture/mcpui-solid2-artifacts';
+const CI_TARBALL = `${CI_PACK_DIR}/seed-ship-mcp-ui-solid-${VERSION}.tgz`;
+const CI_SPEC_TARBALL = `${CI_PACK_DIR}/seed-ship-mcp-ui-spec-6.0.0.tgz`;
 const RUNTIME_PINS = {
-  'solid-js': '2.0.0-rc.21', '@solidjs/web': '2.0.0-rc.21', '@solidjs/signals': '2.0.0-rc.21',
-  '@solidjs/compiler': '2.0.0-rc.21', '@solidjs/babel-plugin': '2.0.0-rc.21',
-  '@solidjs/vite-plugin': '3.0.0-next.57',
+  'solid-js': '2.0.0', '@solidjs/web': '2.0.0', '@solidjs/signals': '2.0.0',
+  '@solidjs/compiler': '2.0.0', '@solidjs/babel-plugin': '2.0.0',
+  '@solidjs/vite-plugin': '3.0.1',
 };
 const MATH_PINS = { ...RUNTIME_PINS, '@babel/core': '7.29.6', '@types/node': '22.19.11',
   vite: '8.3.5', typescript: '5.9.3' };
@@ -159,16 +162,67 @@ async function archive(t, { packageJson = manifest(), extra = [] } = {}) {
   return { file, sha: createHash('sha256').update(bytes).digest('hex') };
 }
 
-function mode(profile, compiled = false) {
+function boundaryProof() {
+  const userAgent = 'fixture-browser';
   return {
+    ssr: { callbackCount: 1, fallbackCount: 1, escaped: true },
+    client: { callbacks: [{ type: 'render', componentId: 'packed-client-boundary',
+      message: '<mcpui-fixture-client-error>', retryCount: 0, userAgent }], fallbackCount: 1, escaped: true },
+    expectedConsoleErrors: [{ componentId: 'packed-client-boundary', componentType: 'text',
+      errorMessage: '<mcpui-fixture-client-error>', errorStack: 'Error: <mcpui-fixture-client-error>',
+      renderDuration: 1, retryCount: 0, timestamp: '2026-11-18T00:00:00Z', userAgent,
+      viewport: { width: 1440, height: 1100 } }],
+  };
+}
+
+function engineProof(mode) {
+  const series = (instanceId, label, values) => ({
+    instanceId, labels: [...'ABCDEFGH'].map(letter => 'Synthetic ' + letter),
+    datasets: [{ label, values }], barHeights: values.map(value => value * 10),
+  });
+  const diagram = iframeWidth => ({ labels: ['Synthetic start', 'Synthetic end'], edges: 1, iframeWidth });
+  return {
+    mode, status: 'passed',
+    chartSeriesUpdate: { before: series(1, 'Fixture', [2, 5, 3, 7, 4, 8, 6, 9]),
+      after: series(2, 'Updated Fixture', [9, 3, 8, 4, 7, 5, 6, 2]), paintChanged: true },
+    mermaid: { version: '12.3.0', inline: diagram(640), expanded: diagram(1100), restored: diagram(640),
+      iframeElementStable: true, focusRestored: true, requests: { document: 3, script: 3 } },
+  };
+}
+
+function mode(profile, name, compiled = false) {
+  return {
+    mode: name,
+    profile,
     status: 'passed',
     errors: [],
     pageErrors: [],
     diagnostics: [],
     console: [],
     externalRequests: [],
-    ...(profile === 'full' ? { engines: { status: 'passed', errors: [] } } : {}),
+    ...(profile === 'full' && !compiled ? { boundary: boundaryProof(), engines: engineProof(name) } : {}),
     ...(compiled ? { compiledModules: ['/fixture/node_modules/@seed-ship/mcp-ui-solid/dist/index.js'] } : {}),
+  };
+}
+
+function runtimePaths(consumer) {
+  return {
+    'solid-js': `/fixture/${consumer}/node_modules/.pnpm/solid-js@2.0.0/node_modules/solid-js/dist/solid.cjs`,
+    '@solidjs/web': `/fixture/${consumer}/node_modules/.pnpm/@solidjs+web@2.0.0_solid-js@2.0.0/node_modules/@solidjs/web/dist/server.cjs`,
+    '@solidjs/signals': `/fixture/${consumer}/node_modules/.pnpm/@solidjs+signals@2.0.0/node_modules/@solidjs/signals/dist/index.cjs`,
+  };
+}
+
+function serverDiagnostics(profile) {
+  const documentRequests = profile === 'full' ? 3 : 2;
+  return {
+    dev: { documentRequests, expectedContainedErrors: profile === 'full' ? [true, false, false].map(explanationFooter => ({
+      code: 'SSR_RENDER_ERROR_CONTAINED',
+      message: 'Render error caught by <Errored>: Error: <mcpui-fixture-ssr-error>',
+      stack: '<Document> › <App> › <BoundaryProbe> › <GenerativeUIErrorBoundary> › <Errored> › <ThrowingChild>',
+      source: 'src/BoundaryProbe.tsx:12:30', explanationFooter,
+    })) : [] },
+    production: { documentRequests, expectedContainedErrors: [] },
   };
 }
 
@@ -176,10 +230,12 @@ function report(profile) {
   return {
     status: 'passed',
     version: VERSION,
-    input: { profile, tarball: { sha256: TARBALL_SHA },
-      spec: { path: '/fixture/seed-ship-mcp-ui-spec-6.0.0.tgz', sha256: SPEC_SHA }, pins: { ...RUNTIME_PINS } },
+    input: { profile, tarball: { path: CI_TARBALL, sha256: TARBALL_SHA },
+      spec: { path: CI_SPEC_TARBALL, sha256: SPEC_SHA }, pins: { ...RUNTIME_PINS } },
     actualPins: { ...RUNTIME_PINS },
-    modes: { dev: mode(profile), production: mode(profile) },
+    runtimePaths: runtimePaths(`mcpui-solid2-${profile}`),
+    serverDiagnostics: serverDiagnostics(profile),
+    modes: { dev: mode(profile, 'dev'), production: mode(profile, 'production') },
   };
 }
 
@@ -207,14 +263,15 @@ function probe(profile) {
 }
 
 function mathReport(version) {
-  const input = { version, tarball: { path: `/fixture/seed-ship-mcp-ui-solid-${VERSION}.tgz`, sha256: TARBALL_SHA },
-    spec: { path: '/fixture/seed-ship-mcp-ui-spec-6.0.0.tgz', sha256: SPEC_SHA }, pins: { ...MATH_PINS } };
+  const input = { version, tarball: { path: CI_TARBALL, sha256: TARBALL_SHA },
+    spec: { path: CI_SPEC_TARBALL, sha256: SPEC_SHA }, pins: { ...MATH_PINS } };
   const mode = name => ({ mode: name, version, browser: 'fixture-chromium', status: 'passed',
     checks: mathBrowserChecks(version), console: [], pageErrors: [], externalRequests: [],
     counts: version === 'absent' ? {} : { total: 6, text: 3, table: 3, block: 1, fraction: 2,
       subscript: 2, matrix: 2, positiveGeometry: 6, annotations: 0, htmlLayout: 0, forbidden: 0 } });
   return { status: 'passed', input, installedVersion: VERSION, peer: '0.18.4 || 0.18.5',
     optional: true, actualPins: { ...MATH_PINS }, pluginKatexVersion: version === 'absent' ? null : version,
+    runtimePaths: runtimePaths(`mcpui-katex-${version}`),
     modes: { dev: mode('dev'), production: mode('production') } };
 }
 
@@ -231,7 +288,7 @@ async function qualification(t, change = () => {}) {
       status: 'passed',
       tarball: { sha256: TARBALL_SHA },
       publicDefaults: Object.fromEntries(Object.entries(PUBLIC_ENTRIES).map(([entry, stem]) => [entry, `./dist/${stem}.js`])),
-      modes: { dev: mode('full', true), production: mode('full', true) },
+      modes: { dev: mode('full', 'dev', true), production: mode('full', 'production', true) },
     },
     math: Object.fromEntries(MATH_VERSIONS.map(version => [version, mathReport(version)])),
   };
@@ -322,7 +379,8 @@ test('staging requires explicit approval bound to the package, source, bytes and
   const approval = `STAGE ${PACKAGE}@${VERSION} FROM ${SOURCE_SHA} SHA256 ${TARBALL_SHA} AS solid2`;
   assert.doesNotThrow(() => validateRequest(request({ stage: true, approval })));
   for (const invalid of ['', approval.replace(SOURCE_SHA, 'c'.repeat(40)),
-    approval.replace(VERSION, '8.0.0-solid2.0'), approval.replace('AS solid2', 'AS latest')]) {
+    approval.replace(VERSION, '8.0.0-solid2.0'), approval.replace(VERSION, '8.0.0-solid2.3'),
+    approval.replace('AS solid2', 'AS latest')]) {
     assert.throws(() => validateRequest(request({ stage: true, approval: invalid })));
   }
 });
@@ -399,6 +457,22 @@ test('rejects a correctly formed archive with the wrong expected digest', async 
   await assert.rejects(() => verifyTarball(file, OTHER_SHA));
 });
 
+test('rejects the prior RC.21 preview and non-exact stable runtime peers with correct digests', async (t) => {
+  const previous = await archive(t, { packageJson: manifest({
+    version: '8.0.0-solid2.3',
+    peerDependencies: { ...manifest().peerDependencies, 'solid-js': '2.0.0-rc.21', '@solidjs/web': '2.0.0-rc.21' },
+  }) });
+  await assert.rejects(() => verifyTarball(previous.file, previous.sha), /Tarball version mismatch/);
+  for (const peer of ['solid-js', '@solidjs/web']) {
+    for (const version of ['2.0.0-rc.21', '^2.0.0']) {
+      const { file, sha } = await archive(t, { packageJson: manifest({
+        peerDependencies: { ...manifest().peerDependencies, [peer]: version },
+      }) });
+      await assert.rejects(() => verifyTarball(file, sha), error => error.message.includes('Unexpected ' + peer + ' peer'));
+    }
+  }
+});
+
 for (const [name, entry] of [
   ['parent traversal', { name: 'package/../../escape', body: 'unsafe' }],
   ['absolute path', { name: '/tmp/escape', body: 'unsafe' }],
@@ -425,7 +499,7 @@ for (const [name, packageJson] of [
   ['Solid1 peer', manifest({ peerDependencies: { 'solid-js': '^1.9.0', '@solidjs/web': RUNTIME_PINS['@solidjs/web'] } })],
   ['RC18 peer', manifest({ peerDependencies: { 'solid-js': '2.0.0-rc.18', '@solidjs/web': '2.0.0-rc.18' } })],
   ['old RC19 peers', manifest({ peerDependencies: { 'solid-js': '2.0.0-rc.19', '@solidjs/web': '2.0.0-rc.19' } })],
-  ['mixed RC20 and RC21 peers', manifest({ peerDependencies: { 'solid-js': '2.0.0-rc.20', '@solidjs/web': RUNTIME_PINS['@solidjs/web'] } })],
+  ['mixed RC20 and stable peers', manifest({ peerDependencies: { 'solid-js': '2.0.0-rc.20', '@solidjs/web': RUNTIME_PINS['@solidjs/web'] } })],
   ['old KaTeX-only peer', manifest({ peerDependencies: { ...manifest().peerDependencies, katex: '0.18.4' } })],
   ['nonoptional KaTeX peer', manifest({ peerDependenciesMeta: { katex: { optional: false } } })],
   ['old Spec floor', manifest({ dependencies: { '@seed-ship/mcp-ui-spec': '^5.7.0' } })],
@@ -443,8 +517,17 @@ test('requires successful source and compiled-browser qualification of the same 
   await verifyQualification(await qualification(t), TARBALL_SHA, SPEC_SHA);
 });
 
+test('accepts a fourth full dev SSR request only with its exact contained diagnostic', async (t) => {
+  const dir = await qualification(t, (e) => {
+    const diagnostics = e.full.serverDiagnostics.dev;
+    diagnostics.documentRequests = 4;
+    diagnostics.expectedContainedErrors.push({ ...diagnostics.expectedContainedErrors.at(-1) });
+  });
+  await verifyQualification(dir, TARBALL_SHA, SPEC_SHA);
+});
+
 for (const [name, options, passes] of [
-  ['matching RC21, KaTeX matrix, Spec 6 and CLI 5.0.2 fixtures', {}, true],
+  ['matching Solid 2.0.0, KaTeX matrix, Spec 6 and CLI 5.0.2 fixtures', {}, true],
   ['missing Spec 6 fixture', { includeSpec: false }, false],
   ['Spec fixture with old manifest', { specVersion: '5.7.0' }, false],
   ['Spec fixture hash forged in profile evidence', { reportSpecSha: OTHER_SHA }, false],
@@ -479,15 +562,85 @@ for (const [name, mutate] of [
   ['failed production source mode', (e) => { e.full.modes.production.status = 'failed'; }],
   ['source report bound to different archive', (e) => { e.absent.input.tarball.sha256 = OTHER_SHA; }],
   ['published preview version in profile report', (e) => { e.full.version = '8.0.0-solid2.0'; }],
+  ['superseded RC21 preview version in profile report', (e) => { e.full.version = '8.0.0-solid2.3'; }],
   ['prepared old RC19 runtime', (e) => { e.full.input.pins['solid-js'] = '2.0.0-rc.19'; }],
-  ['installed mixed RC20/RC21 cohort', (e) => { e.full.actualPins['@solidjs/compiler'] = '2.0.0-rc.20'; }],
+  ['installed mixed RC21/stable cohort', (e) => { e.full.actualPins['@solidjs/compiler'] = '2.0.0-rc.21'; }],
+  ['superseded RC21 Vite plugin', (e) => { e.full.actualPins['@solidjs/vite-plugin'] = '3.0.0-next.57'; }],
   ['wrong installed plugin', (e) => { e.absent.actualPins['@solidjs/vite-plugin'] = '3.0.0-next.50'; }],
   ['missing installed cohort proof', (e) => { delete e.full.actualPins; }],
+  ['missing physical runtime proof', (e) => { delete e.full.runtimePaths; }],
+  ['missing optional-absent physical signals path', (e) => { delete e.absent.runtimePaths['@solidjs/signals']; }],
+  ['relative physical runtime path', (e) => { e.full.runtimePaths['solid-js'] = 'node_modules/solid-js/dist/solid.cjs'; }],
+  ['physical runtime escaped its profile', (e) => { e.full.runtimePaths['@solidjs/web'] = e.absent.runtimePaths['@solidjs/web']; }],
+  ['different physical roots with the same profile name', (e) => {
+    e.full.runtimePaths['@solidjs/web'] = e.full.runtimePaths['@solidjs/web'].replace('/fixture/', '/other-fixture/');
+  }],
+  ['all physical paths relocated from the tarball runner root', (e) => {
+    for (const [name, path] of Object.entries(e.full.runtimePaths)) {
+      e.full.runtimePaths[name] = path.replace('/fixture/', '/other-fixture/');
+    }
+  }],
+  ['one consumer reports a different runner tarball path with the same hash', (e) => {
+    e.absent.input.tarball.path = e.absent.input.tarball.path.replace('/fixture/', '/other-fixture/');
+    for (const [name, path] of Object.entries(e.absent.runtimePaths)) {
+      e.absent.runtimePaths[name] = path.replace('/fixture/', '/other-fixture/');
+    }
+  }],
+  ['tarball path is outside the fixed CI pack directory', (e) => {
+    e.full.input.tarball.path = e.full.input.tarball.path.replace('mcpui-solid2-artifacts', 'other-artifacts');
+  }],
+  ['RC21 physical Solid slot despite a stable manifest claim', (e) => {
+    e.full.runtimePaths['solid-js'] = e.full.runtimePaths['solid-js'].replace('solid-js@2.0.0/', 'solid-js@2.0.0-rc.21/');
+  }],
+  ['RC21 physical signals slot despite a stable manifest claim', (e) => {
+    e.absent.runtimePaths['@solidjs/signals'] = e.absent.runtimePaths['@solidjs/signals'].replace('signals@2.0.0/', 'signals@2.0.0-rc.21/');
+  }],
+  ['stable physical Solid Web with an RC21 Solid peer slot', (e) => {
+    e.math['0.18.5'].runtimePaths['@solidjs/web'] =
+      e.math['0.18.5'].runtimePaths['@solidjs/web'].replace('_solid-js@2.0.0/', '_solid-js@2.0.0-rc.21/');
+  }],
+  ['duplicated physical path for different runtime packages', (e) => { e.full.runtimePaths['@solidjs/web'] = e.full.runtimePaths['solid-js']; }],
   ['wrong Spec fixture hash', (e) => { e.full.input.spec.sha256 = OTHER_SHA; }],
   ['missing Spec fixture', (e) => { delete e.absent.input.spec; }],
   ['wrong Spec fixture path', (e) => { e.absent.input.spec.path = '/fixture/seed-ship-mcp-ui-spec-5.7.0.tgz'; }],
   ['missing prepared cohort pin', (e) => { delete e.absent.input.pins['@solidjs/babel-plugin']; }],
   ['missing real engine qualification', (e) => { delete e.full.modes.dev.engines; }],
+  ['dev source browser evidence relabeled as production', (e) => { e.full.modes.production.mode = 'dev'; }],
+  ['full source browser evidence relabeled as optional-absent', (e) => { e.full.modes.dev.profile = 'optional-absent'; }],
+  ['missing production SSR diagnostic evidence', (e) => { delete e.full.serverDiagnostics.production; }],
+  ['missing full SSR document request count', (e) => { delete e.full.serverDiagnostics.dev.documentRequests; }],
+  ['more SSR document requests than intentional diagnostics', (e) => { e.full.serverDiagnostics.dev.documentRequests = 4; }],
+  ['too few production SSR document requests', (e) => { e.full.serverDiagnostics.production.documentRequests = 2; }],
+  ['too few optional-absent SSR document requests', (e) => { e.absent.serverDiagnostics.dev.documentRequests = 1; }],
+  ['missing intentional SSR containment diagnostic', (e) => { e.full.serverDiagnostics.dev.expectedContainedErrors.pop(); }],
+  ['unrelated SSR containment diagnostic', (e) => {
+    e.full.serverDiagnostics.dev.expectedContainedErrors[1].message = 'Render error caught by <Errored>: Error: unrelated';
+  }],
+  ['incorrect SSR diagnostic footer occurrence', (e) => { e.full.serverDiagnostics.dev.expectedContainedErrors[1].explanationFooter = true; }],
+  ['unexpected SSR diagnostic source', (e) => { e.full.serverDiagnostics.dev.expectedContainedErrors[0].source = 'src/App.tsx:1:1'; }],
+  ['unexpected containment diagnostic in production', (e) => {
+    e.full.serverDiagnostics.production.expectedContainedErrors = e.full.serverDiagnostics.dev.expectedContainedErrors;
+  }],
+  ['unexpected containment diagnostic in optional-absent', (e) => {
+    e.absent.serverDiagnostics.dev.expectedContainedErrors = e.full.serverDiagnostics.dev.expectedContainedErrors;
+  }],
+  ['missing packed SSR boundary callback', (e) => { delete e.full.modes.production.boundary.ssr; }],
+  ['duplicated packed SSR boundary callback', (e) => { e.full.modes.dev.boundary.ssr.callbackCount = 2; }],
+  ['unescaped packed client boundary fallback', (e) => { e.full.modes.production.boundary.client.escaped = false; }],
+  ['missing packed client boundary callback', (e) => { e.full.modes.dev.boundary.client.callbacks = []; }],
+  ['unreviewed packed boundary console context', (e) => {
+    e.full.modes.production.boundary.expectedConsoleErrors[0].errorMessage = 'unexpected error';
+  }],
+  ['stale native Chart.js series', (e) => {
+    e.full.modes.dev.engines.chartSeriesUpdate.after.datasets = e.full.modes.dev.engines.chartSeriesUpdate.before.datasets;
+  }],
+  ['unchanged native Chart.js bar geometry', (e) => {
+    e.full.modes.production.engines.chartSeriesUpdate.after.barHeights = e.full.modes.production.engines.chartSeriesUpdate.before.barHeights;
+  }],
+  ['missing updated Chart.js paint', (e) => { e.full.modes.production.engines.chartSeriesUpdate.paintChanged = false; }],
+  ['missing restored Mermaid diagram', (e) => { delete e.full.modes.production.engines.mermaid.restored; }],
+  ['replaced fullscreen Mermaid iframe', (e) => { e.full.modes.dev.engines.mermaid.iframeElementStable = false; }],
+  ['missing local Mermaid script execution', (e) => { e.full.modes.production.engines.mermaid.requests.script = 0; }],
   ['missing compiled-browser report', (e) => { delete e.compiled; }],
   ['compiled-browser diagnostic', (e) => { e.compiled.modes.production.diagnostics = ['STRICT_READ_UNTRACKED']; }],
   ['compiled-browser source substitution', (e) => { e.compiled.modes.dev.compiledModules = ['/fixture/src/index.ts']; }],
@@ -495,12 +648,14 @@ for (const [name, mutate] of [
   ['failed KaTeX production browser', (e) => { e.math['0.18.4'].modes.production.status = 'failed'; }],
   ['KaTeX report bound to another Solid tarball', (e) => { e.math['0.18.5'].input.tarball.sha256 = OTHER_SHA; }],
   ['KaTeX report bound to another Spec fixture', (e) => { e.math.absent.input.spec.sha256 = OTHER_SHA; }],
-  ['KaTeX wrong installed package', (e) => { e.math['0.18.4'].installedVersion = '8.0.0-solid2.2'; }],
+  ['KaTeX superseded RC21 preview', (e) => { e.math['0.18.4'].installedVersion = '8.0.0-solid2.3'; }],
   ['KaTeX wrong peer range', (e) => { e.math['0.18.5'].peer = '0.18.4'; }],
   ['KaTeX peer not optional', (e) => { e.math.absent.optional = false; }],
   ['KaTeX plugin resolved another version', (e) => { e.math['0.18.4'].pluginKatexVersion = '0.18.5'; }],
-  ['KaTeX prepared old cohort', (e) => { e.math['0.18.4'].input.pins['solid-js'] = '2.0.0-rc.20'; }],
-  ['KaTeX installed old cohort', (e) => { e.math['0.18.5'].actualPins['@solidjs/compiler'] = '2.0.0-rc.20'; }],
+  ['KaTeX prepared RC21 cohort', (e) => { e.math['0.18.4'].input.pins['solid-js'] = '2.0.0-rc.21'; }],
+  ['KaTeX installed RC21 cohort', (e) => { e.math['0.18.5'].actualPins['@solidjs/compiler'] = '2.0.0-rc.21'; }],
+  ['KaTeX missing physical runtime proof', (e) => { delete e.math['0.18.5'].runtimePaths; }],
+  ['KaTeX reused another profile runtime', (e) => { e.math.absent.runtimePaths = e.math['0.18.4'].runtimePaths; }],
   ['KaTeX browser warning', (e) => { e.math['0.18.5'].modes.dev.console = [{ type: 'warning', text: 'hydration' }]; }],
   ['KaTeX browser external request', (e) => { e.math.absent.modes.dev.externalRequests = ['https://example.test']; }],
   ['KaTeX missing math geometry', (e) => { e.math['0.18.4'].modes.dev.counts.positiveGeometry = 0; }],
@@ -598,9 +753,9 @@ test('only the protected stage step receives the npm token, with fixed bytes/tag
   assert.match(stage, /working-directory: \$\{\{ runner\.temp \}\}\/solid2-stage-empty/);
   assert.match(stage, /NPM_CONFIG_IGNORE_SCRIPTS: 'true'/);
   assert.match(stage, /NPM_CONFIG_GLOBALCONFIG: \/dev\/null/);
-  assert.match(stage, /npm stage publish "\$RUNNER_TEMP\/solid2-reviewed\/seed-ship-mcp-ui-solid-8\.0\.0-solid2\.3\.tgz" --access public --tag solid2 --ignore-scripts --registry=https:\/\/registry\.npmjs\.org --json/);
-  assert.match(workflow, /index\("8\.0\.0-solid2\.3"\) == null/);
-  assert.doesNotMatch(workflow, /8\.0\.0-solid2\.[012]/);
+  assert.match(stage, /npm stage publish "\$RUNNER_TEMP\/solid2-reviewed\/seed-ship-mcp-ui-solid-8\.0\.0-solid2\.4\.tgz" --access public --tag solid2 --ignore-scripts --registry=https:\/\/registry\.npmjs\.org --json/);
+  assert.match(workflow, /index\("8\.0\.0-solid2\.4"\) == null/);
+  assert.doesNotMatch(workflow, /8\.0\.0-solid2\.[0-3]\b/);
   assert.doesNotMatch(stage, /--tag\s+["']?\$|\bnpm (?:install|ci|run|exec)\b|\bpnpm\b/);
   const latestGuard = blocks.find((block) => block.includes('Verify latest even when the staging command failed'));
   assert.ok(latestGuard);

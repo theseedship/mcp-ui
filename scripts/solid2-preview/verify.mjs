@@ -4,13 +4,13 @@ import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import { lstat, readdir, readFile, mkdir, copyFile, writeFile, realpath } from 'node:fs/promises'
 import { constants } from 'node:fs'
-import { basename, dirname, isAbsolute, join, resolve, sep } from 'node:path'
+import { basename, dirname, isAbsolute, join, posix, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { gunzipSync } from 'node:zlib'
 
 export const POLICY = Object.freeze({
   repository: 'theseedship/mcp-ui', sourceBranch: 'feat/solid2-preview', sourcePr: 34,
-  packageName: '@seed-ship/mcp-ui-solid', version: '8.0.0-solid2.3', tag: 'solid2',
+  packageName: '@seed-ship/mcp-ui-solid', version: '8.0.0-solid2.4', tag: 'solid2',
   artifactName: 'solid2-preview-qualification', workflowPath: '.github/workflows/ci.yml',
 })
 const sha = value => typeof value === 'string' && /^[a-f0-9]{40}$/.test(value)
@@ -21,9 +21,9 @@ const solidFilename = `seed-ship-mcp-ui-solid-${POLICY.version}.tgz`
 const specFilename = 'seed-ship-mcp-ui-spec-6.0.0.tgz'
 const cliFilename = 'seed-ship-mcp-ui-cli-5.0.2.tgz'
 const runtimePins = Object.freeze({
-  'solid-js': '2.0.0-rc.21', '@solidjs/web': '2.0.0-rc.21', '@solidjs/signals': '2.0.0-rc.21',
-  '@solidjs/compiler': '2.0.0-rc.21', '@solidjs/babel-plugin': '2.0.0-rc.21',
-  '@solidjs/vite-plugin': '3.0.0-next.57',
+  'solid-js': '2.0.0', '@solidjs/web': '2.0.0', '@solidjs/signals': '2.0.0',
+  '@solidjs/compiler': '2.0.0', '@solidjs/babel-plugin': '2.0.0',
+  '@solidjs/vite-plugin': '3.0.1',
 })
 const mathPins = Object.freeze({ ...runtimePins, '@babel/core': '7.29.6', '@types/node': '22.19.11',
   vite: '8.3.5', typescript: '5.9.3' })
@@ -223,12 +223,128 @@ async function walk(directory) {
 const json = async file => JSON.parse(await readFile(file, 'utf8'))
 const empty = (value, message) => assert(Array.isArray(value) && value.length === 0, message)
 
+function ciPath(path) {
+  return typeof path === 'string' && posix.isAbsolute(path) && posix.normalize(path) === path && !/[\\\0\r\n]/.test(path)
+}
+
+function verifyRuntimePaths(paths, tarballPath, expectedConsumer) {
+  const names = ['solid-js', '@solidjs/web', '@solidjs/signals']
+  assert.deepEqual(Object.keys(paths ?? {}).sort(), [...names].sort(), 'Physical Solid runtime proof is missing or incomplete')
+  // Qualification runs on Ubuntu. These are reported physical paths from CI,
+  // not paths to resolve on the runner that reads the downloaded evidence.
+  assert(ciPath(tarballPath) && posix.basename(tarballPath) === solidFilename &&
+    posix.basename(posix.dirname(tarballPath)) === 'mcpui-solid2-artifacts', 'Unexpected CI Solid tarball path')
+  const root = posix.join(posix.dirname(posix.dirname(tarballPath)), expectedConsumer)
+  for (const name of names) {
+    const peer = name === '@solidjs/web' ? '_solid-js@' + runtimePins['solid-js'] : ''
+    const slot = name.replace('/', '+') + '@' + runtimePins[name] + peer
+    const prefix = `${root}/node_modules/.pnpm/${slot}/node_modules/${name}/`
+    const path = paths[name], entry = ciPath(path) && path.startsWith(prefix) && path.slice(prefix.length)
+    assert(entry && !entry.endsWith('/') && !entry.split('/').includes('node_modules'),
+      `Physical ${name} runtime does not match its isolated stable pnpm slot`)
+  }
+}
+
+function verifyServerDiagnostics(diagnostics, profile, mode) {
+  assert.deepEqual(Object.keys(diagnostics ?? {}).sort(), ['documentRequests', 'expectedContainedErrors'],
+    'SSR diagnostic evidence is missing or unexpected')
+  const { documentRequests, expectedContainedErrors: entries } = diagnostics
+  assert(Number.isInteger(documentRequests) && documentRequests >= (profile === 'full' ? 3 : 2),
+    'Missing or invalid SSR document request count')
+  if (mode !== 'dev' || profile !== 'full') {
+    empty(entries, 'Unexpected SSR diagnostic outside the full dev boundary fixture')
+    return
+  }
+  assert(Array.isArray(entries) && entries.length === documentRequests,
+    'Full dev SSR must prove exactly one intentional boundary throw per document request')
+  for (const [index, entry] of entries.entries()) {
+    assert(typeof entry?.source === 'string' && /^src\/BoundaryProbe\.tsx:[1-9]\d*:[1-9]\d*$/.test(entry.source),
+      'Unexpected SSR containment source')
+    assert.deepEqual(entry, {
+      code: 'SSR_RENDER_ERROR_CONTAINED',
+      message: 'Render error caught by <Errored>: Error: <mcpui-fixture-ssr-error>',
+      stack: '<Document> › <App> › <BoundaryProbe> › <GenerativeUIErrorBoundary> › <Errored> › <ThrowingChild>',
+      source: entry.source,
+      explanationFooter: index === 0,
+    }, 'Unexpected SSR containment diagnostic')
+  }
+}
+
+function verifyBoundaryProof(boundary) {
+  const messages = {
+    'packed-ssr-boundary': '<mcpui-fixture-ssr-error>',
+    'packed-client-boundary': '<mcpui-fixture-client-error>',
+  }
+  assert.deepEqual(boundary?.ssr, { callbackCount: 1, fallbackCount: 1, escaped: true },
+    'Packed boundary did not prove one SSR callback and escaped fallback')
+  const client = boundary.client
+  assert(client?.fallbackCount === 1 && client.escaped === true, 'Packed boundary client fallback proof is missing')
+  const userAgent = client.callbacks?.[0]?.userAgent
+  assert(typeof userAgent === 'string' && userAgent.trim(), 'Packed boundary client user agent is missing')
+  assert.deepEqual(client.callbacks, [{ type: 'render', componentId: 'packed-client-boundary',
+    message: messages['packed-client-boundary'], retryCount: 0, userAgent }],
+  'Packed boundary did not prove one interactive callback')
+  const logs = boundary.expectedConsoleErrors
+  assert(Array.isArray(logs), 'Packed boundary structured console proof is missing')
+  const seen = new Set()
+  for (const entry of logs) {
+    const id = entry?.componentId, message = messages[id]
+    assert(Object.hasOwn(messages, id) && !seen.has(id) && entry.errorMessage === message &&
+      entry.componentType === 'text' && entry.userAgent === userAgent && entry.retryCount === 0 &&
+      typeof entry.errorStack === 'string' && entry.errorStack.startsWith('Error: ' + message) &&
+      Number.isFinite(entry.renderDuration) && entry.renderDuration >= 0 && Number.isFinite(Date.parse(entry.timestamp)) &&
+      Number.isInteger(entry.viewport?.width) && entry.viewport.width > 0 &&
+      Number.isInteger(entry.viewport?.height) && entry.viewport.height > 0,
+    'Unexpected packed boundary console context')
+    seen.add(id)
+  }
+  assert(seen.has('packed-client-boundary'), 'Packed boundary did not record its interactive structured error')
+}
+
+function verifyEngineProof(engines) {
+  assert.equal(engines?.status, 'passed', 'Full engine qualification did not pass')
+  const chart = engines.chartSeriesUpdate
+  assert.equal(chart?.paintChanged, true, 'Chart.js did not prove changed paint')
+  const labels = [...'ABCDEFGH'].map(label => 'Synthetic ' + label)
+  for (const [phase, label, values] of [
+    ['before', 'Fixture', [2, 5, 3, 7, 4, 8, 6, 9]],
+    ['after', 'Updated Fixture', [9, 3, 8, 4, 7, 5, 6, 2]],
+  ]) {
+    const snapshot = chart[phase]
+    assert.deepEqual(snapshot?.labels, labels, 'Chart.js fixture labels mismatch')
+    assert.deepEqual(snapshot.datasets, [{ label, values }], 'Chart.js did not report the exact fixture series')
+    assert(Array.isArray(snapshot.barHeights) && snapshot.barHeights.length === labels.length &&
+      snapshot.barHeights.every(height => Number.isFinite(height) && height > 0), 'Chart.js bar geometry proof is missing')
+  }
+  assert(chart.after.barHeights[0] > chart.before.barHeights[0] && chart.after.barHeights[7] < chart.before.barHeights[7],
+    'Chart.js bar geometry did not track the changed values')
+
+  const mermaid = engines.mermaid
+  assert.equal(mermaid?.version, '12.3.0', 'Pinned local Mermaid proof is missing')
+  for (const phase of ['inline', 'expanded', 'restored']) {
+    const state = mermaid[phase]
+    assert.deepEqual(state?.labels, ['Synthetic start', 'Synthetic end'], 'Mermaid fixture nodes mismatch')
+    assert(state.edges === 1 && Number.isFinite(state.iframeWidth) && state.iframeWidth > 0, 'Mermaid geometry or edge proof is missing')
+  }
+  assert(mermaid.expanded.iframeWidth > mermaid.inline.iframeWidth &&
+    mermaid.iframeElementStable === true && mermaid.focusRestored === true, 'Mermaid fullscreen identity or focus proof is missing')
+  assert(Number.isInteger(mermaid.requests?.document) && mermaid.requests.document > 0 &&
+    Number.isInteger(mermaid.requests?.script) && mermaid.requests.script > 0, 'Local Mermaid document or script was not loaded')
+}
+
 export async function verifyQualification(directory, sha256, specSha256) {
   assert(digest(sha256), 'Invalid qualification SHA-256')
   assert(digest(specSha256), 'Invalid Spec fixture SHA-256')
   directory = resolve(directory)
   const reports = (await walk(resolve(directory))).filter(file => basename(file) === 'report.json')
   const core = new Map(), compiled = [], math = new Map()
+  let ciTarballPath
+  const checkRuntime = (report, consumer) => {
+    const path = report.input.tarball?.path
+    verifyRuntimePaths(report.runtimePaths, path, consumer)
+    if (ciTarballPath !== undefined) assert.equal(path, ciTarballPath, 'Qualification reports refer to different CI tarball paths')
+    ciTarballPath = path
+  }
   for (const file of reports) {
     assert(file.includes(`${sep}qualification-results${sep}`) || file.includes(`${sep}dist-client-probe${sep}`),
       'Unexpected qualification report path')
@@ -250,6 +366,7 @@ export async function verifyQualification(directory, sha256, specSha256) {
         'KaTeX Spec fixture path mismatch')
       assert.deepEqual(input.pins, mathPins, 'Unexpected prepared KaTeX cohort')
       assert.deepEqual(report.actualPins, mathPins, 'Unexpected installed KaTeX cohort')
+      checkRuntime(report, `mcpui-katex-${version}`)
       assert.equal(report.installedVersion, POLICY.version, 'KaTeX package version mismatch')
       assert.equal(report.peer, '0.18.4 || 0.18.5', 'KaTeX peer mismatch')
       assert.equal(report.optional, true, 'KaTeX peer is not optional')
@@ -293,6 +410,7 @@ export async function verifyQualification(directory, sha256, specSha256) {
         assert.equal(input.pins?.[name], version, `Unexpected prepared ${name} pin`)
         assert.equal(report.actualPins?.[name], version, `Unexpected installed ${name} pin`)
       }
+      checkRuntime(report, `mcpui-solid2-${profile}`)
       assert((await readFile(join(consumer, 'pnpm-lock.yaml'), 'utf8')).trim().length > 0, 'Consumer lockfile is missing or empty')
       assert.equal(probe.profile, profile, 'Import probe profile mismatch')
       assert.equal(probe.version, POLICY.version, 'Import probe version mismatch')
@@ -315,6 +433,7 @@ export async function verifyQualification(directory, sha256, specSha256) {
       assert(probe.absentPeers.every(item => item.absent === true && ['MODULE_NOT_FOUND', 'ERR_MODULE_NOT_FOUND'].includes(item.code)), 'Optional peer was not proven absent')
       assert.equal(report.input.tarball?.sha256, sha256, 'Profile qualified another tarball')
       assert.equal(report.version, POLICY.version, 'Profile package version mismatch')
+      assert.deepEqual(Object.keys(report.serverDiagnostics ?? {}).sort(), ['dev', 'production'], 'Both source SSR diagnostic modes are required')
       core.set(profile, file)
     } else {
       assert.equal(report.tarball?.sha256, sha256, 'Compiled probe qualified another tarball')
@@ -327,7 +446,16 @@ export async function verifyQualification(directory, sha256, specSha256) {
       assert.equal(result?.status, 'passed', `Missing or failed ${mode} qualification`)
       empty(result[isCore ? 'errors' : 'pageErrors'], 'Browser errors were recorded')
       empty(result.externalRequests, 'Unexpected browser requests were recorded')
-      if (isCore && report.input.profile === 'full') assert.equal(result.engines?.status, 'passed', 'Full engine qualification did not pass')
+      if (isCore) {
+        assert.equal(result.mode, mode, 'Source browser mode mismatch')
+        assert.equal(result.profile, report.input.profile, 'Source browser profile mismatch')
+        verifyServerDiagnostics(report.serverDiagnostics[mode], report.input.profile, mode)
+        if (report.input.profile === 'full') {
+          verifyBoundaryProof(result.boundary)
+          assert.equal(result.engines?.mode, mode, 'Full engine browser mode mismatch')
+          verifyEngineProof(result.engines)
+        }
+      }
       if (!isCore) {
         empty(result.diagnostics, 'Compiled browser diagnostics were recorded')
         assert(Array.isArray(result.compiledModules) && result.compiledModules.some(path => path.endsWith('/dist/index.js')) &&
