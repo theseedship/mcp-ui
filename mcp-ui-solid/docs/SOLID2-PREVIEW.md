@@ -1,6 +1,11 @@
 # Solid 2 preview qualification
 
-> Current candidate: `8.0.0-solid2.1`, prepared on 2026-11-03 for RC.20 and
+> **Current candidate: `8.0.0-solid2.5`** (Solid 2.0.4 cohort). See the
+> [current handoff](./SOLID2-STABLE-QUALIFICATION-2026-11-27.md) and the
+> compatibility matrix in the package README. The sections below are
+> historical records of earlier candidates.
+>
+> Earlier candidate (historical): `8.0.0-solid2.1`, prepared on 2026-11-03 for RC.20 and
 > the Scratchpad lazy-prop fix. See the [current handoff](./SOLID2-SCRATCHPAD-LAZY-PROPS-2026-11-03.md).
 > The original preparation resumed on 2026-10-27 for stable security carry-over and fresh package qualification
 > only. The pause and qualification results below describe the earlier

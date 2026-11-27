@@ -53,7 +53,7 @@ test('missing, extra, wrong scope and malformed native records cannot satisfy th
     raw.replace('guide: node_modules/', 'guide: http://unknown/'),
     raw.replace('how to fix it: https://docs.solidjs.com', 'how to fix it: https://example.com'),
     raw.replace(footer, ''),
-  ]) assert.throws(() => assessSSRBoundaryDiagnostics(corrupted, fullDev), /exact Solid 2\.0\.0 help footer|exactly one/)
+  ]) assert.throws(() => assessSSRBoundaryDiagnostics(corrupted, fullDev), /exact Solid 2\.0\.4 help footer|exactly one/)
 })
 
 test('containment count must match independently measured SSR document requests', () => {

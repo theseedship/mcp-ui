@@ -30,12 +30,12 @@ export function assessSSRBoundaryDiagnostics(log, { profile, mode, documentReque
       continue
     }
 
-    // Solid 2.0.0 prints its exact two help lines once, on the first
+    // Solid 2.0.4 prints its exact two help lines once, on the first
     // occurrence of this code in the freshly started development server.
     const explanationFooter = expectedContainedErrors.length === 0
     if (explanationFooter) {
       assert.deepEqual(contents.slice(index + 3, index + 5), explanation,
-        'First intentional SSR boundary diagnostic must carry the exact Solid 2.0.0 help footer')
+        'First intentional SSR boundary diagnostic must carry the exact Solid 2.0.4 help footer')
     }
     expectedContainedErrors.push({ code, message, stack, source: source[1], explanationFooter })
     index += explanationFooter ? 5 : 3

@@ -1,6 +1,6 @@
 {
   "name": "@seed-ship/mcp-ui-solid",
-  "version": "8.0.0-solid2.4",
+  "version": "8.0.0-solid2.5",
   "description": "SolidJS components for rendering MCP-generated UI resources",
   "type": "module",
   "files": [
@@ -20,6 +20,7 @@
     "docs/KATEX-COMPATIBILITY-2026-11-09.md",
     "docs/SOLID2-RC21-QUALIFICATION-2026-11-10.md",
     "docs/SOLID2-STABLE-QUALIFICATION-2026-11-18.md",
+    "docs/SOLID2-STABLE-QUALIFICATION-2026-11-27.md",
     "docs/ZOD4-STABLE-MIGRATION-2026-10-26.md",
     "LICENSE"
   ],
@@ -252,7 +253,7 @@
     "@antv/g6": "^5.0.0",
     "@duckdb/duckdb-wasm": "^1.28.0",
     "@tanstack/virtual-core": "3.13.18",
-    "@solidjs/web": "2.0.0",
+    "@solidjs/web": "2.0.4",
     "chart.js": "^4.0.0",
     "chartjs-plugin-zoom": "^2.0.0",
     "highlight.js": "^11.9.0",
@@ -260,7 +261,7 @@
     "leaflet": "^1.9.4",
     "leaflet.markercluster": "^1.5.0",
     "protomaps-leaflet": "^4.0.0",
-    "solid-js": "2.0.0"
+    "solid-js": "2.0.4"
   },
   "peerDependenciesMeta": {
     "@antv/g6": {
@@ -306,10 +307,10 @@
     "@size-limit/esbuild-why": "^12.0.0",
     "@size-limit/preset-small-lib": "^12.0.0",
     "@solidjs/testing-library": "1.0.0-rc.2",
-    "@solidjs/web": "2.0.0",
-    "@solidjs/signals": "2.0.0",
-    "@solidjs/compiler": "2.0.0",
-    "@solidjs/babel-plugin": "2.0.0",
+    "@solidjs/web": "2.0.4",
+    "@solidjs/signals": "2.0.4",
+    "@solidjs/compiler": "2.0.3",
+    "@solidjs/babel-plugin": "2.0.3",
     "@solidjs/vite-plugin": "3.0.1",
     "@tanstack/virtual-core": "3.13.18",
     "@types/leaflet": "^1.9.8",
@@ -324,7 +325,7 @@
     "katex": "0.18.4",
     "leaflet.markercluster": "^1.5.3",
     "size-limit": "^12.0.0",
-    "solid-js": "2.0.0",
+    "solid-js": "2.0.4",
     "typescript": "^5.3.3",
     "vite": "8.3.5",
     "vitest": "4.1.12"

@@ -5,7 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [8.0.0-solid2.4] - Unreleased Solid 2.0.0 qualification candidate
+## [8.0.0-solid2.5] - Unreleased Solid 2.0.4 qualification candidate
+
+### Changed
+
+- Cohort bump: `solid-js`, `@solidjs/web` and `@solidjs/signals` 2.0.4;
+  `@solidjs/compiler` and `@solidjs/babel-plugin` 2.0.3 (no 2.0.4 exists);
+  `@solidjs/vite-plugin` 3.0.1 unchanged. Peers are exact `2.0.4`, Node >=22.12.0.
+- Why: `.4` peers exactly `2.0.0`, but `@solidjs/web@2.0.4` peers
+  `solid-js@^2.0.4`, so `.4` cannot coexist with a 2.0.4 host. Hosts move to
+  2.0.4 together with `.5`; do not pair `.4` with 2.0.4.
+- README now carries a version/dist-tag compatibility matrix and install line,
+  guarded against `package.json` by `tests/solid2/readme-compat.node-test.mjs`.
+- No production source changes. Build and typecheck pass on 2.0.4, including its
+  stricter MathML JSX attribute types (no impact on our MathML output).
+- Relevant upstream 2.0.4 fixes: SSR projection serialization, hydration of
+  async iterables, and store-array `mapArray` / `<For>` after a yield.
+- Spec 6.0.0, CLI 5.0.2, public schema and the Solid 1 / `latest` line are
+  unchanged. Publication remains a separately reviewed exact-artifact operation.
+
+## [8.0.0-solid2.4] - Published Solid 2.0.0 preview
 
 ### Changed
 
