@@ -7,11 +7,19 @@ import test from 'node:test'
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..')
 const solidRoot = resolve(repoRoot, 'mcp-ui-solid')
-const cohort = ['solid-js', '@solidjs/web', '@solidjs/signals', '@solidjs/compiler', '@solidjs/babel-plugin']
+// Stable Solid 2 split cohort: the runtime ships as 2.0.4, but the compiler
+// and Babel plugin were last published as 2.0.3 (no 2.0.4 exists on npm).
+const runtimeCohort = ['solid-js', '@solidjs/web', '@solidjs/signals']
+const toolchainCohort = ['@solidjs/compiler', '@solidjs/babel-plugin']
+const cohort = [...runtimeCohort, ...toolchainCohort]
+const pinFor = name => (toolchainCohort.includes(name) ? targetToolchain : targetRuntime)
 const rc19 = '2.0.0-rc.19'
 const rc20 = '2.0.0-rc.20'
 const rc21 = '2.0.0-rc.21'
-const targetRuntime = '2.0.0'
+const staleStable = '2.0.0'
+const targetRuntime = '2.0.4'
+const targetToolchain = '2.0.3'
+const nonexistentToolchain = '2.0.4'
 const plugin = '@solidjs/vite-plugin'
 const pluginVersion = '3.0.1'
 const virtualCore = '@tanstack/virtual-core'
@@ -121,8 +129,9 @@ function assertSolid2Cohort({ producer, workspace, lockText }) {
     assert.notEqual(peerMeta[name]?.optional, true, `${name} cannot be optional`)
     assert.equal(dev[name], targetRuntime, `${name} dev dependency must match its peer pin`)
   }
-  for (const name of ['@solidjs/signals', '@solidjs/compiler', '@solidjs/babel-plugin']) {
-    assert.equal(dev[name], targetRuntime, `${name} must use the same ${targetRuntime} cohort`)
+  assert.equal(dev['@solidjs/signals'], targetRuntime, `@solidjs/signals must use the same ${targetRuntime} runtime cohort`)
+  for (const name of toolchainCohort) {
+    assert.equal(dev[name], targetToolchain, `${name} must use the ${targetToolchain} toolchain cohort`)
   }
   assert.equal(dev[plugin], pluginVersion, `${plugin} must stay on the reviewed compatible plugin pin`)
 
@@ -140,8 +149,9 @@ function assertSolid2Cohort({ producer, workspace, lockText }) {
   for (const name of cohort) {
     const locations = allImporterResolutions(importers, name)
     assert(locations.length > 0, `${name} missing from mcp-ui-solid lock importer`)
-    assert(locations.every(entry => resolutionVersion(entry.version) === targetRuntime), `${name} importer resolution is outside ${targetRuntime}`)
-    assert.deepEqual(versionsFor(lockText, name), new Set([targetRuntime]), `${name} lock package versions must be one ${targetRuntime} cohort`)
+    const pin = pinFor(name)
+    assert(locations.every(entry => resolutionVersion(entry.version) === pin), `${name} importer resolution is outside ${pin}`)
+    assert.deepEqual(versionsFor(lockText, name), new Set([pin]), `${name} lock package versions must be one ${pin} cohort`)
   }
   const pluginResolutions = allImporterResolutions(importers, plugin)
   assert(pluginResolutions.length > 0, `${plugin} missing from mcp-ui-solid lock importer`)
@@ -153,7 +163,7 @@ function assertSolid2Cohort({ producer, workspace, lockText }) {
   for (const record of pluginRecords) {
     const resolved = record.sections.get('dependencies')
     for (const name of ['@solidjs/babel-plugin', '@solidjs/compiler', '@solidjs/web', 'solid-js']) {
-      assert.equal(resolutionVersion(resolved?.get(name)), targetRuntime, `${plugin} must resolve ${name} from the ${targetRuntime} cohort`)
+      assert.equal(resolutionVersion(resolved?.get(name)), pinFor(name), `${plugin} must resolve ${name} from the ${pinFor(name)} cohort`)
     }
   }
   const virtualResolutions = allImporterResolutions(importers, virtualCore)
@@ -187,14 +197,14 @@ function syntheticCase() {
   const producer = {
     peerDependencies: { 'solid-js': targetRuntime, '@solidjs/web': targetRuntime, [virtualCore]: virtualCoreVersion },
     devDependencies: { 'solid-js': targetRuntime, '@solidjs/web': targetRuntime, '@solidjs/signals': targetRuntime,
-      '@solidjs/compiler': targetRuntime, '@solidjs/babel-plugin': targetRuntime, [plugin]: pluginVersion },
+      '@solidjs/compiler': targetToolchain, '@solidjs/babel-plugin': targetToolchain, [plugin]: pluginVersion },
   }
   const workspace = {}
-  const entries = [...cohort.map(name => `      '${name}':\n        specifier: ${targetRuntime}\n        version: ${name === '@solidjs/web' ? `${targetRuntime}(solid-js@${targetRuntime})` : targetRuntime}`),
+  const entries = [...cohort.map(name => `      '${name}':\n        specifier: ${pinFor(name)}\n        version: ${name === '@solidjs/web' ? `${targetRuntime}(solid-js@${targetRuntime})` : pinFor(name)}`),
     `      '${plugin}':\n        specifier: ${pluginVersion}\n        version: ${pluginVersion}(@solidjs/web@${targetRuntime})(solid-js@${targetRuntime})(vite@8.3.5)`,
     `      '${virtualCore}':\n        specifier: ${virtualCoreVersion}\n        version: ${virtualCoreVersion}`].join('\n')
-  const packages = [...cohort.filter(name => name !== '@solidjs/web').map(name => `  /${name}@${targetRuntime}:\n    resolution: {integrity: fixture}\n`),
-    `  /${plugin}@${pluginVersion}(@solidjs/web@${targetRuntime})(solid-js@${targetRuntime})(vite@8.3.5):\n    resolution: {integrity: fixture}\n    dependencies:\n      '@solidjs/babel-plugin': ${targetRuntime}(@babel/core@7.29.7)\n      '@solidjs/compiler': ${targetRuntime}\n      '@solidjs/web': ${targetRuntime}(solid-js@${targetRuntime})\n      solid-js: ${targetRuntime}\n`,
+  const packages = [...cohort.filter(name => name !== '@solidjs/web').map(name => `  /${name}@${pinFor(name)}:\n    resolution: {integrity: fixture}\n`),
+    `  /${plugin}@${pluginVersion}(@solidjs/web@${targetRuntime})(solid-js@${targetRuntime})(vite@8.3.5):\n    resolution: {integrity: fixture}\n    dependencies:\n      '@solidjs/babel-plugin': ${targetToolchain}(@babel/core@7.29.7)\n      '@solidjs/compiler': ${targetToolchain}\n      '@solidjs/web': ${targetRuntime}(solid-js@${targetRuntime})\n      solid-js: ${targetRuntime}\n`,
     `  /${virtualCore}@${virtualCoreVersion}:\n    resolution: {integrity: fixture}\n`,
     `  /@solidjs/web@${targetRuntime}(solid-js@${targetRuntime}):\n    resolution: {integrity: fixture}\n    dependencies:\n      seroval: 99.1.0\n      seroval-plugins: 99.2.0(seroval@99.1.0)\n`,
     `  /seroval@99.1.0:\n    resolution: {integrity: fixture}\n`,
@@ -203,7 +213,7 @@ function syntheticCase() {
   return { producer, workspace, lockText }
 }
 
-test('current producer and lockfile use one Solid 2.0.0 cohort and renderer-owned Seroval pair', async () => {
+test('current producer and lockfile use one split Solid 2.0.4 runtime / 2.0.3 toolchain cohort and renderer-owned Seroval pair', async () => {
   const [producer, workspace, lockText] = await Promise.all([
     readFile(resolve(solidRoot, 'package.json'), 'utf8').then(JSON.parse),
     readFile(resolve(repoRoot, 'package.json'), 'utf8').then(JSON.parse),
@@ -220,21 +230,21 @@ for (const rc of [rc19, rc20, rc21]) {
   test(`validator rejects a ${rc}/stable producer mixture`, () => {
     const input = syntheticCase()
     input.producer.devDependencies['@solidjs/compiler'] = rc
-    assert.throws(() => assertSolid2Cohort(input), /same 2\.0\.0 cohort/)
+    assert.throws(() => assertSolid2Cohort(input), /@solidjs\/compiler must use the 2\.0\.3 toolchain cohort/)
   })
 }
 
 test('validator rejects an RC.20 compiler importer and a second RC.21 runtime record', () => {
   const lock = syntheticCase()
-  const oldEntry = `'@solidjs/compiler':\n        specifier: ${targetRuntime}\n        version: ${targetRuntime}`
+  const oldEntry = `'@solidjs/compiler':\n        specifier: ${targetToolchain}\n        version: ${targetToolchain}`
   const mixedEntry = `'@solidjs/compiler':\n        specifier: ${rc20}\n        version: ${rc20}`
   assert(lock.lockText.includes(oldEntry), 'Synthetic compiler importer entry missing')
   lock.lockText = lock.lockText.replace(oldEntry, mixedEntry)
-  assert.throws(() => assertSolid2Cohort(lock), /importer resolution is outside 2\.0\.0/)
+  assert.throws(() => assertSolid2Cohort(lock), /@solidjs\/compiler importer resolution is outside 2\.0\.3/)
   const duplicate = syntheticCase()
   duplicate.lockText = duplicate.lockText.replace('snapshots:\n',
     `  /solid-js@${rc21}:\n    resolution: {integrity: fixture}\nsnapshots:\n`)
-  assert.throws(() => assertSolid2Cohort(duplicate), /solid-js lock package versions must be one 2\.0\.0 cohort/)
+  assert.throws(() => assertSolid2Cohort(duplicate), /solid-js lock package versions must be one 2\.0\.4 cohort/)
 })
 
 test('validator rejects RC.21 peers in an otherwise stable Vite plugin importer', () => {
@@ -244,7 +254,7 @@ test('validator rejects RC.21 peers in an otherwise stable Vite plugin importer'
     const mixedContext = stableContext.replace(`${name}@${targetRuntime})`, `${name}@${rc21})`)
     const lockText = input.lockText.replace(stableContext, mixedContext)
     assert.notEqual(lockText, input.lockText, 'Synthetic plugin importer context missing')
-    assert.throws(() => assertSolid2Cohort({ ...input, lockText }), /lock resolution must bind to exact 2\.0\.0 runtime peers/)
+    assert.throws(() => assertSolid2Cohort({ ...input, lockText }), /lock resolution must bind to exact 2\.0\.4 runtime peers/)
   }
 })
 
@@ -269,4 +279,45 @@ test('validator rejects an incoherent renderer-owned Seroval pair and forced ove
   const override = syntheticCase()
   override.workspace = { pnpm: { overrides: { seroval: '1.0.0' } } }
   assert.throws(() => assertSolid2Cohort(override), /Workspace cannot force renderer Seroval/)
+})
+
+test('validator rejects a runtime/toolchain mismatch in either direction', () => {
+  // Compiler/Babel plugin forced onto the runtime version (2.0.4 was never published for them).
+  for (const name of toolchainCohort) {
+    const input = syntheticCase()
+    input.producer.devDependencies[name] = nonexistentToolchain
+    assert.throws(() => assertSolid2Cohort(input), new RegExp(`${name.replace('/', '\\/')} must use the 2\\.0\\.3 toolchain cohort`))
+  }
+  // Runtime packages left behind on the previous stable 2.0.0 cohort.
+  for (const name of ['solid-js', '@solidjs/web', '@solidjs/signals']) {
+    const input = syntheticCase()
+    input.producer.devDependencies[name] = staleStable
+    assert.throws(() => assertSolid2Cohort(input), /dev dependency must match its peer pin|must use the same 2\.0\.4 runtime cohort/)
+  }
+  for (const name of ['solid-js', '@solidjs/web']) {
+    const input = syntheticCase()
+    input.producer.peerDependencies[name] = staleStable
+    assert.throws(() => assertSolid2Cohort(input), /must remain a required 2\.0\.4 peer/)
+  }
+  // Lock side: a toolchain importer at the runtime version, and a runtime importer left on 2.0.0.
+  const toolchainLock = syntheticCase()
+  const toolchainEntry = `'@solidjs/babel-plugin':\n        specifier: ${targetToolchain}\n        version: ${targetToolchain}`
+  assert(toolchainLock.lockText.includes(toolchainEntry), 'Synthetic babel-plugin importer entry missing')
+  toolchainLock.lockText = toolchainLock.lockText.replace(toolchainEntry,
+    `'@solidjs/babel-plugin':\n        specifier: ${nonexistentToolchain}\n        version: ${nonexistentToolchain}`)
+  assert.throws(() => assertSolid2Cohort(toolchainLock), /@solidjs\/babel-plugin importer resolution is outside 2\.0\.3/)
+  const runtimeLock = syntheticCase()
+  const runtimeEntry = `'@solidjs/signals':\n        specifier: ${targetRuntime}\n        version: ${targetRuntime}`
+  assert(runtimeLock.lockText.includes(runtimeEntry), 'Synthetic signals importer entry missing')
+  runtimeLock.lockText = runtimeLock.lockText.replace(runtimeEntry,
+    `'@solidjs/signals':\n        specifier: ${staleStable}\n        version: ${staleStable}`)
+  assert.throws(() => assertSolid2Cohort(runtimeLock), /@solidjs\/signals importer resolution is outside 2\.0\.4/)
+  // Vite plugin transitive resolution must keep the split: compiler 2.0.4 or web 2.0.0 are both rejected.
+  const pluginCompiler = syntheticCase()
+  pluginCompiler.lockText = pluginCompiler.lockText.replace(`'@solidjs/compiler': ${targetToolchain}\n      '@solidjs/web'`, `'@solidjs/compiler': ${nonexistentToolchain}\n      '@solidjs/web'`)
+  assert.throws(() => assertSolid2Cohort(pluginCompiler), /vite-plugin must resolve @solidjs\/compiler from the 2\.0\.3 cohort/)
+  const pluginWeb = syntheticCase()
+  pluginWeb.lockText = pluginWeb.lockText.replace(`'@solidjs/web': ${targetRuntime}(solid-js@${targetRuntime})\n      solid-js: ${targetRuntime}\n`,
+    `'@solidjs/web': ${staleStable}(solid-js@${staleStable})\n      solid-js: ${targetRuntime}\n`)
+  assert.throws(() => assertSolid2Cohort(pluginWeb), /vite-plugin must resolve @solidjs\/web from the 2\.0\.4 cohort/)
 })

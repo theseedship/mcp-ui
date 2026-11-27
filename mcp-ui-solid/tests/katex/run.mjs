@@ -16,9 +16,9 @@ const here = dirname(fileURLToPath(import.meta.url))
 const repo = resolve(here, '../../..')
 const expectedPeer = '0.18.4 || 0.18.5'
 const pins = Object.freeze({
-  'solid-js': '2.0.0', '@solidjs/web': '2.0.0',
-  '@solidjs/signals': '2.0.0', '@solidjs/compiler': '2.0.0',
-  '@solidjs/babel-plugin': '2.0.0', '@solidjs/vite-plugin': '3.0.1',
+  'solid-js': '2.0.4', '@solidjs/web': '2.0.4',
+  '@solidjs/signals': '2.0.4', '@solidjs/compiler': '2.0.3',
+  '@solidjs/babel-plugin': '2.0.3', '@solidjs/vite-plugin': '3.0.1',
   '@babel/core': '7.29.6', '@types/node': '22.19.11',
   vite: '8.3.5', typescript: '5.9.3',
 })

@@ -1,52 +1,49 @@
 # @seed-ship/mcp-ui-solid
 
-## Solid 2 preview (unpublished)
+## Solid 2 line (`8.0.0-solid2.x`, npm dist-tag `solid2`)
 
-**Stable-runtime candidate prepared on 2026-11-18:** recompiles the existing
-8.x adapter from `feat/solid2-preview` with Solid 2.0.0 and Vite plugin 3.0.1.
-This qualification PR does not authorize
-staging, publication, a dist-tag change or application installation.
-See the [current stable/Deposium handoff](./docs/SOLID2-STABLE-QUALIFICATION-2026-11-18.md).
-The [RC.21 handoff](./docs/SOLID2-RC21-QUALIFICATION-2026-11-10.md) records the published `.3` cohort.
-The [KaTeX handoff](./docs/KATEX-COMPATIBILITY-2026-11-09.md) records `.2` / RC.20 qualification.
-The [Scratchpad handoff](./docs/SOLID2-SCRATCHPAD-LAZY-PROPS-2026-11-03.md) records the prior fix.
-The [pause/resumption handoff](./docs/SOLID2-PREVIEW-HANDOFF-2026-10-23.md)
-records the preserved source, checksums, known gaps and restart checklist.
+This is the **Solid 2** line of the package, published on the `solid2` dist-tag.
+The `7.x` line on `latest` stays Solid 1; `8.x` is opt-in and never installed by
+default. Peers are exact, so each Solid patch release needs a matching
+mcp-ui-solid release. Pick the row that matches your host:
 
-This branch prepares `8.0.0-solid2.4` as an **opt-in preview for a separate
-Solid 2 host**. The stable `7.x` line, including future `7.1.x` releases, remains
-Solid 1 on npm `latest`; Solid 2 belongs to `8.x` and the separate `solid2` tag.
-The `8.0.0-solid2.4` source version alone proves neither qualification nor
-release approval: bind later proof to the exact source HEAD and archive. Zod is
-4.6.6 and Spec is 6.x. This is not a
-dual-runtime package: required peers are exactly `solid-js@2.0.0` and
-`@solidjs/web@2.0.0` (Node >=22.12.0). DOM types/imports stay on
-`@solidjs/web`; core and draft-store APIs come from `solid-js`.
+<!-- solid-compat:start -->
+| `@seed-ship/mcp-ui-solid` | npm dist-tag | `solid-js` | `@solidjs/web` |
+| --- | --- | --- | --- |
+| `7.x` | `latest` | `^1.9.0` | — |
+| `8.0.0-solid2.0` | — | `2.0.0-rc.19` | `2.0.0-rc.19` |
+| `8.0.0-solid2.1` | — | `2.0.0-rc.20` | `2.0.0-rc.20` |
+| `8.0.0-solid2.3` | — | `2.0.0-rc.21` | `2.0.0-rc.21` |
+| `8.0.0-solid2.4` | — | `2.0.0` | `2.0.0` |
+| `8.0.0-solid2.5` | `solid2` | `2.0.4` | `2.0.4` |
+<!-- solid-compat:end -->
 
-For any later host qualification, use an identified archive qualified from the
-exact source HEAD, not an unpinned branch or the stable npm tag. Preserved
-archives are historical evidence.
-The [preview guide](./docs/SOLID2-PREVIEW.md) records the compiler/testing pins,
-optional peers, real-package qualification, consumer integration and rollback
-boundaries. Large-table virtualization uses optional
-`@tanstack/virtual-core@3.13.18`; the Solid 1 adapter is not compatible.
+`8.0.0-solid2.2` was never published. `.4` cannot be paired with Solid 2.0.4
+(`@solidjs/web@2.0.4` peers `solid-js@^2.0.4`); use `.5`.
 
-Scratchpad `pinned` and `debug` may be ordinary reactive JSX conditionals.
-Lifecycle logging snapshots the initial props during setup; debug effects read
-props in compute and consume that snapshot in apply. Host-side memo hoisting is
-not required for this regression. The published `.0` targeted RC.19; `.1` and
-the `.2` candidate target RC.20; published `.3` requires RC.21 and `.4` targets
-2.0.0 stable. `.3` is not compatible with the stable runtime: keep that peer
-failure visible rather than overriding it. Each release needs its own CI/archive approval.
+```sh
+pnpm add @seed-ship/mcp-ui-solid@8.0.0-solid2.5 solid-js@2.0.4 @solidjs/web@2.0.4
+```
 
-Public component names, MCP wire payloads, HTML trust policy, callbacks and CSS
-tokens are retained. Imperative store/controller methods commit before returning;
-ordinary reactive writes follow Solid 2 staged scheduling. Do not widen the
-stable peer range, alias runtimes or mix Solid 1 and Solid 2 in a reactive tree.
+Node >=22.12.0. This is not a dual-runtime package: do not alias runtimes or mix
+Solid 1 and Solid 2 in one reactive tree, and do not widen the exact peer range.
+DOM types/imports come from `@solidjs/web`; core and draft-store APIs come from
+`solid-js`. Large-table virtualization uses optional `@tanstack/virtual-core@3.13.18`
+(the Solid 1 adapter is not compatible). Public component names, MCP wire
+payloads, HTML trust policy, callbacks and CSS tokens are unchanged from 7.x.
+Imperative store/controller methods commit before returning; ordinary reactive
+writes follow Solid 2 staged scheduling.
 
-No npm staging/publication, release tag, workflow dispatch, runtime-PR merge or
-application installation is authorized by this preview. The historical stable
-changelog and examples below do not override these preview-specific requirements.
+Handoffs and guides:
+[current qualification (2.0.4)](./docs/SOLID2-STABLE-QUALIFICATION-2026-11-27.md),
+[2.0.0 qualification](./docs/SOLID2-STABLE-QUALIFICATION-2026-11-18.md),
+[RC.21](./docs/SOLID2-RC21-QUALIFICATION-2026-11-10.md),
+[KaTeX](./docs/KATEX-COMPATIBILITY-2026-11-09.md),
+[Scratchpad](./docs/SOLID2-SCRATCHPAD-LAZY-PROPS-2026-11-03.md),
+[preview guide](./docs/SOLID2-PREVIEW.md),
+[pause/resumption](./docs/SOLID2-PREVIEW-HANDOFF-2026-10-23.md).
+The sections below describe the shared feature set; "What's New" entries are
+historical and refer to the `7.x` / Solid 1 line.
 
 SolidJS components + chat toolkit for MCP-generated UI. Part of the [MCP UI ecosystem](https://github.com/theseedship/mcp-ui).
 
@@ -137,7 +134,7 @@ The candidate's optional peer explicitly accepts `0.18.4 || 0.18.5`, not a
 caret or an untested future range. Its development baseline remains 0.18.4.
 KaTeX 0.18.5 pulls in Commander 15 (Node >=22.12); use the host's supported
 Node version before upgrading. The KaTeX adapter does not choose the Solid
-runtime; this `.4` preview requires the coherent 2.0.0 stable cohort.
+runtime; this `.5` preview requires the coherent Solid 2.0.4 cohort.
 See the [version-specific qualification and Deposium handoff](./docs/KATEX-COMPATIBILITY-2026-11-09.md).
 
 The provider applies to `text` with `markdown: true` and string-valued table
@@ -567,9 +564,11 @@ Everything rolled up from the 4.x series is documented in the previous section b
 pnpm add @seed-ship/mcp-ui-solid
 # or
 npm install @seed-ship/mcp-ui-solid
+# default `latest` is the Solid 1 line; for Solid 2 use the pinned command
+# from the compatibility matrix at the top of this file
 ```
 
-**Peer dependencies:** `solid-js` ^1.9.0
+**Peer dependencies:** `solid-js` and `@solidjs/web`, pinned exactly per release for the 8.x Solid 2 line (see the compatibility matrix at the top of this file); `7.x` uses `solid-js` ^1.9.0.
 
 **Optional peer deps** (install as needed):
 - `chart.js` — native chart rendering

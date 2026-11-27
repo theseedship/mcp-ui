@@ -1,11 +1,13 @@
 # MCP UI Components
 
-> **Solid 2.0.0 qualification candidate — 2026-11-18.** Recompiles the existing
-> 8.x port from `feat/solid2-preview`; this is not a second runtime migration.
-> KaTeX remains optional at `0.18.4 || 0.18.5`.
-> See the [current candidate and host handoff](./mcp-ui-solid/docs/SOLID2-STABLE-QUALIFICATION-2026-11-18.md).
+> **Solid 2.0.4 qualification candidate — 2026-11-27.** `8.0.0-solid2.5` moves
+> the exact peers to `solid-js` / `@solidjs/web` 2.0.4 (`.4` cannot coexist with
+> a 2.0.4 host); no production source change. KaTeX remains optional at
+> `0.18.4 || 0.18.5`. See the
+> [current candidate and host handoff](./mcp-ui-solid/docs/SOLID2-STABLE-QUALIFICATION-2026-11-27.md)
+> and the [2.0.0 handoff](./mcp-ui-solid/docs/SOLID2-STABLE-QUALIFICATION-2026-11-18.md).
 
-> This branch prepares the isolated **Solid 2 preview**, `8.0.0-solid2.4`,
+> This branch prepares the isolated **Solid 2 preview**, `8.0.0-solid2.5`,
 > not a published release. Stable **7.x remains Solid 1** (`latest`), including
 > future `7.1.x` releases; **8.x targets Solid 2** (`solid2`, opt-in).
 > The old 7.x preview archive cannot qualify the new 8.x package. Do not install
@@ -187,11 +189,11 @@ for token setup, tags, and recovery of an interrupted release.
 | MCPUI Solid line | Host framework | npm channel | Release path |
 | --- | --- | --- | --- |
 | `7.x` (including future `7.1.x`) | Solid 1 | `latest` | Reviewed bump + stable Git tag, then npm staging and human 2FA approval |
-| `8.0.0-solid2.N` (next candidate: `8.0.0-solid2.4`) | Solid 2 | `solid2`, explicit opt-in | Manual review of the exact CI artifact; upload requires separate approval |
+| `8.0.0-solid2.N` (next candidate: `8.0.0-solid2.5`) | Solid 2 | `solid2`, explicit opt-in | Manual review of the exact CI artifact; upload requires separate approval |
 
 **Solid 2 preview:** a separate, manual
 [preview channel](./.github/SOLID2_PREVIEW_RELEASE.md) currently binds the
-published `.3` RC.21 release and preserves `latest`. The next `.4` stable-runtime candidate
+published `.4` (Solid 2.0.0) release and preserves `latest`. The next `.5` Solid 2.0.4 candidate
 needs a separately reviewed promotion-policy update, staging and npm 2FA
 approval; this qualification PR publishes nothing. The source stays on PR #34,
 not stable main. Install a future approved preview only in a coherent Solid 2

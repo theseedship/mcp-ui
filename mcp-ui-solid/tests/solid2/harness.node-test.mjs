@@ -6,7 +6,7 @@ import { assertSolid2HostCompatibility, manifestFor, pins, enginePins, validateD
 import { EXPECTED_STREAM_ERROR, isExpectedStreamError } from './browser.mjs'
 import { hasMathServerMigrationDiagnostic, processHandle } from '../katex/run.mjs'
 
-test('Solid 2.0.0 consumers use the current Vite plugin Node server option', async () => {
+test('Solid 2.0.4 consumers use the current Vite plugin Node server option', async () => {
   for (const relative of ['./consumer/vite.config.ts', '../katex/consumer/vite.config.ts']) {
     const config = await readFile(new URL(relative, import.meta.url), 'utf8')
     assert.match(config, /nodeServer:\s*true/)
@@ -24,15 +24,28 @@ test('tarball workflows check out and verify the exact PR head instead of its sy
   }
 })
 
-test('8.0.0-solid2.3 (RC.21) is still rejected by the Solid 2.0.0 stable host guard', () => {
-  const candidate = { version: '8.0.0-solid2.4', peerDependencies: { 'solid-js': '2.0.0', '@solidjs/web': '2.0.0' } }
+test('8.0.0-solid2.3 (RC.21) and published 8.0.0-solid2.4 (2.0.0 peers) are rejected by the Solid 2.0.4 stable host guard', () => {
+  const candidate = { version: '8.0.0-solid2.5', peerDependencies: { 'solid-js': '2.0.4', '@solidjs/web': '2.0.4' } }
   const rc21 = { version: '8.0.0-solid2.3', peerDependencies: { 'solid-js': '2.0.0-rc.21', '@solidjs/web': '2.0.0-rc.21' } }
+  const published = { version: '8.0.0-solid2.4', peerDependencies: { 'solid-js': '2.0.0', '@solidjs/web': '2.0.0' } }
   assert.doesNotThrow(() => assertSolid2HostCompatibility(candidate))
-  assert.throws(() => assertSolid2HostCompatibility(rc21), /peer must match the stable consumer pin 2\.0\.0/)
+  assert.throws(() => assertSolid2HostCompatibility(rc21), /peer must match the stable consumer pin 2\.0\.4/)
   assert.throws(() => assertSolid2HostCompatibility({ ...rc21, peerDependencies: candidate.peerDependencies }), /Review harness pins/)
   assert.throws(() => assertSolid2HostCompatibility({
     ...candidate, peerDependencies: { ...candidate.peerDependencies, '@solidjs/web': '2.0.0-rc.21' },
   }), /Packed @solidjs\/web peer must match/)
+  // @solidjs/web@2.0.4 peers solid-js ^2.0.4, so the published .4 (exact 2.0.0 peers) cannot satisfy this host.
+  assert.throws(() => assertSolid2HostCompatibility(published), /peer must match the stable consumer pin 2\.0\.4/)
+  assert.throws(() => assertSolid2HostCompatibility({ ...published, peerDependencies: candidate.peerDependencies }), /Review harness pins/)
+  assert.throws(() => assertSolid2HostCompatibility({
+    ...candidate, peerDependencies: { ...candidate.peerDependencies, 'solid-js': '2.0.0' },
+  }), /Packed solid-js peer must match/)
+})
+
+test('host pins split the Solid 2.0.4 runtime from the 2.0.3 compiler/Babel toolchain', () => {
+  for (const name of ['solid-js', '@solidjs/web', '@solidjs/signals']) assert.equal(pins[name], '2.0.4', name)
+  for (const name of ['@solidjs/compiler', '@solidjs/babel-plugin']) assert.equal(pins[name], '2.0.3', name)
+  assert.equal(pins['@solidjs/vite-plugin'], '3.0.1')
 })
 
 test('full host pins runtime/compiler and explicit optional engines without workspace dependencies', () => {

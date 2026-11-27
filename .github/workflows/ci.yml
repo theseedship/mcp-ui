@@ -23,7 +23,7 @@ jobs:
           node-version: '22.23.3'
           package-manager-cache: false
       - name: Test preview release guards without credentials or network
-        run: node --test scripts/solid2-preview/verify.test.mjs scripts/stable-release/verify.test.mjs mcp-ui-solid/tests/solid2/cohort.node-test.mjs
+        run: node --test scripts/solid2-preview/verify.test.mjs scripts/stable-release/verify.test.mjs mcp-ui-solid/tests/solid2/cohort.node-test.mjs mcp-ui-solid/tests/solid2/readme-compat.node-test.mjs
 
   test:
     runs-on: ubuntu-latest
@@ -81,7 +81,7 @@ jobs:
         run: pnpm typecheck
 
       - name: Test clean-consumer harness and release safeguards
-        run: node --test scripts/finalize-declarations.test.mjs scripts/solid2-preview/verify.test.mjs scripts/stable-release/verify.test.mjs mcp-ui-solid/tests/solid2/cohort.node-test.mjs mcp-ui-solid/tests/solid2/harness.node-test.mjs mcp-ui-solid/tests/solid2/dist-browser.node-test.mjs mcp-ui-solid/tests/solid2/optional-loader.node-test.mjs mcp-ui-solid/tests/solid2/boundary-proofs.node-test.mjs mcp-ui-solid/tests/solid2/ssr-boundary-diagnostics.node-test.mjs
+        run: node --test scripts/finalize-declarations.test.mjs scripts/solid2-preview/verify.test.mjs scripts/stable-release/verify.test.mjs mcp-ui-solid/tests/solid2/cohort.node-test.mjs mcp-ui-solid/tests/solid2/readme-compat.node-test.mjs mcp-ui-solid/tests/solid2/harness.node-test.mjs mcp-ui-solid/tests/solid2/dist-browser.node-test.mjs mcp-ui-solid/tests/solid2/optional-loader.node-test.mjs mcp-ui-solid/tests/solid2/boundary-proofs.node-test.mjs mcp-ui-solid/tests/solid2/ssr-boundary-diagnostics.node-test.mjs
 
       - name: Test
         run: pnpm -r exec vitest run --maxWorkers=4
@@ -115,7 +115,7 @@ jobs:
           for profile in full optional-absent; do
             consumer="$RUNNER_TEMP/mcpui-solid2-$profile"
             node mcp-ui-solid/tests/solid2/run.mjs prepare \
-              --tarball "$RUNNER_TEMP/mcpui-solid2-artifacts/seed-ship-mcp-ui-solid-8.0.0-solid2.4.tgz" \
+              --tarball "$RUNNER_TEMP/mcpui-solid2-artifacts/seed-ship-mcp-ui-solid-8.0.0-solid2.5.tgz" \
               --spec-tarball "$RUNNER_TEMP/mcpui-solid2-artifacts/seed-ship-mcp-ui-spec-6.0.0.tgz" \
               --consumer "$consumer" --profile "$profile"
             pnpm --dir "$consumer" install --ignore-scripts
@@ -132,7 +132,7 @@ jobs:
           for version in 0.18.4 0.18.5 absent; do
             consumer="$RUNNER_TEMP/mcpui-katex-$version"
             node mcp-ui-solid/tests/katex/run.mjs prepare \
-              --tarball "$RUNNER_TEMP/mcpui-solid2-artifacts/seed-ship-mcp-ui-solid-8.0.0-solid2.4.tgz" \
+              --tarball "$RUNNER_TEMP/mcpui-solid2-artifacts/seed-ship-mcp-ui-solid-8.0.0-solid2.5.tgz" \
               --spec-tarball "$RUNNER_TEMP/mcpui-solid2-artifacts/seed-ship-mcp-ui-spec-6.0.0.tgz" \
               --consumer "$consumer" --version "$version"
             pnpm --dir "$consumer" install --ignore-scripts

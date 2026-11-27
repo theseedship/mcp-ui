@@ -1,10 +1,12 @@
 # Solid 2 clean-tarball qualification
 
-The current stable-runtime candidate is `8.0.0-solid2.4` for the opt-in Solid 2 `solid2`
+The current Solid 2.0.4 candidate is `8.0.0-solid2.5` for the opt-in Solid 2 `solid2`
 channel. Stable `7.x` / `latest` remains Solid 1. The version string alone is
 not qualification or release proof: qualify the exact source HEAD and archive.
-Published `.3` requires RC.21 and cannot qualify Solid 2.0.0 stable. Its
-incompatibility with a stable host remains an explicit negative regression.
+Published `.3` requires RC.21 and `.4` requires exactly 2.0.0; neither can
+qualify 2.0.4. The `.3` incompatibility with a stable host remains an explicit
+negative regression. `readme-compat.node-test.mjs` keeps the README matrix and
+install line aligned with `package.json`.
 Deposium host migration remains in progress; installation needs app-team approval.
 
 ### Native-engine identity and zoom scope
@@ -42,7 +44,7 @@ Run after the library has been built and the maintainer supplies its tarball:
 
 ```sh
 node mcp-ui-solid/tests/solid2/run.mjs prepare \
-  --tarball /absolute/artifacts/seed-ship-mcp-ui-solid-8.0.0-solid2.4.tgz \
+  --tarball /absolute/artifacts/seed-ship-mcp-ui-solid-8.0.0-solid2.5.tgz \
   --spec-tarball /absolute/artifacts/seed-ship-mcp-ui-spec-6.0.0.tgz \
   --consumer /home/nico/worktrees/mcp-ui-solid2-consumer-full \
   --profile full
@@ -63,7 +65,7 @@ pnpm install --ignore-scripts
 The generated `.npmrc` disables automatic peer installation. Full profile lists
 every browser engine explicitly at the exact locally inspected versions, including
 KaTeX `0.18.4` and TanStack virtual-core `3.13.18`. It pins Solid/web/signals/compiler/
-Babel `2.0.0`, scoped Vite plugin `3.0.1`, Vite `8.3.5`, explicit
+`2.0.4` (compiler and Babel plugin `2.0.3`), scoped Vite plugin `3.0.1`, Vite `8.3.5`, explicit
 Babel core `7.29.6`, and Node types `22.19.11`.
 The runner rejects package realpaths outside its own consumer. pnpm's internal
 consumer-local symlinks are normal; linking to the MCPUI source checkout is not.

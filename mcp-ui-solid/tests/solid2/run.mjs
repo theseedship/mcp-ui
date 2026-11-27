@@ -13,7 +13,7 @@ import { qualifyBrowser } from './browser.mjs'
 import { assessSSRBoundaryDiagnostics } from './ssr-boundary-diagnostics.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url)), sourceRoot = resolve(here, '../../..')
-const expectedVersion = '8.0.0-solid2.4'
+const expectedVersion = '8.0.0-solid2.5'
 export const hasMigrationDiagnostic = text => /\[(?:CAUGHT_REACTIVE_READ|STRICT_READ_UNTRACKED|REACTIVE_WRITE_IN_OWNED_SCOPE|EFFECT_RELAY_TEAR|EFFECT_WRITES_OWN_SOURCE|PRIMITIVE_IN_[A-Z_]+|MISSING_EFFECT_FN|NO_OWNER_[A-Z_]+|SSR_[A-Z_]+)\]|hydration (?:key miss|completed[^\n]*unclaimed|mismatch|error)/i.test(text)
 export const hasBareZoomImport = text => /\bimport\s*\(\s*(?:\/\*[\s\S]*?\*\/\s*)?(['"`])chartjs-plugin-zoom\1\s*\)/.test(text)
 
@@ -33,8 +33,9 @@ async function auditClientZoomGraph(root) {
   return { javascript, bareImports }
 }
 export const pins = Object.freeze({
-  'solid-js': '2.0.0', '@solidjs/web': '2.0.0', '@solidjs/signals': '2.0.0',
-  '@solidjs/compiler': '2.0.0', '@solidjs/babel-plugin': '2.0.0',
+  // Runtime 2.0.4; compiler and Babel plugin have no 2.0.4 and stay on 2.0.3.
+  'solid-js': '2.0.4', '@solidjs/web': '2.0.4', '@solidjs/signals': '2.0.4',
+  '@solidjs/compiler': '2.0.3', '@solidjs/babel-plugin': '2.0.3',
   '@solidjs/vite-plugin': '3.0.1', '@babel/core': '7.29.6', '@types/node': '22.19.11', vite: '8.3.5', typescript: '5.9.3',
   '@tailwindcss/vite': '4.3.3', tailwindcss: '4.3.3',
 })
