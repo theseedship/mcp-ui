@@ -3,22 +3,25 @@
 This channel is separate from the Solid 1 stable release. Merging this
 policy update does **not** stage, publish or deploy anything. No package
 version or lockfile changes are needed here: source PR #34 must first receive
-the separately reviewed Solid 2.0.0 qualification change before it prepares
-`@seed-ship/mcp-ui-solid@8.0.0-solid2.4` independently of stable main.
+the separately reviewed Solid 2.0.4 qualification change before it prepares
+`@seed-ship/mcp-ui-solid@8.0.0-solid2.5` independently of stable main.
+`8.0.0-solid2.4` (exact Solid 2.0.0 cohort) is already published on the
+`solid2` tag; it is the previous preview, not a candidate, and this policy
+refuses it.
 
 ## What stays separate
 
 | Consumer | Package | npm channel |
 | --- | --- | --- |
 | Existing Solid 1 application | `7.x`, including future `7.1.x` | `latest` |
-| Isolated Solid 2 pilot | exact `8.0.0-solid2.4`, Solid/Web/compiler 2.0.0 | `solid2`, only after staging and npm approval |
+| Isolated Solid 2 pilot | exact `8.0.0-solid2.5`; runtime (Solid/Web/signals) 2.0.4, compiler/Babel plugin 2.0.3, Vite plugin 3.0.1 | `solid2`, only after staging and npm approval |
 
 The major number of MCPUI is not the framework's major: MCPUI 7 is Solid 1;
 MCPUI 8 is Solid 2. Keep stable work on main while the port remains on
 `feat/solid2-preview`. A future `7.1.x` release still uses bump + reviewed stable
 Git tag + the existing staged-publishing/2FA procedure. Spec 6.0.0 and CLI 5.0.2
 remain independently versioned; neither is published by this preview workflow.
-No `.4` upload is authorized by this policy change.
+No `.5` upload is authorized by this policy change.
 
 The workflow `publish-solid2-preview.yml` must first be reviewed and merged
 into the default branch. Dispatch it on **main**, never on the preview branch.
@@ -26,7 +29,7 @@ It checks out only the trusted infrastructure commit, not the preview source.
 It promotes the exact archive already tested in successful PR CI, rather than
 rebuilding a different package while npm credentials are available.
 
-Do **not** use `publish.yml`, `publish:all`, or a `v8.0.0-solid2.4` Git tag.
+Do **not** use `publish.yml`, `publish:all`, or a `v8.0.0-solid2.5` Git tag.
 The existing stable workflows match prerelease tags and hardcode `latest` /
 `prerelease: false`; an offline guard rejects preview/8.x workspaces before
 installation and accepts stable Solid 7 / Solid 1 instead. This channel
@@ -40,27 +43,36 @@ Do not merge the Solid 2 runtime PR into stable main just to obtain an npm build
 ## Candidate identities, not execution authorization
 
 The next candidate is source PR [#34](https://github.com/theseedship/mcp-ui/pull/34),
-`feat/solid2-preview`, only **after** source PR [#47](https://github.com/theseedship/mcp-ui/pull/47) is
-reviewed and integrated into that branch and its head contains
-`8.0.0-solid2.4` with the exact stable Solid 2.0.0 cohort.
-The prior `.3` / RC.21 source and artifact cannot satisfy this policy.
+`feat/solid2-preview`, only **after** the separately reviewed Solid 2.0.4
+qualification change [#49](https://github.com/theseedship/mcp-ui/pull/49) (the
+earlier source PR [#47](https://github.com/theseedship/mcp-ui/pull/47) was the
+`.4` change) is integrated into that branch and its head contains `8.0.0-solid2.5` with the
+exact split Solid 2 cohort: runtime `solid-js`, `@solidjs/web` and
+`@solidjs/signals` exactly 2.0.4; `@solidjs/compiler` and
+`@solidjs/babel-plugin` exactly 2.0.3 (npm has no 2.0.4 for them); Vite plugin
+3.0.1; `@solidjs/testing-library` 1.0.0-rc.2 unchanged; peers `solid-js`
+2.0.4 and `@solidjs/web` 2.0.4.
+The prior `.3` / RC.21 and published `.4` / 2.0.0 sources and artifacts cannot
+satisfy this policy, nor can any artifact reporting compiler or Babel plugin
+2.0.4 (a wrong cohort).
 It needs a **new successful first-attempt CI run** on the exact new head,
 including its independent Solid 1 baseline. No source SHA, run ID, artifact ID
 or tarball digest is recorded for this candidate yet. Record those values and
-the SHA-256 of `seed-ship-mcp-ui-solid-8.0.0-solid2.4.tgz` inside its
+the SHA-256 of `seed-ship-mcp-ui-solid-8.0.0-solid2.5.tgz` inside its
 `solid2-preview-qualification` artifact. Use neither the ZIP digest nor a
 separately built local tarball's hash.
 
-On 2026-11-18 the public registry showed `latest=7.0.0` and
-`solid2=8.0.0-solid2.3` (RC.21), with `.4` not public. This does not rule
-out a private pending `.4` stage or authorize an upload. Previous
-qualifications do not establish eligibility for `.4`. Recheck the public
-registry and, separately, npm Staged Packages before staging. The `solid2`
-tag changes only after the reviewed `.4` stage receives separate maintainer
-approval on npmjs.com with 2FA.
+On 2026-11-27 the public registry showed `latest=7.0.0` and
+`solid2=8.0.0-solid2.4` (Solid 2.0.0 cohort, published), with `.5` not public.
+This does not rule out a private pending `.5` stage or authorize an upload.
+Previous qualifications, including the published `.4`, do not establish
+eligibility for `.5`. Recheck the public registry and, separately, npm Staged
+Packages before staging. The `solid2` tag changes only after the reviewed `.5`
+stage receives separate maintainer approval on npmjs.com with 2FA.
 
 The policy permits only PR #34, its canonical branch/repository,
-`8.0.0-solid2.4`, the exact Solid 2.0.0 cohort, Spec 6.0.0 / CLI 5.0.2 fixtures,
+`8.0.0-solid2.5`, the exact split 2.0.4 runtime / 2.0.3 toolchain cohort,
+Spec 6.0.0 / CLI 5.0.2 fixtures (unchanged tarballs from the `.4` policy),
 and the fixed `solid2` tag. Other versions/PRs and rerun attempts
 require a separately reviewed policy update. Expired artifacts, advanced PR
 heads and merged/closed PRs fail closed; do not bypass those checks to retry.
@@ -70,21 +82,25 @@ heads and merged/closed PRs fail closed; do not bypass those checks to retry.
 After the policy PR is merged, and when a maintainer authorizes a
 review dispatch, run **Review or stage Solid 2 preview** on main with:
 
-| Input | Value from the newly qualified `.4` candidate |
+| Input | Value from the newly qualified `.5` candidate (required; none recorded yet) |
 | --- | --- |
 | `source_sha` | exact current PR #34 head, 40 lowercase hex characters |
 | `ci_run_id` | successful first-attempt PR CI run for that head |
 | `artifact_id` | its unexpired `solid2-preview-qualification` artifact |
-| `tarball_sha256` | SHA-256 of the Solid **`.4` `.tgz`**, not the artifact ZIP |
+| `tarball_sha256` | SHA-256 of the Solid **`.5` `.tgz`**, not the artifact ZIP |
 | `stage` | `false` (default) |
 | `staging_approval` | empty |
 
 This mode has no npm token. It binds the source PR, SHA, successful first-attempt
 CI run and immutable artifact; verifies the checksum and safe tar headers;
-checks name/version/exact Solid 2.0.0 peers and rejects lifecycle scripts, unresolved
+checks name/version/exact Solid 2.0.4 peers and rejects lifecycle scripts, unresolved
 workspace dependencies and unsafe npm configuration. Both real-tarball
 consumer profiles, imports/targets, lockfiles and compiled-browser results are
-required. Full-consumer dev and production evidence must prove the packed error
+required. The producer evidence includes the new README compatibility guard
+(`tests/solid2/readme-compat.node-test.mjs`), and the packed tarball ships
+`docs/SOLID2-STABLE-QUALIFICATION-2026-11-27.md`; this verifier checks neither
+beyond the existing packaged-evidence refusal, so reviewers confirm both in the
+source PR. Full-consumer dev and production evidence must prove the packed error
 boundary's SSR and hydrated client callbacks and escaped fallbacks, the updated
 native Chart.js series and pixels, and the pinned local Mermaid iframe's
 inline, fullscreen and restored diagram with stable iframe identity and focus
@@ -97,10 +113,11 @@ also contain exact KaTeX `0.18.4`, `0.18.5`
 and absent-peer clean-consumer reports, import probes and lockfiles for that
 same Solid tarball and Spec fixture. Their dev/production browser results must
 pass without warnings, errors or external requests. The packed KaTeX peer is
-exactly `0.18.4 || 0.18.5` and optional. Runtime, web, signals, compiler and
-Babel plugin must all be exactly `2.0.0`; the Vite plugin must be
-`3.0.1`. Each core and KaTeX consumer must prove one physical set of Solid,
-Web and signals modules, with exact stable pnpm slots in its isolated installation
+exactly `0.18.4 || 0.18.5` and optional. Runtime, web and signals must all be
+exactly `2.0.4`; compiler and Babel plugin must both be exactly `2.0.3` (a
+2.0.0 cohort or a nonexistent 2.0.4 compiler/Babel plugin is refused); the Vite
+plugin must be `3.0.1`. Each core and KaTeX consumer must prove one physical set of Solid,
+Web and signals modules, with exact 2.0.4 pnpm slots in its isolated installation
 alongside the original CI pack directory. The packed Solid package
 must depend on Spec `^6.0.0`. The exact Spec fixture hash must match both
 consumer reports. The CLI fixture and its passing packed fast-uri report must
@@ -156,16 +173,16 @@ tarball for a byte comparison. These commands do not modify the registry.
 Set `TARBALL_SHA256` to the reviewed digest of the inner CI tarball:
 
 ```sh
-npm view @seed-ship/mcp-ui-solid@8.0.0-solid2.4 version --registry=https://registry.npmjs.org
+npm view @seed-ship/mcp-ui-solid@8.0.0-solid2.5 version --registry=https://registry.npmjs.org
 npm view @seed-ship/mcp-ui-solid dist-tags --json --registry=https://registry.npmjs.org
 preview_download_dir=$(mktemp -d)
-npm pack @seed-ship/mcp-ui-solid@8.0.0-solid2.4 --ignore-scripts \
+npm pack @seed-ship/mcp-ui-solid@8.0.0-solid2.5 --ignore-scripts \
   --registry=https://registry.npmjs.org --pack-destination "$preview_download_dir"
-printf '%s  %s\n' "$TARBALL_SHA256" "$preview_download_dir/seed-ship-mcp-ui-solid-8.0.0-solid2.4.tgz" |
+printf '%s  %s\n' "$TARBALL_SHA256" "$preview_download_dir/seed-ship-mcp-ui-solid-8.0.0-solid2.5.tgz" |
   sha256sum --check --strict
 ```
 
-`solid2` must identify the reviewed `.4` preview, `latest` must remain the stable
+`solid2` must identify the reviewed `.5` preview, `latest` must remain the stable
 version observed before staging, and the public tarball must match the reviewed
 SHA-256. Check again after npm approval, not just after the upload. The staging
 tag is immutable; an incorrectly tagged stage needs
@@ -176,13 +193,17 @@ maintainer rejection and correct restaging, not automatic tag repair.
 Do not install the preview into a Solid 1 application. The application team
 chooses the current Solid 2 migration branch and package; the old experimental
 pilot path is historical, not an installation target. Align the host runtime,
-compiler and tooling coherently with the qualified Solid 2.0.0 cohort before
+compiler and tooling coherently with the qualified split cohort (runtime 2.0.4,
+compiler/Babel plugin 2.0.3, Vite plugin 3.0.1) before
 installing this package. The application team's migration is independent and
 is not declared complete by MCPUI qualification.
 Pin the exact preview version and commit the host's own matching lockfile.
 
-Source PR [#47](https://github.com/theseedship/mcp-ui/pull/47) records the stable migration in
-`mcp-ui-solid/docs/SOLID2-STABLE-QUALIFICATION-2026-11-18.md`; the prior RC
+The `.5` qualification is recorded in
+`mcp-ui-solid/docs/SOLID2-STABLE-QUALIFICATION-2026-11-27.md` of its source PR
+(number recorded once it exists); the `.4` record
+`mcp-ui-solid/docs/SOLID2-STABLE-QUALIFICATION-2026-11-18.md` (source PR
+[#47](https://github.com/theseedship/mcp-ui/pull/47)) and the prior RC
 handoffs remain historical. The real Deposium chat, bus, sources and
 visualizations still need integration qualification, including the separate
 chart-data issue. The CI-qualified `.tgz` can be used without waiting for npm:

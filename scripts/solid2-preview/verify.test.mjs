@@ -19,17 +19,16 @@ const SOURCE_SHA = '271e92434696f14ba0fdaaa3e91b242819820a16';
 const TARBALL_SHA = 'a'.repeat(64);
 const OTHER_SHA = 'b'.repeat(64);
 const PACKAGE = '@seed-ship/mcp-ui-solid';
-const VERSION = '8.0.0-solid2.4';
+const VERSION = '8.0.0-solid2.5';
 const SPEC_SHA = 'c'.repeat(64);
 const CI_PACK_DIR = '/fixture/mcpui-solid2-artifacts';
 const CI_TARBALL = `${CI_PACK_DIR}/seed-ship-mcp-ui-solid-${VERSION}.tgz`;
 const CI_SPEC_TARBALL = `${CI_PACK_DIR}/seed-ship-mcp-ui-spec-6.0.0.tgz`;
-const RUNTIME_PINS = {
-  'solid-js': '2.0.0', '@solidjs/web': '2.0.0', '@solidjs/signals': '2.0.0',
-  '@solidjs/compiler': '2.0.0', '@solidjs/babel-plugin': '2.0.0',
-  '@solidjs/vite-plugin': '3.0.1',
-};
-const MATH_PINS = { ...RUNTIME_PINS, '@babel/core': '7.29.6', '@types/node': '22.19.11',
+// Split stable cohort: runtime 2.0.4; compiler/Babel plugin 2.0.3 (no 2.0.4 on npm).
+const RUNTIME_PINS = { 'solid-js': '2.0.4', '@solidjs/web': '2.0.4', '@solidjs/signals': '2.0.4' };
+const TOOLCHAIN_PINS = { '@solidjs/compiler': '2.0.3', '@solidjs/babel-plugin': '2.0.3', '@solidjs/vite-plugin': '3.0.1' };
+const COHORT_PINS = { ...RUNTIME_PINS, ...TOOLCHAIN_PINS };
+const MATH_PINS = { ...COHORT_PINS, '@babel/core': '7.29.6', '@types/node': '22.19.11',
   vite: '8.3.5', typescript: '5.9.3' };
 const MATH_VERSIONS = ['0.18.4', '0.18.5', 'absent'];
 const MATH_ADAPTER_CHECKS = ['inline fraction', 'subscript', 'display fraction', 'matrix',
@@ -207,9 +206,9 @@ function mode(profile, name, compiled = false) {
 
 function runtimePaths(consumer) {
   return {
-    'solid-js': `/fixture/${consumer}/node_modules/.pnpm/solid-js@2.0.0/node_modules/solid-js/dist/solid.cjs`,
-    '@solidjs/web': `/fixture/${consumer}/node_modules/.pnpm/@solidjs+web@2.0.0_solid-js@2.0.0/node_modules/@solidjs/web/dist/server.cjs`,
-    '@solidjs/signals': `/fixture/${consumer}/node_modules/.pnpm/@solidjs+signals@2.0.0/node_modules/@solidjs/signals/dist/index.cjs`,
+    'solid-js': `/fixture/${consumer}/node_modules/.pnpm/solid-js@2.0.4/node_modules/solid-js/dist/solid.cjs`,
+    '@solidjs/web': `/fixture/${consumer}/node_modules/.pnpm/@solidjs+web@2.0.4_solid-js@2.0.4/node_modules/@solidjs/web/dist/server.cjs`,
+    '@solidjs/signals': `/fixture/${consumer}/node_modules/.pnpm/@solidjs+signals@2.0.4/node_modules/@solidjs/signals/dist/index.cjs`,
   };
 }
 
@@ -231,8 +230,8 @@ function report(profile) {
     status: 'passed',
     version: VERSION,
     input: { profile, tarball: { path: CI_TARBALL, sha256: TARBALL_SHA },
-      spec: { path: CI_SPEC_TARBALL, sha256: SPEC_SHA }, pins: { ...RUNTIME_PINS } },
-    actualPins: { ...RUNTIME_PINS },
+      spec: { path: CI_SPEC_TARBALL, sha256: SPEC_SHA }, pins: { ...COHORT_PINS } },
+    actualPins: { ...COHORT_PINS },
     runtimePaths: runtimePaths(`mcpui-solid2-${profile}`),
     serverDiagnostics: serverDiagnostics(profile),
     modes: { dev: mode(profile, 'dev'), production: mode(profile, 'production') },
@@ -383,7 +382,7 @@ test('staging requires explicit approval bound to the package, source, bytes and
   const approval = `STAGE ${PACKAGE}@${VERSION} FROM ${SOURCE_SHA} SHA256 ${TARBALL_SHA} AS solid2`;
   assert.doesNotThrow(() => validateRequest(request({ stage: true, approval })));
   for (const invalid of ['', approval.replace(SOURCE_SHA, 'c'.repeat(40)),
-    approval.replace(VERSION, '8.0.0-solid2.0'), approval.replace(VERSION, '8.0.0-solid2.3'),
+    approval.replace(VERSION, '8.0.0-solid2.0'), approval.replace(VERSION, '8.0.0-solid2.3'), approval.replace(VERSION, '8.0.0-solid2.4'),
     approval.replace('AS solid2', 'AS latest')]) {
     assert.throws(() => validateRequest(request({ stage: true, approval: invalid })));
   }
@@ -477,6 +476,23 @@ test('rejects the prior RC.21 preview and non-exact stable runtime peers with co
   }
 });
 
+test('rejects the published .4 (exact 2.0.0 cohort) and any non-2.0.4 runtime peer with correct digests', async (t) => {
+  const published = await archive(t, { packageJson: manifest({
+    version: '8.0.0-solid2.4',
+    peerDependencies: { ...manifest().peerDependencies, 'solid-js': '2.0.0', '@solidjs/web': '2.0.0' },
+  }) });
+  await assert.rejects(() => verifyTarball(published.file, published.sha), /Tarball version mismatch/);
+  // The current version with the previous 2.0.0 peers (or a split/ranged runtime) is also a wrong cohort.
+  for (const peer of ['solid-js', '@solidjs/web']) {
+    for (const version of ['2.0.0', '2.0.3', '^2.0.4', '>=2.0.4', '2.0.5']) {
+      const { file, sha } = await archive(t, { packageJson: manifest({
+        peerDependencies: { ...manifest().peerDependencies, [peer]: version },
+      }) });
+      await assert.rejects(() => verifyTarball(file, sha), error => error.message.includes('Unexpected ' + peer + ' peer'));
+    }
+  }
+});
+
 for (const [name, entry] of [
   ['parent traversal', { name: 'package/../../escape', body: 'unsafe' }],
   ['absolute path', { name: '/tmp/escape', body: 'unsafe' }],
@@ -503,6 +519,10 @@ for (const [name, packageJson] of [
   ['Solid1 peer', manifest({ peerDependencies: { 'solid-js': '^1.9.0', '@solidjs/web': RUNTIME_PINS['@solidjs/web'] } })],
   ['RC18 peer', manifest({ peerDependencies: { 'solid-js': '2.0.0-rc.18', '@solidjs/web': '2.0.0-rc.18' } })],
   ['old RC19 peers', manifest({ peerDependencies: { 'solid-js': '2.0.0-rc.19', '@solidjs/web': '2.0.0-rc.19' } })],
+  ['published .4 2.0.0 peers on the current version', manifest({ peerDependencies: { 'solid-js': '2.0.0', '@solidjs/web': '2.0.0' } })],
+  ['mixed 2.0.4 Solid and 2.0.0 Web peers', manifest({ peerDependencies: { 'solid-js': RUNTIME_PINS['solid-js'], '@solidjs/web': '2.0.0' } })],
+  ['mixed 2.0.0 Solid and 2.0.4 Web peers', manifest({ peerDependencies: { 'solid-js': '2.0.0', '@solidjs/web': RUNTIME_PINS['@solidjs/web'] } })],
+  ['compiler version leaked into runtime peers', manifest({ peerDependencies: { 'solid-js': TOOLCHAIN_PINS['@solidjs/compiler'], '@solidjs/web': TOOLCHAIN_PINS['@solidjs/compiler'] } })],
   ['mixed RC20 and stable peers', manifest({ peerDependencies: { 'solid-js': '2.0.0-rc.20', '@solidjs/web': RUNTIME_PINS['@solidjs/web'] } })],
   ['old KaTeX-only peer', manifest({ peerDependencies: { ...manifest().peerDependencies, katex: '0.18.4' } })],
   ['nonoptional KaTeX peer', manifest({ peerDependenciesMeta: { katex: { optional: false } } })],
@@ -550,7 +570,7 @@ test('accepts a fourth full dev SSR request only with its exact contained diagno
 });
 
 for (const [name, options, passes] of [
-  ['matching Solid 2.0.0, KaTeX matrix, Spec 6 and CLI 5.0.2 fixtures', {}, true],
+  ['matching Solid 2.0.4/2.0.3 split cohort, KaTeX matrix, Spec 6 and CLI 5.0.2 fixtures', {}, true],
   ['missing Spec 6 fixture', { includeSpec: false }, false],
   ['Spec fixture with old manifest', { specVersion: '5.7.0' }, false],
   ['Spec fixture hash forged in profile evidence', { reportSpecSha: OTHER_SHA }, false],
@@ -586,6 +606,29 @@ for (const [name, mutate] of [
   ['source report bound to different archive', (e) => { e.absent.input.tarball.sha256 = OTHER_SHA; }],
   ['published preview version in profile report', (e) => { e.full.version = '8.0.0-solid2.0'; }],
   ['superseded RC21 preview version in profile report', (e) => { e.full.version = '8.0.0-solid2.3'; }],
+  ['published .4 version in profile report', (e) => { e.full.version = '8.0.0-solid2.4'; }],
+  ['prepared previous 2.0.0 runtime cohort', (e) => { for (const name of Object.keys(RUNTIME_PINS)) e.full.input.pins[name] = '2.0.0'; }],
+  ['installed previous 2.0.0 cohort', (e) => { for (const name of Object.keys(COHORT_PINS).filter(n => n !== '@solidjs/vite-plugin')) e.full.actualPins[name] = '2.0.0'; }],
+  ['prepared nonexistent compiler 2.0.4', (e) => { e.full.input.pins['@solidjs/compiler'] = '2.0.4'; }],
+  ['installed nonexistent compiler 2.0.4', (e) => { e.absent.actualPins['@solidjs/compiler'] = '2.0.4'; }],
+  ['prepared nonexistent Babel plugin 2.0.4', (e) => { e.absent.input.pins['@solidjs/babel-plugin'] = '2.0.4'; }],
+  ['installed nonexistent Babel plugin 2.0.4', (e) => { e.full.actualPins['@solidjs/babel-plugin'] = '2.0.4'; }],
+  ['installed compiler left on 2.0.0', (e) => { e.full.actualPins['@solidjs/compiler'] = '2.0.0'; }],
+  ['installed Babel plugin forced to the runtime 2.0.4', (e) => { e.full.actualPins['@solidjs/babel-plugin'] = RUNTIME_PINS['solid-js']; }],
+  ['prepared runtime downgraded to the toolchain 2.0.3', (e) => { e.full.input.pins['@solidjs/web'] = '2.0.3'; }],
+  ['installed signals left on 2.0.0', (e) => { e.absent.actualPins['@solidjs/signals'] = '2.0.0'; }],
+  ['previous 2.0.0 physical Solid slot', (e) => {
+    e.full.runtimePaths['solid-js'] = e.full.runtimePaths['solid-js'].replace('solid-js@2.0.4/', 'solid-js@2.0.0/');
+  }],
+  ['previous 2.0.0 physical signals slot', (e) => {
+    e.absent.runtimePaths['@solidjs/signals'] = e.absent.runtimePaths['@solidjs/signals'].replace('signals@2.0.4/', 'signals@2.0.0/');
+  }],
+  ['previous 2.0.0 physical Web slot', (e) => {
+    e.full.runtimePaths['@solidjs/web'] = e.full.runtimePaths['@solidjs/web'].replace('web@2.0.4_solid-js@2.0.4/', 'web@2.0.0_solid-js@2.0.0/');
+  }],
+  ['physical Web slot on the 2.0.3 toolchain version', (e) => {
+    e.full.runtimePaths['@solidjs/web'] = e.full.runtimePaths['@solidjs/web'].replace('web@2.0.4_solid-js@2.0.4/', 'web@2.0.3_solid-js@2.0.3/');
+  }],
   ['prepared old RC19 runtime', (e) => { e.full.input.pins['solid-js'] = '2.0.0-rc.19'; }],
   ['installed mixed RC21/stable cohort', (e) => { e.full.actualPins['@solidjs/compiler'] = '2.0.0-rc.21'; }],
   ['superseded RC21 Vite plugin', (e) => { e.full.actualPins['@solidjs/vite-plugin'] = '3.0.0-next.57'; }],
@@ -613,14 +656,14 @@ for (const [name, mutate] of [
     e.full.input.tarball.path = e.full.input.tarball.path.replace('mcpui-solid2-artifacts', 'other-artifacts');
   }],
   ['RC21 physical Solid slot despite a stable manifest claim', (e) => {
-    e.full.runtimePaths['solid-js'] = e.full.runtimePaths['solid-js'].replace('solid-js@2.0.0/', 'solid-js@2.0.0-rc.21/');
+    e.full.runtimePaths['solid-js'] = e.full.runtimePaths['solid-js'].replace('solid-js@2.0.4/', 'solid-js@2.0.0-rc.21/');
   }],
   ['RC21 physical signals slot despite a stable manifest claim', (e) => {
-    e.absent.runtimePaths['@solidjs/signals'] = e.absent.runtimePaths['@solidjs/signals'].replace('signals@2.0.0/', 'signals@2.0.0-rc.21/');
+    e.absent.runtimePaths['@solidjs/signals'] = e.absent.runtimePaths['@solidjs/signals'].replace('signals@2.0.4/', 'signals@2.0.0-rc.21/');
   }],
   ['stable physical Solid Web with an RC21 Solid peer slot', (e) => {
     e.math['0.18.5'].runtimePaths['@solidjs/web'] =
-      e.math['0.18.5'].runtimePaths['@solidjs/web'].replace('_solid-js@2.0.0/', '_solid-js@2.0.0-rc.21/');
+      e.math['0.18.5'].runtimePaths['@solidjs/web'].replace('_solid-js@2.0.4/', '_solid-js@2.0.0-rc.21/');
   }],
   ['duplicated physical path for different runtime packages', (e) => { e.full.runtimePaths['@solidjs/web'] = e.full.runtimePaths['solid-js']; }],
   ['wrong Spec fixture hash', (e) => { e.full.input.spec.sha256 = OTHER_SHA; }],
@@ -675,6 +718,14 @@ for (const [name, mutate] of [
   ['KaTeX wrong peer range', (e) => { e.math['0.18.5'].peer = '0.18.4'; }],
   ['KaTeX peer not optional', (e) => { e.math.absent.optional = false; }],
   ['KaTeX plugin resolved another version', (e) => { e.math['0.18.4'].pluginKatexVersion = '0.18.5'; }],
+  ['KaTeX published .4 version', (e) => { e.math['0.18.5'].installedVersion = '8.0.0-solid2.4'; }],
+  ['KaTeX prepared previous 2.0.0 cohort', (e) => { e.math['0.18.4'].input.pins['solid-js'] = '2.0.0'; }],
+  ['KaTeX installed previous 2.0.0 cohort', (e) => { e.math.absent.actualPins['@solidjs/web'] = '2.0.0'; }],
+  ['KaTeX prepared nonexistent compiler 2.0.4', (e) => { e.math['0.18.4'].input.pins['@solidjs/compiler'] = '2.0.4'; }],
+  ['KaTeX installed nonexistent Babel plugin 2.0.4', (e) => { e.math['0.18.5'].actualPins['@solidjs/babel-plugin'] = '2.0.4'; }],
+  ['KaTeX previous 2.0.0 physical runtime slot', (e) => {
+    e.math['0.18.5'].runtimePaths['@solidjs/signals'] = e.math['0.18.5'].runtimePaths['@solidjs/signals'].replace('signals@2.0.4/', 'signals@2.0.0/');
+  }],
   ['KaTeX prepared RC21 cohort', (e) => { e.math['0.18.4'].input.pins['solid-js'] = '2.0.0-rc.21'; }],
   ['KaTeX installed RC21 cohort', (e) => { e.math['0.18.5'].actualPins['@solidjs/compiler'] = '2.0.0-rc.21'; }],
   ['KaTeX missing physical runtime proof', (e) => { delete e.math['0.18.5'].runtimePaths; }],
@@ -776,9 +827,9 @@ test('only the protected stage step receives the npm token, with fixed bytes/tag
   assert.match(stage, /working-directory: \$\{\{ runner\.temp \}\}\/solid2-stage-empty/);
   assert.match(stage, /NPM_CONFIG_IGNORE_SCRIPTS: 'true'/);
   assert.match(stage, /NPM_CONFIG_GLOBALCONFIG: \/dev\/null/);
-  assert.match(stage, /npm stage publish "\$RUNNER_TEMP\/solid2-reviewed\/seed-ship-mcp-ui-solid-8\.0\.0-solid2\.4\.tgz" --access public --tag solid2 --ignore-scripts --registry=https:\/\/registry\.npmjs\.org --json/);
-  assert.match(workflow, /index\("8\.0\.0-solid2\.4"\) == null/);
-  assert.doesNotMatch(workflow, /8\.0\.0-solid2\.[0-3]\b/);
+  assert.match(stage, /npm stage publish "\$RUNNER_TEMP\/solid2-reviewed\/seed-ship-mcp-ui-solid-8\.0\.0-solid2\.5\.tgz" --access public --tag solid2 --ignore-scripts --registry=https:\/\/registry\.npmjs\.org --json/);
+  assert.match(workflow, /index\("8\.0\.0-solid2\.5"\) == null/);
+  assert.doesNotMatch(workflow, /8\.0\.0-solid2\.[0-4]\b/);
   assert.doesNotMatch(stage, /--tag\s+["']?\$|\bnpm (?:install|ci|run|exec)\b|\bpnpm\b/);
   const latestGuard = blocks.find((block) => block.includes('Verify latest even when the staging command failed'));
   assert.ok(latestGuard);
