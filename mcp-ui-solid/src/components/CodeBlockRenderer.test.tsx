@@ -1,3 +1,4 @@
+import { flush } from 'solid-js';
 /**
  * CodeBlockRenderer Tests
  * Sprint 6 Refinement
@@ -65,7 +66,7 @@ describe('CodeBlockRenderer', () => {
         render(() => <CodeBlockRenderer params={defaultParams} />)
 
         const copyButton = screen.getByTitle('Copy code')
-        fireEvent.click(copyButton)
+        flush(() => fireEvent.click(copyButton))
 
         expect(navigator.clipboard.writeText).toHaveBeenCalledWith('console.log("Hello")')
     })

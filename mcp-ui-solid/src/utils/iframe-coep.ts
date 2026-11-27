@@ -12,7 +12,7 @@
  * storage of its own origin — see `MCPUIConfigContext` for the policy.
  */
 
-import { createSignal, onMount, type Accessor } from 'solid-js'
+import { createSignal, onSettled, type Accessor } from 'solid-js'
 import { isTrustedIframeDomain } from '../services/validation'
 import type { MCPUIConfig } from '../context/MCPUIConfigContext'
 
@@ -56,7 +56,7 @@ export function shouldSetCredentialless(
  */
 export function createCrossOriginIsolated(): Accessor<boolean> {
   const [isolated, setIsolated] = createSignal(false)
-  onMount(() => {
+  onSettled(() => {
     setIsolated(typeof window !== 'undefined' && window.crossOriginIsolated === true)
   })
   return isolated

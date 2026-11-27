@@ -1,3 +1,4 @@
+import { flush } from 'solid-js';
 import { cleanup, fireEvent, render, waitFor } from '@solidjs/testing-library';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createSignal } from 'solid-js';
@@ -128,7 +129,7 @@ describe('<ChartJSRenderer>', () => {
     expect(dataButton.tabIndex).toBe(0);
     expect(chartButton.getAttribute('aria-pressed')).toBe('true');
 
-    fireEvent.click(dataButton);
+    flush(() => fireEvent.click(dataButton));
     expect(dataButton.getAttribute('aria-pressed')).toBe('true');
     expect(getByRole('button', { name: 'Download chart as PNG' }).hasAttribute('disabled')).toBe(true);
     expect(getByRole('table', { name: 'Quarterly sales — Chart data' })).toBeTruthy();
@@ -138,7 +139,7 @@ describe('<ChartJSRenderer>', () => {
     ]);
     expect(getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['Q1', '10', 'Q2', '20']);
 
-    fireEvent.click(chartButton);
+    flush(() => fireEvent.click(chartButton));
     await waitFor(() => expect(chartHarness.instances[0].resize).toHaveBeenCalled());
   });
 
@@ -155,7 +156,7 @@ describe('<ChartJSRenderer>', () => {
     ));
 
     await waitFor(() => expect(chartHarness.instances).toHaveLength(1));
-    fireEvent.click(getByRole('button', { name: 'Data' }));
+    flush(() => fireEvent.click(getByRole('button', { name: 'Data' })));
     const table = getByRole('table', { name: 'Quarterly sales — Chart data' });
     const viewport = table.parentElement!;
 
@@ -165,7 +166,7 @@ describe('<ChartJSRenderer>', () => {
     expect(table.textContent).toContain('Row 40');
     expect(table.textContent).toContain('40');
 
-    fireEvent.click(getByLabelText('Expand'));
+    flush(() => fireEvent.click(getByLabelText('Expand')));
     await waitFor(() =>
       expect(document.querySelector('[role="dialog"][aria-label="Quarterly sales"]')).toBeTruthy(),
     );
@@ -206,7 +207,7 @@ describe('<ChartJSRenderer>', () => {
       <ChartJSRenderer component={chartComponent({ className: 'consumer-chart-shell' })} />
     ));
 
-    fireEvent.click(getByRole('button', { name: 'Data' }));
+    flush(() => fireEvent.click(getByRole('button', { name: 'Data' })));
     const table = getByRole('table', { name: 'Quarterly sales — Chart data' });
     const wrapper = container.querySelector('.consumer-chart-shell');
 
@@ -221,7 +222,7 @@ describe('<ChartJSRenderer>', () => {
       <ChartJSRenderer component={chartComponent()} />
     ));
 
-    fireEvent.click(getByRole('button', { name: 'Data' }));
+    flush(() => fireEvent.click(getByRole('button', { name: 'Data' })));
     expect(getByRole('table', { name: 'Quarterly sales — Chart data' })).toBeTruthy();
     expect(queryByText('Loading chart...')).toBeNull();
   });
@@ -230,14 +231,14 @@ describe('<ChartJSRenderer>', () => {
     const [component, setComponent] = createSignal(chartComponent());
     const { getByRole } = render(() => <ChartJSRenderer component={component()} />);
     await waitFor(() => expect(chartHarness.instances).toHaveLength(1));
-    fireEvent.click(getByRole('button', { name: 'Data' }));
+    flush(() => fireEvent.click(getByRole('button', { name: 'Data' })));
 
-    setComponent(
+    flush(() => setComponent(
       chartComponent({
         title: 'Updated sales',
         data: { labels: ['Q3'], datasets: [{ label: 'Revenue', data: [30] }] },
       }),
-    );
+    ));
 
     await waitFor(() => expect(chartHarness.instances).toHaveLength(2));
     expect(chartHarness.instances[0].destroy).toHaveBeenCalledTimes(1);
@@ -266,7 +267,7 @@ describe('<ChartJSRenderer>', () => {
     await waitFor(() => expect(chartHarness.instances).toHaveLength(1));
 
     expect(getByRole('group', { name: 'Vue graphique ou données' })).toBeTruthy();
-    fireEvent.click(getByRole('button', { name: 'Données' }));
+    flush(() => fireEvent.click(getByRole('button', { name: 'Données' })));
     expect(getByRole('table', { name: 'Vide — Données du graphique' })).toBeTruthy();
     expect(getByText('Aucune donnée')).toBeTruthy();
   });
@@ -315,7 +316,7 @@ describe('<ChartJSRenderer>', () => {
     ));
 
     await waitFor(() => expect(getByRole('group', { name: 'Chart or data view' })).toBeTruthy());
-    fireEvent.click(getByRole('button', { name: 'Data' }));
+    flush(() => fireEvent.click(getByRole('button', { name: 'Data' })));
     expect(getByRole('table', { name: 'Quarterly sales — Chart data' })).toBeTruthy();
   });
 
@@ -343,7 +344,7 @@ describe('<ChartJSRenderer>', () => {
     ));
 
     await waitFor(() => expect(getByRole('group', { name: 'Chart or data view' })).toBeTruthy());
-    fireEvent.click(getByRole('button', { name: 'Data' }));
+    flush(() => fireEvent.click(getByRole('button', { name: 'Data' })));
     expect(getByRole('table', { name: 'Quarterly sales — Chart data' })).toBeTruthy();
   });
 });

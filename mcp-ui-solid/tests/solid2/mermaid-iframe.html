@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Synthetic Mermaid fixture</title>
+</head>
+<body>
+  <main id="mermaid-diagram">
+    <pre class="mermaid">flowchart LR
+      A["Synthetic start"] --> B["Synthetic end"]
+    </pre>
+  </main>
+  <script src="/__mcpui-fixture__/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', flowchart: { htmlLabels: false } })
+    mermaid.run({ querySelector: '#mermaid-diagram .mermaid' }).then(() => {
+      document.documentElement.dataset.diagramReady = 'true'
+    }).catch(error => {
+      document.documentElement.dataset.diagramError = error.message
+      console.error(error)
+    })
+  </script>
+</body>
+</html>

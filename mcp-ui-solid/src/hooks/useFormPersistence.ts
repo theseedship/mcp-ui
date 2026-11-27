@@ -3,7 +3,7 @@
  * Sprint 4: State & Charts
  */
 
-import { Accessor, createEffect, onMount, onCleanup } from 'solid-js'
+import { Accessor, createMemo, createEffect, onSettled, onCleanup } from 'solid-js'
 
 const STORAGE_PREFIX = 'mcp-ui-form:'
 const DEFAULT_DEBOUNCE = 500
@@ -104,12 +104,13 @@ export interface UseFormPersistenceReturn {
  * ```
  */
 export function useFormPersistence(options: UseFormPersistenceOptions): UseFormPersistenceReturn {
-  const storageKey = `${STORAGE_PREFIX}${options.persistKey}`
+  const storageKey = createMemo(() => `${STORAGE_PREFIX}${options.persistKey}`)
   let debounceTimer: ReturnType<typeof setTimeout> | undefined
   let isInitialized = false
 
   // Get storage (default to localStorage, with SSR safety)
   const getStorage = (): Storage | null => {
+    if (!options.persistKey) return null
     if (options.storage !== undefined) {
       return options.storage
     }
@@ -120,19 +121,21 @@ export function useFormPersistence(options: UseFormPersistenceOptions): UseFormP
     return null
   }
 
-  // Restore on mount
-  onMount(() => {
+  // Restore only in the imperative lifecycle/effect phase. Reactive keys let
+  // callers keep this hook in the component body rather than recreate owners.
+  const restore = (key: string) => {
+    if (debounceTimer) clearTimeout(debounceTimer)
     const storage = getStorage()
     if (!storage) return
 
     try {
-      const stored = storage.getItem(storageKey)
+      const stored = storage.getItem(key)
       if (stored) {
         const parsed: StoredData = JSON.parse(stored)
 
         // Check version
         if (parsed.version !== STORAGE_VERSION) {
-          storage.removeItem(storageKey)
+          storage.removeItem(key)
           return
         }
 
@@ -140,7 +143,7 @@ export function useFormPersistence(options: UseFormPersistenceOptions): UseFormP
         if (options.expiresIn) {
           const elapsed = Date.now() - parsed.timestamp
           if (elapsed > options.expiresIn) {
-            storage.removeItem(storageKey)
+            storage.removeItem(key)
             return
           }
         }
@@ -155,12 +158,17 @@ export function useFormPersistence(options: UseFormPersistenceOptions): UseFormP
     }
 
     isInitialized = true
-  })
+  }
+  onSettled(() => restore(storageKey()))
+  createEffect(storageKey, restore, { defer: true })
 
   // Save on change (debounced)
-  createEffect(() => {
-    const data = options.formData()
-
+  createEffect(() => ({
+    data: { ...options.formData() },
+    key: storageKey(),
+    excluded: [...(options.excludeFields ?? [])],
+    delay: options.debounce ?? DEFAULT_DEBOUNCE,
+  }), ({ data, key, excluded, delay }) => {
     // Don't save before initialization (would save initial/empty state)
     if (!isInitialized) return
 
@@ -175,13 +183,13 @@ export function useFormPersistence(options: UseFormPersistenceOptions): UseFormP
       try {
         // Filter excluded fields
         const toStore = { ...data }
-        for (const field of options.excludeFields || []) {
+        for (const field of excluded) {
           delete toStore[field]
         }
 
         // Don't store empty data
         if (Object.keys(toStore).length === 0) {
-          storage.removeItem(storageKey)
+          storage.removeItem(key)
           return
         }
 
@@ -191,11 +199,14 @@ export function useFormPersistence(options: UseFormPersistenceOptions): UseFormP
           version: STORAGE_VERSION,
         }
 
-        storage.setItem(storageKey, JSON.stringify(stored))
+        storage.setItem(key, JSON.stringify(stored))
       } catch (e) {
         console.warn('[useFormPersistence] Failed to persist form data:', e)
       }
-    }, options.debounce ?? DEFAULT_DEBOUNCE)
+    }, delay)
+    return () => {
+      if (debounceTimer) clearTimeout(debounceTimer)
+    }
   })
 
   // Cleanup timer on unmount
@@ -209,7 +220,7 @@ export function useFormPersistence(options: UseFormPersistenceOptions): UseFormP
   const clearPersisted = () => {
     const storage = getStorage()
     if (storage) {
-      storage.removeItem(storageKey)
+      storage.removeItem(storageKey())
     }
   }
 
@@ -219,7 +230,7 @@ export function useFormPersistence(options: UseFormPersistenceOptions): UseFormP
     if (!storage) return false
 
     try {
-      const stored = storage.getItem(storageKey)
+      const stored = storage.getItem(storageKey())
       if (!stored) return false
 
       const parsed: StoredData = JSON.parse(stored)
@@ -245,7 +256,7 @@ export function useFormPersistence(options: UseFormPersistenceOptions): UseFormP
     if (!storage) return null
 
     try {
-      const stored = storage.getItem(storageKey)
+      const stored = storage.getItem(storageKey())
       if (!stored) return null
 
       const parsed: StoredData = JSON.parse(stored)

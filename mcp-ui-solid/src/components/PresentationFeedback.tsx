@@ -256,7 +256,7 @@ export const PresentationFeedback: Component<PresentationFeedbackProps> = (props
                 <button
                   type="button"
                   onClick={() => toggleProblem(p)}
-                  aria-pressed={problems().has(p)}
+                  aria-pressed={problems().has(p) ? 'true' : 'false'}
                   data-presentation-feedback-problem={p}
                   class={`px-2 py-0.5 rounded-full border transition-colors ${
                     problems().has(p)
@@ -279,7 +279,7 @@ export const PresentationFeedback: Component<PresentationFeedbackProps> = (props
                   <button
                     type="button"
                     onClick={() => setPreferred((cur) => (cur === opt ? undefined : opt))}
-                    aria-pressed={preferred() === opt}
+                    aria-pressed={preferred() === opt ? 'true' : 'false'}
                     data-presentation-feedback-layout={opt}
                     class={`px-2 py-0.5 rounded border transition-colors ${
                       preferred() === opt

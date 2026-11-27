@@ -1,18 +1,49 @@
 # @seed-ship/mcp-ui-solid
 
-## Prepared v7.0.0 — Zod 4, still Solid 1
+## Solid 2 line (`8.0.0-solid2.x`, npm dist-tag `solid2`)
 
-This stable-line candidate uses Zod `4.6.6` and requires Spec `^6.0.0`.
-The Solid peer remains `^1.9.0`; no Solid 2 renderer or visual redesign is
-included. This conservative major marks the Spec 6 dependency/public-type
-compatibility boundary, not a new Solid engine or a direct Solid-local Zod
-schema-class export. JSON acceptance, absent optional fields and application
-validation codes/paths are preserved; native Zod error messages can change.
+This is the **Solid 2** line of the package, published on the `solid2` dist-tag.
+The `7.x` line on `latest` stays Solid 1; `8.x` is opt-in and never installed by
+default. Peers are exact, so each Solid patch release needs a matching
+mcp-ui-solid release. Pick the row that matches your host:
 
-This is not the paused `7.0.0-solid2.0` experiment. Do not consume its branch or
-old archives for this release. See the [migration record](./docs/ZOD4-STABLE-MIGRATION-2026-10-26.md)
-for SemVer, exact gates, resource-limit caveats and the separate publication
-approval. A PR or staged upload is not a public npm release.
+<!-- solid-compat:start -->
+| `@seed-ship/mcp-ui-solid` | npm dist-tag | `solid-js` | `@solidjs/web` |
+| --- | --- | --- | --- |
+| `7.x` | `latest` | `^1.9.0` | — |
+| `8.0.0-solid2.0` | — | `2.0.0-rc.19` | `2.0.0-rc.19` |
+| `8.0.0-solid2.1` | — | `2.0.0-rc.20` | `2.0.0-rc.20` |
+| `8.0.0-solid2.3` | — | `2.0.0-rc.21` | `2.0.0-rc.21` |
+| `8.0.0-solid2.4` | — | `2.0.0` | `2.0.0` |
+| `8.0.0-solid2.5` | `solid2` | `2.0.4` | `2.0.4` |
+<!-- solid-compat:end -->
+
+`8.0.0-solid2.2` was never published. `.4` cannot be paired with Solid 2.0.4
+(`@solidjs/web@2.0.4` peers `solid-js@^2.0.4`); use `.5`.
+
+```sh
+pnpm add @seed-ship/mcp-ui-solid@8.0.0-solid2.5 solid-js@2.0.4 @solidjs/web@2.0.4
+```
+
+Node >=22.12.0. This is not a dual-runtime package: do not alias runtimes or mix
+Solid 1 and Solid 2 in one reactive tree, and do not widen the exact peer range.
+DOM types/imports come from `@solidjs/web`; core and draft-store APIs come from
+`solid-js`. Large-table virtualization uses optional `@tanstack/virtual-core@3.13.18`
+(the Solid 1 adapter is not compatible). Public component names, MCP wire
+payloads, HTML trust policy, callbacks and CSS tokens are unchanged from 7.x.
+Imperative store/controller methods commit before returning; ordinary reactive
+writes follow Solid 2 staged scheduling.
+
+Handoffs and guides:
+[current qualification (2.0.4)](./docs/SOLID2-STABLE-QUALIFICATION-2026-11-27.md),
+[2.0.0 qualification](./docs/SOLID2-STABLE-QUALIFICATION-2026-11-18.md),
+[RC.21](./docs/SOLID2-RC21-QUALIFICATION-2026-11-10.md),
+[KaTeX](./docs/KATEX-COMPATIBILITY-2026-11-09.md),
+[Scratchpad](./docs/SOLID2-SCRATCHPAD-LAZY-PROPS-2026-11-03.md),
+[preview guide](./docs/SOLID2-PREVIEW.md),
+[pause/resumption](./docs/SOLID2-PREVIEW-HANDOFF-2026-10-23.md).
+The sections below describe the shared feature set; "What's New" entries are
+historical and refer to the `7.x` / Solid 1 line.
 
 SolidJS components + chat toolkit for MCP-generated UI. Part of the [MCP UI ecosystem](https://github.com/theseedship/mcp-ui).
 
@@ -87,7 +118,7 @@ currency guards and sanitized MathML output. No change without a provider;
 Install the optional peer only if the host wants the supplied KaTeX adapter:
 
 ```bash
-pnpm add --save-exact katex@0.18.4
+pnpm add --save-exact katex@0.18.5
 ```
 
 ```tsx
@@ -99,9 +130,12 @@ import { renderKatexMath } from '@seed-ship/mcp-ui-solid/plugins/katex'
 </MCPUIMathProvider>
 ```
 
-The adapter's optional peer is pinned to 0.18.4 to retain Node 20 installation
-compatibility. KaTeX 0.18.5–0.18.7 pull in Commander 15 (Node >=22.12);
-do not replace the pin with a caret range on Node 20.
+The candidate's optional peer explicitly accepts `0.18.4 || 0.18.5`, not a
+caret or an untested future range. Its development baseline remains 0.18.4.
+KaTeX 0.18.5 pulls in Commander 15 (Node >=22.12); use the host's supported
+Node version before upgrading. The KaTeX adapter does not choose the Solid
+runtime; this `.5` preview requires the coherent Solid 2.0.4 cohort.
+See the [version-specific qualification and Deposium handoff](./docs/KATEX-COMPATIBILITY-2026-11-09.md).
 
 The provider applies to `text` with `markdown: true` and string-valued table
 cells, including virtualized rows. It recognizes `$...$` inline and `$$...$$`
@@ -256,7 +290,7 @@ text and every concrete occurrence.
   cannot run) the sink emits `escapeHtml()`'d text — for `text` components
   specifically, the **escaped markdown source**, not escaped `marked`
   output — so block structure (tables, lists, headings) is not present on
-  first paint; `<SafeHtml>`'s `onMount` upgrades it to sanitized rich HTML on
+  first paint; `<SafeHtml>`'s `onSettled` upgrades it to sanitized rich HTML on
   the client, and the region reflows at that point. See **SSR Compatibility**
   below for the full contract. The `code` component's own `<code innerHTML>`
   sink is a separate, documented exception: it binds highlight.js output or
@@ -530,9 +564,11 @@ Everything rolled up from the 4.x series is documented in the previous section b
 pnpm add @seed-ship/mcp-ui-solid
 # or
 npm install @seed-ship/mcp-ui-solid
+# default `latest` is the Solid 1 line; for Solid 2 use the pinned command
+# from the compatibility matrix at the top of this file
 ```
 
-**Peer dependencies:** `solid-js` ^1.9.0
+**Peer dependencies:** `solid-js` and `@solidjs/web`, pinned exactly per release for the 8.x Solid 2 line (see the compatibility matrix at the top of this file); `7.x` uses `solid-js` ^1.9.0.
 
 **Optional peer deps** (install as needed):
 - `chart.js` — native chart rendering
@@ -1352,9 +1388,9 @@ to load or throws.
   region **reflows once the client hydrates**.
 - **Client:** the real DOMPurify runs with a profile scoped to the call site
   (`prose` for text content, `cellLink` / `cellMarkdown` / `cellHtml` for
-  table cells, `resource` for `ui://` content). `<SafeHtml>`'s `onMount`
+  table cells, `resource` for `ui://` content). `<SafeHtml>`'s `onSettled`
   then re-applies the sanitized rich HTML if the hydrated DOM still shows
-  the server's escaped text — this is what covers `solid-js/web`'s
+  the server's escaped text — this is what covers `@solidjs/web`'s
   `setProperty(node, 'innerHTML', v)` early-return during hydration, so a
   hydrated page doesn't stay stuck showing escaped text.
 

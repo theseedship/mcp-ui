@@ -11,7 +11,7 @@
  *     'innerHTML', v)` returns early while hydrating, so the server-rendered
  *     content (escaped plain text, per the SSR contract — block structure is
  *     lost until this fix-up runs) would otherwise stay in the DOM forever.
- *     `onMount` runs client-side only, after hydration, and re-applies
+ *     `onSettled` runs client-side only, after hydration, and re-applies
  *     `html()` when the live DOM disagrees with it.
  *
  * Every sink carrying untrusted markup goes through this component: `text`
@@ -25,7 +25,8 @@
  * @see ./CodeBlockRenderer for the one innerHTML sink outside this component
  */
 
-import { onMount, splitProps, type JSX } from 'solid-js'
+import { onSettled, omit } from "solid-js";
+import type { JSX } from "@solidjs/web";
 
 export interface SafeHtmlProps extends JSX.HTMLAttributes<HTMLDivElement> {
   /**
@@ -53,14 +54,14 @@ export function _applySafeHtml(el: HTMLElement | undefined, html: string): boole
 }
 
 export function SafeHtml(props: SafeHtmlProps): JSX.Element {
-  const [local, rest] = splitProps(props, ['html'])
+  const rest = omit(props, 'html')
   let el: HTMLDivElement | undefined
 
-  onMount(() => {
-    _applySafeHtml(el, local.html())
+  onSettled(() => {
+    _applySafeHtml(el, props.html())
   })
 
   // `innerHTML` is written last on purpose: it must win over anything the
   // caller spreads in. Later reactive updates ride the prop's render effect.
-  return <div ref={el} {...rest} innerHTML={local.html()} />
+  return <div ref={el} {...rest} innerHTML={props.html()} />
 }

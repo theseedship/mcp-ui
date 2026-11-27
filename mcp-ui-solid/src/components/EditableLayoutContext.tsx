@@ -4,7 +4,7 @@ import { createContext, useContext, type ParentComponent } from 'solid-js'
 const EditableLayoutContext = createContext(false)
 
 export const EditableLayoutProvider: ParentComponent = (props) => (
-  <EditableLayoutContext.Provider value={true}>{props.children}</EditableLayoutContext.Provider>
+  <EditableLayoutContext value={true}>{props.children}</EditableLayoutContext>
 )
 
 export function useEditableLayoutPositions(): boolean {

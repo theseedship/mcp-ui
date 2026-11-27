@@ -21,7 +21,7 @@
  * ```
  */
 
-import { createSignal, onCleanup } from 'solid-js'
+import { createSignal, onCleanup, onSettled, flush, untrack } from 'solid-js'
 import type { UIComponent } from '../types'
 import { createLogger } from '../utils/logger'
 import { formatMCPUIString } from '../utils/format-string'
@@ -182,11 +182,13 @@ export function useStreamingUI(options: UseStreamingUIOptions) {
   const [components, setComponents] = createSignal<UIComponent[]>([])
   const [isLoading, setIsLoading] = createSignal(false)
   const [isStreaming, setIsStreaming] = createSignal(false)
-  const [error, setError] = createSignal<StreamError | null>(null)
+  const [error, setError] = createSignal<StreamError | null>(isServer ? {
+    error: 'ssr', message: untrack(() => msg('serverSide')), recoverable: false,
+  } : null)
   const [progress, setProgress] = createSignal<StreamProgress>({
     receivedCount: 0,
     totalCount: null,
-    message: msg('initializing'),
+    message: untrack(() => msg('initializing')),
     timestamp: new Date().toISOString(),
   })
   const [metadata, setMetadata] = createSignal<CompleteMetadata | null>(null)
@@ -194,9 +196,24 @@ export function useStreamingUI(options: UseStreamingUIOptions) {
   // Component buffer for reordering
   let componentBuffer: ComponentBuffer = {}
   let nextSequenceId = 0
-  let eventSource: EventSource | null = null
+  let requestController: AbortController | null = null
+  let activeReader: ReadableStreamDefaultReader<Uint8Array> | null = null
+  let reconnectTimer: ReturnType<typeof setTimeout> | null = null
+  let generation = 0
+  let disposed = false
   let reconnectAttempts = 0
   const maxReconnectAttempts = 3
+
+  const cancelConnection = () => {
+    generation++
+    requestController?.abort()
+    requestController = null
+    const reader = activeReader
+    activeReader = null
+    if (reader) void reader.cancel().catch(() => { /* An aborted reader may already be closed. */ })
+    if (reconnectTimer !== null) clearTimeout(reconnectTimer)
+    reconnectTimer = null
+  }
 
   /**
    * Flush components from buffer in sequence order
@@ -232,12 +249,12 @@ export function useStreamingUI(options: UseStreamingUIOptions) {
   const handleStatusEvent = (data: StatusEvent) => {
     logger.debug('Status event received', data as unknown as Record<string, unknown>)
 
-    setProgress({
-      receivedCount: progress().receivedCount,
-      totalCount: data.totalComponents ?? progress().totalCount,
+    setProgress((previous) => ({
+      receivedCount: previous.receivedCount,
+      totalCount: data.totalComponents ?? previous.totalCount,
       message: data.message,
       timestamp: data.timestamp,
-    })
+    }))
   }
 
   /**
@@ -273,6 +290,7 @@ export function useStreamingUI(options: UseStreamingUIOptions) {
 
     // Notify callback
     if (options.onComponentReceived) {
+      flush() // Public callbacks may synchronously inspect the hook's state.
       options.onComponentReceived(data.component)
     }
   }
@@ -302,6 +320,7 @@ export function useStreamingUI(options: UseStreamingUIOptions) {
 
     // Notify callback
     if (options.onComplete) {
+      flush()
       options.onComplete(data)
     }
   }
@@ -310,6 +329,7 @@ export function useStreamingUI(options: UseStreamingUIOptions) {
    * Handle SSE error event
    */
   const handleErrorEvent = (data: StreamError) => {
+    const errorGeneration = generation
     logger.error('Stream error received', data as unknown as Record<string, unknown>)
 
     setError(data)
@@ -324,21 +344,28 @@ export function useStreamingUI(options: UseStreamingUIOptions) {
 
     // Notify callback
     if (options.onError) {
+      flush()
       options.onError(data)
     }
 
     // Try to reconnect if recoverable
-    if (data.recoverable && reconnectAttempts < maxReconnectAttempts) {
+    if (!disposed && generation === errorGeneration && data.recoverable && reconnectAttempts < maxReconnectAttempts) {
       reconnectAttempts++
       logger.warn('Attempting to reconnect', { attempt: reconnectAttempts })
-      setTimeout(() => startStreaming(), 1000 * reconnectAttempts)
+      if (reconnectTimer !== null) clearTimeout(reconnectTimer)
+      reconnectTimer = setTimeout(() => {
+        reconnectTimer = null
+        if (!disposed && generation === errorGeneration) startStreaming()
+      }, 1000 * reconnectAttempts)
     }
   }
 
   /**
    * Parse SSE event
    */
-  const parseSSEEvent = (event: MessageEvent, eventType: SSEEventType) => {
+  // An SSE chunk can contain several events. Commit each event's public state
+  // before its callbacks inspect it or the next event is handled.
+  const parseSSEEvent = (event: MessageEvent, eventType: SSEEventType) => flush(() => {
     try {
       const data = JSON.parse(event.data)
 
@@ -367,12 +394,14 @@ export function useStreamingUI(options: UseStreamingUIOptions) {
         eventType,
       })
     }
-  }
+  })
 
   /**
    * Start SSE streaming
    */
   const startStreaming = () => {
+    if (disposed) return
+    cancelConnection()
     // SSR Guard: Prevent execution on server-side (Node.js environment)
     // fetch() and ReadableStream APIs are only available in browsers
     if (isServer) {
@@ -387,6 +416,9 @@ export function useStreamingUI(options: UseStreamingUIOptions) {
     }
 
     // Reset state
+    const currentGeneration = generation
+    const controller = new AbortController()
+    requestController = controller
     setComponents([])
     setError(null)
     setIsLoading(true)
@@ -414,16 +446,17 @@ export function useStreamingUI(options: UseStreamingUIOptions) {
       options: options.options,
     }
 
-    // Create EventSource (SSE connection)
-    // Note: EventSource doesn't support POST, so we need to use fetch + ReadableStream
+    // EventSource doesn't support POST; use fetch + ReadableStream instead.
     fetch('/api/mcp/generative-ui-stream', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(requestBody),
+      signal: controller.signal,
     })
       .then(async (response) => {
+        if (disposed || generation !== currentGeneration || controller.signal.aborted) return
         if (!response.ok) {
           const errorData = await response.json()
           throw new Error(errorData.message || msg('requestFailed'))
@@ -434,6 +467,7 @@ export function useStreamingUI(options: UseStreamingUIOptions) {
         }
 
         const reader = response.body.getReader()
+        activeReader = reader
         const decoder = new TextDecoder()
 
         let buffer = ''
@@ -441,8 +475,10 @@ export function useStreamingUI(options: UseStreamingUIOptions) {
         // Read stream
         const readChunk = async (): Promise<void> => {
           const { done, value } = await reader.read()
+          if (disposed || generation !== currentGeneration || controller.signal.aborted) return
 
           if (done) {
+            if (activeReader === reader) activeReader = null
             logger.info('Stream ended')
             return
           }
@@ -456,6 +492,7 @@ export function useStreamingUI(options: UseStreamingUIOptions) {
           let currentEvent: SSEEventType | null = null
 
           for (const line of lines) {
+            if (disposed || generation !== currentGeneration || controller.signal.aborted) return
             if (line.startsWith('event: ')) {
               currentEvent = line.slice(7) as SSEEventType
             } else if (line.startsWith('data: ') && currentEvent) {
@@ -472,6 +509,8 @@ export function useStreamingUI(options: UseStreamingUIOptions) {
         await readChunk()
       })
       .catch((err) => {
+        // Cancellation and superseded streams never emit errors or reconnect.
+        if (disposed || generation !== currentGeneration || controller.signal.aborted) return
         logger.error('Stream fetch failed', {
           error: err instanceof Error ? err.message : String(err),
         })
@@ -488,10 +527,7 @@ export function useStreamingUI(options: UseStreamingUIOptions) {
    * Stop streaming
    */
   const stopStreaming = () => {
-    if (eventSource) {
-      eventSource.close()
-      eventSource = null
-    }
+    cancelConnection()
 
     setIsStreaming(false)
     setIsLoading(false)
@@ -503,11 +539,12 @@ export function useStreamingUI(options: UseStreamingUIOptions) {
    * Cleanup on unmount
    */
   onCleanup(() => {
+    disposed = true
     stopStreaming()
   })
 
   // Auto-start streaming
-  startStreaming()
+  onSettled(startStreaming)
 
   // Return state accessors and controls
   return {

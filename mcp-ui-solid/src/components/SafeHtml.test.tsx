@@ -8,7 +8,7 @@
 
 import { describe, it, expect, afterEach } from 'vitest'
 import { render, cleanup } from '@solidjs/testing-library'
-import { createSignal } from 'solid-js'
+import { createSignal, flush } from 'solid-js'
 import { SafeHtml, _applySafeHtml } from './SafeHtml'
 
 afterEach(() => cleanup())
@@ -70,6 +70,7 @@ describe('<SafeHtml>', () => {
     expect(container.querySelector('b')?.textContent).toBe('one')
 
     setHtml('<i>two</i>')
+    flush()
     expect(container.querySelector('b')).toBeNull()
     expect(container.querySelector('i')?.textContent).toBe('two')
   })

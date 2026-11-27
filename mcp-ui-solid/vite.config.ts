@@ -1,19 +1,16 @@
 import { defineConfig } from 'vite'
-import solidPlugin from 'vite-plugin-solid'
+import solidPlugin from '@solidjs/vite-plugin'
 import { resolve } from 'path'
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [
-    solidPlugin({
-      // DOM mode: generates client-side code with real DOM elements
-      // SolidStart handles SSR separately; packages should export client code
-      solid: {
-        generate: 'dom',
-        hydratable: true,
-      },
-    }),
+    // Real server output is distinct from browser templates; source-condition
+    // consumers still compile their own host-specific SSR and client graphs.
+    solidPlugin({ ssr: mode === 'server' }),
   ],
   build: {
+    ssr: mode === 'server',
+    outDir: mode === 'server' ? 'dist/server' : 'dist',
     lib: {
       entry: {
         index: resolve(__dirname, 'src/index.ts'),
@@ -50,8 +47,7 @@ export default defineConfig({
       output: {
         globals: {
           'solid-js': 'SolidJS',
-          'solid-js/web': 'SolidJSWeb',
-          'solid-js/store': 'SolidJSStore',
+          '@solidjs/web': 'SolidJSWeb',
           'chart.js': 'Chart',
           'chart.js/auto': 'Chart',
         },
@@ -71,4 +67,4 @@ export default defineConfig({
       reporter: ['text', 'json', 'html'],
     },
   },
-})
+}))

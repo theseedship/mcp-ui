@@ -1,3 +1,4 @@
+import { flush } from 'solid-js';
 /**
  * ChartJSRenderer — explicit missing values and units (v6.24.0).
  *
@@ -8,7 +9,7 @@
 
 import { cleanup, fireEvent, render, waitFor } from '@solidjs/testing-library';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { JSX } from 'solid-js';
+import type { JSX } from "@solidjs/web";
 import type { UIComponent } from '../types';
 import {
   DEFAULT_MCPUI_STRINGS,
@@ -116,7 +117,7 @@ describe('<ChartJSRenderer> missing values and unit', () => {
       const canvas = getByRole('img', { name: 'Quarterly sales' });
       expect(canvas.getAttribute('aria-describedby')).not.toContain(' ');
       expect(container.querySelector('[data-mcp-chart-notes]')).toBeNull();
-      fireEvent.click(getByRole('button', { name: 'Data' }));
+      flush(() => fireEvent.click(getByRole('button', { name: 'Data' })));
       expect(container.querySelector('[data-mcp-missing-value]')).toBeNull();
       expect(container.querySelector('[data-mcp-missing-legend]')).toBeNull();
     });
@@ -671,11 +672,11 @@ describe('<ChartJSRenderer> missing values and unit', () => {
       expect(ids[1]).toBe(notes.id);
       expect(document.getElementById(ids[0])?.textContent).toContain('Quarterly sales');
 
-      fireEvent.click(getByRole('button', { name: 'Data' }));
+      flush(() => fireEvent.click(getByRole('button', { name: 'Data' })));
       expect(container.querySelector('[data-mcp-chart-notes]')).toBeNull();
       expect(canvas.getAttribute('aria-describedby')).not.toContain(' ');
 
-      fireEvent.click(getByRole('button', { name: 'Chart' }));
+      flush(() => fireEvent.click(getByRole('button', { name: 'Chart' })));
       expect(container.querySelector('[data-mcp-chart-notes]')).not.toBeNull();
     });
   });
@@ -763,12 +764,12 @@ describe('<ChartJSRenderer> missing values and unit', () => {
       );
       const { container } = render(() => <ChartJSRenderer component={params()} />);
       await waitFor(() => expect(container.querySelector('[role="alert"]')).not.toBeNull());
-      setParams(
+      flush(() => setParams(
         chartComponent({
           type: 'pie',
           data: { labels: ['A', 'B'], datasets: [{ label: 'Share', data: [1, 2] }] },
         })
-      );
+      ));
       await waitFor(() => expect(chartHarness.configs).toHaveLength(1));
       await waitFor(() => expect(container.querySelector('[role="alert"]')).toBeNull());
     });
@@ -778,7 +779,7 @@ describe('<ChartJSRenderer> missing values and unit', () => {
     it('marks the missing cell, keeps its row, and shows one legend', async () => {
       const { container, getByRole } = render(() => <ChartJSRenderer component={chartComponent()} />);
       await lastConfig();
-      fireEvent.click(getByRole('button', { name: 'Data' }));
+      flush(() => fireEvent.click(getByRole('button', { name: 'Data' })));
 
       const rows = Array.from(container.querySelectorAll('tbody tr'));
       expect(rows).toHaveLength(3);
@@ -803,7 +804,7 @@ describe('<ChartJSRenderer> missing values and unit', () => {
       });
       const { container, getByRole } = render(() => <ChartJSRenderer component={component} />);
       await lastConfig();
-      fireEvent.click(getByRole('button', { name: 'Data' }));
+      flush(() => fireEvent.click(getByRole('button', { name: 'Data' })));
       const rows = container.querySelectorAll('tbody tr');
       expect(rows).toHaveLength(2);
       // The slot has no entry: an empty cell, as in 6.23.0 ...
@@ -824,7 +825,7 @@ describe('<ChartJSRenderer> missing values and unit', () => {
       });
       const { container, getByRole } = render(() => <ChartJSRenderer component={component} />);
       await lastConfig();
-      fireEvent.click(getByRole('button', { name: 'Data' }));
+      flush(() => fireEvent.click(getByRole('button', { name: 'Data' })));
       const rows = container.querySelectorAll('tbody tr');
       expect(rows).toHaveLength(3);
       expect(rows[1].children[2].querySelector('[data-mcp-missing-value]')).not.toBeNull();
@@ -841,7 +842,7 @@ describe('<ChartJSRenderer> missing values and unit', () => {
       });
       const { container, getByRole } = render(() => <ChartJSRenderer component={component} />);
       await lastConfig();
-      fireEvent.click(getByRole('button', { name: 'Data' }));
+      flush(() => fireEvent.click(getByRole('button', { name: 'Data' })));
       const rows = container.querySelectorAll('tbody tr');
       expect(rows[0].children[3].querySelector('[data-mcp-missing-value]')).not.toBeNull();
       expect(rows[0].children[2].textContent).toBe('1');
@@ -853,7 +854,7 @@ describe('<ChartJSRenderer> missing values and unit', () => {
         <ChartJSRenderer component={complete({ unit: '°C' })} />
       ));
       await lastConfig();
-      fireEvent.click(getByRole('button', { name: 'Data' }));
+      flush(() => fireEvent.click(getByRole('button', { name: 'Data' })));
       const headers = Array.from(container.querySelectorAll('th')).map((th) => th.textContent);
       expect(headers).toEqual(['Label', 'Revenue (°C)']);
     });
@@ -863,7 +864,7 @@ describe('<ChartJSRenderer> missing values and unit', () => {
         <ChartJSRenderer component={complete({ unit: 'kg' })} />
       ));
       await lastConfig();
-      fireEvent.click(getByRole('button', { name: 'Data' }));
+      flush(() => fireEvent.click(getByRole('button', { name: 'Data' })));
       expect(Array.from(container.querySelectorAll('th')).map((th) => th.textContent)).toEqual([
         'Label',
         'Revenue en kg',
@@ -878,7 +879,7 @@ describe('<ChartJSRenderer> missing values and unit', () => {
       });
       const { container, getByRole } = render(() => <ChartJSRenderer component={component} />);
       await lastConfig();
-      fireEvent.click(getByRole('button', { name: 'Data' }));
+      flush(() => fireEvent.click(getByRole('button', { name: 'Data' })));
       expect(Array.from(container.querySelectorAll('th')).map((th) => th.textContent)).toEqual([
         'Series',
         'Point',
@@ -970,7 +971,7 @@ describe('<ChartJSRenderer> pseudo-locale', () => {
     expect(notes.textContent).toContain('大阪');
     expect(leaks(container)).toEqual([]);
 
-    fireEvent.click(getByRole('button', { name: /chartDataView/ }));
+    flush(() => fireEvent.click(getByRole('button', { name: /chartDataView/ })));
     expect(container.querySelectorAll('[data-mcp-missing-value]').length).toBeGreaterThan(0);
     expect(container.querySelector('[data-mcp-missing-legend]')?.textContent).toContain(
       '⟦missingValueLegend'

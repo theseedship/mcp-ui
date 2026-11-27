@@ -13,7 +13,8 @@
  * `safeUrl` — an unsafe one renders nothing at all.
  */
 
-import { createMemo, Show, type JSX } from 'solid-js'
+import { createMemo, Show } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import { safeUrl } from '../utils/safe-url'
 import { useMCPUIStrings } from '../context/MCPUIStringsContext'
 import { useMCPUIConfig } from '../context/MCPUIConfigContext'

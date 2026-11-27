@@ -1,13 +1,18 @@
+import { flush } from 'solid-js';
 import { cleanup, render, waitFor } from '@solidjs/testing-library'
 import { createSignal } from 'solid-js'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { MCPUIMathProvider, type MathRenderer } from '../context/MCPUIMathContext'
 import { UIResourceRenderer, highlightQuery } from './UIResourceRenderer'
 
-vi.mock('@tanstack/solid-virtual', () => ({
-  createVirtualizer: () => ({
+// Isolate math dispatch through the virtual branch. The bridge has its own
+// unmocked virtual-core geometry/lifecycle regression suite.
+vi.mock('../utils/solid2-virtualizer', () => ({
+  createTableVirtualizer: () => ({
     getVirtualItems: () => [{ index: 0, key: 0, start: 0, size: 48, end: 48, lane: 0 }],
     getTotalSize: () => 48,
+    update: () => {},
+    dispose: () => {},
   }),
 }))
 
@@ -218,7 +223,9 @@ describe('UIResourceRenderer math integration', () => {
   it('reacts when the provider renderer changes', async () => {
     const first: MathRenderer = (tex) => `<math class="first"><mi>${tex}</mi></math>`
     const second: MathRenderer = (tex) => `<math class="second"><mi>${tex}</mi></math>`
-    const [renderer, setRenderer] = createSignal<MathRenderer>(first)
+    // Function-form signals are derived in Solid 2; retain this renderer as
+    // the signal's value rather than calling it as the computation.
+    const [renderer, setRenderer] = createSignal<MathRenderer>(() => first)
     const { container } = render(() => (
       <MCPUIMathProvider renderMath={renderer()}>
         <UIResourceRenderer content={textComponent('$x$')} />
@@ -226,7 +233,7 @@ describe('UIResourceRenderer math integration', () => {
     ))
 
     expect(container.querySelector('math.first')).not.toBeNull()
-    setRenderer(() => second)
+    flush(() => setRenderer(() => second))
     await Promise.resolve()
     expect(container.querySelector('math.first')).toBeNull()
     expect(container.querySelector('math.second')).not.toBeNull()
@@ -242,7 +249,7 @@ describe('UIResourceRenderer math integration', () => {
 
     expect(container.querySelector('math')).toBeNull()
     expect(container.textContent).toContain('Streaming $x_')
-    setContent(textComponent('Streaming $x_1$'))
+    flush(() => setContent(textComponent('Streaming $x_1$')))
     await waitFor(() => expect(container.querySelector('math')?.textContent).toBe('x_1'))
   })
 })

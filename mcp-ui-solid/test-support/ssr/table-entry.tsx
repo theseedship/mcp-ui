@@ -7,7 +7,7 @@
  * Lives outside `src/` because everything under `src/` except `*.test.*` is
  * published to npm (see the package `files` list).
  */
-import { renderToString } from 'solid-js/web'
+import { renderToString } from "@solidjs/web";
 import { UIResourceRenderer } from '../../src/components/UIResourceRenderer'
 import { MCPUIStringsProvider, type MCPUIStrings } from '../../src/context/MCPUIStringsContext'
 
@@ -23,4 +23,15 @@ export function renderTableToString(content: unknown, strings?: MCPUIStrings): s
     // ErrorBoundary (wrapped around every component) asks for a hydration id.
     { renderId: 'ssr-test' }
   )
+}
+
+/** Migration regression helper: server validation callbacks are part of the contract. */
+export function renderValidationToString(content: unknown, errorMode: 'block' | 'silent') {
+  const errors: Array<{ type: string; componentId?: string; details?: unknown }> = []
+  const html = renderToString(() => <UIResourceRenderer
+    content={content as never}
+    errorMode={errorMode}
+    onError={(error) => { errors.push(error) }}
+  />, { renderId: 'ssr-validation' })
+  return { html, errors }
 }
