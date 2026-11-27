@@ -1,5 +1,22 @@
 # Security dependency notes
 
+## 2026-11-27 — minimatch 11 for lint tooling (Dependabot alert #108)
+
+[GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249)
+(medium, denial of service via globparts amplification) affects `minimatch`
+`>=7.0.0 <11.0.1`, with no 10.x backport. The workspace override
+`"minimatch": ">=10.2.1"` pinned every consumer to 10.2.5, and Dependabot cannot
+rewrite overrides, so its security update failed with "Security update not
+possible". The override is raised to `>=11.0.1` (lock: 10.2.5 → 11.0.9, adding
+its dependency `@isaacs/nonrecursive-glob-match` 1.1.0).
+
+| Dependency | Previous lock | Updated lock | Scope |
+| --- | --- | --- | --- |
+| minimatch | 10.2.5 | 11.0.9 | Development only: ESLint 8 / eslintrc / config-array, typescript-estree 6 and 7, glob 7. Not in any published package. |
+
+Lint (0 errors), build, typecheck, workspace tests and the release-guard Node
+tests pass unchanged. minimatch 11 requires Node 20 or >=22; CI uses Node 22.
+
 ## 2026-10-26 — stable fast-uri follow-up after PR #40
 
 The workspace override floor moves from `^3.1.6` to `^3.1.9`; the pnpm 8.15.0
