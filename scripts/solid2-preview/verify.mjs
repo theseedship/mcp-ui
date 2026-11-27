@@ -10,7 +10,7 @@ import { gunzipSync } from 'node:zlib'
 
 export const POLICY = Object.freeze({
   repository: 'theseedship/mcp-ui', sourceBranch: 'feat/solid2-preview', sourcePr: 34,
-  packageName: '@seed-ship/mcp-ui-solid', version: '8.0.0-solid2.4', tag: 'solid2',
+  packageName: '@seed-ship/mcp-ui-solid', version: '8.0.0-solid2.5', tag: 'solid2',
   artifactName: 'solid2-preview-qualification', workflowPath: '.github/workflows/ci.yml',
 })
 const sha = value => typeof value === 'string' && /^[a-f0-9]{40}$/.test(value)
@@ -20,12 +20,20 @@ const exactId = (actual, expected) => Number.isSafeInteger(actual) && String(act
 const solidFilename = `seed-ship-mcp-ui-solid-${POLICY.version}.tgz`
 const specFilename = 'seed-ship-mcp-ui-spec-6.0.0.tgz'
 const cliFilename = 'seed-ship-mcp-ui-cli-5.0.2.tgz'
+// Split stable Solid 2 cohort. The runtime (solid-js, @solidjs/web,
+// @solidjs/signals) is exactly 2.0.4. @solidjs/compiler and
+// @solidjs/babel-plugin have no 2.0.4 on npm and stay exactly 2.0.3; the Vite
+// plugin is 3.0.1. Never collapse these into one version: a 2.0.0 cohort or a
+// nonexistent compiler/Babel 2.0.4 is a wrong-cohort artifact.
 const runtimePins = Object.freeze({
-  'solid-js': '2.0.0', '@solidjs/web': '2.0.0', '@solidjs/signals': '2.0.0',
-  '@solidjs/compiler': '2.0.0', '@solidjs/babel-plugin': '2.0.0',
+  'solid-js': '2.0.4', '@solidjs/web': '2.0.4', '@solidjs/signals': '2.0.4',
+})
+const toolchainPins = Object.freeze({
+  '@solidjs/compiler': '2.0.3', '@solidjs/babel-plugin': '2.0.3',
   '@solidjs/vite-plugin': '3.0.1',
 })
-const mathPins = Object.freeze({ ...runtimePins, '@babel/core': '7.29.6', '@types/node': '22.19.11',
+const cohortPins = Object.freeze({ ...runtimePins, ...toolchainPins })
+const mathPins = Object.freeze({ ...cohortPins, '@babel/core': '7.29.6', '@types/node': '22.19.11',
   vite: '8.3.5', typescript: '5.9.3' })
 const mathVersions = ['0.18.4', '0.18.5', 'absent']
 const mathAdapterChecks = ['inline fraction', 'subscript', 'display fraction', 'matrix',
@@ -407,7 +415,7 @@ export async function verifyQualification(directory, sha256, specSha256) {
       assert.equal(input.spec?.sha256, specSha256, 'Profile qualified another Spec fixture')
       assert(typeof input.spec.path === 'string' && isAbsolute(input.spec.path) && basename(input.spec.path) === specFilename,
         'Profile Spec fixture path mismatch')
-      for (const [name, version] of Object.entries(runtimePins)) {
+      for (const [name, version] of Object.entries(cohortPins)) {
         assert.equal(input.pins?.[name], version, `Unexpected prepared ${name} pin`)
         assert.equal(report.actualPins?.[name], version, `Unexpected installed ${name} pin`)
       }
