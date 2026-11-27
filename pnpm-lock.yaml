@@ -8,7 +8,7 @@ overrides:
   lodash: '>=4.17.23'
   '@isaacs/brace-expansion': '>=5.0.1'
   brace-expansion: ^5.0.12
-  minimatch: '>=10.2.1'
+  minimatch: '>=11.0.1'
   postcss: ^8.5.23
   fast-uri: ^3.1.9
   js-yaml: ^4.3.2
@@ -1254,7 +1254,7 @@ packages:
       ignore: 5.3.2
       import-fresh: 3.3.1
       js-yaml: 4.3.2
-      minimatch: 10.2.5
+      minimatch: 11.0.9
       strip-json-comments: 3.1.1
     transitivePeerDependencies:
       - supports-color
@@ -1272,7 +1272,7 @@ packages:
     dependencies:
       '@humanwhocodes/object-schema': 2.0.3
       debug: 4.4.3
-      minimatch: 10.2.5
+      minimatch: 11.0.9
     transitivePeerDependencies:
       - supports-color
     dev: true
@@ -1285,6 +1285,10 @@ packages:
   /@humanwhocodes/object-schema@2.0.3:
     resolution: {integrity: sha512-93zYdMES/c1D69yZiKDBj0V24vqNzB/koF26KPaagAfd3P/4gUlh3Dys5ogAK+Exi9QyzlD8x/08Zt7wIKcDcA==}
     deprecated: Use @eslint/object-schema instead
+    dev: true
+
+  /@isaacs/nonrecursive-glob-match@1.1.0:
+    resolution: {integrity: sha512-GPm/Dbvk5RLmhRnxXIa7nTpK0xtl4E0wj0MslsuNiJ1FIROU+2+9lgUC/dgF7Ey4QCWhfEsgxilMRMCdHPfDfw==}
     dev: true
 
   /@jridgewell/gen-mapping@0.3.13:
@@ -2048,7 +2052,7 @@ packages:
       debug: 4.4.3
       globby: 11.1.0
       is-glob: 4.0.3
-      minimatch: 10.2.5
+      minimatch: 11.0.9
       semver: 7.7.3
       ts-api-utils: 1.4.3(typescript@5.9.3)
       typescript: 5.9.3
@@ -2070,7 +2074,7 @@ packages:
       debug: 4.4.3
       globby: 11.1.0
       is-glob: 4.0.3
-      minimatch: 10.2.5
+      minimatch: 11.0.9
       semver: 7.7.3
       ts-api-utils: 1.4.3(typescript@5.9.3)
       typescript: 5.9.3
@@ -3018,7 +3022,7 @@ packages:
       json-stable-stringify-without-jsonify: 1.0.1
       levn: 0.4.1
       lodash.merge: 4.6.2
-      minimatch: 10.2.5
+      minimatch: 11.0.9
       natural-compare: 1.4.0
       optionator: 0.9.4
       strip-ansi: 6.0.1
@@ -3218,7 +3222,7 @@ packages:
       fs.realpath: 1.0.0
       inflight: 1.0.6
       inherits: 2.0.4
-      minimatch: 10.2.5
+      minimatch: 11.0.9
       once: 1.4.0
       path-is-absolute: 1.0.1
     dev: true
@@ -3659,10 +3663,11 @@ packages:
     engines: {node: '>=6'}
     dev: false
 
-  /minimatch@10.2.5:
-    resolution: {integrity: sha512-MULkVLfKGYDFYejP07QOurDLLQpcjk7Fw+7jXS2R2czRQzR56yHRveU5NDJEOviH+hETZKSkIk5c+T23GjFUMg==}
-    engines: {node: 18 || 20 || >=22}
+  /minimatch@11.0.9:
+    resolution: {integrity: sha512-KCFkfyjqerNlSstjlhIGNXIKZGA/6O4V4RlhZ+Dsr621SPPw0mzlypE9D9ZOoPiVefHID+j7/XuMMlqfD/F60Q==}
+    engines: {node: 20 || >=22}
     dependencies:
+      '@isaacs/nonrecursive-glob-match': 1.1.0
       brace-expansion: 5.0.12
     dev: true
 
